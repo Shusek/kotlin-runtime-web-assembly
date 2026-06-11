@@ -1,0 +1,2 @@
+obsolete-keywords.wast
+simd_select.wast

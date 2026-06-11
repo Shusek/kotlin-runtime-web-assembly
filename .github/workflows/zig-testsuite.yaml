@@ -17,16 +17,14 @@ jobs:
       - name: Set up Java
         uses: actions/setup-java@v5
         with:
-          distribution: 'temurin'
-          java-version: '21'
-          cache: maven
+          distribution: temurin
+          java-version: 25
+          cache: gradle
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
       - name: Compile the Zig testsuite
-        if: github.repository_owner == 'bytecodealliance'
+        if: github.repository_owner == 'Shusek'
         run: ./scripts/build-zig-testsuite.sh
       - name: Nightly Test
-        if: github.repository_owner == 'bytecodealliance'
-        run: |
-          # Build everything
-          mvn -B -Dquickly
-          # Run only the ZigTestsuite
-          mvn -B test -f nightly-testsuite/pom.xml
+        if: github.repository_owner == 'Shusek'
+        run: ./gradlew --no-daemon :nightly-testsuite:test

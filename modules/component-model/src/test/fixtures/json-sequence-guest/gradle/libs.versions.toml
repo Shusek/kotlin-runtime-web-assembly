@@ -1,0 +1,13 @@
+[versions]
+io = "0.9.0"
+kotlin = "2.4.0"
+serialization = "1.11.0"
+
+[libraries]
+kotlinxIoCore = { module = "org.jetbrains.kotlinx:kotlinx-io-core", version.ref = "io" }
+kotlinxSerializationJson = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
+kotlinxSerializationJsonIo = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json-io", version.ref = "serialization" }
+
+[plugins]
+kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }

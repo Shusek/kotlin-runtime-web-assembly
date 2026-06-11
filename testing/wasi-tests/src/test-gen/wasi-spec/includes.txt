@@ -1,0 +1,3 @@
+tests/assemblyscript/testsuite/wasm32-wasip1/*.wasm
+tests/c/testsuite/wasm32-wasip1/*.wasm
+tests/rust/testsuite/wasm32-wasip1/*.wasm

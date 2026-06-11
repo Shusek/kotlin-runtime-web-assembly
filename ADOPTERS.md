@@ -1,6 +1,7 @@
-# Endive Adopters
+# Runtime Lineage Adopters
 
-Organizations and projects using Endive (formerly Chicory) in production:
+Organizations and projects using Kotlin Runtime Web Assembly, Chicory, or this
+runtime lineage in production:
 
 * [sqlite4j](https://github.com/roastedroot/sqlite4j) - Pure Java SQLite JDBC driver
 * [pglite4j](https://github.com/roastedroot/pglite4j) - Embedded PostgreSQL 17 in pure Java

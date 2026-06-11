@@ -1,0 +1,49 @@
+[project]
+site_name = "Kotlin Runtime Web Assembly"
+site_url = "https://shusek.github.io/kotlin-runtime-web-assembly/"
+site_description = "Kotlin-first WebAssembly runtime and Component Model tooling."
+site_author = "Shusek"
+docs_dir = "docs/pages"
+site_dir = "site"
+copyright = "MIT License"
+nav = [
+    {"Home" = "index.md"},
+    {"Getting Started" = [
+        "getting-started/installation.md",
+        "getting-started/runtime-basics.md",
+    ]},
+    {"Core Runtime" = [
+        "core/host-functions.md",
+        {"Memory" = "core/memory.md"},
+        "core/linking.md",
+    ]},
+    {"Execution" = [
+        "execution/modes.md",
+        "execution/runtime-compiler.md",
+        "execution/build-time-compiler.md",
+        "execution/compiler-cache.md",
+        "execution/cpu-limits.md",
+    ]},
+    {"WASI And Components" = [
+        "wasi/preview1.md",
+        "components/index.md",
+        "components/wasi-preview3.md",
+    ]},
+    {"Guides" = [
+        "guides/annotations.md",
+        "guides/tools.md",
+        "guides/security.md",
+        "guides/logging.md",
+        "guides/from-chicory.md",
+    ]},
+    {"API Reference" = "api/"},
+]
+
+[project.theme]
+features = [
+    "navigation.instant",
+    "navigation.path",
+    "navigation.sections",
+    "navigation.expand",
+    "toc.follow",
+]

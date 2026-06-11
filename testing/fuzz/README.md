@@ -1,0 +1,52 @@
+# fuzz
+
+Differential fuzz testing module — compares Kotlin Runtime Web Assembly's interpreter against its compiler using randomly generated WebAssembly modules.
+
+## How it works
+
+1. **wasm-smith** (via the in-process `wasm-tools` WASM module) generates random valid WASM modules from random seeds
+2. Each module's exported functions are called with random parameters through both the **interpreter** (oracle) and the **compiler** (subject)
+3. Results are compared — any difference is a bug
+
+No external tools are required. Everything runs in-process using Kotlin Runtime Web Assembly itself.
+
+## Running
+
+```bash
+# Run fuzz tests with default 10 iterations per instruction type
+./gradlew --no-daemon :fuzz:test
+
+# Run with custom iteration count
+./gradlew --no-daemon :fuzz:test -Dfuzz.test.iterations=50
+```
+
+## Crash reproducers
+
+When a differential mismatch or parse failure is found, a crash reproducer folder is automatically saved to `src/test/resources/crash-{type}-{hash}/` containing:
+
+- `test.wasm` — the binary module
+- `seed.txt` — the seed used for generation
+- `crash-info.properties` — metadata (instruction type, function name, expected/actual results)
+
+These are automatically picked up by `RegressionTest` on subsequent runs to prevent regressions.
+
+## Run a single reproducer
+
+```bash
+export CHICORY_FUZZ_SEED=path/to/seed.txt
+export CHICORY_FUZZ_TYPES=numeric,table
+
+./gradlew --no-daemon :fuzz:test --tests "uk.shusek.krwa.fuzz.SingleReproTest.singleReproducer"
+```
+
+## Configuration
+
+Smith defaults are in `src/test/resources/smith.default.properties`:
+
+```
+min-exports=10
+max-imports=0
+max-modules=1
+simd-enabled=false
+relaxed-simd-enabled=false
+```

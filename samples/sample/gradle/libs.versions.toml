@@ -1,0 +1,25 @@
+[versions]
+coroutines = "1.10.2"
+io = "0.9.0"
+kotlin = "2.4.0"
+krwa = "0.3.0-SNAPSHOT"
+ktor = "3.5.0"
+serialization = "1.11.0"
+
+[libraries]
+krwaAnnotations = { module = "uk.shusek.krwa:annotations", version.ref = "krwa" }
+krwaComponentModel = { module = "uk.shusek.krwa:component-model", version.ref = "krwa" }
+krwaRuntime = { module = "uk.shusek.krwa:runtime", version.ref = "krwa" }
+krwaWasi = { module = "uk.shusek.krwa:wasi", version.ref = "krwa" }
+krwaWasiPreview3 = { module = "uk.shusek.krwa:wasi-preview3", version.ref = "krwa" }
+krwaWasm = { module = "uk.shusek.krwa:wasm", version.ref = "krwa" }
+krwaWasmTools = { module = "uk.shusek.krwa:wasm-tools", version.ref = "krwa" }
+ktorClientMock = { module = "io.ktor:ktor-client-mock", version.ref = "ktor" }
+kotlinxCoroutinesCore = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
+kotlinxIoCore = { module = "org.jetbrains.kotlinx:kotlinx-io-core", version.ref = "io" }
+kotlinxSerializationJson = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
+kotlinxSerializationJsonIo = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json-io", version.ref = "serialization" }
+
+[plugins]
+kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }

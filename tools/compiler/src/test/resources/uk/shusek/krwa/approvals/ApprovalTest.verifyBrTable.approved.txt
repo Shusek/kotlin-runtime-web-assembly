@@ -1,0 +1,144 @@
+public final class uk/shusek/krwa/$gen/CompiledMachine implements uk/shusek/krwa/runtime/Machine {
+
+  private final Luk/shusek/krwa/runtime/Instance; instance
+
+  public <init>(Luk/shusek/krwa/runtime/Instance;)V
+    ALOAD 0
+    INVOKESPECIAL java/lang/Object.<init> ()V
+    ALOAD 0
+    ALOAD 1
+    PUTFIELD uk/shusek/krwa/$gen/CompiledMachine.instance : Luk/shusek/krwa/runtime/Instance;
+    RETURN
+
+  public call(I[J)[J
+    TRYCATCHBLOCK L0 L1 L1 java/lang/StackOverflowError
+   L0
+    ALOAD 0
+    GETFIELD uk/shusek/krwa/$gen/CompiledMachine.instance : Luk/shusek/krwa/runtime/Instance;
+    DUP
+    INVOKEVIRTUAL uk/shusek/krwa/runtime/Instance.memory ()Luk/shusek/krwa/runtime/Memory;
+    ILOAD 1
+    ALOAD 2
+    INVOKESTATIC uk/shusek/krwa/$gen/CompiledMachineMachineCall.call (Luk/shusek/krwa/runtime/Instance;Luk/shusek/krwa/runtime/Memory;I[J)[J
+    ARETURN
+   L1
+    INVOKESTATIC uk/shusek/krwa/$gen/CompiledMachineShaded.throwCallStackExhausted (Ljava/lang/StackOverflowError;)Ljava/lang/RuntimeException;
+    ATHROW
+
+  public static call_indirect_0(IIILuk/shusek/krwa/runtime/Memory;Luk/shusek/krwa/runtime/Instance;)I
+    INVOKESTATIC uk/shusek/krwa/$gen/CompiledMachineShaded.checkInterruption ()V
+    ALOAD 4
+    ILOAD 2
+    INVOKEVIRTUAL uk/shusek/krwa/runtime/Instance.table (I)Luk/shusek/krwa/runtime/TableInstance;
+    ASTORE 5
+    ALOAD 5
+    ILOAD 1
+    INVOKEVIRTUAL uk/shusek/krwa/runtime/TableInstance.requiredRef (I)I
+    ISTORE 6
+    ALOAD 5
+    ILOAD 1
+    INVOKEVIRTUAL uk/shusek/krwa/runtime/TableInstance.instance (I)Luk/shusek/krwa/runtime/Instance;
+    ASTORE 7
+    ALOAD 7
+    IFNULL L0
+    ALOAD 7
+    ALOAD 4
+    IF_ACMPNE L1
+   L0
+    ILOAD 0
+    ALOAD 3
+    ALOAD 4
+    ILOAD 6
+    LOOKUPSWITCH
+      0: L2
+      default: L3
+   L2
+    INVOKESTATIC uk/shusek/krwa/$gen/CompiledMachineFuncGroup_0.func_0 (ILuk/shusek/krwa/runtime/Memory;Luk/shusek/krwa/runtime/Instance;)I
+    IRETURN
+   L3
+    INVOKESTATIC uk/shusek/krwa/$gen/CompiledMachineShaded.throwIndirectCallTypeMismatch ()Ljava/lang/RuntimeException;
+    ATHROW
+   L1
+    ICONST_1
+    NEWARRAY T_LONG
+    DUP
+    ICONST_0
+    ILOAD 0
+    I2L
+    LASTORE
+    ICONST_0
+    ILOAD 6
+    ALOAD 7
+    INVOKESTATIC uk/shusek/krwa/$gen/CompiledMachineShaded.callIndirect ([JIILuk/shusek/krwa/runtime/Instance;)[J
+    ICONST_0
+    LALOAD
+    L2I
+    IRETURN
+}
+
+final class uk/shusek/krwa/$gen/CompiledMachineFuncGroup_0 {
+
+  public static func_0(ILuk/shusek/krwa/runtime/Memory;Luk/shusek/krwa/runtime/Instance;)I
+    ILOAD 0
+    TABLESWITCH
+      0: L0
+      1: L1
+      2: L2
+      default: L3
+   L2
+    BIPUSH 100
+    IRETURN
+   L1
+    BIPUSH 101
+    IRETURN
+   L0
+    BIPUSH 102
+    IRETURN
+   L3
+    BIPUSH 103
+    IRETURN
+   L4
+    ATHROW
+
+  public static call_0(Luk/shusek/krwa/runtime/Instance;Luk/shusek/krwa/runtime/Memory;[J)[J
+    ALOAD 2
+    ICONST_0
+    LALOAD
+    L2I
+    ALOAD 1
+    ALOAD 0
+    INVOKESTATIC uk/shusek/krwa/$gen/CompiledMachineFuncGroup_0.func_0 (ILuk/shusek/krwa/runtime/Memory;Luk/shusek/krwa/runtime/Instance;)I
+    I2L
+    LSTORE 3
+    ICONST_1
+    NEWARRAY T_LONG
+    DUP
+    ICONST_0
+    LLOAD 3
+    LASTORE
+    ARETURN
+}
+
+final class uk/shusek/krwa/$gen/CompiledMachineMachineCall {
+
+  public <init>()V
+    ALOAD 0
+    INVOKESPECIAL java/lang/Object.<init> ()V
+    RETURN
+
+  public static call(Luk/shusek/krwa/runtime/Instance;Luk/shusek/krwa/runtime/Memory;I[J)[J
+    ALOAD 0
+    ALOAD 1
+    ALOAD 3
+    ILOAD 2
+    TABLESWITCH
+      0: L0
+      default: L1
+   L0
+    INVOKESTATIC uk/shusek/krwa/$gen/CompiledMachineFuncGroup_0.call_0 (Luk/shusek/krwa/runtime/Instance;Luk/shusek/krwa/runtime/Memory;[J)[J
+    ARETURN
+   L1
+    ILOAD 2
+    INVOKESTATIC uk/shusek/krwa/$gen/CompiledMachineShaded.throwUnknownFunction (I)Ljava/lang/RuntimeException;
+    ATHROW
+}

@@ -1,28 +1,13 @@
-# Dependencies
-/node_modules
+# Local generated documentation
+/build/
+/.dokka/
+/docs/
+/.docusaurus/
 
-# Production
-/build
-
-# Generated files
-.docusaurus
-.cache-loader
+# Local dependencies and test artifacts
+/node_modules/
+/.approval_tests_temp/
+/*.wasm
 
 # Misc
 .DS_Store
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-.yarn
-
-.pnp.*
-*.wasm
-*.result
-
-yarn.lock

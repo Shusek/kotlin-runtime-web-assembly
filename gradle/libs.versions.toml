@@ -1,0 +1,72 @@
+[versions]
+approvalTests = "30.1.1"
+asm = "9.10.1"
+commonsLang = "3.20.0"
+dokka = "2.2.0"
+errorProne = "2.49.0"
+jacksonAnnotations = "2.22"
+jacksonDatabind = "2.21.4"
+jetbrainsAnnotations = "13.0"
+jmh = "1.37"
+junit = "5.14.4"
+kotlin = "2.4.0"
+kotlinCryptoRandom = "0.6.0"
+kotlinxCoroutines = "1.10.2"
+kotlinxBrowser = "0.5.0"
+kotlinxDatetime = "0.8.0"
+kotlinxIo = "0.9.0"
+ksp = "2.3.9"
+ktor = "3.5.0"
+okio = "3.17.0"
+picocli = "4.7.7"
+velocity = "1.7"
+wasmTools = "1.252.0"
+wasmtime = "45.0.1"
+zerofs = "0.1.0"
+zip4j = "2.11.6"
+
+[libraries]
+approvalTests = { module = "com.approvaltests:approvaltests", version.ref = "approvalTests" }
+asm = { module = "org.ow2.asm:asm" }
+asmBom = { module = "org.ow2.asm:asm-bom", version.ref = "asm" }
+asmCommons = { module = "org.ow2.asm:asm-commons" }
+asmUtil = { module = "org.ow2.asm:asm-util" }
+commonsLang3 = { module = "org.apache.commons:commons-lang3", version.ref = "commonsLang" }
+errorProneAnnotations = { module = "com.google.errorprone:error_prone_annotations", version.ref = "errorProne" }
+jacksonAnnotations = { module = "com.fasterxml.jackson.core:jackson-annotations", version.ref = "jacksonAnnotations" }
+jacksonDatabind = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "jacksonDatabind" }
+jetbrainsAnnotations = { module = "org.jetbrains:annotations", version.ref = "jetbrainsAnnotations" }
+jmhCore = { module = "org.openjdk.jmh:jmh-core", version.ref = "jmh" }
+jmhGeneratorAnnprocess = { module = "org.openjdk.jmh:jmh-generator-annprocess", version.ref = "jmh" }
+junitBom = { module = "org.junit:junit-bom", version.ref = "junit" }
+junitJupiterApi = { module = "org.junit.jupiter:junit-jupiter-api" }
+junitJupiterEngine = { module = "org.junit.jupiter:junit-jupiter-engine" }
+junitJupiterParams = { module = "org.junit.jupiter:junit-jupiter-params" }
+junitPlatformLauncher = { module = "org.junit.platform:junit-platform-launcher" }
+kotlinCompilerEmbeddable = { module = "org.jetbrains.kotlin:kotlin-compiler-embeddable", version.ref = "kotlin" }
+kotlinGradlePlugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
+kotlinCryptoRand = { module = "org.kotlincrypto.random:crypto-rand", version.ref = "kotlinCryptoRandom" }
+kotlinxCoroutinesCore = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
+kotlinxBrowser = { module = "org.jetbrains.kotlinx:kotlinx-browser", version.ref = "kotlinxBrowser" }
+kotlinxDatetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinxDatetime" }
+kotlinxIoCore = { module = "org.jetbrains.kotlinx:kotlinx-io-core", version.ref = "kotlinxIo" }
+kotlinxIoOkio = { module = "org.jetbrains.kotlinx:kotlinx-io-okio", version.ref = "kotlinxIo" }
+kspSymbolProcessingApi = { module = "com.google.devtools.ksp:symbol-processing-api", version.ref = "ksp" }
+ktorClientCio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
+ktorClientCore = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
+ktorClientDarwin = { module = "io.ktor:ktor-client-darwin", version.ref = "ktor" }
+ktorClientJs = { module = "io.ktor:ktor-client-js", version.ref = "ktor" }
+ktorClientWebsockets = { module = "io.ktor:ktor-client-websockets", version.ref = "ktor" }
+ktorNetwork = { module = "io.ktor:ktor-network", version.ref = "ktor" }
+okio = { module = "com.squareup.okio:okio", version.ref = "okio" }
+picocli = { module = "info.picocli:picocli", version.ref = "picocli" }
+velocity = { module = "org.apache.velocity:velocity", version.ref = "velocity" }
+zerofs = { module = "io.roastedroot:zerofs", version.ref = "zerofs" }
+zip4j = { module = "net.lingala.zip4j:zip4j", version.ref = "zip4j" }
+
+[plugins]
+dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
+kotlinJvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlinKapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "kotlin" }
+kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }

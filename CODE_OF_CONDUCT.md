@@ -34,13 +34,13 @@ This Code of Conduct applies both within project spaces and in public spaces whe
 
 ## Code of Conduct Team
 
-The Organization’s Code of Conduct Team is responsible for ensuring that all Code of Conduct complaints are investigated and resolved. It consists of the members of the Technical Steering Commmittee along with the Executive Director acting as Compliance Officer. The Compliance Officer, on behalf of the Code of Conduct Team, will advise the Board of all complaints and their resolution and will report at least annually to the Board on compliance activity relating to the organizational Code of Conduct.
+Project maintainers are responsible for ensuring that Code of Conduct complaints are investigated and resolved.
 
 ## Enforcement
 
-Instances of abusive, harassing, or otherwise unacceptable behavior may be reported by contacting the Bytecode Alliance CoC Team at [report@bytecodealliance.org](mailto:report@bytecodealliance.org). The CoC Team will review and investigate all complaints, and will respond in a way that it deems appropriate to the circumstances. The CoC Team is obligated to maintain confidentiality with regard to the reporter of an incident. Further details of specific enforcement policies may be posted separately.
+Instances of abusive, harassing, or otherwise unacceptable behavior may be reported through the repository maintainers on GitHub. Project maintainers will review and investigate complaints, and will respond in a way that is appropriate to the circumstances. Project maintainers are obligated to maintain confidentiality with regard to the reporter of an incident. Further details of specific enforcement policies may be posted separately.
 
-Project maintainers who do not follow or enforce the Code of Conduct in good faith may face temporary or permanent repercussions as determined by other members of the Bytecode Alliance's leadership.
+Project maintainers who do not follow or enforce the Code of Conduct in good faith may face temporary or permanent repercussions as determined by other project maintainers.
 
 ## Attribution
 

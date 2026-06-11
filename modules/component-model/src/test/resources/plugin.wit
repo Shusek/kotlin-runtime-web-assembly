@@ -1,0 +1,29 @@
+package example:plugins;
+
+interface host {
+  log: func(level: u8, message: string);
+}
+
+interface transform {
+  record request {
+    body: list<u8>,
+    content-type: string,
+  }
+
+  variant response {
+    ok(list<u8>),
+    rejected(string),
+  }
+
+  flags features {
+    streaming,
+    cacheable,
+  }
+
+  export: func(request: request) -> result<response, string>;
+}
+
+world plugin {
+  import host;
+  export transform;
+}

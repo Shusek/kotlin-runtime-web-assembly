@@ -1,0 +1,28 @@
+private final Luk/shusek/krwa/runtime/Instance; instance
+
+  private final Luk/shusek/krwa/runtime/internal/CompilerInterpreterMachine; compilerInterpreterMachine
+}
+
+  private final static Z memCopyWorkaround
+}
+
+final class uk/shusek/krwa/$gen/CompiledMachineFuncGroup_0 {
+
+  public static func_2(ILuk/shusek/krwa/runtime/Memory;Luk/shusek/krwa/runtime/Instance;)I
+    ICONST_1
+    NEWARRAY T_LONG
+    DUP
+    ICONST_0
+    ILOAD 0
+    I2L
+    LASTORE
+    ICONST_2
+    ALOAD 2
+    INVOKESTATIC uk/shusek/krwa/$gen/CompiledMachineShaded.callIndirect ([JILuk/shusek/krwa/runtime/Instance;)[J
+    ICONST_0
+    LALOAD
+    L2I
+    IRETURN
+}
+
+}

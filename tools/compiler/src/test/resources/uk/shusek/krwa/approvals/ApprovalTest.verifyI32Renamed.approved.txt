@@ -1,0 +1,68 @@
+public final class FOO implements uk/shusek/krwa/runtime/Machine {
+
+  private final Luk/shusek/krwa/runtime/Instance; instance
+
+  public <init>(Luk/shusek/krwa/runtime/Instance;)V
+    ALOAD 0
+    INVOKESPECIAL java/lang/Object.<init> ()V
+    ALOAD 0
+    ALOAD 1
+    PUTFIELD FOO.instance : Luk/shusek/krwa/runtime/Instance;
+    RETURN
+
+  public call(I[J)[J
+    TRYCATCHBLOCK L0 L1 L1 java/lang/StackOverflowError
+   L0
+    ALOAD 0
+    GETFIELD FOO.instance : Luk/shusek/krwa/runtime/Instance;
+    DUP
+    INVOKEVIRTUAL uk/shusek/krwa/runtime/Instance.memory ()Luk/shusek/krwa/runtime/Memory;
+    ILOAD 1
+    ALOAD 2
+    INVOKESTATIC FOOMachineCall.call (Luk/shusek/krwa/runtime/Instance;Luk/shusek/krwa/runtime/Memory;I[J)[J
+    ARETURN
+   L1
+    INVOKESTATIC FOOShaded.throwCallStackExhausted (Ljava/lang/StackOverflowError;)Ljava/lang/RuntimeException;
+    ATHROW
+
+  public static call_indirect_0(IILuk/shusek/krwa/runtime/Memory;Luk/shusek/krwa/runtime/Instance;)V
+    INVOKESTATIC FOOShaded.checkInterruption ()V
+    ALOAD 3
+    ILOAD 1
+    INVOKEVIRTUAL uk/shusek/krwa/runtime/Instance.table (I)Luk/shusek/krwa/runtime/TableInstance;
+    ASTORE 4
+    ALOAD 4
+    ILOAD 0
+    INVOKEVIRTUAL uk/shusek/krwa/runtime/TableInstance.requiredRef (I)I
+    ISTORE 5
+    ALOAD 4
+    ILOAD 0
+    INVOKEVIRTUAL uk/shusek/krwa/runtime/TableInstance.instance (I)Luk/shusek/krwa/runtime/Instance;
+    ASTORE 6
+    ALOAD 6
+    IFNULL L0
+    ALOAD 6
+    ALOAD 3
+    IF_ACMPNE L1
+   L0
+    ALOAD 2
+    ALOAD 3
+    ILOAD 5
+    LOOKUPSWITCH
+      0: L2
+      default: L3
+   L2
+    INVOKESTATIC FOOFuncGroup_0.func_0 (Luk/shusek/krwa/runtime/Memory;Luk/shusek/krwa/runtime/Instance;)V
+    RETURN
+   L3
+    INVOKESTATIC FOOShaded.throwIndirectCallTypeMismatch ()Ljava/lang/RuntimeException;
+    ATHROW
+   L1
+    ICONST_0
+    NEWARRAY T_LONG
+    ICONST_0
+    ILOAD 5
+    ALOAD 6
+    INVOKESTATIC FOOShaded.callIndirect ([JIILuk/shusek/krwa/runtime/Instance;)[J
+    RETURN
+}

@@ -9,8 +9,20 @@
 .cursor
 
 target/
+.gradle/
+.kotlin/
+/build/
+**/build/
+/site/
+
+# Legacy local checkout locations for external test suites.
 testsuite/
 wasi-testsuite/
+prod-testsuite-base.zip
+
+# Legacy root artifacts from old KMP module names.
+runtime-kmp/
+wasm-kmp/
 dependency-reduced-pom.xml
 jmh-result.json
 scripts/jmh-tmp
@@ -24,11 +36,13 @@ scripts/jmh-tmp
 
 /local-repo
 
-/wasm-tools/*.tar.gz
+**/wasm-tools/*.tar.gz
 
+# Legacy local tool output locations.
 /binaryen-install
 /zig-install
 /zig-source
 /zig-testsuite
 
 .claude
+/local.properties

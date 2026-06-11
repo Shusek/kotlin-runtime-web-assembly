@@ -1,0 +1,20 @@
+[versions]
+agp = "9.2.1"
+junitJupiterApi = "5.14.3"
+kotlin = "2.4.0"
+kotlinxIo = "0.9.0"
+krwa = "0.3.0-SNAPSHOT"
+
+[libraries]
+junit-jupiter-api = { module = "org.junit.jupiter:junit-jupiter-api", version.ref = "junitJupiterApi" }
+kotlinx-io-core-jvm = { module = "org.jetbrains.kotlinx:kotlinx-io-core-jvm", version.ref = "kotlinxIo" }
+krwa-wasi = { module = "uk.shusek.krwa:wasi", version.ref = "krwa" }
+krwa-runtime = { module = "uk.shusek.krwa:runtime", version.ref = "krwa" }
+krwa-wasm = { module = "uk.shusek.krwa:wasm", version.ref = "krwa" }
+krwa-wasmCorpus = { module = "uk.shusek.krwa:wasm-corpus", version.ref = "krwa" }
+android-gradle-plugin-api = { module = "com.android.tools.build:gradle-api", version.ref = "agp" }
+
+[plugins]
+kotlinJvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+android-library = { id = "com.android.library", version.ref = "agp" }
+android-junit5 = { id = "de.mannodermaus.android-junit5", version = "2.0.1" }

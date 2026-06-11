@@ -1,117 +1,237 @@
-# Endive
+# Kotlin Runtime Web Assembly
 
-<p align="center">
-  <picture>
-    <img width="200" src="endive.png">
-  </picture>
-  <br>
-  <strong>A <a href="https://bytecodealliance.org/">Bytecode Alliance</a> hosted project</strong>
-  <br><br>
-  <a href="https://endive.run/">Website</a> |
-  <a href="https://endive.run/docs/#getting-started">Getting started</a> |
-  <a href="https://endive.run/blog">Blog</a> |
-  <a href="/CONTRIBUTING.md">Contributing</a>
-</p>
+Kotlin Runtime Web Assembly is a Kotlin-first WebAssembly runtime for running
+plugins without JNI, native runtimes, or JSON-only plugin boundaries. The main
+Kotlin Multiplatform artifacts target JVM, iOS ARM, and Kotlin/Wasm browser
+builds. JVM variants are compiled for Java 25.
 
-[![Interpreter Test Results](https://raw.githubusercontent.com/bytecodealliance/endive/badges/badge-interpreter.svg)](https://github.com/bytecodealliance/endive/actions)
-[![Compiler Test Results](https://raw.githubusercontent.com/bytecodealliance/endive/badges/badge-compiler.svg)](https://github.com/bytecodealliance/endive/actions)
-[![WASI Test Results](https://raw.githubusercontent.com/bytecodealliance/endive/badges/badge-wasi.svg)](https://github.com/bytecodealliance/endive/actions)
+## Project Status
 
-[![Zulip](https://img.shields.io/badge/zulip-join_chat-brightgreen.svg)](https://bytecodealliance.zulipchat.com/#narrow/stream/endive)
+This project is experimental and under active development. Every push to `main`
+publishes `0.3.0-SNAPSHOT` artifacts for evaluation and integration work;
+production use [should wait](https://youtube.com/shorts/xODPOxVDzFE) for
+reviewed releases and pinned versions. Public APIs in experimental modules may
+change while the Kotlin Multiplatform and Component Model surfaces settle. If
+you still decide to run it in production, who am I to judge? Pin versions
+carefully and expect breaking changes.
 
-Endive is a JVM native WebAssembly runtime. It allows you to run WebAssembly programs with
-zero native dependencies or JNI. Endive can run Wasm anywhere that the JVM can go. It is designed with
-simplicity and safety in mind.
+Special thanks to [dylibso/chicory](https://github.com/dylibso/chicory) for the
+solid foundations this project builds on.
 
-Endive is a fork of [Chicory](https://github.com/dylibso/chicory) by Dylibso, Inc.
-We thank Dylibso for the incubation period and their foundational work on this project.
+## Documentation
 
-> *Reach out to us*: let us know what you are building with Endive.
-> [Join our Zulip chat](https://bytecodealliance.zulipchat.com/#narrow/stream/endive).
+**Read the full documentation:**
+[shusek.github.io/kotlin-runtime-web-assembly](https://shusek.github.io/kotlin-runtime-web-assembly/)
 
-Get started now with the [official documentation](https://endive.run/docs/)
+Start with:
 
-## Why?
+- [Installation](docs/pages/getting-started/installation.md)
+- [Runtime basics](docs/pages/getting-started/runtime-basics.md)
+- [Execution modes](docs/pages/execution/modes.md)
+- [CPU limits](docs/pages/execution/cpu-limits.md)
+- [WASI Preview 1](docs/pages/wasi/preview1.md)
+- [Component Model](docs/pages/components/index.md)
 
-There are a number of mature Wasm runtimes to choose from to execute a Wasm module.
-To name a few [v8](https://v8.dev/), [wasmtime](https://wasmtime.dev/), [wasmer](https://wasmer.io/), [wasmedge](https://wasmedge.org/), [wazero](https://wazero.io/) etc.
+## Quick Start
 
-Although these can be great choices for running a Wasm application, embedding them into your existing
-Java application has some downsides. Because these runtimes are written in C/C++/Rust/etc, they must be distributed
-and run as native code. This causes two main friction points:
+Snapshots are published to the public GitHub Pages Maven repository:
 
-### 1. Distribution
+```kotlin
+// settings.gradle.kts
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        mavenCentral()
+        maven("https://shusek.github.io/kotlin-runtime-web-assembly/maven")
+    }
+}
+```
 
-If you're distributing a Java library (jar, war, etc), you must now distribute along with it a native object targeting the correct
-architecture and operating system. This matrix can become quite large. This eliminates a lot of the simplicity and original benefit of shipping Java code.
+Use the BOM and add the runtime:
 
-### 2. Runtime
+```kotlin
+// build.gradle.kts
+val runtimeVersion = "0.3.0-SNAPSHOT"
 
-At runtime, you must use FFI to execute the module. When you do, you're effectively escaping the safety and observability of the JVM. Having a pure JVM runtime means all your
-security and memory guarantees, and your tools, can stay in place.
+dependencies {
+    implementation(platform("uk.shusek.krwa:bom:$runtimeVersion"))
+    implementation("uk.shusek.krwa:runtime")
+}
+```
+
+Parse and instantiate a module:
+
+```kotlin
+import uk.shusek.krwa.runtime.Instance
+import uk.shusek.krwa.wasm.WasmParser
+
+fun instantiate(bytes: ByteArray): Instance =
+    Instance.builder(WasmParser.parse(bytes)).build()
+```
+
+Add `wasi`, `component-model`, `wasi-preview3`, or JVM-only `simd` when the
+host needs those surfaces. The [installation guide](docs/pages/getting-started/installation.md)
+has the full module list and target-specific notes.
+
+The JVM-only `Parser` facade still provides `InputStream`, `File`, and `Path`
+entrypoints for JVM consumers. Multiplatform consumers should use `WasmParser`
+with `ByteArray` or `okio.Source`.
+
+## WASI And Components
+
+Use `component-model` when plugin boundaries should be described with WIT and
+lifted/lowered through the canonical ABI instead of ad-hoc JSON payloads. It
+includes WIT parsing, Kotlin contract generation, `WasmPlugin`, WASI Preview 2,
+and canonical Preview 3 runtime support. See
+[modules/component-model/README.md](modules/component-model/README.md) for the
+full surface.
+
+Use `wasi-preview3` when you want the Kotlin-first WASI 0.3 facade:
+
+```kotlin
+val runtime = KotlinWasiPreview3.builder()
+    .withNetworking()
+    .withStreamBufferCapacity(64 * 1024)
+    .withMaxPendingFutures(4_096)
+    .build()
+
+val future = runtime.completed("ready")
+val value = runtime.await(future)
+runtime.close()
+```
+
+The facade keeps canonical `WitFuture<T>` and `WitStream<T>` handles at the
+boundary, while adding coroutine adapters, typed stream helpers, Kotlin clock
+and random configuration, and a capability-based file API over preopened
+directories. See [modules/wasi-preview3/README.md](modules/wasi-preview3/README.md).
+
+Browser wasm builds can parse modules, instantiate the interpreter, or use
+`WasmJsExecution.instantiate` to prefer the browser or Node WebAssembly engine
+and fall back to the interpreter when native execution is unavailable or the
+provided imports require interpreter-owned objects. Its common facade exposes
+function exports, exported memories, globals, tables, and exception tags across
+the selected backend. Tables expose shared metadata such as size, element type,
+and limits; use the concrete backend object for raw table entries. Advanced
+callers can use `NativeWasmInstance` directly. Native runtime traps during
+instantiation are not masked by `AUTO`; they are reported as
+`NativeWasmRuntimeException`. Native execution accepts modules parsed from
+complete bytes, uses `NativeWasmImports` for host functions, memories, globals,
+tables, and exception tags, and exposes exported linear memories through
+`NativeWasmMemory` with native shared memory atomics when the host enables
+`SharedArrayBuffer`.
+`NativeWasmTag` bridges `WebAssembly.Tag` for exception-handling modules when
+the host engine exposes that JS API, including host callbacks throwing imported
+tags with `NativeWasmTag.throwException`. Reference values such as `externref`,
+`anyref`, and `funcref` are represented as stable `Long` handles; use
+`NativeWasmInstance.storeReference` and `referenceValue` to bridge those handles
+to real JavaScript values. Function reference tables and globals use the
+host-compatible `anyfunc` descriptor under the hood. `NativeWasmFeatures`
+reports host support for the native engine, shared memories, exception tags,
+value types, and table element types before an application selects that fast
+path. `NativeWasmImports.fromImportValues` can reuse existing `ImportFunction`
+handles, including functions exported by an interpreter `Instance`, while
+memory/global/table/tag imports still need the native wrapper types when they
+must be shared with the browser engine. Browser filesystem access,
+raw TCP/UDP sockets, and blocking delay must be supplied by the application when
+a WASI workload needs those capabilities. Node-backed wasmJs environments also
+have suspend TCP connect and listen paths; wasmJs UDP remains unavailable.
+
+## Resource Budgets
+
+The runtime does not own a global CPU quota. Hosts that run untrusted code should
+enforce execution time at the Wasm call or resume boundary, for example by
+running JVM execution on an interruptible worker thread and cancelling it on
+timeout. Coroutine cancellation alone does not preempt CPU-bound Wasm execution.
+
+When using WASI Preview 3, also budget the async host side. A supplied
+`CoroutineDispatcher` or `CoroutineScope` controls where P3 host tasks and
+coroutine-scheduled P3 resumes run; a dispatcher with parallelism greater than
+one can consume multiple CPU cores. If billing or limits assume one core, use a
+bounded resource policy such as `withResourceBudget(parallelism = 1)`.
+`withResourceBudget(...)` is a resource limit, not a CPU meter. Real CPU
+accounting requires OS/process isolation, cgroup accounting, or a dedicated JVM
+worker pool measured with platform thread CPU counters.
+See [CPU limits](docs/pages/execution/cpu-limits.md) and
+[wasi-preview3](modules/wasi-preview3/README.md).
+
+## Sample
+
+The standalone sample builds a Kotlin `wasmWasi` guest and runs it through the
+JVM host:
+
+```shell
+cd samples/sample
+./gradlew runShowcase
+./gradlew runWasmJsShowcase
+./gradlew runIosShowcase
+```
+
+The showcase covers core Wasm execution plus a Kotlin 2.4 `wasmWasi` app that
+runs as raw WASI Preview 1, as a component with the bundled Preview 1 adapter,
+and through a WASIp3-configured host bridge. The WASI path exercises host HTTP,
+`kotlinx.serialization`, chunked `stdin` streaming, coroutine aggregation,
+sandboxed filesystem reports, capability-safe file semantics, controlled malformed
+JSON handling, WIT generation, Component Model packaging, WASIp3 runtime services,
+Ktor `HttpClient` wiring through WASIp3, and WASIp2 host wiring. The wasmJs
+showcase runs a web-targeted subset through
+`Instance.builder(...).withExecutionBackend(ExecutionBackend.AUTO)`, proving the
+same common API can select the host browser or Node WebAssembly engine on
+wasmJs while falling back to the interpreter on JVM and iOS. The iOS simulator
+showcase demonstrates the same portable parser/interpreter API surface for instance
+construction, function exports, structured control flow, host imports,
+`Store`-based cross-module imports, traps, linear memory, WIT parsing, WASIp3
+metadata/contracts, and WASIp3 preopened storage from Kotlin/Native. See
+[samples/sample/README.md](samples/sample/README.md) for the detailed coverage
+list.
+
+The shared KMP portion of the sample lives in `src/kmpShowcaseMain` and is used
+by JVM, wasmJs, and iOS. Its common runner owns the shared execution flow, while
+platform source sets only add entry points and storage-root configuration.
+
+## Local Development
+
+For local changes that are not committed yet, keep this repository checked out
+next to your application and use a Gradle composite build:
+
+```kotlin
+// settings.gradle.kts
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+    }
+}
+
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        mavenCentral()
+    }
+}
+
+includeBuild("../kotlin-runtime-web-assembly")
+```
+
+Then declare the same module dependencies in your application. Adjust the
+`includeBuild` path to where this repository is checked out.
+
+If you prefer normal local Maven dependencies, publish the checkout once and
+enable `mavenLocal()` in the consuming build:
+
+```shell
+git clone https://github.com/Shusek/kotlin-runtime-web-assembly.git
+cd kotlin-runtime-web-assembly
+./gradlew publishToMavenLocal
+```
 
 ## Goals
 
-* Be the default runtime for Wasm on the JVM
-* Be as safe as possible
-* Make it easy to run Wasm in any JVM environment without native code, including very restrictive environments
-* Fully support the core Wasm spec
-* Make integration with Java (and other host languages) easy and idiomatic
+- Make Kotlin/Wasm plugins practical across supported targets.
+- Use WIT and the Component Model for plugin boundaries instead of ad-hoc JSON.
+- Keep the host runtime portable and dependency-light.
+- Support WASI Preview 2 as a first-class host surface and WASI Preview 3 as
+  the stable async Component Model surface.
 
-## Roadmap
+## License
 
-Endive development builds on years of work started in September 2023 as Chicory.
-If you have an interest in working on any of these please reach out in Zulip!
-
-### Completed
-
-* [x] Wasm binary parser
-* [x] Simple bytecode interpreter
-* [x] Generate JUnit tests from wasm test suite
-* [x] All tests green with the interpreter (correctness)
-* [x] Validation logic (safety)
-* [x] v1.0 API (stability and dx)
-* [x] Decoupled interpreter and compiler "engines"
-* [x] Build-time compiler passes all the same specs as interpreter
-* [x] WASIp1 Support (including test gen)
-* [x] SIMD Support
-* [x] Tail Call (interpreter and compiler)
-* [x] Compiler out of experimental
-* [x] Exception Handling
-* [x] Threads Support
-* [x] Extended Constant Expressions
-* [x] GC support
-* [x] Multi-Memory Support
-
-### Ongoing
-
-* [ ] Performance
-* [ ] WASIp2 Support
-
-## On the press
-
-- [Chicory: A Zero Dependency Wasm Runtime for the JVM](https://www.javaadvent.com/2023/12/chicory-wasm-jvm.html) on [Java Advent 2023](https://www.javaadvent.com/2023/12)
-- [Chicory - a WebAssembly Interpreter Written Purely in Java with Zero Native Dependencies](https://www.infoq.com/news/2024/05/chicory-wasm-java-interpreter/) on [InfoQ](https://www.infoq.com)
-- [Chicory: Write to WebAssembly, Overcome JVM Shortcomings](https://thenewstack.io/chicory-write-to-webassembly-overcome-jvm-shortcomings/) on [The New Stack](https://thenewstack.io)
-- [Meet Chicory, exploit the power of WebAssembly on the server side! by Andrea Peruffo](https://www.youtube.com/watch?v=7a1yrDSh9rA) (Devoxx BE 2024)
-- [WebAssembly, the Safer Alternative to Integrating Native Code in Java](https://www.infoq.com/articles/sqlite-java-integration-webassembly/) on [InfoQ](https://www.infoq.com)
-- [Chicory: Creating a Language-Native Wasm Runtime by Benjamin Eckel / Andrea Peruffo](https://www.youtube.com/watch?v=00LYdZS0YlI) (Wasm I/O 2024)
-- [Chicory, a JVM Native WebAssembly Runtime by Benjamin Eckel](https://youtu.be/acF_cJ70n04?si=jpMAfAmjl5UaEWWa) (Dylibso Insiders)
-- [WebAssembly the ace up the sleeve of your Java and Quarkus apps](https://www.youtube.com/live/YY5he2pdv8Q?si=tJCXJbfLXDtRxbh-) (Quarkus Insights 206)
-- [The Chicory Photo Album: Celebrating 1.0.0 and a Year of Wasm](https://www.javaadvent.com/2024/12/wasm-chicory-1.html) on [Java Advent 2024](https://www.javaadvent.com/2024/12)
-- [Wazero vs Chicory: An In-Depth Comparison Between Two Language-Native Wasm Runtimes by Edoardo Vacchi](https://archive.fosdem.org/2025/schedule/event/fosdem-2025-4961-wazero-vs-chicory-an-in-depth-comparison-between-two-language-native-wasm-runtimes/) (FOSDEM 2025)
-- [WASM in the Enterprise: Secure, Portable, and Ready for Business by Andrea Peruffo](https://www.infoq.com/presentations/wasm-enterprise/) (QCon London 2025)
-- [A Go CEL Policy Engine in Java, with Quarkus Chicory](https://quarkus.io/blog/k8s-style-CEL-with-quarkus-chicory/) on [Quarkus Blog](https://quarkus.io/blog/)
-- [Introduction to the Chicory Native JVM WebAssembly Runtime](https://www.baeldung.com/chicory-native-jvm-webassembly-runtime) on [Baeldung](https://www.baeldung.com)
-- [Bring WebAssembly to the JVM. How Chicory Is Powering a New Generation of Java Libraries](https://www.javaadvent.com/2025/12/chicory-webassembly-on-the-jvm.html) on [Java Advent 2025](https://www.javaadvent.com/2025/12)
-- [The State of Zero-Dependency Wasm: A 2026 Update from Wazero and Chicory](https://www.youtube.com/watch?v=RjLXovPbU90) (Wasm I/O 2026)
-
-## Prior Art
-
-* [asmble](https://github.com/cretz/asmble)
-* [kwasm](https://github.com/jasonwyatt/KWasm)
-* [wazero](https://wazero.io/)
-
-## Who uses Endive?
-
-See [ADOPTERS.md](ADOPTERS.md) for the full list of organizations and projects using Endive.
+MIT. See [LICENSE](LICENSE).

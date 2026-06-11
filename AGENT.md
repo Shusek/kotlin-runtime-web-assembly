@@ -1,96 +1,112 @@
 # Working with this repository
 
-Endive is a WebAssembly runtime written in Java. This document captures practical knowledge for working in the codebase.
+Kotlin Runtime Web Assembly (KRWA) is a Kotlin-first WebAssembly runtime and
+toolchain. The core `wasm` and `runtime` artifacts are Kotlin Multiplatform
+modules for JVM, iOS ARM, and web/wasm browser builds; compiler, tooling, test
+generation, and some integration layers remain JVM-specific.
 
 ## Prerequisites
 
-- Java 11+ (build targets Java 11 compatibility)
-- Maven (or use `./mvnw` / `./mvnw.cmd`)
+- Java 25 for the normal Gradle build and CI configuration
+- Gradle via `./gradlew`
+- Node.js and npm for Kotlin/Wasm browser artifacts and wasm node-based tests
 
 ## Key build commands
 
 ```bash
 # Full build with all tests
-mvn clean install
+./gradlew --no-daemon test --continue
 
-# Quick install, skip all tests and checks
-mvn -Dquickly
+# Publish local artifacts for downstream composite checks
+./gradlew --no-daemon publishToMavenLocal -x test
 
-# Skip tests only
-mvn install -DskipTests
+# Run one Gradle module's tests
+./gradlew --no-daemon :runtime:test
 
-# Disable linters and enforcers during development
-mvn -Ddev <goals>
-
-# Autoformat code (required before committing)
-mvn spotless:apply
+# Build generated API documentation
+./gradlew --no-daemon :dokkaGenerate
 ```
 
 ## Module dependency graph
 
-Maven plugins are defined in the same build, so modules do not build in isolation. Always use `-pl` and `-am` to include dependencies:
+The Gradle build wires module dependencies in the root build script. Use
+qualified Gradle task paths for focused work and let Gradle bring in required
+dependencies:
 
 ```
-wasm-corpus (test resources)
-wasm (parser, validator, types)
-  └── runtime (interpreter, Instance, Store)
-        ├── wasi (WASI preview1)
-        │     └── wasm-tools (wat2wasm, wast2json via WASI)
-        ├── compiler (JVM bytecode compiler)
-        ├── simd (SIMD opcodes, pluggable machine)
-        └── log
+wasm-corpus (compiled Wasm fixtures and source corpus)
+wasm (parser, writer, validation-facing types)
+  <- runtime (interpreter, Instance, Store, Memory)
+       <- wasi (WASI Preview 1)
+       <- component-model (WIT and canonical ABI support)
+            <- wasi-preview3 (Kotlin-first WASI 0.3 facade)
+  <- compiler (JVM bytecode compiler)
+  <- simd (SIMD-capable machine)
 ```
 
-Other modules: `annotations`, `annotations/processor`, `build-time-compiler`, `compiler-maven-plugin`, `dircache`.
+Other modules include `annotations`, `annotations:processor`,
+`build-time-compiler`, `codegen`, `dircache`, `wasm-tools`, `wabt`,
+`test-gen-lib`, and `wasi-test-gen`.
 
 ## Building and testing a single module
 
-After changing code in a module, you must `mvn install` it (and its dependencies) before downstream modules can see the changes. Use `-DskipTests` when you only need to propagate artifacts:
+Run the focused Gradle task for the module you changed. Publish to Maven local
+only when an external consumer needs artifact coordinates:
 
 ```bash
-# Build runtime and everything it depends on, skip tests
-mvn install -pl runtime -am -DskipTests
+# Runtime unit tests
+./gradlew --no-daemon :runtime:test
 
-# Run only runtime unit tests (after install)
-mvn test -pl runtime
+# Parser/writer tests
+./gradlew --no-daemon :wasm:test
 
-# Build everything up to wasm-tools
-mvn install -pl wasm-tools -am -DskipTests
+# Browser wasm compile and node-backed wasm tests
+./gradlew --no-daemon :wasm:compileKotlinWasmJs :runtime:wasmJsNodeTest
+
+# Compiler tests
+./gradlew --no-daemon :compiler-tests:test
 ```
+
+The supported native/mobile/web target matrix is intentionally narrow:
+`iosArm64` and `iosSimulatorArm64` for iOS, and Kotlin/Wasm browser via
+`wasmJs { browser() }` for web. Do not add `iosX64`, classic `js()`, or
+`wasmWasi` targets to the core artifacts unless the platform decision changes.
+The root build also registers `wasmJs { nodejs() }` for test execution only.
 
 ## Spec tests (runtime-tests)
 
-The WebAssembly spec testsuite lives in `testsuite/`. JUnit tests are **generated** from `.wast` files by the `test-gen-plugin` Maven plugin at build time.
+The WebAssembly spec testsuite lives in `build/external-testsuites/wasm/`. WASI
+tests live in `build/external-testsuites/wasi/`. CI checks out fixed upstream
+refs before running the Gradle tests. Local runs need those directories present
+when exercising generated spec tests.
 
 ### Adding a new spec test
 
-1. Add the `.wast` filename to `<includedWasts>` in `runtime-tests/pom.xml`
-2. Run `mvn install -pl runtime-tests -am` to regenerate the JUnit test classes
-3. Run `mvn surefire:test -pl runtime-tests` to execute them
+1. Update the relevant generated-test configuration under
+   `testing/*/src/test-gen`.
+2. Run the affected Gradle test task.
+3. Check generated approval output when the change updates expected behavior.
 
-Individual tests can be excluded via `<excludedTests>` in the same pom.
+Individual spec cases can be excluded in the same generated-test configuration
+when an upstream test targets unsupported behavior.
 
 ### Running spec tests
 
 ```bash
-# Full spec test suite (interpreter) — install first to generate test classes, then run
-mvn install -pl runtime-tests -am -DskipTests
-mvn surefire:test -pl runtime-tests
-
-# Or in one shot (install runs tests too)
-mvn install -pl runtime-tests -am
+# Interpreter spec tests
+./gradlew --no-daemon :runtime-tests:test
 
 # Compiler spec tests
-mvn surefire:test -pl compiler-tests
+./gradlew --no-daemon :compiler-tests:test
 
-# WASI spec tests
-mvn surefire:test -pl wasi-tests
+# WASI tests
+./gradlew --no-daemon :wasi-tests:test
 ```
 
 ### Running a single test class
 
 ```bash
-mvn surefire:test -pl runtime-tests -Dtest=SpecV1GcStructTest
+./gradlew --no-daemon :runtime-tests:test --tests '*SpecV1GcStructTest'
 ```
 
 ## Test modules
@@ -105,32 +121,35 @@ mvn surefire:test -pl runtime-tests -Dtest=SpecV1GcStructTest
 ## Code style
 
 - No wildcard imports (configure your IDE accordingly)
-- Run `mvn spotless:apply` before committing
+- Keep Kotlin formatting consistent with the surrounding file
 - Approval tests: set `APPROVAL_TESTS_USE_REPORTER=AutoApproveReporter` to auto-approve golden samples
 
 ## Module architecture overview
 
 ### `wasm` module
-- `Parser.java` — binary format parser
-- `Validator.java` — type checking and validation (see spec appendix for the algorithm)
-- `types/` — all Wasm types: `ValType`, `FunctionType`, `SubType`, `RecType`, `CompType`, `StructType`, `ArrayType`, `FieldType`, `StorageType`, `PackedType`, `TypeSection`, `OpCode`
+- `WasmParser` / `Parser` - portable parser API and JVM facade
+- `WasmWriter` - binary writer
+- `types/` - Wasm types such as `ValType`, `FunctionType`, `SubType`,
+  `RecType`, `CompType`, `StructType`, `ArrayType`, `FieldType`,
+  `StorageType`, `PackedType`, `TypeSection`, and `OpCode`
 
 ### `runtime` module
-- `Instance.java` — module instantiation, GC ref storage, heap type matching
-- `InterpreterMachine.java` — opcode interpreter (the main execution loop)
-- `Store.java` — cross-module linking
-- `ImportFunction.java` — imported function representation with cross-module type validation
-- `ConstantEvaluators.java` — constant expression evaluation (globals, element/data segments)
-- `WasmStruct.java`, `WasmArray.java`, `WasmI31Ref.java` — GC object types
-- `internal/GcRefStore.java` — auto-keyed store for Wasm GC references with mark-sweep collection
+- `Instance` - module instantiation, imports, exports, and runtime state
+- `InterpreterMachine` - opcode interpreter and execution loop
+- `Store` - cross-module linking
+- `ImportFunction` - imported function representation with type validation
+- `ConstantEvaluators` - constant expression evaluation
+- `WasmStruct`, `WasmArray`, `WasmI31Ref` - GC object types
+- `internal/GcRefStore` - auto-keyed store for Wasm GC references
 
 ### `compiler` module
-- `MachineFactoryCompiler.java` — entry point for the JVM bytecode compiler
-- `internal/Compiler.java` — translates Wasm opcodes to JVM bytecode
+- `MachineFactoryCompiler` - entry point for the JVM bytecode compiler
+- `internal/Compiler` - translates Wasm opcodes to JVM bytecode
 
 ### `wasi` module
-- `WasiPreview1.java` — WASI preview1 host function implementations
-- `WasiOptions.java` — configuration (stdin/stdout/stderr, directories, env vars)
+- `WasiPreview1` - WASI Preview 1 host function implementations
+- `WasiOptions` - configuration for stdio, directories, env vars, and host
+  services
 
 ## Performance considerations
 

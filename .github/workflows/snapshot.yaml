@@ -1,0 +1,76 @@
+name: Snapshot
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    name: Publish Snapshot And Docs
+    runs-on: ubuntu-latest
+    if: github.repository == 'Shusek/kotlin-runtime-web-assembly'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install Zensical
+        run: python -m pip install -r docs/requirements.txt
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 25
+          cache: gradle
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Build Zensical docs
+        run: zensical build --clean
+
+      - name: Build Dokka API docs
+        run: ./gradlew --no-daemon :dokkaGenerate
+
+      - name: Prepare Pages site
+        run: |
+          set -euo pipefail
+          rm -rf build/pages
+          mkdir -p build/pages/api
+          rsync -a site/ build/pages/
+          rsync -a build/dokka/html/ build/pages/api/
+          touch build/pages/.nojekyll
+
+      - name: Publish snapshot artifacts
+        run: ./gradlew --no-daemon -Pkrwa.githubPagesMavenRepository="$PWD/build/pages/maven" publishAllPublicationsToGithubPagesRepository -x test
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          name: github-pages-${{ github.run_attempt }}
+          path: build/pages
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
+        with:
+          artifact_name: github-pages-${{ github.run_attempt }}

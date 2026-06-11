@@ -1,26 +1,25 @@
-# Website
+# Documentation
 
-This website is built using [Docusaurus](https://docusaurus.io/), a modern static website generator.
+This repository publishes two documentation surfaces to GitHub Pages:
 
-### Installation
+- descriptive documentation built with Zensical from `docs/pages`,
+- generated API reference built with Dokka and published under `/api`.
 
-```
-$ npm install
-```
+Build locally from the repository root:
 
-### Local Development
-
-```
-$ npm run start
-```
-
-This command starts a local development server and opens up a browser window. Most changes are reflected live without having to restart the server.
-
-### Build
-
-```
-$ npm run build
+```shell
+# Use Python 3.12 or newer for Zensical.
+python3.12 -m venv /tmp/krwa-zensical
+/tmp/krwa-zensical/bin/python -m pip install -r docs/requirements.txt
+/tmp/krwa-zensical/bin/zensical build --clean
+./gradlew :dokkaGenerate
 ```
 
-This command generates static content into the `build` directory and can be served using any static contents hosting service.
+Zensical writes the descriptive site to `site`. Dokka writes generated API
+documentation to `build/dokka/html`.
 
+The GitHub Pages workflow copies them into one artifact:
+
+- `site/` becomes the root documentation site,
+- `build/dokka/html/` becomes `/api/`,
+- snapshot Maven artifacts are published under `/maven/`.
