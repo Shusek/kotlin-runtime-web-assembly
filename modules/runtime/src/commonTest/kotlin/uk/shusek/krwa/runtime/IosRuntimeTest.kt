@@ -1,6 +1,7 @@
 package uk.shusek.krwa.runtime
 
 import kotlin.test.Test
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import uk.shusek.krwa.wasm.WasmParser
@@ -57,6 +58,14 @@ class IosRuntimeTest {
         val instance = Instance.builder(module).withImportValues(hostImports).build()
 
         assertEquals(14, instance.export("callDouble").apply(7)[0].toInt())
+    }
+
+    @Test
+    fun shouldReturnEmptyArrayForVoidExport() {
+        val module = WasmParser.parse(VOID_EXPORT_WASM)
+        val instance = Instance.builder(module).build()
+
+        assertContentEquals(LongArray(0), instance.export("nop").apply())
     }
 
     @Test
@@ -118,6 +127,16 @@ class IosRuntimeTest {
                 0x20, 0x00,
                 0x10, 0x00,
                 0x0B,
+            )
+
+        val VOID_EXPORT_WASM =
+            byteArrayOf(
+                0x00, 0x61, 0x73, 0x6D,
+                0x01, 0x00, 0x00, 0x00,
+                0x01, 0x04, 0x01, 0x60, 0x00, 0x00,
+                0x03, 0x02, 0x01, 0x00,
+                0x07, 0x07, 0x01, 0x03, 0x6E, 0x6F, 0x70, 0x00, 0x00,
+                0x0A, 0x04, 0x01, 0x02, 0x00, 0x0B,
             )
 
         val TRAP_WASM =

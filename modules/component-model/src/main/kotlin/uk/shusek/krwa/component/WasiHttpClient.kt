@@ -1,5 +1,6 @@
 package uk.shusek.krwa.component
 
+import io.ktor.client.HttpClient as KtorHttpClient
 import kotlin.time.Duration
 import kotlinx.io.Buffer
 import kotlinx.io.RawSource
@@ -43,6 +44,8 @@ public class WasiHttpResponse {
 public class WasiHttpHeader(public val name: String, public val value: String)
 
 internal expect fun defaultWasiHttpClient(): WasiHttpClient
+
+internal expect fun ktorWasiHttpClient(httpClient: KtorHttpClient): WasiHttpClient
 
 private const val HTTP_BODY_CHUNK_SIZE: Long = 8192L
 

@@ -6,7 +6,10 @@ import io.ktor.client.HttpClient as KtorHttpClient
 import io.ktor.client.engine.darwin.Darwin
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.network.sockets.InetSocketAddress
+import kotlin.time.Duration
 import kotlin.time.Instant
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.FixedOffsetTimeZone
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.offsetAt
@@ -24,6 +27,9 @@ internal actual fun defaultWasiHttpClient(): WasiHttpClient =
             followRedirects = true
         }
     )
+
+internal actual fun ktorWasiHttpClient(httpClient: KtorHttpClient): WasiHttpClient =
+    KtorWasiHttpClient(httpClient)
 
 internal actual fun defaultWasiStdin(): RawSource = NullSource()
 
@@ -66,6 +72,10 @@ internal actual fun restoreWasiInterruptStatus() {
 }
 
 internal actual fun isWasiSecurityException(throwable: Throwable): Boolean = false
+
+internal actual fun wasiDelay(duration: Duration) {
+    runBlocking { delay(duration) }
+}
 
 private class NullSource : RawSource {
     override fun readAtMostTo(sink: Buffer, byteCount: Long): Long = -1L

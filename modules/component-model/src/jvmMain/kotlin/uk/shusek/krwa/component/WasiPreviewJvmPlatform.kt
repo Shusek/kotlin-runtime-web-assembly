@@ -5,9 +5,12 @@ package uk.shusek.krwa.component
 import io.ktor.client.HttpClient as KtorHttpClient
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.HttpTimeout
+import kotlin.time.Duration
 import kotlin.time.Instant
 import kotlin.time.toJavaInstant
 import kotlin.random.asKotlinRandom
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toJavaZoneId
 import kotlinx.io.RawSink
@@ -23,6 +26,9 @@ internal actual fun defaultWasiHttpClient(): WasiHttpClient =
             followRedirects = true
         }
     )
+
+internal actual fun ktorWasiHttpClient(httpClient: KtorHttpClient): WasiHttpClient =
+    KtorWasiHttpClient(httpClient)
 
 internal actual fun defaultWasiStdin(): RawSource = java.lang.System.`in`.asSource()
 
@@ -51,6 +57,10 @@ internal actual fun restoreWasiInterruptStatus() {
 
 internal actual fun isWasiSecurityException(throwable: Throwable): Boolean =
     throwable is SecurityException
+
+internal actual fun wasiDelay(duration: Duration) {
+    runBlocking { delay(duration) }
+}
 
 public fun WasiPreview2.Builder.withKtorHttpClient(httpClient: KtorHttpClient): WasiPreview2.Builder =
     withHttpClient(KtorWasiHttpClient(httpClient))

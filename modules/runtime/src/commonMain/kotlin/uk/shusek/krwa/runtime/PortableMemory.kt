@@ -158,47 +158,94 @@ class PortableMemory(private val limits: MemoryLimits) : Memory {
 
     override fun writeI32(addr: Int, data: Int) {
         checkBounds(addr, 4, sizeInBytes(), ::WasmRuntimeException)
-        writeByte(addr, data.toByte())
-        writeByte(addr + 1, (data ushr 8).toByte())
-        writeByte(addr + 2, (data ushr 16).toByte())
-        writeByte(addr + 3, (data ushr 24).toByte())
+        val pageOffset = addr and PAGE_MASK
+        if (pageOffset <= PAGE_MASK - 3) {
+            val page = page(addr ushr PAGE_SHIFT)
+            page[pageOffset] = data.toByte()
+            page[pageOffset + 1] = (data ushr 8).toByte()
+            page[pageOffset + 2] = (data ushr 16).toByte()
+            page[pageOffset + 3] = (data ushr 24).toByte()
+        } else {
+            writeByteUnchecked(addr, data.toByte())
+            writeByteUnchecked(addr + 1, (data ushr 8).toByte())
+            writeByteUnchecked(addr + 2, (data ushr 16).toByte())
+            writeByteUnchecked(addr + 3, (data ushr 24).toByte())
+        }
     }
 
     override fun readInt(addr: Int): Int {
         checkBounds(addr, 4, sizeInBytes(), ::WasmRuntimeException)
-        return (read(addr).toInt() and 0xFF) or
-            ((read(addr + 1).toInt() and 0xFF) shl 8) or
-            ((read(addr + 2).toInt() and 0xFF) shl 16) or
-            ((read(addr + 3).toInt() and 0xFF) shl 24)
+        val pageOffset = addr and PAGE_MASK
+        return if (pageOffset <= PAGE_MASK - 3) {
+            val page = page(addr ushr PAGE_SHIFT)
+            (page[pageOffset].toInt() and 0xFF) or
+                ((page[pageOffset + 1].toInt() and 0xFF) shl 8) or
+                ((page[pageOffset + 2].toInt() and 0xFF) shl 16) or
+                ((page[pageOffset + 3].toInt() and 0xFF) shl 24)
+        } else {
+            readByteUnchecked(addr) or
+                (readByteUnchecked(addr + 1) shl 8) or
+                (readByteUnchecked(addr + 2) shl 16) or
+                (readByteUnchecked(addr + 3) shl 24)
+        }
     }
 
     override fun writeLong(addr: Int, data: Long) {
         checkBounds(addr, 8, sizeInBytes(), ::WasmRuntimeException)
-        for (i in 0 until 8) {
-            writeByte(addr + i, (data ushr (i * 8)).toByte())
+        val pageOffset = addr and PAGE_MASK
+        if (pageOffset <= PAGE_MASK - 7) {
+            val page = page(addr ushr PAGE_SHIFT)
+            for (i in 0 until 8) {
+                page[pageOffset + i] = (data ushr (i * 8)).toByte()
+            }
+        } else {
+            for (i in 0 until 8) {
+                writeByteUnchecked(addr + i, (data ushr (i * 8)).toByte())
+            }
         }
     }
 
     override fun readLong(addr: Int): Long {
         checkBounds(addr, 8, sizeInBytes(), ::WasmRuntimeException)
         var result = 0L
-        for (i in 0 until 8) {
-            result = result or ((read(addr + i).toLong() and 0xFFL) shl (i * 8))
+        val pageOffset = addr and PAGE_MASK
+        if (pageOffset <= PAGE_MASK - 7) {
+            val page = page(addr ushr PAGE_SHIFT)
+            for (i in 0 until 8) {
+                result = result or ((page[pageOffset + i].toLong() and 0xFFL) shl (i * 8))
+            }
+        } else {
+            for (i in 0 until 8) {
+                result = result or (readByteUnchecked(addr + i).toLong() shl (i * 8))
+            }
         }
         return result
     }
 
     override fun writeShort(addr: Int, data: Short) {
         checkBounds(addr, 2, sizeInBytes(), ::WasmRuntimeException)
-        writeByte(addr, data.toByte())
-        writeByte(addr + 1, (data.toInt() ushr 8).toByte())
+        val pageOffset = addr and PAGE_MASK
+        if (pageOffset <= PAGE_MASK - 1) {
+            val page = page(addr ushr PAGE_SHIFT)
+            page[pageOffset] = data.toByte()
+            page[pageOffset + 1] = (data.toInt() ushr 8).toByte()
+        } else {
+            writeByteUnchecked(addr, data.toByte())
+            writeByteUnchecked(addr + 1, (data.toInt() ushr 8).toByte())
+        }
     }
 
     override fun readShort(addr: Int): Short {
         checkBounds(addr, 2, sizeInBytes(), ::WasmRuntimeException)
-        return ((read(addr).toInt() and 0xFF) or
-            ((read(addr + 1).toInt() and 0xFF) shl 8))
-            .toShort()
+        val pageOffset = addr and PAGE_MASK
+        return if (pageOffset <= PAGE_MASK - 1) {
+            val page = page(addr ushr PAGE_SHIFT)
+            ((page[pageOffset].toInt() and 0xFF) or
+                ((page[pageOffset + 1].toInt() and 0xFF) shl 8))
+                .toShort()
+        } else {
+            (readByteUnchecked(addr) or (readByteUnchecked(addr + 1) shl 8)).toShort()
+        }
     }
 
     override fun readU16(addr: Int): Long = readShort(addr).toLong() and 0xFFFFL
@@ -430,6 +477,13 @@ class PortableMemory(private val limits: MemoryLimits) : Memory {
     private fun sizeInBytes(): Int = Memory.PAGE_SIZE * nPages
 
     private fun page(index: Int): ByteArray = pages[index]!!
+
+    private fun readByteUnchecked(addr: Int): Int =
+        page(addr ushr PAGE_SHIFT)[addr and PAGE_MASK].toInt() and 0xFF
+
+    private fun writeByteUnchecked(addr: Int, data: Byte) {
+        page(addr ushr PAGE_SHIFT)[addr and PAGE_MASK] = data
+    }
 
     private companion object {
         private const val PAGE_SHIFT = 16

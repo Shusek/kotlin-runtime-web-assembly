@@ -2,8 +2,8 @@
 
 Kotlin Runtime Web Assembly is a Kotlin-first WebAssembly runtime focused
 on plugin execution without JNI, native runtimes, or JSON-only plugin
-boundaries. The main `wasm` and `runtime` artifacts target JVM and iOS ARM
-through Kotlin Multiplatform. JVM variants are compiled for Java 25.
+boundaries. The main Kotlin Multiplatform artifacts target JVM, iOS ARM, and
+web/wasm browser builds. JVM variants are compiled for Java 25.
 
 ## Project Status
 
@@ -16,7 +16,7 @@ carefully and expect breaking changes.
 
 ## What It Provides
 
-- a pure JVM WebAssembly parser and runtime,
+- a pure Kotlin WebAssembly parser and runtime for JVM, iOS ARM, and web/wasm,
 - interpreter and compiler execution modes,
 - WASI Preview 1 host support,
 - Component Model tooling for WIT-based plugin contracts,
@@ -63,8 +63,8 @@ dependencies {
 ### Kotlin Multiplatform Runtime
 
 Use `runtime` from a Kotlin Multiplatform consumer when you need the portable
-interpreter on iOS. It depends on `wasm`, which exposes the common parser API
-and Okio-based byte input.
+interpreter on iOS or in a browser-hosted Kotlin/Wasm application. It depends on
+`wasm`, which exposes the common parser API and Okio-based byte input.
 
 ```kotlin
 // build.gradle.kts
@@ -77,6 +77,9 @@ val runtimeVersion = "0.3.0-SNAPSHOT"
 kotlin {
     iosArm64()
     iosSimulatorArm64()
+    wasmJs {
+        browser()
+    }
 
     sourceSets {
         commonMain {
@@ -89,6 +92,12 @@ kotlin {
     }
 }
 ```
+
+The iOS target set is ARM-only: `iosArm64` for devices and
+`iosSimulatorArm64` for Apple Silicon simulators. The web target is
+Kotlin/Wasm browser (`wasmJs { browser() }`), not classic Kotlin/JS. This
+repository also configures `wasmJs { nodejs() }` so Gradle can run wasm tests
+locally, but published web usage is the browser wasm target.
 
 Parse modules with the common `WasmParser` API:
 
@@ -104,15 +113,12 @@ The JVM-only `Parser` facade still provides `InputStream`, `File`, and `Path`
 entrypoints for the JVM artifacts. KMP consumers should use `WasmParser` with
 `ByteArray` or `okio.Source`.
 
-The `component-model` artifact now also publishes JVM and iOS ARM variants for
-the common WIT model types such as `WitPackage`, `WitValue`, `WitResult`,
-`WitFuture`, and `WitStream`. The `wasi-preview3` artifact is Kotlin
-Multiplatform too. Its common/iOS API uses `kotlin.time.Clock`/`Instant` and
-Okio-backed paths/filesystem helpers. The full `KotlinWasiPreview3`
-component-model runtime facade remains on the JVM artifact because the current
-runtime integration still has JVM-only plugin/runtime, HTTP engine, time-zone,
-and random defaults. WASI filesystem and byte streams are backed by Okio, and
-HTTP plus TCP/UDP socket networking are backed by Ktor.
+The `component-model`, `wasi`, and `wasi-preview3` artifacts also publish JVM,
+iOS ARM, and web/wasm variants for their portable APIs. Browser wasm builds can
+parse modules, instantiate the interpreter, and use host-provided imports. Some
+default host integrations are intentionally unavailable in browser wasm:
+filesystem access, raw sockets, default HTTP, and blocking delay must be
+provided by the application when a WASI workload needs those capabilities.
 
 ### Gradle Composite Build
 

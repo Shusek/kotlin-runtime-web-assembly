@@ -14,7 +14,7 @@ import uk.shusek.krwa.wasm.types.Value
  * You can only jump to instructions within the function you are in and only specific places.
  */
 class StackFrame {
-    private val code: List<AnnotatedInstruction>
+    private val code: Array<AnnotatedInstruction>
 
     private val funcId: Int
     private var pc = 0
@@ -162,8 +162,9 @@ class StackFrame {
         instance: Instance,
         argsTypes: List<ValType>,
         bodyLocalTypes: List<ValType>,
-        val code: List<AnnotatedInstruction>,
+        code: List<AnnotatedInstruction>,
     ) {
+        val code: Array<AnnotatedInstruction> = code.toTypedArray()
         val localTypes: Array<ValType>
         val localIdx: IntArray
         val defaultLocals: LongArray
@@ -213,15 +214,15 @@ class StackFrame {
                 }
             }
 
-            controlStartSlots = IntArray(code.size)
-            controlEndSlots = IntArray(code.size)
-            localSlots = IntArray(code.size)
-            localIsV128 = BooleanArray(code.size)
-            structFieldIndices = IntArray(code.size)
-            structPackedMasks = LongArray(code.size)
-            structPackedSignExtend = BooleanArray(code.size)
-            for (i in code.indices) {
-                val instruction = code[i]
+            controlStartSlots = IntArray(this.code.size)
+            controlEndSlots = IntArray(this.code.size)
+            localSlots = IntArray(this.code.size)
+            localIsV128 = BooleanArray(this.code.size)
+            structFieldIndices = IntArray(this.code.size)
+            structPackedMasks = LongArray(this.code.size)
+            structPackedSignExtend = BooleanArray(this.code.size)
+            for (i in this.code.indices) {
+                val instruction = this.code[i]
                 when (instruction.opcode()) {
                     OpCode.BLOCK,
                     OpCode.LOOP,

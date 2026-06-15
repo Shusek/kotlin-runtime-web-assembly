@@ -4,13 +4,14 @@ import kotlinx.io.Buffer
 import kotlinx.io.Sink
 import kotlinx.io.readByteArray
 import uk.shusek.krwa.wasm.types.RawSection
+import uk.shusek.krwa.wasm.types.WasmJvmStatic
 
 class WasmWriter {
     private val out = Buffer()
 
     init {
-        out.write(Parser.MAGIC_BYTES)
-        out.write(Parser.VERSION_BYTES)
+        out.write(WasmParser.MAGIC_BYTES)
+        out.write(WasmParser.VERSION_BYTES)
     }
 
     fun writeSection(section: RawSection) {
@@ -26,7 +27,7 @@ class WasmWriter {
     fun bytes(): ByteArray = out.copy().readByteArray()
 
     companion object {
-        @JvmStatic
+        @WasmJvmStatic
         fun writeVarUInt32(out: Sink, value: Int) {
             var x = value.toUInt().toLong()
             while (true) {

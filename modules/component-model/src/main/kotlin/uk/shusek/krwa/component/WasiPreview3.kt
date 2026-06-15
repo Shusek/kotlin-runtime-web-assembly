@@ -11,8 +11,6 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.nanoseconds
 import kotlin.time.Instant as KotlinInstant
 import kotlin.time.TimeSource
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.offsetAt
 import kotlinx.io.Buffer as KotlinxBuffer
@@ -3408,7 +3406,7 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
         if (nanos <= 0L) {
             return
         }
-        runBlocking { delay(nanos.nanoseconds) }
+        wasiDelay(nanos.nanoseconds)
     }
 
     private fun randomBytes(random: CryptoRand, length: Int): ByteArray {
@@ -3760,7 +3758,7 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
         }
 
         fun withHttpClient(httpClient: io.ktor.client.HttpClient): Builder =
-            withHttpClient(KtorWasiHttpClient(requirePresent(httpClient, "httpClient")))
+            withHttpClient(ktorWasiHttpClient(requirePresent(httpClient, "httpClient")))
 
         fun build(): WasiPreview3 = WasiPreview3(this)
 

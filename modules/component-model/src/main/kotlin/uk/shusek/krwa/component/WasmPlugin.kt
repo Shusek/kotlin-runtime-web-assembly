@@ -1,22 +1,15 @@
 package uk.shusek.krwa.component
 
-import java.io.UncheckedIOException
-import java.util.Collections
-import java.util.Objects
-import java.util.concurrent.ConcurrentHashMap
-import okio.FileSystem
 import okio.Path
-import uk.shusek.krwa.compiler.Cache
-import uk.shusek.krwa.compiler.InterpreterFallback
-import uk.shusek.krwa.compiler.MachineFactoryCompiler
+import uk.shusek.krwa.runtime.ExecutionListener
 import uk.shusek.krwa.runtime.HostFunction
 import uk.shusek.krwa.runtime.ImportFunction
 import uk.shusek.krwa.runtime.ImportValues
 import uk.shusek.krwa.runtime.Instance
 import uk.shusek.krwa.runtime.Machine
 import uk.shusek.krwa.wasm.InvalidException
-import uk.shusek.krwa.wasm.Parser
 import uk.shusek.krwa.wasm.WasmModule
+import uk.shusek.krwa.wasm.WasmParser
 import uk.shusek.krwa.wasm.types.ExternalType
 import uk.shusek.krwa.wasm.types.FunctionImport
 import uk.shusek.krwa.wasm.types.FunctionType
@@ -32,7 +25,7 @@ private constructor(
     exports: Map<String, CanonicalAbi.BoundFunction>,
 ) : WasiComponentInvoker {
     private val exportsByName: Map<String, CanonicalAbi.BoundFunction> =
-        Collections.unmodifiableMap(LinkedHashMap(exports))
+        LinkedHashMap(exports).toMap()
 
     fun witPackage(): WitPackage = witPackage
 
@@ -49,10 +42,11 @@ private constructor(
 
     fun exports(): Map<String, CanonicalAbi.BoundFunction> = exportsByName
 
-    fun <T : Any> exports(contractType: Class<T>): T = WitReflection.exports(this, contractType)
+    fun <T : Any> exports(contractType: ComponentModelJvmClass<T>): T =
+        wasmPluginReflectExports(this, contractType)
 
     class Builder internal constructor(witPackage: WitPackage) : WasiHostImportBuilder {
-        private val witPackage: WitPackage = Objects.requireNonNull(witPackage)
+        private val witPackage: WitPackage = witPackage
         private val abi: CanonicalAbi = CanonicalAbi.of(witPackage)
         private val hostImports = LinkedHashMap<String, HostHandler>()
         private val hostObjects = ArrayList<Any>()
@@ -65,9 +59,9 @@ private constructor(
         private var preview3Host: WasiPreview3? = null
         private var worldName: String? = null
         private var module: WasmModule? = null
-        private var component: WasmComponentTools.UnbundledComponent? = null
+        private var component: WasmPluginUnbundledComponent? = null
+        private var executionListener: ExecutionListener? = null
         private val rawHostFunctions = ArrayList<ImportFunction>()
-        private val fileSystem: FileSystem = FileSystem.SYSTEM
 
         fun withWorld(worldName: String?): Builder {
             this.worldName = worldName
@@ -81,34 +75,30 @@ private constructor(
         }
 
         fun withModule(wasmBytes: ByteArray): Builder {
-            module = Parser.parse(wasmBytes)
+            module = WasmParser.parse(wasmBytes)
             return this
         }
 
         fun withModule(wasmPath: Path): Builder {
-            try {
-                return withModule(fileSystem.read(wasmPath) { readByteArray() })
-            } catch (e: java.io.IOException) {
-                throw UncheckedIOException(e)
-            }
+            return withModule(wasmPluginReadPathBytes(wasmPath))
         }
 
         fun withComponent(componentBytes: ByteArray): Builder {
             module = null
-            component = WasmComponentTools.unbundleComponent(componentBytes)
+            component = wasmPluginUnbundleComponent(componentBytes)
             return this
         }
 
         fun withComponent(componentPath: Path): Builder {
             module = null
-            component = WasmComponentTools.unbundleComponent(componentPath)
+            component = wasmPluginUnbundleComponent(componentPath)
             return this
         }
 
         fun withComponentModule(componentBytes: ByteArray, moduleName: String): Builder {
             module =
-                Parser.parse(
-                    WasmComponentTools.unbundleComponent(componentBytes).module(moduleName)
+                WasmParser.parse(
+                    wasmPluginUnbundleComponent(componentBytes).module(moduleName)
                 )
             component = null
             return this
@@ -116,7 +106,7 @@ private constructor(
 
         fun withComponentModule(componentPath: Path, moduleName: String): Builder {
             module =
-                Parser.parse(WasmComponentTools.unbundleComponent(componentPath).module(moduleName))
+                WasmParser.parse(wasmPluginUnbundleComponent(componentPath).module(moduleName))
             component = null
             return this
         }
@@ -126,17 +116,17 @@ private constructor(
             functionName: String?,
             handler: HostHandler,
         ): Builder {
-            hostImports[importKey(interfaceName, functionName)] = Objects.requireNonNull(handler)
+            hostImports[importKey(interfaceName, functionName)] = handler
             return this
         }
 
         override fun withHostImport(qualifiedName: String, handler: HostHandler): Builder {
-            hostImports[qualifiedName] = Objects.requireNonNull(handler)
+            hostImports[qualifiedName] = handler
             return this
         }
 
         fun withHost(host: Any): Builder {
-            hostObjects.add(Objects.requireNonNull(host))
+            hostObjects.add(host)
             return this
         }
 
@@ -153,27 +143,34 @@ private constructor(
         override fun withWasiPreview3CanonicalIntrinsics(
             intrinsics: WasiPreview3CanonicalIntrinsics
         ): Builder {
-            val adapter = WasiPreview3JvmCanonicalIntrinsics(Objects.requireNonNull(intrinsics))
+            val adapter = WasiPreview3CanonicalIntrinsicsAdapter(intrinsics)
             canonicalFutureIntrinsics = adapter
             canonicalStreamIntrinsics = adapter
             return this
         }
 
         fun withWasiPreview2(wasi: WasiPreview2): Builder {
-            Objects.requireNonNull(wasi, "wasi").install(this)
+            wasi.install(this)
             return this
         }
 
         fun withWasiPreview1(wasi: WasiPreview1): Builder {
             preview1HostConfigured = true
-            rawHostFunctions.addAll(Objects.requireNonNull(wasi, "wasi").toHostFunctions())
+            rawHostFunctions.addAll(wasi.toHostFunctions())
             return this
         }
 
         fun withWasiPreview3(wasi: WasiPreview3): Builder {
-            val preview3 = Objects.requireNonNull(wasi, "wasi")
-            preview3.install(this)
-            preview3Host = preview3
+            wasi.install(this)
+            preview3Host = wasi
+            return this
+        }
+
+        /*
+         * This method is experimental and might be dropped without notice in future releases.
+         */
+        fun withUnsafeExecutionListener(listener: ExecutionListener): Builder {
+            executionListener = listener
             return this
         }
 
@@ -196,6 +193,7 @@ private constructor(
                 )
             }
             val instanceBuilder = Instance.builder(selectedModule).withImportValues(imports)
+            executionListener?.let { instanceBuilder.withUnsafeExecutionListener(it) }
             compiledComponentMachineFactory(selectedModule)?.let {
                 instanceBuilder.withMachineFactory(it)
             }
@@ -206,50 +204,7 @@ private constructor(
         }
 
         private fun compiledComponentMachineFactory(module: WasmModule): ((Instance) -> Machine)? {
-            if (!componentCompilerEnabled()) {
-                return null
-            }
-
-            return try {
-                MachineFactoryCompiler.builder(module)
-                    .withCache(ComponentMachineCache)
-                    .withInterpreterFallback(InterpreterFallback.SILENT)
-                    .compile()
-            } catch (e: Exception) {
-                traceCompilerFallback(e)
-                null
-            } catch (e: LinkageError) {
-                traceCompilerFallback(e)
-                null
-            }
-        }
-
-        private fun componentCompilerEnabled(): Boolean {
-            val configured = System.getProperty(COMPONENT_COMPILER_PROPERTY)
-            if (configured != null) {
-                return configured.toBoolean()
-            }
-            return !androidRuntime()
-        }
-
-        private fun androidRuntime(): Boolean {
-            val runtimeName = System.getProperty("java.runtime.name", "")
-            val vmName = System.getProperty("java.vm.name", "")
-            return runtimeName.contains("Android", ignoreCase = true) ||
-                vmName.contains("Dalvik", ignoreCase = true)
-        }
-
-        private fun traceCompilerFallback(error: Throwable) {
-            if (!java.lang.Boolean.getBoolean(COMPONENT_COMPILER_TRACE_PROPERTY)) {
-                return
-            }
-            System.err.println(
-                "KRWA component compiler failed; falling back to interpreter: " +
-                    error.javaClass.name +
-                    ": " +
-                    error.message
-            )
-            error.printStackTrace(System.err)
+            return wasmPluginCompiledMachineFactory(module)
         }
 
         private fun selectWorld(): WitPackage.WorldDeclaration {
@@ -528,11 +483,11 @@ private constructor(
             for (candidateInterfaceName in handlerInterfaceNames) {
                 if (handler == null) {
                     handler =
-                        WitReflection.hostHandler(hostObjects, candidateInterfaceName, publicName)
+                        wasmPluginHostHandler(hostObjects, candidateInterfaceName, publicName)
                 }
                 if (handler == null) {
                     handler =
-                        WitReflection.hostHandler(hostObjects, candidateInterfaceName, symbolName)
+                        wasmPluginHostHandler(hostObjects, candidateInterfaceName, symbolName)
                 }
             }
             if (handler == null) {
@@ -1196,10 +1151,16 @@ private constructor(
         private fun asyncTaskReturnSlot(
             moduleName: String,
             importName: String,
-        ): AsyncTaskReturnSlot =
-            asyncTaskReturns.computeIfAbsent(importKey(moduleName, importName)) {
-                AsyncTaskReturnSlot()
+        ): AsyncTaskReturnSlot {
+            val key = importKey(moduleName, importName)
+            val existing = asyncTaskReturns[key]
+            if (existing != null) {
+                return existing
             }
+            val created = AsyncTaskReturnSlot()
+            asyncTaskReturns[key] = created
+            return created
+        }
 
         private fun rootAsyncTaskReturnModuleName(): String = "[export]\$root"
 
@@ -1239,7 +1200,7 @@ private constructor(
         private fun deduplicateFunctions(functions: List<ImportFunction>): List<ImportFunction> {
             val result = LinkedHashMap<String, ImportFunction>()
             for (function in functions) {
-                result.putIfAbsent(function.module() + "\u0000" + function.name(), function)
+                putIfAbsent(result, function.module() + "\u0000" + function.name(), function)
             }
             return ArrayList(result.values)
         }
@@ -1473,13 +1434,13 @@ private constructor(
         }
 
         private fun selectComponentModule(
-            component: WasmComponentTools.UnbundledComponent,
+            component: WasmPluginUnbundledComponent,
             world: WitPackage.WorldDeclaration,
         ): WasmModule {
             val matches = LinkedHashMap<String, WasmModule>()
             val exportsByModule = LinkedHashMap<String, List<String>>()
             for ((name, bytes) in component.modules()) {
-                val candidate = Parser.parse(bytes)
+                val candidate = WasmParser.parse(bytes)
                 val exportNames = functionExports(candidate)
                 exportsByModule[name] = exportNames
                 if (exportsWorld(candidate, world)) {
@@ -1775,35 +1736,35 @@ private constructor(
             private val handles = LinkedHashMap<String?, MutableMap<Long, Long>>()
             private var nextHandle = 1L
 
-            @Synchronized
             fun newHandle(resourceKey: String?, rep: Long): Long {
                 if (nextHandle == 0L || nextHandle > 0xffff_ffffL) {
                     throw ComponentModelException("WIT canonical resource table exhausted")
                 }
                 val handle = nextHandle++
-                handles.computeIfAbsent(resourceKey) { LinkedHashMap() }[handle] = toU32(rep)
+                val resources = handles[resourceKey] ?: LinkedHashMap<Long, Long>().also {
+                    handles[resourceKey] = it
+                }
+                resources[handle] = toU32(rep)
                 return handle
             }
 
-            @Synchronized
             fun rep(resourceKey: String?, handle: Long): Long {
                 val resources = handles[resourceKey]
                 val rep = resources?.get(toU32(handle))
                 if (rep == null) {
                     throw ComponentModelException(
-                        "unknown WIT resource handle ${java.lang.Long.toUnsignedString(toU32(handle))} for $resourceKey"
+                        "unknown WIT resource handle ${toU32(handle).toULong()} for $resourceKey"
                     )
                 }
                 return rep
             }
 
-            @Synchronized
             fun drop(resourceKey: String?, handle: Long): Long {
                 val resources = handles[resourceKey]
                 val rep = resources?.remove(toU32(handle))
                 if (rep == null) {
                     throw ComponentModelException(
-                        "unknown WIT resource handle ${java.lang.Long.toUnsignedString(toU32(handle))} for $resourceKey"
+                        "unknown WIT resource handle ${toU32(handle).toULong()} for $resourceKey"
                     )
                 }
                 return rep
@@ -1813,16 +1774,14 @@ private constructor(
         private class AsyncTaskReturnSlot : CanonicalAbi.AsyncTaskReturn {
             private var rawResults: LongArray? = null
 
-            @Synchronized
             fun putRawResults(results: LongArray) {
                 rawResults = results.copyOf()
             }
 
-            @Synchronized override fun reset() {
+            override fun reset() {
                 rawResults = null
             }
 
-            @Synchronized
             override fun takeRawResults(): LongArray? = rawResults?.copyOf()
         }
 
@@ -1980,12 +1939,12 @@ private constructor(
                     when (kind) {
                         Kind.GET -> {
                             requireArity(symbolName, args, 0)
-                            val value = synchronized(contexts) { contexts[index] ?: 0 }
+                            val value = contexts[index] ?: 0
                             longArrayOf(value.toLong())
                         }
                         Kind.SET -> {
                             requireArity(symbolName, args, 1)
-                            synchronized(contexts) { contexts[index] = args[0].toInt() }
+                            contexts[index] = args[0].toInt()
                             LongArray(0)
                         }
                     }
@@ -2327,31 +2286,24 @@ private constructor(
                 }
                 return unsigned.toInt()
             }
+
+            private fun <K, V> putIfAbsent(map: MutableMap<K, V>, key: K, value: V) {
+                if (!map.containsKey(key)) {
+                    map[key] = value
+                }
+            }
         }
     }
 
     companion object {
-        @JvmStatic fun builder(witPackage: WitPackage): Builder = Builder(witPackage)
+        @ComponentModelJvmStatic fun builder(witPackage: WitPackage): Builder = Builder(witPackage)
 
-        @JvmStatic
+        @ComponentModelJvmStatic
         fun builderFromComponent(componentBytes: ByteArray): Builder =
-            builder(Wit.parse(componentBytes)).withComponent(componentBytes)
+            builder(wasmPluginParseWit(componentBytes)).withComponent(componentBytes)
 
-        @JvmStatic
+        @ComponentModelJvmStatic
         fun builderFromComponent(componentPath: Path): Builder =
-            builder(Wit.parse(componentPath)).withComponent(componentPath)
-    }
-}
-
-private const val COMPONENT_COMPILER_PROPERTY = "krwa.component.compiler"
-private const val COMPONENT_COMPILER_TRACE_PROPERTY = "krwa.component.compiler.trace"
-
-private object ComponentMachineCache : Cache {
-    private val entries = ConcurrentHashMap<String, ByteArray>()
-
-    override fun get(key: String): ByteArray? = entries[key]?.clone()
-
-    override fun putIfAbsent(key: String, data: ByteArray) {
-        entries.putIfAbsent(key, data.clone())
+            builder(wasmPluginParseWit(componentPath)).withComponent(componentPath)
     }
 }

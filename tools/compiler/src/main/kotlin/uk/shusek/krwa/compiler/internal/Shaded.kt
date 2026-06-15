@@ -40,7 +40,7 @@ object Shaded {
     @JvmStatic
     fun callHostFunction(instance: Instance, funcId: Int, args: LongArray): LongArray? {
         val imprt = instance.imports().function(funcId)
-        return imprt.handle()!!.apply(instance, *args)
+        return imprt.handle()!!.apply(instance, args)
     }
 
     @JvmStatic

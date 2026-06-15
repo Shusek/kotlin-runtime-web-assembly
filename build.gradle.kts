@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalWasmDsl::class)
+
 import org.gradle.api.tasks.Copy
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.bundling.Jar
@@ -13,9 +15,13 @@ import org.gradle.api.provider.Provider
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.process.CommandLineArgumentProvider
+import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
+import org.jetbrains.kotlin.gradle.targets.wasm.nodejs.WasmNodeJsEnvSpec
+import org.jetbrains.kotlin.gradle.targets.wasm.nodejs.WasmNodeJsPlugin
+import org.jetbrains.kotlin.gradle.targets.wasm.nodejs.WasmNodeJsRootPlugin
 import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
 
 plugins {
@@ -51,6 +57,22 @@ val wasmToolsVersion = "1.240.0"
 val wasmtimeVersion = "45.0.1"
 val zerofsVersion = "0.1.0"
 val zip4jVersion = "2.11.6"
+
+plugins.withType<WasmNodeJsRootPlugin>().configureEach {
+    extensions.configure<WasmNodeJsEnvSpec>(WasmNodeJsEnvSpec.EXTENSION_NAME) {
+        download.set(false)
+        command.set("node")
+    }
+}
+
+allprojects {
+    plugins.withType<WasmNodeJsPlugin>().configureEach {
+        extensions.configure<WasmNodeJsEnvSpec>(WasmNodeJsEnvSpec.EXTENSION_NAME) {
+            download.set(false)
+            command.set("node")
+        }
+    }
+}
 
 val moduleByArtifact =
     mapOf(
@@ -312,6 +334,20 @@ fun Project.registerTaskAlias(alias: String, target: String) {
         tasks.register(alias) {
             dependsOn(target)
         }
+    }
+}
+
+fun KotlinMultiplatformExtension.krwaArmIosAndWebWasmTargets() {
+    jvm {
+        compilerOptions {
+            jvmTarget.set(JvmTarget.fromTarget("25"))
+        }
+    }
+    iosArm64()
+    iosSimulatorArm64()
+    wasmJs {
+        browser()
+        nodejs()
     }
 }
 
@@ -691,13 +727,7 @@ project(":annotations:annotations") {
     }
 
     extensions.configure<KotlinMultiplatformExtension> {
-        jvm {
-            compilerOptions {
-                jvmTarget.set(JvmTarget.fromTarget("25"))
-            }
-        }
-        iosArm64()
-        iosSimulatorArm64()
+        krwaArmIosAndWebWasmTargets()
     }
 
     tasks.withType<JavaCompile>().configureEach {
@@ -820,19 +850,26 @@ project(":component-model") {
     val commonComponentModelSources =
         listOf(
             "ComponentModelException.kt",
+            "ComponentModelJvmClass.kt",
             "ComponentModelJvmAnnotations.kt",
+            "CanonicalAbi.kt",
+            "CanonicalAbiReflection.kt",
+            "CanonicalFutureIntrinsics.kt",
+            "CanonicalStreamIntrinsics.kt",
             "HostHandler.kt",
-            "KtorWasiHttpClient.kt",
             "RandomAdapters.kt",
             "WasiComponentInvoker.kt",
             "WasiHostImportBuilder.kt",
             "WasiHttpClient.kt",
+            "WasiPreview3CanonicalIntrinsicsAdapter.kt",
             "WasiPreviewPlatform.kt",
             "WasiSocketRuntime.kt",
             "WasiPreview.kt",
             "WasiPreview2.kt",
             "WasiPreview3.kt",
             "WasiPreview3CanonicalIntrinsics.kt",
+            "WasmPlugin.kt",
+            "WasmPluginPlatform.kt",
             "WitFuture.kt",
             "WitNames.kt",
             "WitPackage.kt",
@@ -905,13 +942,7 @@ project(":component-model") {
         }
 
     extensions.configure<KotlinMultiplatformExtension> {
-        jvm {
-            compilerOptions {
-                jvmTarget.set(JvmTarget.fromTarget("25"))
-            }
-        }
-        iosArm64()
-        iosSimulatorArm64()
+        krwaArmIosAndWebWasmTargets()
 
         sourceSets.named("commonMain") {
             kotlin.srcDir("src/main/kotlin")
@@ -925,6 +956,9 @@ project(":component-model") {
                 implementation("org.jetbrains.kotlinx:kotlinx-io-okio:$kotlinxIoVersion")
                 api("org.kotlincrypto.random:crypto-rand:$kotlinCryptoRandomVersion")
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinxCoroutinesVersion")
+                api(krwa("runtime"))
+                api(krwa("wasi"))
+                api(krwa("wasm"))
             }
         }
         sourceSets.named("jvmMain") {
@@ -960,6 +994,13 @@ project(":component-model") {
                 implementation("org.junit.jupiter:junit-jupiter-api")
                 runtimeOnly("org.junit.jupiter:junit-jupiter-engine")
                 runtimeOnly("org.junit.platform:junit-platform-launcher")
+            }
+        }
+        sourceSets.configureEach {
+            if (name == "iosTest" || name == "iosArm64Test" || name == "iosSimulatorArm64Test") {
+                dependencies {
+                    implementation(kotlin("test"))
+                }
             }
         }
     }
@@ -1145,13 +1186,7 @@ project(":runtime") {
     }
 
     extensions.configure<KotlinMultiplatformExtension> {
-        jvm {
-            compilerOptions {
-                jvmTarget.set(JvmTarget.fromTarget("25"))
-            }
-        }
-        iosArm64()
-        iosSimulatorArm64()
+        krwaArmIosAndWebWasmTargets()
 
         sourceSets.named("commonMain") {
             dependencies {
@@ -1351,13 +1386,7 @@ project(":wasi") {
         ).map { "uk/shusek/krwa/wasi/$it" }
 
     extensions.configure<KotlinMultiplatformExtension> {
-        jvm {
-            compilerOptions {
-                jvmTarget.set(JvmTarget.fromTarget("25"))
-            }
-        }
-        iosArm64()
-        iosSimulatorArm64()
+        krwaArmIosAndWebWasmTargets()
 
         sourceSets.named("commonMain") {
             kotlin.srcDir("src/main/kotlin")
@@ -1433,13 +1462,7 @@ project(":wasi-preview3") {
     }
 
     extensions.configure<KotlinMultiplatformExtension> {
-        jvm {
-            compilerOptions {
-                jvmTarget.set(JvmTarget.fromTarget("25"))
-            }
-        }
-        iosArm64()
-        iosSimulatorArm64()
+        krwaArmIosAndWebWasmTargets()
 
         sourceSets.named("commonMain") {
             dependencies {
@@ -1524,18 +1547,17 @@ project(":wasm") {
     }
 
     extensions.configure<KotlinMultiplatformExtension> {
-        jvm {
-            compilerOptions {
-                jvmTarget.set(JvmTarget.fromTarget("25"))
-            }
-        }
-        iosArm64()
-        iosSimulatorArm64()
+        krwaArmIosAndWebWasmTargets()
 
         sourceSets.named("commonMain") {
             dependencies {
                 api("org.jetbrains.kotlinx:kotlinx-io-core:$kotlinxIoVersion")
                 implementation("com.squareup.okio:okio:$okioVersion")
+            }
+        }
+        sourceSets.named("commonTest") {
+            dependencies {
+                implementation(kotlin("test"))
             }
         }
         sourceSets.named("jvmMain") {

@@ -155,6 +155,10 @@ class KotlinWitBindings private constructor(builder: Builder) {
         out.append("import ").append(runtimePackageName).append(".WitResource\n")
         out.append("import ").append(runtimePackageName).append(".WitResult\n")
         out.append("import ").append(runtimePackageName).append(".WitStream\n\n")
+        if (includePluginHelpers) {
+            out.append("import ").append(runtimePackageName).append(".WasiComponentInvoker\n")
+            out.append("import ").append(runtimePackageName).append(".WitValue\n\n")
+        }
         out.append("import ").append(runtimePackageName).append(".WitTuple1\n")
         out.append("import ").append(runtimePackageName).append(".WitTuple4\n")
         out.append("import ").append(runtimePackageName).append(".WitTuple5\n")
@@ -321,8 +325,504 @@ class KotlinWitBindings private constructor(builder: Builder) {
             .append("public fun guest(plugin: ")
             .append(wasmPlugin)
             .append("): Guest =\n")
-        out.append(indent).append("  plugin.exports(Guest::class.java)\n")
+        out.append(indent)
+            .append("  plugin.exports(uk.shusek.krwa.component.componentModelJvmClass<Guest>())\n\n")
+        appendWorldGuestInvoker(out, declaration, indent)
+        appendPluginHelperRuntime(out, indent)
     }
+
+    private fun appendWorldGuestInvoker(
+        out: StringBuilder,
+        declaration: WorldDeclaration,
+        indent: String,
+    ) {
+        out.append(indent)
+            .append("public fun guest(invoker: ")
+            .append(runtimeType("WasiComponentInvoker"))
+            .append("): Guest =\n")
+        out.append(indent).append("  object : Guest {\n")
+        for (item in declaration.exports()) {
+            if (item.isFunction) {
+                appendInvokerFunction(out, item.function()!!, null, item.name(), "$indent    ")
+                continue
+            }
+            val exportedInterface = findInterfaceForWorldItem(item)
+            val propertyName = memberName(worldItemMemberName(item, declaration.exports()))
+            out.append(indent)
+                .append("    override val ")
+                .append(propertyName)
+                .append(": ")
+                .append(worldItemType(item.type()))
+                .append(" = object : ")
+                .append(worldItemType(item.type()))
+                .append(" {\n")
+            val interfaceName = interfaceName(item)
+            for (member in exportedInterface.members()) {
+                if (member is Function) {
+                    appendInvokerFunction(
+                        out,
+                        member,
+                        exportedInterface,
+                        "$interfaceName.${member.name()}",
+                        "$indent      ",
+                    )
+                }
+            }
+            out.append(indent).append("    }\n")
+        }
+        out.append(indent).append("  }\n")
+    }
+
+    private fun appendInvokerFunction(
+        out: StringBuilder,
+        function: Function,
+        owner: InterfaceDeclaration?,
+        exportName: String,
+        indent: String,
+    ) {
+        out.append(indent).append("override ")
+        if (function.isAsync) {
+            out.append("suspend ")
+        }
+        out.append("fun ").append(memberName(function.name())).append("(")
+        for (index in function.parameters().indices) {
+            val param = function.parameters()[index]
+            if (index > 0) {
+                out.append(", ")
+            }
+            out.append(memberName(param.name())).append(": ").append(adapterKotlinType(param.type()))
+        }
+        out.append(")")
+        if (function.results().isNotEmpty()) {
+            out.append(": ").append(adapterReturnType(function.results()))
+        }
+        out.append(" {\n")
+        out.append(indent)
+            .append("  val __krwaResult = invoker.call(")
+            .append(kotlinString(exportName))
+        for (param in function.parameters()) {
+            val name = memberName(param.name())
+            out.append(", ").append(toAbiExpression(name, param.type(), owner))
+        }
+        out.append(")\n")
+        if (function.results().isEmpty()) {
+            out.append(indent).append("  return\n")
+        } else {
+            out.append(indent)
+                .append("  return ")
+                .append(fromAbiReturnExpression("__krwaResult", function.results(), owner))
+                .append("\n")
+        }
+        out.append(indent).append("}\n")
+    }
+
+    private fun appendPluginHelperRuntime(out: StringBuilder, indent: String) {
+        out.append("\n")
+        out.append(indent).append("private fun __krwaRequireMap(value: Any?, context: String): Map<*, *> =\n")
+        out.append(indent).append("  value as? Map<*, *> ?: error(\"expected WIT record for ${'$'}context, got ${'$'}value\")\n\n")
+        out.append(indent).append("private fun __krwaRequireList(value: Any?, context: String): List<*> =\n")
+        out.append(indent).append("  value as? List<*> ?: error(\"expected WIT list for ${'$'}context, got ${'$'}value\")\n\n")
+        out.append(indent).append("private fun __krwaRequireByteArray(value: Any?, context: String): ByteArray =\n")
+        out.append(indent).append("  value as? ByteArray ?: error(\"expected WIT byte list for ${'$'}context, got ${'$'}value\")\n\n")
+        out.append(indent).append("private fun __krwaField(value: Any?, name: String, context: String): Any? =\n")
+        out.append(indent).append("  __krwaRequireMap(value, context)[name]\n\n")
+        out.append(indent).append("private fun __krwaFlag(value: Any?, name: String, context: String): Boolean =\n")
+        out.append(indent).append("  __krwaRequireMap(value, context)[name] == true\n\n")
+        out.append(indent).append("private fun __krwaVariant(value: Any?, context: String): WitValue.Variant =\n")
+        out.append(indent).append("  value as? WitValue.Variant ?: error(\"expected WIT variant for ${'$'}context, got ${'$'}value\")\n\n")
+        out.append(indent).append("private fun __krwaVariantValue(value: Any?, context: String): Any? =\n")
+        out.append(indent).append("  __krwaVariant(value, context).value()\n\n")
+        out.append(indent).append("private fun __krwaAsLong(value: Any?, context: String): Long =\n")
+        out.append(indent).append("  when (value) {\n")
+        out.append(indent).append("    is Byte -> value.toLong()\n")
+        out.append(indent).append("    is Short -> value.toLong()\n")
+        out.append(indent).append("    is Int -> value.toLong()\n")
+        out.append(indent).append("    is Long -> value\n")
+        out.append(indent).append("    is UByte -> value.toLong()\n")
+        out.append(indent).append("    is UShort -> value.toLong()\n")
+        out.append(indent).append("    is UInt -> value.toLong()\n")
+        out.append(indent).append("    is ULong -> value.toLong()\n")
+        out.append(indent).append("    else -> error(\"expected numeric WIT value for ${'$'}context, got ${'$'}value\")\n")
+        out.append(indent).append("  }\n\n")
+        out.append(indent).append("private fun __krwaAsBoolean(value: Any?, context: String): Boolean =\n")
+        out.append(indent).append("  value as? Boolean ?: (__krwaAsLong(value, context) != 0L)\n\n")
+        out.append(indent).append("private fun __krwaAsString(value: Any?, context: String): String =\n")
+        out.append(indent).append("  value as? String ?: error(\"expected WIT string for ${'$'}context, got ${'$'}value\")\n")
+    }
+
+    private fun fromAbiReturnExpression(
+        value: String,
+        results: List<Field>,
+        owner: InterfaceDeclaration?,
+    ): String {
+        if (results.size == 1) {
+            return fromAbiExpression(value, results[0].type(), owner, "result")
+        }
+        val list = "__krwaRequireList($value, \"result\")"
+        val expressions =
+            results.mapIndexed { index, field ->
+                fromAbiExpression("$list[$index]", field.type(), owner, "result.$index")
+            }
+        return tupleConstructionExpression(expressions)
+    }
+
+    private fun fromAbiExpression(
+        value: String,
+        type: TypeRef,
+        owner: InterfaceDeclaration?,
+        context: String,
+    ): String {
+        val resolved = resolveAlias(type)
+        if (resolved.kind() == TypeRef.TypeKind.PRIMITIVE) {
+            return fromAbiPrimitiveExpression(value, resolved.name()!!, context)
+        }
+        if (resolved.kind() == TypeRef.TypeKind.NAMED) {
+            val declaration = findTypeDeclaration(resolved.name()!!)
+            if (declaration != null) {
+                return fromAbiDeclarationExpression(value, declaration, owner, context)
+            }
+        }
+        val args = resolved.arguments()
+        return when (resolved.kind()) {
+            TypeRef.TypeKind.LIST ->
+                fromAbiListExpression(
+                    value,
+                    if (args.isEmpty()) TypeRef.primitive("unit") else args[0],
+                    owner,
+                    context,
+                )
+            TypeRef.TypeKind.OPTION ->
+                "(if (__krwaVariant($value, ${kotlinString(context)}).label() == \"none\") null else " +
+                    fromAbiExpression(
+                        "__krwaVariantValue($value, ${kotlinString(context)})",
+                        args[0],
+                        owner,
+                        "$context.some",
+                    ) +
+                    ")"
+            TypeRef.TypeKind.RESULT ->
+                fromAbiResultExpression(value, args, owner, context)
+            TypeRef.TypeKind.TUPLE ->
+                fromAbiTupleExpression(value, args, owner, context)
+            TypeRef.TypeKind.FUTURE ->
+                "WitFuture.of<${optionalArgument(args, false, owner)}>(" +
+                    "__krwaAsLong($value, ${kotlinString(context)}))"
+            TypeRef.TypeKind.STREAM ->
+                "WitStream.of<${optionalArgument(args, false, owner)}>(" +
+                    "__krwaAsLong($value, ${kotlinString(context)}))"
+            TypeRef.TypeKind.BORROW,
+            TypeRef.TypeKind.OWN ->
+                "WitResource(__krwaAsLong($value, ${kotlinString(context)}).toUInt())"
+            else -> value
+        }
+    }
+
+    private fun fromAbiPrimitiveExpression(value: String, name: String, context: String): String =
+        when (name) {
+            "unit" -> "Unit"
+            "bool" -> "__krwaAsBoolean($value, ${kotlinString(context)})"
+            "s8" -> "__krwaAsLong($value, ${kotlinString(context)}).toByte()"
+            "s16" -> "__krwaAsLong($value, ${kotlinString(context)}).toShort()"
+            "s32",
+            "char" -> "__krwaAsLong($value, ${kotlinString(context)}).toInt()"
+            "s64" -> "__krwaAsLong($value, ${kotlinString(context)})"
+            "u8" -> "__krwaAsLong($value, ${kotlinString(context)}).toUByte()"
+            "u16" -> "__krwaAsLong($value, ${kotlinString(context)}).toUShort()"
+            "u32" -> "__krwaAsLong($value, ${kotlinString(context)}).toUInt()"
+            "u64" -> "__krwaAsLong($value, ${kotlinString(context)}).toULong()"
+            "f32" -> "($value as Number).toFloat()"
+            "f64" -> "($value as Number).toDouble()"
+            "string" -> "__krwaAsString($value, ${kotlinString(context)})"
+            else -> "$value as ${typeName(name)}"
+        }
+
+    private fun fromAbiDeclarationExpression(
+        value: String,
+        declaration: TypeDeclaration,
+        owner: InterfaceDeclaration?,
+        context: String,
+    ): String =
+        when (declaration.kind()) {
+            TypeDeclaration.Kind.RECORD -> fromAbiRecordExpression(value, declaration, owner, context)
+            TypeDeclaration.Kind.FLAGS -> fromAbiFlagsExpression(value, declaration, context)
+            TypeDeclaration.Kind.ENUM -> fromAbiEnumExpression(value, declaration, context)
+            TypeDeclaration.Kind.VARIANT -> fromAbiVariantExpression(value, declaration, owner, context)
+            TypeDeclaration.Kind.RESOURCE ->
+                "WitResource(__krwaAsLong($value, ${kotlinString(context)}).toUInt())"
+            TypeDeclaration.Kind.ALIAS -> fromAbiExpression(value, declaration.target()!!, owner, context)
+        }
+
+    private fun fromAbiRecordExpression(
+        value: String,
+        declaration: TypeDeclaration,
+        owner: InterfaceDeclaration?,
+        context: String,
+    ): String =
+        adapterTypeName(declaration.name()) +
+            "(" +
+            declaration.fields().joinToString(", ") { field ->
+                memberName(field.name()) +
+                    " = " +
+                    fromAbiExpression(
+                        "__krwaField($value, ${kotlinString(field.name())}, ${kotlinString(context)})",
+                        field.type(),
+                        owner,
+                        "$context.${field.name()}",
+                    )
+            } +
+            ")"
+
+    private fun fromAbiFlagsExpression(
+        value: String,
+        declaration: TypeDeclaration,
+        context: String,
+    ): String =
+        adapterTypeName(declaration.name()) +
+            "(" +
+            declaration.cases().joinToString(", ") { flag ->
+                memberName(flag.name()) +
+                    " = __krwaFlag($value, ${kotlinString(flag.name())}, ${kotlinString(context)})"
+            } +
+            ")"
+
+    private fun fromAbiEnumExpression(value: String, declaration: TypeDeclaration, context: String): String =
+        "when (__krwaVariant($value, ${kotlinString(context)}).label()) {" +
+            declaration.cases().joinToString("; ") { witCase ->
+                "${kotlinString(witCase.name())} -> ${adapterTypeName(declaration.name())}.${enumName(witCase.name())}"
+            } +
+            "; else -> error(\"unknown WIT enum case\") }"
+
+    private fun fromAbiVariantExpression(
+        value: String,
+        declaration: TypeDeclaration,
+        owner: InterfaceDeclaration?,
+        context: String,
+    ): String {
+        val type = adapterTypeName(declaration.name())
+        return "when (__krwaVariant($value, ${kotlinString(context)}).label()) {" +
+            declaration.cases().joinToString("; ") { witCase ->
+                val target = "$type.${typeName(witCase.name())}"
+                if (witCase.type() == null) {
+                    "${kotlinString(witCase.name())} -> $target"
+                } else {
+                    "${kotlinString(witCase.name())} -> $target(" +
+                        fromAbiExpression(
+                            "__krwaVariantValue($value, ${kotlinString(context)})",
+                            witCase.type()!!,
+                            owner,
+                            "$context.${witCase.name()}",
+                        ) +
+                        ")"
+                }
+            } +
+            "; else -> error(\"unknown WIT variant case\") }"
+    }
+
+    private fun fromAbiResultExpression(
+        value: String,
+        args: List<TypeRef>,
+        owner: InterfaceDeclaration?,
+        context: String,
+    ): String {
+        val okType = if (args.isEmpty()) TypeRef.primitive("unit") else args[0]
+        val errType = if (args.size <= 1) TypeRef.primitive("unit") else args[1]
+        return "when (__krwaVariant($value, ${kotlinString(context)}).label()) {" +
+            "\"ok\" -> WitResult.Ok(" +
+            fromAbiExpression(
+                "__krwaVariantValue($value, ${kotlinString(context)})",
+                okType,
+                owner,
+                "$context.ok",
+            ) +
+            "); \"err\" -> WitResult.Err(" +
+            fromAbiExpression(
+                "__krwaVariantValue($value, ${kotlinString(context)})",
+                errType,
+                owner,
+                "$context.err",
+            ) +
+            "); else -> error(\"unknown WIT result case\") }"
+    }
+
+    private fun fromAbiTupleExpression(
+        value: String,
+        args: List<TypeRef>,
+        owner: InterfaceDeclaration?,
+        context: String,
+    ): String {
+        val list = "__krwaRequireList($value, ${kotlinString(context)})"
+        return tupleConstructionExpression(
+            args.mapIndexed { index, type ->
+                fromAbiExpression("$list[$index]", type, owner, "$context.$index")
+            }
+        )
+    }
+
+    private fun fromAbiListExpression(
+        value: String,
+        elementType: TypeRef,
+        owner: InterfaceDeclaration?,
+        context: String,
+    ): String {
+        if (elementType.kind() == TypeRef.TypeKind.PRIMITIVE) {
+            return when (elementType.name()) {
+                "s8" -> "__krwaRequireByteArray($value, ${kotlinString(context)})"
+                "u8" -> "__krwaRequireByteArray($value, ${kotlinString(context)}).asUByteArray()"
+                "s16" -> "__krwaRequireList($value, ${kotlinString(context)}).map { __krwaAsLong(it, ${kotlinString(context)}).toShort() }.toShortArray()"
+                "s32" -> "__krwaRequireList($value, ${kotlinString(context)}).map { __krwaAsLong(it, ${kotlinString(context)}).toInt() }.toIntArray()"
+                "s64" -> "__krwaRequireList($value, ${kotlinString(context)}).map { __krwaAsLong(it, ${kotlinString(context)}) }.toLongArray()"
+                "u16" -> "__krwaRequireList($value, ${kotlinString(context)}).map { __krwaAsLong(it, ${kotlinString(context)}).toUShort() }.toUShortArray()"
+                "u32" -> "__krwaRequireList($value, ${kotlinString(context)}).map { __krwaAsLong(it, ${kotlinString(context)}).toUInt() }.toUIntArray()"
+                "u64" -> "__krwaRequireList($value, ${kotlinString(context)}).map { __krwaAsLong(it, ${kotlinString(context)}).toULong() }.toULongArray()"
+                "f32" -> "__krwaRequireList($value, ${kotlinString(context)}).map { (it as Number).toFloat() }.toFloatArray()"
+                "f64" -> "__krwaRequireList($value, ${kotlinString(context)}).map { (it as Number).toDouble() }.toDoubleArray()"
+                else -> null
+            } ?: "__krwaRequireList($value, ${kotlinString(context)}).map { " +
+                fromAbiExpression("it", elementType, owner, "$context.item") +
+                " }"
+        }
+        return "__krwaRequireList($value, ${kotlinString(context)}).map { " +
+            fromAbiExpression("it", elementType, owner, "$context.item") +
+            " }"
+    }
+
+    private fun toAbiExpression(value: String, type: TypeRef, owner: InterfaceDeclaration?): String {
+        val resolved = resolveAlias(type)
+        if (resolved.kind() == TypeRef.TypeKind.PRIMITIVE) {
+            return toAbiPrimitiveExpression(value, resolved.name()!!)
+        }
+        if (resolved.kind() == TypeRef.TypeKind.NAMED) {
+            val declaration = findTypeDeclaration(resolved.name()!!)
+            if (declaration != null) {
+                return toAbiDeclarationExpression(value, declaration, owner)
+            }
+        }
+        val args = resolved.arguments()
+        return when (resolved.kind()) {
+            TypeRef.TypeKind.LIST ->
+                toAbiListExpression(value, if (args.isEmpty()) TypeRef.primitive("unit") else args[0], owner)
+            TypeRef.TypeKind.OPTION ->
+                "(if ($value == null) WitValue.none() else WitValue.some(" +
+                    toAbiExpression(value, args[0], owner) +
+                    "))"
+            TypeRef.TypeKind.RESULT ->
+                toAbiResultExpression(value, args, owner)
+            TypeRef.TypeKind.TUPLE ->
+                toAbiTupleExpression(value, args, owner)
+            TypeRef.TypeKind.FUTURE,
+            TypeRef.TypeKind.STREAM,
+            TypeRef.TypeKind.BORROW,
+            TypeRef.TypeKind.OWN -> "$value.handle()"
+            else -> value
+        }
+    }
+
+    private fun toAbiPrimitiveExpression(value: String, name: String): String =
+        when (name) {
+            "unit" -> "null"
+            "u8",
+            "u16",
+            "u32",
+            "u64" -> "$value.toLong()"
+            else -> value
+        }
+
+    private fun toAbiDeclarationExpression(
+        value: String,
+        declaration: TypeDeclaration,
+        owner: InterfaceDeclaration?,
+    ): String =
+        when (declaration.kind()) {
+            TypeDeclaration.Kind.RECORD ->
+                "WitValue.record(" +
+                    declaration.fields().joinToString(", ") { field ->
+                        kotlinString(field.name()) +
+                            ", " +
+                            toAbiExpression("$value.${memberName(field.name())}", field.type(), owner)
+                    } +
+                    ")"
+            TypeDeclaration.Kind.FLAGS ->
+                "WitValue.flags(*listOf(" +
+                    declaration.cases().joinToString(", ") { flag ->
+                        "if ($value.${memberName(flag.name())}) ${kotlinString(flag.name())} else null"
+                    } +
+                    ").filterNotNull().toTypedArray())"
+            TypeDeclaration.Kind.ENUM ->
+                "when ($value) {" +
+                    declaration.cases().joinToString("; ") { witCase ->
+                        "${adapterTypeName(declaration.name())}.${enumName(witCase.name())} -> " +
+                            "WitValue.variant(${kotlinString(witCase.name())})"
+                    } +
+                    " }"
+            TypeDeclaration.Kind.VARIANT -> toAbiVariantExpression(value, declaration, owner)
+            TypeDeclaration.Kind.RESOURCE -> "$value.handle()"
+            TypeDeclaration.Kind.ALIAS -> toAbiExpression(value, declaration.target()!!, owner)
+        }
+
+    private fun toAbiVariantExpression(
+        value: String,
+        declaration: TypeDeclaration,
+        owner: InterfaceDeclaration?,
+    ): String {
+        val type = adapterTypeName(declaration.name())
+        return "when ($value) {" +
+            declaration.cases().joinToString("; ") { witCase ->
+                val caseType = "$type.${typeName(witCase.name())}"
+                if (witCase.type() == null) {
+                    "$caseType -> WitValue.variant(${kotlinString(witCase.name())})"
+                } else {
+                    "is $caseType -> WitValue.variant(${kotlinString(witCase.name())}, " +
+                        toAbiExpression("$value.value", witCase.type()!!, owner) +
+                        ")"
+                }
+            } +
+            " }"
+    }
+
+    private fun toAbiResultExpression(
+        value: String,
+        args: List<TypeRef>,
+        owner: InterfaceDeclaration?,
+    ): String {
+        val okType = if (args.isEmpty()) TypeRef.primitive("unit") else args[0]
+        val errType = if (args.size <= 1) TypeRef.primitive("unit") else args[1]
+        return "when ($value) {" +
+            "is WitResult.Ok -> WitValue.ok(" +
+            toAbiExpression("$value.value", okType, owner) +
+            "); is WitResult.Err -> WitValue.err(" +
+            toAbiExpression("$value.value", errType, owner) +
+            ") }"
+    }
+
+    private fun toAbiTupleExpression(value: String, args: List<TypeRef>, owner: InterfaceDeclaration?): String {
+        val accessors = args.indices.map { index -> tupleAccessor(index) }
+        return "listOf(" +
+            args.mapIndexed { index, type ->
+                toAbiExpression("$value.${accessors[index]}", type, owner)
+            }.joinToString(", ") +
+            ")"
+    }
+
+    private fun toAbiListExpression(value: String, elementType: TypeRef, owner: InterfaceDeclaration?): String {
+        if (elementType.kind() == TypeRef.TypeKind.PRIMITIVE) {
+            return when (elementType.name()) {
+                "s8" -> value
+                "u8" -> "$value.asByteArray()"
+                else -> "$value.map { ${toAbiExpression("it", elementType, owner)} }"
+            }
+        }
+        return "$value.map { ${toAbiExpression("it", elementType, owner)} }"
+    }
+
+    private fun tupleConstructionExpression(expressions: List<String>): String =
+        when (expressions.size) {
+            0 -> "Unit"
+            1 -> "WitTuple1(${expressions[0]})"
+            2 -> "Pair(${expressions[0]}, ${expressions[1]})"
+            3 -> "Triple(${expressions[0]}, ${expressions[1]}, ${expressions[2]})"
+            in 4..8 -> "WitTuple${expressions.size}(${expressions.joinToString(", ")})"
+            else -> "listOf(${expressions.joinToString(", ")})"
+        }
 
     private fun appendWorldSide(
         out: StringBuilder,

@@ -74,6 +74,58 @@ class WasmPluginTest {
         }
     }
 
+    @Test
+    fun builderCanAttachUnsafeExecutionListenerToPluginInstance() {
+        val previous = System.getProperty("krwa.component.compiler")
+        try {
+            System.setProperty("krwa.component.compiler", "false")
+            val witPackage =
+                WitPackage.parse(
+                    """
+                    package example:plugin-execution-listener;
+
+                    world plugin {
+                      export api;
+                    }
+
+                    interface api {
+                      value: func() -> u32;
+                    }
+                    """
+                        .trimIndent()
+                )
+            var instructions = 0
+
+            val plugin =
+                WasmPlugin.builder(witPackage)
+                    .withModule(
+                        Wat2Wasm.parse(
+                            """
+                            (module
+                              (memory (export "memory") 1)
+                              (func (export "api.value") (result i32)
+                                (i32.const 40)
+                                (i32.const 2)
+                                (i32.add))
+                            )
+                            """
+                                .trimIndent()
+                        )
+                    )
+                    .withUnsafeExecutionListener { _, _ -> instructions += 1 }
+                    .build()
+
+            assertEquals(42L, plugin.call("api.value"))
+            assertTrue(instructions > 0)
+        } finally {
+            if (previous == null) {
+                System.clearProperty("krwa.component.compiler")
+            } else {
+                System.setProperty("krwa.component.compiler", previous)
+            }
+        }
+    }
+
     private fun ByteArray.containsBytes(needle: ByteArray): Boolean {
         if (needle.isEmpty()) {
             return true
@@ -652,6 +704,152 @@ class WasmPluginTest {
                 .build()
 
         assertEquals(42L, plugin.call("api.run"))
+    }
+
+    @Test
+    fun lowersCompletedFutureResultErrVariantWithOptionStringPayload() {
+        val witPackage =
+            WitPackage.parse(
+                """
+                package example:host-future-error;
+
+                world plugin {
+                  import client;
+                  export api;
+                }
+
+                interface client {
+                  resource response;
+                  variant error-code {
+                    HTTP-request-denied,
+                    HTTP-request-URI-invalid,
+                    HTTP-request-method-invalid,
+                    connection-refused,
+                    connection-timeout,
+                    internal-error(option<string>),
+                  }
+                  send: func() -> future<result<response, error-code>>;
+                }
+
+                interface api {
+                  run: func() -> u32;
+                }
+                """
+                    .trimIndent()
+            )
+        var completedValue: Any? = null
+        val futures =
+            object : CanonicalFutureIntrinsics {
+                override fun completedFutureHandle(value: Any?): Long {
+                    completedValue = value
+                    return 7L
+                }
+
+                override fun futureNew(): Long = throw AssertionError("future.new should not be used")
+
+                override fun futureRead(
+                    instance: Instance,
+                    futureHandle: Long,
+                    ptr: Int,
+                    abi: CanonicalAbi,
+                    payloadType: WitPackage.TypeRef,
+                ): Long {
+                    assertEquals(7L, futureHandle)
+                    abi.storeValues(
+                        CanonicalAbi.Context.forInstance(instance),
+                        ptr,
+                        listOf(WitPackage.Field("result", payloadType)),
+                        listOf(completedValue),
+                    )
+                    return 0L
+                }
+
+                override fun futureWrite(
+                    instance: Instance,
+                    futureHandle: Long,
+                    ptr: Int,
+                    abi: CanonicalAbi,
+                    payloadType: WitPackage.TypeRef,
+                ): Long = throw AssertionError("future.write should not be used")
+
+                override fun futureCancelRead(futureHandle: Long): Long = 0L
+
+                override fun futureCancelWrite(futureHandle: Long): Long = 0L
+
+                override fun futureDropReadable(futureHandle: Long) = Unit
+
+                override fun futureDropWritable(futureHandle: Long) = Unit
+            }
+        val d = '$'
+        val plugin =
+            WasmPlugin.builder(witPackage)
+                .withModule(
+                    Wat2Wasm.parse(
+                        """
+                        (module
+                          (import "client" "send" (func ${d}send (result i32)))
+                          (import "client" "[async-lower][future-read-0]send"
+                            (func ${d}future_read (param i32 i32) (result i32)))
+                          (memory (export "memory") 1)
+                          (global ${d}heap (mut i32) (i32.const 1024))
+                          (func ${d}realloc
+                            (param ${d}old i32) (param ${d}old_size i32)
+                            (param ${d}align i32) (param ${d}new_size i32)
+                            (result i32)
+                            (local ${d}ptr i32)
+                            (local.set ${d}ptr (global.get ${d}heap))
+                            (global.set ${d}heap
+                              (i32.add (global.get ${d}heap) (local.get ${d}new_size)))
+                            (local.get ${d}ptr))
+                          (export "canonical_abi_realloc" (func ${d}realloc))
+                          (func ${d}run (result i32)
+                            (local ${d}future i32)
+                            (local ${d}message i32)
+                            (local.set ${d}future (call ${d}send))
+                            (if
+                              (i32.ne
+                                (call ${d}future_read (local.get ${d}future) (i32.const 64))
+                                (i32.const 0))
+                              (then (return (i32.const 90))))
+                            (if
+                              (i32.ne (i32.load8_u (i32.const 64)) (i32.const 1))
+                              (then (return (i32.const 91))))
+                            (if
+                              (i32.ne (i32.load8_u (i32.const 68)) (i32.const 5))
+                              (then (return (i32.const 92))))
+                            (if
+                              (i32.ne (i32.load8_u (i32.const 72)) (i32.const 1))
+                              (then (return (i32.const 93))))
+                            (if
+                              (i32.ne (i32.load (i32.const 80)) (i32.const 4))
+                              (then (return (i32.const 94))))
+                            (local.set ${d}message (i32.load (i32.const 76)))
+                            (if
+                              (i32.ne (i32.load8_u (local.get ${d}message)) (i32.const 98))
+                              (then (return (i32.const 95))))
+                            (if
+                              (i32.ne (i32.load8_u (i32.add (local.get ${d}message) (i32.const 1))) (i32.const 111))
+                              (then (return (i32.const 96))))
+                            (if
+                              (i32.ne (i32.load8_u (i32.add (local.get ${d}message) (i32.const 2))) (i32.const 111))
+                              (then (return (i32.const 97))))
+                            (if
+                              (i32.ne (i32.load8_u (i32.add (local.get ${d}message) (i32.const 3))) (i32.const 109))
+                              (then (return (i32.const 98))))
+                            (i32.const 123))
+                          (export "api.run" (func ${d}run))
+                        )
+                        """
+                            .trimIndent()
+                    )
+                )
+                .withHostImport("client", "send") {
+                    WitResult.err(WitValue.variant("internal-error", "boom"))
+                }
+                .withCanonicalFutureIntrinsics(futures)
+                .build()
+
+        assertEquals(123L, plugin.call("api.run"))
     }
 
     @Test

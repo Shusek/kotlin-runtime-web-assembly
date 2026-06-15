@@ -640,6 +640,7 @@ class WasiHttpStreamingTest {
                 .trimIndent()
         )
     }
+
 }
 
 private class FailingRawSource(private val reads: AtomicReference<Int>) : RawSource {

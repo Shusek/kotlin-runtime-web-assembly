@@ -3,6 +3,7 @@
 package uk.shusek.krwa.component
 
 import kotlin.time.Instant
+import kotlin.time.Duration
 import kotlinx.datetime.TimeZone
 import kotlinx.io.RawSink
 import kotlinx.io.RawSource
@@ -27,3 +28,5 @@ internal expect fun isWasiInterrupted(throwable: Throwable): Boolean
 internal expect fun restoreWasiInterruptStatus()
 
 internal expect fun isWasiSecurityException(throwable: Throwable): Boolean
+
+internal expect fun wasiDelay(duration: Duration)

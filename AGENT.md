@@ -2,13 +2,14 @@
 
 Kotlin Runtime Web Assembly (KRWA) is a Kotlin-first WebAssembly runtime and
 toolchain. The core `wasm` and `runtime` artifacts are Kotlin Multiplatform
-modules for JVM and iOS ARM; compiler, tooling, test generation, and some
-integration layers remain JVM-specific.
+modules for JVM, iOS ARM, and web/wasm browser builds; compiler, tooling, test
+generation, and some integration layers remain JVM-specific.
 
 ## Prerequisites
 
 - Java 25 for the normal Gradle build and CI configuration
 - Gradle via `./gradlew`
+- Node.js and npm for Kotlin/Wasm browser artifacts and wasm node-based tests
 - Node.js 22 and npm for the Docusaurus documentation site
 
 ## Key build commands
@@ -64,9 +65,18 @@ only when an external consumer or docs snippet test needs artifact coordinates:
 # Parser/writer tests
 ./gradlew --no-daemon :wasm:test
 
+# Browser wasm compile and node-backed wasm tests
+./gradlew --no-daemon :wasm:compileKotlinWasmJs :runtime:wasmJsNodeTest
+
 # Compiler tests
 ./gradlew --no-daemon :compiler-tests:test
 ```
+
+The supported native/mobile/web target matrix is intentionally narrow:
+`iosArm64` and `iosSimulatorArm64` for iOS, and Kotlin/Wasm browser via
+`wasmJs { browser() }` for web. Do not add `iosX64`, classic `js()`, or
+`wasmWasi` targets to the core artifacts unless the platform decision changes.
+The root build also registers `wasmJs { nodejs() }` for test execution only.
 
 ## Spec tests (runtime-tests)
 

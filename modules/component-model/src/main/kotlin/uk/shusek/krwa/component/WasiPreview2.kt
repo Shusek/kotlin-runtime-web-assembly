@@ -8,11 +8,10 @@ import io.ktor.network.sockets.InetSocketAddress
 import kotlin.random.Random
 import kotlin.time.Clock as KotlinClock
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.nanoseconds
 import kotlin.time.Instant as KotlinInstant
 import kotlin.time.TimeSource
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.offsetAt
 import kotlinx.io.Buffer
@@ -2661,7 +2660,7 @@ class WasiPreview2 private constructor(builder: Builder) {
 
     private fun waitForPollableReadiness() {
         try {
-            runBlocking { delay(1L) }
+            wasiDelay(1.milliseconds)
         } catch (e: Exception) {
             if (isWasiInterrupted(e)) {
                 restoreWasiInterruptStatus()
@@ -4057,7 +4056,7 @@ class WasiPreview2 private constructor(builder: Builder) {
         }
 
         fun withHttpClient(httpClient: io.ktor.client.HttpClient): Builder =
-            withHttpClient(KtorWasiHttpClient(requirePresent(httpClient, "httpClient")))
+            withHttpClient(ktorWasiHttpClient(requirePresent(httpClient, "httpClient")))
 
         fun withWallClock(wallClock: KotlinClock, zoneId: String = "UTC"): Builder =
             withWallClock(wallClock, TimeZone.of(requirePresent(zoneId, "zoneId")))

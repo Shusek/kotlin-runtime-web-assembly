@@ -39,8 +39,6 @@ open class InterpreterMachine(private val instance: Instance) : Machine {
         fun get(index: Int): Long = instruction.operand(index)
     }
 
-    @Suppress("UNCHECKED_CAST") private fun <T> nullValue(): T = null as T
-
     private fun MStack.push(value: Int) {
         push(value.toLong())
     }
@@ -133,7 +131,7 @@ open class InterpreterMachine(private val instance: Instance) : Machine {
 
                 try {
                     RuntimePlatform.runCatchingStackOverflow {
-                        var results = imprt.handle()!!.apply(instance, *args)
+                        var results = imprt.handle()!!.apply(instance, args)
                         // a host function can return null or an array of ints
                         // which we will push onto the stack
                         if (results != null) {
@@ -157,14 +155,14 @@ open class InterpreterMachine(private val instance: Instance) : Machine {
         }
 
         if (!popResults) {
-            return nullValue()
+            return LongArray(0)
         }
 
         if (type.returnSlotCount() == 0) {
-            return nullValue()
+            return LongArray(0)
         }
         if (stack.size() == 0) {
-            return nullValue()
+            return LongArray(0)
         }
 
         var totalResults = type.returnSlotCount()
@@ -2679,7 +2677,7 @@ open class InterpreterMachine(private val instance: Instance) : Machine {
                 var imprt = instance.imports().function(funcId)
 
                 try {
-                    var results = imprt.handle()!!.apply(instance, *args)
+                    var results = imprt.handle()!!.apply(instance, args)
                     // a host function can return null or an array of ints
                     // which we will push onto the stack
                     if (results != null) {
@@ -2760,7 +2758,7 @@ open class InterpreterMachine(private val instance: Instance) : Machine {
                 var imprt = instance.imports().function(funcId)
 
                 try {
-                    var results = imprt.handle()!!.apply(instance, *args)
+                    var results = imprt.handle()!!.apply(instance, args)
                     // a host function can return null or an array of ints
                     // which we will push onto the stack
                     if (results != null) {
@@ -2842,10 +2840,8 @@ open class InterpreterMachine(private val instance: Instance) : Machine {
         } else {
             checkInterruption()
             var results = refInstance.getMachine().call(funcId, args)
-            if (results != null) {
-                for (result in results) {
-                    stack.push(result)
-                }
+            for (result in results) {
+                stack.push(result)
             }
             return null
         }

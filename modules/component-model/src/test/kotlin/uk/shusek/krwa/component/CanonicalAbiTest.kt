@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test
 import uk.shusek.krwa.runtime.ByteArrayMemory
 import uk.shusek.krwa.runtime.ImportValues
 import uk.shusek.krwa.runtime.Instance
+import uk.shusek.krwa.runtime.Memory
 import uk.shusek.krwa.tools.wasm.Wat2Wasm
 import uk.shusek.krwa.wasm.Parser
 import uk.shusek.krwa.wasm.types.FunctionType
@@ -173,6 +174,38 @@ class CanonicalAbiTest {
                 16,
             ),
         )
+    }
+
+    @Test
+    fun storesSelectedVariantPayloadWithoutRequiringTrailingPadding() {
+        val witPackage =
+            WitPackage.parse(
+                """
+                package example:filesystem-result;
+                interface api {
+                  resource descriptor;
+                  variant error-code {
+                    access,
+                    other(option<string>),
+                  }
+                  open: func() -> result<descriptor, error-code>;
+                }
+                """
+                    .trimIndent()
+            )
+        val function = witPackage.interfaces()[0].functions()[0]
+        val abi = CanonicalAbi.of(witPackage)
+        val memory = ByteArrayMemory(MemoryLimits(1))
+        val context = CanonicalAbi.Context.of(memory, BumpAllocator(1024)::allocate)
+        val ptr = Memory.PAGE_SIZE - 16
+
+        abi.storeValues(context, ptr, function.results(), listOf(WitResult.ok(WitResource<Any>(42))))
+        val loaded = abi.loadValues(context, ptr, function.results())[0] as WitValue.Variant
+
+        assertEquals(0L, memory.readU8(ptr))
+        assertEquals(42, memory.readInt(ptr + 4))
+        assertEquals("ok", loaded.label())
+        assertEquals(42L, loaded.value())
     }
 
     @Test
@@ -654,6 +687,72 @@ class CanonicalAbiTest {
         assertEquals(
             FunctionType.of(listOf(ValType.I32, ValType.I32, ValType.I32), listOf()),
             abi.coreFunctionType(decorate, CanonicalAbi.Direction.LOWERED_IMPORT),
+        )
+    }
+
+    @Test
+    fun adaptsHostImportByteListResultsThroughCanonicalAbiRetptr() {
+        val witPackage =
+            WitPackage.parse(
+                """
+                package example:host-bytes;
+                interface host {
+                  get-chunk: func() -> list<u8>;
+                }
+                world plugin {
+                  import host;
+                  export run: func() -> u32;
+                }
+                """
+                    .trimIndent()
+            )
+        val getChunk = witPackage.interfaces()[0].functions()[0]
+        val abi = CanonicalAbi.of(witPackage)
+        val bytes = ByteArray(32 * 1024) { index -> (index % 251).toByte() }
+        val imports =
+            ImportValues.builder()
+                .addFunction(abi.hostFunction("host", "get-chunk", getChunk) { bytes })
+                .build()
+        val module =
+            Parser.parse(
+                Wat2Wasm.parse(
+                    """
+                    (module
+                      (import "host" "get-chunk" (func ${'$'}get-chunk (param i32)))
+                      (memory (export "memory") 1)
+                      (global ${'$'}heap (mut i32) (i32.const 1024))
+                      (func (export "canonical_abi_realloc")
+                        (param ${'$'}old i32) (param ${'$'}old_size i32)
+                        (param ${'$'}align i32) (param ${'$'}new_size i32)
+                        (result i32)
+                        (local ${'$'}ptr i32)
+                        (local.set ${'$'}ptr
+                          (i32.and
+                            (i32.add (global.get ${'$'}heap)
+                              (i32.sub (local.get ${'$'}align) (i32.const 1)))
+                            (i32.xor
+                              (i32.sub (local.get ${'$'}align) (i32.const 1))
+                              (i32.const -1))))
+                        (global.set ${'$'}heap
+                          (i32.add (local.get ${'$'}ptr) (local.get ${'$'}new_size)))
+                        (local.get ${'$'}ptr))
+                      (func (export "run") (result i32)
+                        (call ${'$'}get-chunk (i32.const 64))
+                        (i32.load (i32.const 68)))
+                    )
+                    """
+                        .trimIndent()
+                )
+            )
+
+        val instance = Instance.builder(module).withImportValues(imports).build()
+
+        assertEquals(bytes.size.toLong(), instance.export("run").apply()[0])
+        assertEquals(bytes.size, instance.memory().readInt(68))
+        assertArrayEquals(bytes, instance.memory().readBytes(instance.memory().readInt(64), bytes.size))
+        assertEquals(
+            FunctionType.of(listOf(ValType.I32), listOf()),
+            abi.coreFunctionType(getChunk, CanonicalAbi.Direction.LOWERED_IMPORT),
         )
     }
 

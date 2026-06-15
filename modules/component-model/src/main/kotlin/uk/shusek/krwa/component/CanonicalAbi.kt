@@ -1,12 +1,5 @@
 package uk.shusek.krwa.component
 
-import java.lang.reflect.Array as ReflectArray
-import java.lang.reflect.Field as ReflectField
-import java.lang.reflect.Method
-import java.util.Arrays
-import java.util.LinkedHashMap
-import java.util.LinkedHashSet
-import java.util.Objects
 import uk.shusek.krwa.runtime.ExportFunction
 import uk.shusek.krwa.runtime.HostFunction
 import uk.shusek.krwa.runtime.Instance
@@ -271,12 +264,13 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
     }
 
     fun storeValues(context: Context, ptr: Int, fields: List<WitPackage.Field>, values: List<*>) {
-        checkRange(context, ptr, sizeOfFields(fields), alignmentOfFields(fields))
+        if (fields.size != values.size) {
+            throw ComponentModelException("expected ${fields.size} values, got ${values.size}")
+        }
         storeFields(context, ptr, fields, values)
     }
 
     fun loadValues(context: Context, ptr: Int, fields: List<WitPackage.Field>): List<Any?> {
-        checkRange(context, ptr, sizeOfFields(fields), alignmentOfFields(fields))
         return loadFields(context, ptr, fields)
     }
 
@@ -329,7 +323,7 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
             if (args.size < flatParamCount) {
                 throw ComponentModelException("lowered import received too few parameters")
             }
-            paramValues = Arrays.copyOfRange(args, 0, flatParamCount)
+            paramValues = args.copyOfRange(0, flatParamCount)
             resultPointerIndex = flatParamCount
         }
 
@@ -349,7 +343,15 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
             if (args.size <= resultPointerIndex) {
                 throw ComponentModelException("lowered import is missing result pointer")
             }
-            storeValues(context, args[resultPointerIndex].toInt(), function.results(), resultValues)
+            try {
+                storeValues(context, args[resultPointerIndex].toInt(), function.results(), resultValues)
+            } catch (error: ComponentModelException) {
+                throw ComponentModelException(
+                    "lowered import ${function.name()} failed to store result: ${error.message} " +
+                        "resultPointerIndex=$resultPointerIndex flatResultCount=$flatResultCount args=${args.toList()}",
+                    error,
+                )
+            }
             return LongArray(0)
         }
         return lowerFlatValues(context, function.results(), resultValues, MAX_FLAT_RESULTS)
@@ -379,7 +381,7 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
                     liftFlatValues(
                         context,
                         function.parameters(),
-                        Arrays.copyOfRange(args, 0, paramArgCount),
+                        args.copyOfRange(0, paramArgCount),
                         paramArgCount,
                     )
                 paramArgCount == 1 ->
@@ -398,12 +400,21 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
         val result = handler.apply(params)
         if (hasResults) {
             val resultValues = resultValues(function.results(), result, asyncFutures)
-            storeValues(
-                context,
-                memoryIndex(args[args.size - 1], "async-lower result pointer"),
-                function.results(),
-                resultValues,
-            )
+            val resultPtr = memoryIndex(args[args.size - 1], "async-lower result pointer")
+            try {
+                storeValues(
+                    context,
+                    resultPtr,
+                    function.results(),
+                    resultValues,
+                )
+            } catch (error: ComponentModelException) {
+                throw ComponentModelException(
+                    "async-lower import $symbolName (${function.name()}) failed to store result: " +
+                        "${error.message} resultPtr=$resultPtr args=${args.toList()}",
+                    error,
+                )
+            }
         }
         return longArrayOf(0)
     }
@@ -421,12 +432,6 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
             values = arrayListOf(result)
         } else if (result is List<*>) {
             values = ArrayList(result)
-        } else if (result != null && result.javaClass.isArray) {
-            val arrayValues = ArrayList<Any?>()
-            for (i in 0 until ReflectArray.getLength(result)) {
-                arrayValues.add(ReflectArray.get(result, i))
-            }
-            values = arrayValues
         } else {
             val positional = positionalValuesOrNull(result, results.size)
             values = positional ?: valuesForFields(result, results)
@@ -637,9 +642,9 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
             "u64" -> longArrayOf(asLong(value))
             "f32" ->
                 longArrayOf(
-                    java.lang.Float.floatToRawIntBits(asFloat(value)).toLong() and 0xFFFFFFFFL
+                    asFloat(value).toRawBits().toLong() and 0xFFFFFFFFL
                 )
-            "f64" -> longArrayOf(java.lang.Double.doubleToRawLongBits(asDouble(value)))
+            "f64" -> longArrayOf(asDouble(value).toRawBits())
             "string" -> lowerFlatString(context, value?.toString() ?: "")
             else -> throw ComponentModelException("unsupported primitive WIT type $typeName")
         }
@@ -657,8 +662,8 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
             "char" -> checkedCodePoint(iter.next(CoreValType.I32)).toInt()
             "s64",
             "u64" -> iter.next(CoreValType.I64)
-            "f32" -> java.lang.Float.intBitsToFloat(iter.next(CoreValType.F32).toInt())
-            "f64" -> java.lang.Double.longBitsToDouble(iter.next(CoreValType.F64))
+            "f32" -> Float.fromBits(iter.next(CoreValType.F32).toInt())
+            "f64" -> Double.fromBits(iter.next(CoreValType.F64))
             "string" -> liftFlatString(context, iter)
             else -> throw ComponentModelException("unsupported primitive WIT type $typeName")
         }
@@ -804,8 +809,8 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
 
     private fun store(context: Context, value: Any?, type: WitPackage.TypeRef, ptr: Int) {
         val resolved = resolveAlias(type)
-        checkRange(context, ptr, elementSize(resolved), alignment(resolved))
         if (resolved.kind() == WitPackage.TypeRef.TypeKind.PRIMITIVE) {
+            checkRange(context, ptr, elementSize(resolved), alignment(resolved))
             storePrimitive(context, value, resolved.name()!!, ptr)
             return
         }
@@ -820,17 +825,23 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
                         valuesForFields(value, declaration.fields()),
                     )
                 WitPackage.TypeDeclaration.Kind.FLAGS ->
-                    storeFlags(
-                        context,
-                        ptr,
-                        packFlags(value, declaration.cases()),
-                        declaration.cases().size,
-                    )
+                    {
+                        checkRange(context, ptr, flagsSize(declaration.cases().size), flagsAlignment(declaration.cases().size))
+                        storeFlags(
+                            context,
+                            ptr,
+                            packFlags(value, declaration.cases()),
+                            declaration.cases().size,
+                        )
+                    }
                 WitPackage.TypeDeclaration.Kind.ENUM,
                 WitPackage.TypeDeclaration.Kind.VARIANT ->
                     storeVariant(context, ptr, value, casesFromDeclaration(declaration))
                 WitPackage.TypeDeclaration.Kind.RESOURCE ->
-                    context.memory().writeI32(ptr, asLong(value).toInt())
+                    {
+                        checkRange(context, ptr, 4, 4)
+                        context.memory().writeI32(ptr, asLong(value).toInt())
+                    }
                 WitPackage.TypeDeclaration.Kind.ALIAS ->
                     store(context, value, declaration.target()!!, ptr)
             }
@@ -838,8 +849,10 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
         }
 
         when (resolved.kind()) {
-            WitPackage.TypeRef.TypeKind.LIST ->
+            WitPackage.TypeRef.TypeKind.LIST -> {
+                checkRange(context, ptr, 8, 4)
                 storeList(context, ptr, value, firstArgument(resolved))
+            }
             WitPackage.TypeRef.TypeKind.OPTION,
             WitPackage.TypeRef.TypeKind.RESULT ->
                 storeVariant(context, ptr, value, casesFromConstructed(resolved))
@@ -848,15 +861,18 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
             WitPackage.TypeRef.TypeKind.FUTURE,
             WitPackage.TypeRef.TypeKind.STREAM,
             WitPackage.TypeRef.TypeKind.BORROW,
-            WitPackage.TypeRef.TypeKind.OWN -> context.memory().writeI32(ptr, asLong(value).toInt())
+            WitPackage.TypeRef.TypeKind.OWN -> {
+                checkRange(context, ptr, 4, 4)
+                context.memory().writeI32(ptr, asLong(value).toInt())
+            }
             else -> throw unsupported(resolved)
         }
     }
 
     private fun load(context: Context, ptr: Int, type: WitPackage.TypeRef): Any? {
         val resolved = resolveAlias(type)
-        checkRange(context, ptr, elementSize(resolved), alignment(resolved))
         if (resolved.kind() == WitPackage.TypeRef.TypeKind.PRIMITIVE) {
+            checkRange(context, ptr, elementSize(resolved), alignment(resolved))
             return loadPrimitive(context, resolved.name()!!, ptr)
         }
         if (resolved.kind() == WitPackage.TypeRef.TypeKind.NAMED) {
@@ -865,31 +881,47 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
                 WitPackage.TypeDeclaration.Kind.RECORD ->
                     loadFieldsAsRecord(context, ptr, declaration.fields())
                 WitPackage.TypeDeclaration.Kind.FLAGS ->
-                    unpackFlags(
-                        loadFlags(context, ptr, declaration.cases().size),
-                        declaration.cases(),
-                    )
+                    {
+                        checkRange(context, ptr, flagsSize(declaration.cases().size), flagsAlignment(declaration.cases().size))
+                        unpackFlags(
+                            loadFlags(context, ptr, declaration.cases().size),
+                            declaration.cases(),
+                        )
+                    }
                 WitPackage.TypeDeclaration.Kind.ENUM,
                 WitPackage.TypeDeclaration.Kind.VARIANT ->
                     loadVariant(context, ptr, casesFromDeclaration(declaration))
                 WitPackage.TypeDeclaration.Kind.RESOURCE ->
-                    Integer.toUnsignedLong(context.memory().readInt(ptr))
+                    {
+                        checkRange(context, ptr, 4, 4)
+                        unsignedIntToLong(context.memory().readInt(ptr))
+                    }
                 WitPackage.TypeDeclaration.Kind.ALIAS -> load(context, ptr, declaration.target()!!)
             }
         }
 
         return when (resolved.kind()) {
-            WitPackage.TypeRef.TypeKind.LIST -> loadList(context, ptr, firstArgument(resolved))
+            WitPackage.TypeRef.TypeKind.LIST -> {
+                checkRange(context, ptr, 8, 4)
+                loadList(context, ptr, firstArgument(resolved))
+            }
             WitPackage.TypeRef.TypeKind.OPTION,
             WitPackage.TypeRef.TypeKind.RESULT ->
                 loadVariant(context, ptr, casesFromConstructed(resolved))
             WitPackage.TypeRef.TypeKind.TUPLE -> loadTuple(context, ptr, resolved.arguments())
-            WitPackage.TypeRef.TypeKind.FUTURE ->
-                WitFuture.of<Any?>(Integer.toUnsignedLong(context.memory().readInt(ptr)))
-            WitPackage.TypeRef.TypeKind.STREAM ->
-                WitStream.of<Any?>(Integer.toUnsignedLong(context.memory().readInt(ptr)))
+            WitPackage.TypeRef.TypeKind.FUTURE -> {
+                checkRange(context, ptr, 4, 4)
+                WitFuture.of<Any?>(unsignedIntToLong(context.memory().readInt(ptr)))
+            }
+            WitPackage.TypeRef.TypeKind.STREAM -> {
+                checkRange(context, ptr, 4, 4)
+                WitStream.of<Any?>(unsignedIntToLong(context.memory().readInt(ptr)))
+            }
             WitPackage.TypeRef.TypeKind.BORROW,
-            WitPackage.TypeRef.TypeKind.OWN -> Integer.toUnsignedLong(context.memory().readInt(ptr))
+            WitPackage.TypeRef.TypeKind.OWN -> {
+                checkRange(context, ptr, 4, 4)
+                unsignedIntToLong(context.memory().readInt(ptr))
+            }
             else -> throw unsupported(resolved)
         }
     }
@@ -995,6 +1027,11 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
         value: Any?,
         elementType: WitPackage.TypeRef,
     ): StoredList {
+        if (isByteList(elementType) && (value == null || value is ByteArray)) {
+            val bytes = value ?: ByteArray(0)
+            val ptr = allocateBytes(context, bytes, 1)
+            return StoredList(ptr, bytes.size)
+        }
         val elements = listElements(value)
         val length = elements.size
         val elementAlignment = alignment(elementType)
@@ -1115,7 +1152,7 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
                 throw ComponentModelException("variant map must contain exactly one case")
             }
             val entry = value.entries.iterator().next()
-            label = Objects.toString(entry.key)
+            label = entry.key.toString()
             payload = entry.value
             hasPayload = true
         } else if (isOptionCases(cases)) {
@@ -1127,7 +1164,7 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
                 hasPayload = true
             }
         } else {
-            val reflected = reflectiveCase(value, cases)
+            val reflected = reflectedCase(value, cases)
             if (reflected != null) {
                 return reflected
             }
@@ -1135,7 +1172,7 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
             if (enumCase != null) {
                 return enumCase
             }
-            label = Objects.toString(value)
+            label = value.toString()
         }
 
         for (i in cases.indices) {
@@ -1147,22 +1184,18 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
         throw ComponentModelException("unknown variant case $label")
     }
 
-    private fun reflectiveCase(value: Any?, cases: List<CaseLayout>): SelectedCase? {
+    private fun reflectedCase(value: Any?, cases: List<CaseLayout>): SelectedCase? {
         if (value == null) {
             return null
         }
-        val simpleName = value.javaClass.simpleName
-        for (i in cases.indices) {
-            val c = cases[i]
-            if (simpleName != WitNames.typeName(c.label)) {
-                continue
-            }
-            if (c.type == null) {
-                return SelectedCase(i, null, null)
-            }
-            return SelectedCase(i, c.type, variantPayload(value))
-        }
-        return null
+        val reflected =
+            canonicalAbiReflectedCase(
+                value,
+                cases.map { it.label },
+                cases.map { it.type != null },
+            ) ?: return null
+        val selected = cases[reflected.index]
+        return SelectedCase(reflected.index, selected.type, reflected.payload)
     }
 
     private fun enumCase(value: Any?, cases: List<CaseLayout>): SelectedCase? {
@@ -1183,24 +1216,6 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
         return null
     }
 
-    private fun variantPayload(value: Any): Any? {
-        for (methodName in listOf("value", "getValue")) {
-            try {
-                val method = value.javaClass.getMethod(methodName)
-                return method.invoke(value)
-            } catch (_: ReflectiveOperationException) {
-                // Try the next common Kotlin/Java variant payload shape.
-            }
-        }
-        try {
-            val field = value.javaClass.getDeclaredField("value")
-            field.isAccessible = true
-            return field.get(value)
-        } catch (_: ReflectiveOperationException) {
-            throw ComponentModelException("missing variant payload on ${value.javaClass.name}")
-        }
-    }
-
     private fun isOptionCases(cases: List<CaseLayout>): Boolean =
         cases.size == 2 && cases[0].label == "none" && cases[1].label == "some"
 
@@ -1209,24 +1224,27 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
         if (value is Map<*, *>) {
             for (flag in flags) {
                 if (
-                    java.lang.Boolean.TRUE == value[flag.name()] ||
-                        java.lang.Boolean.TRUE == value[memberName(flag.name())]
+                    value[flag.name()] == true ||
+                        value[memberName(flag.name())] == true
                 ) {
                     enabled.add(flag.name())
                 }
             }
         } else if (value is Iterable<*>) {
             for (label in value) {
-                enabled.add(Objects.toString(label))
-            }
-        } else if (value != null && value.javaClass.isArray) {
-            for (i in 0 until ReflectArray.getLength(value)) {
-                enabled.add(Objects.toString(ReflectArray.get(value, i)))
+                enabled.add(label.toString())
             }
         } else if (value != null) {
-            for (flag in flags) {
-                if (java.lang.Boolean.TRUE == fieldValue(value, flag.name())) {
-                    enabled.add(flag.name())
+            val arrayElements = canonicalAbiArrayElements(value)
+            if (arrayElements != null) {
+                for (label in arrayElements) {
+                    enabled.add(label.toString())
+                }
+            } else {
+                for (flag in flags) {
+                    if (fieldValue(value, flag.name()) == true) {
+                        enabled.add(flag.name())
+                    }
                 }
             }
         }
@@ -1265,11 +1283,11 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
         when (flagsSize(count)) {
             1 -> longArrayOf(context.memory().readU8(ptr))
             2 -> longArrayOf(context.memory().readU16(ptr))
-            4 -> longArrayOf(Integer.toUnsignedLong(context.memory().readInt(ptr)))
+            4 -> longArrayOf(unsignedIntToLong(context.memory().readInt(ptr)))
             else -> {
                 val result = LongArray(flagsWordCount(count))
                 for (i in result.indices) {
-                    result[i] = Integer.toUnsignedLong(context.memory().readInt(ptr + (i * 4)))
+                    result[i] = unsignedIntToLong(context.memory().readInt(ptr + (i * 4)))
                 }
                 result
             }
@@ -1278,7 +1296,7 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
     private fun liftFlatFlags(iter: FlatIter, count: Int): LongArray {
         val result = LongArray(flagsWordCount(count))
         for (i in result.indices) {
-            result[i] = Integer.toUnsignedLong(iter.next(CoreValType.I32).toInt())
+            result[i] = unsignedIntToLong(iter.next(CoreValType.I32).toInt())
         }
         return result
     }
@@ -1444,6 +1462,7 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
     }
 
     private fun storeDiscriminant(context: Context, ptr: Int, index: Int, caseCount: Int) {
+        checkRange(context, ptr, discriminantSize(caseCount), discriminantSize(caseCount))
         when (discriminantSize(caseCount)) {
             1 -> context.memory().writeByte(ptr, index.toByte())
             2 -> context.memory().writeShort(ptr, index.toShort())
@@ -1451,12 +1470,15 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
         }
     }
 
-    private fun loadDiscriminant(context: Context, ptr: Int, caseCount: Int): Int =
-        when (discriminantSize(caseCount)) {
+    private fun loadDiscriminant(context: Context, ptr: Int, caseCount: Int): Int {
+        val size = discriminantSize(caseCount)
+        checkRange(context, ptr, size, size)
+        return when (size) {
             1 -> context.memory().readU8(ptr).toInt()
             2 -> context.memory().readU16(ptr).toInt()
             else -> context.memory().readInt(ptr)
         }
+    }
 
     private fun primitiveAlignment(name: String): Int =
         when (name) {
@@ -1645,10 +1667,10 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
         ownerQualifiedName: String? = null,
     ) {
         if (ownerQualifiedName != null) {
-            result.putIfAbsent(normalizeTypeName("$ownerQualifiedName/${type.name()}"), type)
+            putIfAbsent(result, normalizeTypeName("$ownerQualifiedName/${type.name()}"), type)
         }
-        result.putIfAbsent(normalizeTypeName(type.name()), type)
-        result.putIfAbsent(lastSegment(normalizeTypeName(type.name())), type)
+        putIfAbsent(result, normalizeTypeName(type.name()), type)
+        putIfAbsent(result, lastSegment(normalizeTypeName(type.name())), type)
     }
 
     private fun indexUse(
@@ -1664,9 +1686,15 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
                     listOf(),
                     null,
             )
-            result.putIfAbsent(normalizeTypeName(item.localName()), resource)
-            result.putIfAbsent(lastSegment(normalizeTypeName(item.localName())), resource)
-            result.putIfAbsent(normalizeTypeName(use.path() + "/" + item.name()), resource)
+            putIfAbsent(result, normalizeTypeName(item.localName()), resource)
+            putIfAbsent(result, lastSegment(normalizeTypeName(item.localName())), resource)
+            putIfAbsent(result, normalizeTypeName(use.path() + "/" + item.name()), resource)
+        }
+    }
+
+    private fun <K, V> putIfAbsent(map: MutableMap<K, V>, key: K, value: V) {
+        if (!map.containsKey(key)) {
+            map[key] = value
         }
     }
 
@@ -1716,58 +1744,18 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
         val memberName = memberName(name)
         for (methodName in
             listOf(memberName, "get" + capitalize(memberName), "is" + capitalize(memberName))) {
-            try {
-                val method = fieldAccessor(value.javaClass, methodName)
-                method.isAccessible = true
-                return method.invoke(value)
-            } catch (_: ReflectiveOperationException) {
-                // Try the next common Java/Kotlin accessor shape.
+            val reflected = canonicalAbiFieldValue(value, methodName)
+            if (reflected != null) {
+                return reflected.value
             }
         }
         for (fieldName in listOf(name, memberName)) {
-            val field = field(value.javaClass, fieldName)
-            if (field != null) {
-                try {
-                    field.isAccessible = true
-                    return field.get(value)
-                } catch (e: ReflectiveOperationException) {
-                    throw ComponentModelException(
-                        "failed to read field $name on ${value.javaClass}",
-                        e,
-                    )
-                }
+            val reflected = canonicalAbiFieldValue(value, fieldName)
+            if (reflected != null) {
+                return reflected.value
             }
         }
-        throw ComponentModelException("missing field $name on ${value.javaClass.name}")
-    }
-
-    @Throws(NoSuchMethodException::class)
-    private fun fieldAccessor(type: Class<*>, name: String): Method {
-        try {
-            return type.getMethod(name)
-        } catch (ignored: NoSuchMethodException) {
-            var current: Class<*>? = type
-            while (current != null) {
-                try {
-                    return current.getDeclaredMethod(name)
-                } catch (_: NoSuchMethodException) {
-                    current = current.superclass
-                }
-            }
-            throw ignored
-        }
-    }
-
-    private fun field(type: Class<*>, name: String): ReflectField? {
-        var current: Class<*>? = type
-        while (current != null) {
-            try {
-                return current.getDeclaredField(name)
-            } catch (_: NoSuchFieldException) {
-                current = current.superclass
-            }
-        }
-        return null
+        throw ComponentModelException("missing field $name on ${canonicalAbiTypeName(value)}")
     }
 
     private fun positionalValues(value: Any?, size: Int): List<Any?> {
@@ -1785,12 +1773,8 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
         if (value is List<*>) {
             return ArrayList(value)
         }
-        if (value != null && value.javaClass.isArray) {
-            val result = ArrayList<Any?>()
-            for (i in 0 until ReflectArray.getLength(value)) {
-                result.add(ReflectArray.get(value, i))
-            }
-            return result
+        if (value != null) {
+            canonicalAbiArrayElements(value)?.let { return it }
         }
         return componentValues(value, size)
     }
@@ -1799,33 +1783,7 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
         if (value == null) {
             return null
         }
-        val result = ArrayList<Any?>(size)
-        for (i in 1..size) {
-            val method = componentMethod(value.javaClass, i) ?: return null
-            try {
-                method.isAccessible = true
-                result.add(method.invoke(value))
-            } catch (e: ReflectiveOperationException) {
-                throw ComponentModelException(
-                    "failed to read tuple component$i from ${value.javaClass}",
-                    e,
-                )
-            }
-        }
-        return result
-    }
-
-    private fun componentMethod(type: Class<*>, index: Int): Method? {
-        val name = "component$index"
-        try {
-            return type.getMethod(name)
-        } catch (_: NoSuchMethodException) {
-            try {
-                return type.getDeclaredMethod(name)
-            } catch (_: NoSuchMethodException) {
-                return null
-            }
-        }
+        return canonicalAbiTupleComponents(value, size)
     }
 
     private fun listElements(value: Any?): List<Any?> {
@@ -1846,12 +1804,9 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
             }
             return result
         }
-        if (value.javaClass.isArray) {
-            val result = ArrayList<Any?>()
-            for (i in 0 until ReflectArray.getLength(value)) {
-                result.add(ReflectArray.get(value, i))
-            }
-            return result
+        val arrayElements = canonicalAbiArrayElements(value)
+        if (arrayElements != null) {
+            return arrayElements
         }
         throw ComponentModelException("list value must be iterable or array")
     }
@@ -1876,8 +1831,9 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
         }
         if (value is CharSequence) {
             val text = value.toString()
-            if (text.codePointCount(0, text.length) == 1) {
-                return checkedCodePoint(text.codePointAt(0).toLong())
+            val codePoint = singleCodePointOrNull(text)
+            if (codePoint != null) {
+                return checkedCodePoint(codePoint)
             }
         }
         throw ComponentModelException("expected one Unicode scalar value, got $value")
@@ -1886,12 +1842,11 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
     private fun checkedCodePoint(value: Long): Long {
         if (
             value < 0 ||
-                value > Character.MAX_CODE_POINT ||
-                (value >= Character.MIN_SURROGATE.code.toLong() &&
-                    value <= Character.MAX_SURROGATE.code.toLong())
+                value > MAX_UNICODE_CODE_POINT ||
+                (value >= MIN_SURROGATE && value <= MAX_SURROGATE)
         ) {
             throw ComponentModelException(
-                "invalid Unicode scalar value " + java.lang.Long.toUnsignedString(value)
+                "invalid Unicode scalar value " + unsignedLongToString(value)
             )
         }
         return value
@@ -1918,35 +1873,38 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
         throw ComponentModelException("expected numeric canonical ABI value, got $value")
     }
 
+    private fun singleCodePointOrNull(value: String): Long? {
+        if (value.isEmpty()) {
+            return null
+        }
+        val first = value[0].code
+        if (first in MIN_HIGH_SURROGATE..MAX_HIGH_SURROGATE) {
+            if (value.length != 2) {
+                return null
+            }
+            val second = value[1].code
+            if (second !in MIN_LOW_SURROGATE..MAX_LOW_SURROGATE) {
+                return null
+            }
+            return (((first - MIN_HIGH_SURROGATE) shl 10) + (second - MIN_LOW_SURROGATE) + 0x10000)
+                .toLong()
+        }
+        if (first in MIN_LOW_SURROGATE..MAX_LOW_SURROGATE || value.length != 1) {
+            return null
+        }
+        return first.toLong()
+    }
+
     private fun kotlinUnsignedLong(value: Any?): Long? {
         if (value == null) {
             return null
         }
-        try {
-            return when (value.javaClass.name) {
-                "kotlin.UByte" ->
-                    java.lang.Byte.toUnsignedLong(
-                        value.javaClass.getDeclaredMethod("unbox-impl").invoke(value) as Byte
-                    )
-                "kotlin.UShort" ->
-                    Integer.toUnsignedLong(
-                        java.lang.Short.toUnsignedInt(
-                            value.javaClass.getDeclaredMethod("unbox-impl").invoke(value) as Short
-                        )
-                    )
-                "kotlin.UInt" ->
-                    Integer.toUnsignedLong(
-                        value.javaClass.getDeclaredMethod("unbox-impl").invoke(value) as Int
-                    )
-                "kotlin.ULong" ->
-                    value.javaClass.getDeclaredMethod("unbox-impl").invoke(value) as Long
-                else -> null
-            }
-        } catch (e: ReflectiveOperationException) {
-            throw ComponentModelException(
-                "failed to unbox Kotlin unsigned value ${value.javaClass.name}",
-                e,
-            )
+        return when (value) {
+            is UByte -> value.toLong()
+            is UShort -> value.toLong()
+            is UInt -> value.toLong()
+            is ULong -> value.toLong()
+            else -> null
         }
     }
 
@@ -1954,41 +1912,10 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
         if (value == null) {
             return null
         }
-        for (method in value.javaClass.methods) {
-            if (
-                method.parameterCount == 0 &&
-                    (method.name == "handle" ||
-                        method.name == "getHandle" ||
-                        method.name.startsWith("getHandle-"))
-            ) {
-                val handle = invokeHandle(value, method)
-                if (handle != null) {
-                    return handle
-                }
-            }
+        if (value is WitResource<*>) {
+            return value.handle()
         }
-        try {
-            val field = value.javaClass.getField("handle")
-            val handle = field.get(value)
-            if (handle is Number) {
-                return handle.toLong()
-            }
-        } catch (_: ReflectiveOperationException) {
-            // Try only common Kotlin/Java resource wrapper shapes.
-        }
-        return null
-    }
-
-    private fun invokeHandle(value: Any, method: Method): Long? {
-        try {
-            val handle = method.invoke(value)
-            if (handle is Number) {
-                return handle.toLong()
-            }
-        } catch (_: ReflectiveOperationException) {
-            // Try the next common Kotlin/Java accessor shape.
-        }
-        return null
+        return canonicalAbiResourceHandle(value)
     }
 
     private fun asFloat(value: Any?): Float {
@@ -2012,6 +1939,10 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
         }
         return result
     }
+
+    private fun unsignedIntToLong(value: Int): Long = value.toLong() and 0xffff_ffffL
+
+    private fun unsignedLongToString(value: Long): String = value.toULong().toString()
 
     private fun normalizeTypeName(name: String): String =
         WitNames.withoutVersion(WitNames.stripIdentifierEscape(name))
@@ -2077,10 +2008,10 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
         }
 
         companion object {
-            @JvmStatic
+            @ComponentModelJvmStatic
             fun of(memory: Memory, reallocator: Reallocator): Context = Context(memory, reallocator)
 
-            @JvmStatic
+            @ComponentModelJvmStatic
             fun forInstance(instance: Instance): Context {
                 val memory =
                     instance.memory()
@@ -2134,7 +2065,7 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
                 abi.lowerFlatValues(
                     context,
                     function.parameters(),
-                    Arrays.asList(*args),
+                    args.toList(),
                     MAX_FLAT_PARAMS,
                 )
             asyncTaskReturn?.reset()
@@ -2206,7 +2137,7 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
 
     private class FlatIter(types: List<CoreValType>, values: LongArray) {
         private val types: List<CoreValType> = ArrayList(types)
-        private val values: LongArray = values.clone()
+        private val values: LongArray = values.copyOf()
         private var index = 0
 
         fun next(expected: CoreValType): Long {
@@ -2241,7 +2172,14 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
         const val MAX_FLAT_PARAMS: Int = 16
         const val MAX_FLAT_RESULTS: Int = 1
         const val REALLOC_EXPORT: String = "canonical_abi_realloc"
+        private const val MAX_UNICODE_CODE_POINT: Long = 0x10ffffL
+        private const val MIN_SURROGATE: Long = 0xd800L
+        private const val MAX_SURROGATE: Long = 0xdfffL
+        private const val MIN_HIGH_SURROGATE: Int = 0xd800
+        private const val MAX_HIGH_SURROGATE: Int = 0xdbff
+        private const val MIN_LOW_SURROGATE: Int = 0xdc00
+        private const val MAX_LOW_SURROGATE: Int = 0xdfff
 
-        @JvmStatic fun of(witPackage: WitPackage): CanonicalAbi = CanonicalAbi(witPackage)
+        @ComponentModelJvmStatic fun of(witPackage: WitPackage): CanonicalAbi = CanonicalAbi(witPackage)
     }
 }

@@ -746,6 +746,7 @@ class KotlinWitBindingsCompileTest {
 
             package example.generated.movies
 
+            import uk.shusek.krwa.component.WasiComponentInvoker
             import uk.shusek.krwa.component.WasmPlugin
 
             object MoviePluginRunner {
@@ -754,6 +755,9 @@ class KotlinWitBindingsCompileTest {
 
               fun movieDetails(plugin: WasmPlugin, id: ULong): Movies.MovieDetail =
                   Plugin.guest(plugin).movies.getMovieDetails(id)
+
+              fun movieDetailsViaInvoker(invoker: WasiComponentInvoker, id: ULong): Movies.MovieDetail =
+                  Plugin.guest(invoker).movies.getMovieDetails(id)
             }
             """
                 .trimIndent(),
@@ -788,8 +792,11 @@ class KotlinWitBindingsCompileTest {
                     .getMethod("build", WasmPlugin.Builder::class.java)
                     .invoke(runner, pluginBuilder) as WasmPlugin
             val detail = singleMethod(runnerType, "movieDetails").invoke(runner, plugin, 2L)
+            val invokerDetail =
+                singleMethod(runnerType, "movieDetailsViaInvoker").invoke(runner, plugin, 3L)
 
             assertMovieDetail(detail, 2L, "The Movie")
+            assertMovieDetail(invokerDetail, 3L, "The Movie")
         }
     }
 
@@ -1012,7 +1019,7 @@ class KotlinWitBindingsCompileTest {
                     "-no-reflect",
                     "-no-stdlib",
                     "-jvm-target",
-                    "11",
+                    "25",
                     "-cp",
                     kotlinCompileClasspath(),
                     "-d",
