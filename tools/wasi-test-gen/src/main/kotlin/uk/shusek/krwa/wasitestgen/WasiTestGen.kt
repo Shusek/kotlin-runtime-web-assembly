@@ -203,11 +203,12 @@ object WasiKotlinTestSources {
             appendLine("fun test${StringUtils.escapedCamelCase(baseName)}() {")
             appendLine("    val test = File(${relativePath(file).kotlinLiteral()})")
             appendLine("    val args = ${listOf(specification.args())}")
+            appendLine("    val root = ${optionalOf(specification.root())}")
             appendLine("    val dirs = ${listOf(specification.dirs())}")
             appendLine("    val env = ${mapOf(specification.env())}")
             appendLine("    val exitCode = ${specification.exitCode()}")
             appendLine("    val stdout = ${optionalOf(specification.stdout())}")
-            appendLine("    WasiTestRunner.execute(test, args, dirs, env, exitCode, stdout)")
+            appendLine("    WasiTestRunner.execute(test, args, root, dirs, env, exitCode, stdout)")
             appendLine("}")
         }
     }

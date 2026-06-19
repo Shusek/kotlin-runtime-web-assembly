@@ -3249,12 +3249,15 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
         }
         val candidate = base.path.resolve(raw, normalize = true)
         val rootReal = fileSystem.canonicalize(base.root)
-        val checked = realPathForSandboxCheck(candidate, followLast)
+        val checked = realPathForSandboxCheck(candidate, followLast || rawPath.hasTrailingSeparator())
         if (!isInsidePreopen(rootReal, checked)) {
             throw FsException("not-permitted")
         }
         return candidate
     }
+
+    private fun String.hasTrailingSeparator(): Boolean =
+        length > 1 && last() == '/'
 
     private fun realPathForSandboxCheck(path: Path, followLast: Boolean): Path {
         if (followLast) {

@@ -163,7 +163,7 @@ class WasiPreview3TestsuiteTest {
         )
             .map { wasmName ->
                 dynamicTest(wasmName) {
-                    runCommandComponent(wasmName, preopenedDirectories = listOf("fs-tests.dir"))
+                    runCommandComponent(wasmName, preopenedRoot = "fs-tests.dir")
                 }
             }
 
@@ -175,6 +175,7 @@ class WasiPreview3TestsuiteTest {
         expectedStdout: String = "",
         expectedStderr: String = "",
         expectedExitCode: Int = 0,
+        preopenedRoot: String? = null,
         preopenedDirectories: List<String> = emptyList(),
         networking: Boolean = false,
     ) {
@@ -203,6 +204,13 @@ class WasiPreview3TestsuiteTest {
             wasiBuilder.withNetworking()
         }
 
+        if (preopenedRoot != null) {
+            val source = component.parentFile.toPath().resolve(preopenedRoot)
+            val target = tempDir.resolve("${wasmName.removeSuffix(".wasm")}-$preopenedRoot")
+            Files.copyDirectory(source, target)
+            wasiBuilder.withPreopenedDirectory("/", target.toString())
+            wasiPreview2Builder.withPreopenedDirectory("/", target.toString())
+        }
         for (directory in preopenedDirectories) {
             val source = component.parentFile.toPath().resolve(directory)
             val target = tempDir.resolve("${wasmName.removeSuffix(".wasm")}-$directory")

@@ -20,6 +20,7 @@ object WasiTestRunner {
     fun execute(
         test: File,
         args: List<String>,
+        root: Optional<String>,
         dirs: List<String>,
         env: Map<String, String>,
         exitCode: Int,
@@ -27,7 +28,7 @@ object WasiTestRunner {
     ) {
         try {
             ZeroFs.newFileSystem(Configuration.unix().toBuilder().setAttributeViews("unix").build())
-                .use { fs -> execute(test, args, dirs, env, exitCode, stdout, fs) }
+                .use { fs -> execute(test, args, root, dirs, env, exitCode, stdout, fs) }
         } catch (e: IOException) {
             throw UncheckedIOException(e)
         }
@@ -36,6 +37,7 @@ object WasiTestRunner {
     private fun execute(
         test: File,
         args: List<String>,
+        root: Optional<String>,
         dirs: List<String>,
         env: Map<String, String>,
         exitCode: Int,
@@ -60,6 +62,12 @@ object WasiTestRunner {
             options.withEnvironment("NO_DANGLING_FILESYSTEM", "true")
         }
 
+        root.ifPresent { dir ->
+            val source = test.parentFile.toPath().resolve(dir)
+            val target = fs.getPath("/")
+            Files.copyDirectory(source, target)
+            options.withDirectory("/", target)
+        }
         for (dir in dirs) {
             val source = test.parentFile.toPath().resolve(dir)
             val target = fs.getPath(dir)
