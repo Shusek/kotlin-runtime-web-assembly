@@ -40,6 +40,7 @@ val krwaModuleByArtifact =
         "codegen" to ":codegen",
         "compiler" to ":compiler",
         "compiler-tests" to ":compiler-tests",
+        "component-model-gradle-plugin" to ":component-model-gradle-plugin",
         "component-model" to ":component-model",
         "dircache-experimental" to ":dircache",
         "fuzz" to ":fuzz",

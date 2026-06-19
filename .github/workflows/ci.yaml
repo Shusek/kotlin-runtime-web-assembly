@@ -41,6 +41,11 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
 
+      - name: Verify Component Model Gradle plugin
+        run: ./gradlew --no-daemon :component-model-gradle-plugin:test :component-model-gradle-plugin:validatePlugins
+        env:
+          GRADLE_OPTS: "-ea"
+
       - name: Run tests
         run: ./gradlew --no-daemon test --continue
         env:

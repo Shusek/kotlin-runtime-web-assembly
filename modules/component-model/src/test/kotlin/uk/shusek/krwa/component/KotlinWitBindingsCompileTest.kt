@@ -30,6 +30,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import uk.shusek.krwa.tools.wasm.Wat2Wasm
+import uk.shusek.krwa.wasi.WasiPreview1
 
 class KotlinWitBindingsCompileTest {
     @TempDir lateinit var tempDir: Path
@@ -182,6 +183,58 @@ class KotlinWitBindingsCompileTest {
     }
 
     @Test
+    fun writtenBindingsDirectoryFromWitFileCompilesAsKotlin() {
+        val witFile = tempDir.resolve("split-plugin.wit")
+        Files.writeString(
+            witFile,
+            """
+            package example:split;
+
+            interface api {
+              run: func(value: string) -> string;
+            }
+
+            world plugin {
+              export api;
+            }
+            """
+                .trimIndent(),
+            StandardCharsets.UTF_8,
+        )
+        val generatedDirectory = tempDir.resolve("split-generated")
+        val usageFile = tempDir.resolve("UseSplitPluginBindings.kt")
+        val writtenFiles =
+            KotlinWitBindings.writeDirectory(
+                witFile.toOkioPath(),
+                "example.generated.split",
+                generatedDirectory.toOkioPath(),
+            ).map { path -> Path.of(path.toString()) }
+
+        assertTrue(writtenFiles.any { path -> path.fileName.toString() == "Api.kt" }, writtenFiles.toString())
+        assertTrue(writtenFiles.any { path -> path.fileName.toString() == "Plugin.kt" }, writtenFiles.toString())
+        Files.writeString(
+            usageFile,
+            """
+            @file:OptIn(kotlin.ExperimentalUnsignedTypes::class)
+
+            package example.generated.split
+
+            class ApiImpl : Api {
+              override fun run(value: String): String = value
+            }
+
+            class PluginImpl : Plugin.Guest {
+              override val api: Api = ApiImpl()
+            }
+            """
+                .trimIndent(),
+            StandardCharsets.UTF_8,
+        )
+
+        compileKotlin(writtenFiles, usageFile)
+    }
+
+    @Test
     fun cliWrittenBindingsFromWitFileCompileAsKotlin() {
         val witFile = tempDir.resolve("cli-plugin.wit")
         Files.writeString(
@@ -237,6 +290,52 @@ class KotlinWitBindingsCompileTest {
         )
 
         compileKotlin(generatedFile, usageFile)
+    }
+
+    @Test
+    fun cliCanWriteSplitBindingsDirectory() {
+        val witFile = tempDir.resolve("cli-split-plugin.wit")
+        Files.writeString(
+            witFile,
+            """
+            package example:cli-split@1.0.0;
+            interface api {
+              run: async func(value: u32) -> u32;
+            }
+            world plugin {
+              export api;
+            }
+            """
+                .trimIndent(),
+            StandardCharsets.UTF_8,
+        )
+        val generatedDirectory = tempDir.resolve("cli-split")
+        val stdout = ByteArrayOutputStream()
+        val stderr = ByteArrayOutputStream()
+
+        assertEquals(
+            0,
+            KotlinWitBindgen.run(
+                arrayOf(
+                    "--package",
+                    "example.generated.cli.split",
+                    "--out-dir",
+                    generatedDirectory.toString(),
+                    "--guest-exports",
+                    witFile.toString(),
+                ),
+                PrintStream(stdout, true, StandardCharsets.UTF_8),
+                PrintStream(stderr, true, StandardCharsets.UTF_8),
+            ),
+            stderr.toString(StandardCharsets.UTF_8),
+        )
+        assertEquals("", stdout.toString(StandardCharsets.UTF_8))
+        val generatedPackage = generatedDirectory.resolve("example/generated/cli/split")
+        assertTrue(Files.exists(generatedPackage.resolve("RuntimeTypes.kt")))
+        assertTrue(Files.exists(generatedPackage.resolve("Api.kt")))
+        assertTrue(Files.exists(generatedPackage.resolve("Plugin.kt")))
+        assertTrue(Files.exists(generatedPackage.resolve("KrwaGuestExports.kt")))
+        assertTrue(Files.readString(generatedPackage.resolve("KrwaGuestExports.kt")).contains("krwaRunSuspend"))
     }
 
     @Test
@@ -336,6 +435,10 @@ class KotlinWitBindingsCompileTest {
                 .withGuestExportAdapters(true)
                 .build()
                 .generate()
+        assertFalse(generated.contains("@file:Suppress(\"INVISIBLE_MEMBER\""), generated)
+        assertFalse(generated.contains("INVISIBLE_REFERENCE"), generated)
+        assertFalse(generated.contains("kotlin.wasm.internal"), generated)
+        assertFalse(generated.contains("wasm_memory_"), generated)
         val usage =
             """
             @file:OptIn(kotlin.ExperimentalUnsignedTypes::class)
@@ -374,7 +477,89 @@ class KotlinWitBindingsCompileTest {
             """
                 .trimIndent()
 
-        compileWasmWasi(generated, usage)
+        val output = compileWasmWasi(generated, usage)
+        assertFalse(output.contains("Suppression of error"), output)
+        assertFalse(output.contains("INVISIBLE_REFERENCE"), output)
+    }
+
+    @Test
+    fun generatedGuestBindingsPackageAndRunAsComponent() {
+        val witSource =
+            """
+            package example:generated-guest@1.0.0;
+
+            interface api {
+              greet: func(name: string) -> string;
+            }
+
+            world plugin {
+              export api;
+            }
+            """
+                .trimIndent()
+        val witPackage = WitPackage.parse(witSource)
+        val generated =
+            KotlinWitBindings.builder(witPackage)
+                .withPackageName("example.generated.guestcomponent")
+                .withRuntimeTypes(true)
+                .withGuestExportAdapters(true)
+                .build()
+                .generate()
+        val usage =
+            """
+            @file:OptIn(kotlin.ExperimentalUnsignedTypes::class)
+
+            package example.generated.guestcomponent
+
+            import kotlin.wasm.WasmExport
+
+            object GeneratedComponentGuest : Plugin.Guest {
+              override val api: Api = object : Api {
+                override fun greet(name: String): String = "hello, ${'$'}name"
+              }
+            }
+
+            @WasmExport("krwa_guest_init")
+            fun krwaGuestInit() {
+                KrwaGuestExports.installPlugin(GeneratedComponentGuest)
+            }
+            """
+                .trimIndent()
+        val coreWasm = buildWasmWasiExecutable("generated-guest-component", generated, usage)
+        val witFile = tempDir.resolve("generated-guest-component.wit")
+        val componentFile = tempDir.resolve("generated/guest-component.wasm")
+        Files.writeString(witFile, witSource, StandardCharsets.UTF_8)
+        val stdout = ByteArrayOutputStream()
+        val stderr = ByteArrayOutputStream()
+
+        assertEquals(
+            0,
+            WasmComponentPackager.run(
+                arrayOf(
+                    "--wit",
+                    witFile.toString(),
+                    "--world",
+                    "plugin",
+                    "--core",
+                    coreWasm.toString(),
+                    "--out",
+                    componentFile.toString(),
+                ),
+                PrintStream(stdout, true, StandardCharsets.UTF_8),
+                PrintStream(stderr, true, StandardCharsets.UTF_8),
+            ),
+            stderr.toString(StandardCharsets.UTF_8),
+        )
+        assertEquals("", stdout.toString(StandardCharsets.UTF_8))
+
+        WasiPreview1.builder().build().use { wasi ->
+            val plugin =
+                WasmPlugin.builderFromComponent(componentFile.toOkioPath())
+                    .withWasiPreview1(wasi)
+                    .build()
+
+            assertEquals("hello, Ada", plugin.call("api.greet", "Ada"))
+        }
     }
 
     @Test
@@ -1009,7 +1194,15 @@ class KotlinWitBindingsCompileTest {
     }
 
     private fun compileKotlin(generatedFile: Path, usageFile: Path): Path {
-        val outputDir = tempDir.resolve("classes-${generatedFile.fileName}")
+        return compileKotlin(listOf(generatedFile), usageFile, "classes-${generatedFile.fileName}")
+    }
+
+    private fun compileKotlin(generatedFiles: List<Path>, usageFile: Path): Path {
+        return compileKotlin(generatedFiles, usageFile, "classes-${usageFile.fileName}")
+    }
+
+    private fun compileKotlin(generatedFiles: List<Path>, usageFile: Path, outputName: String): Path {
+        val outputDir = tempDir.resolve(outputName)
         Files.createDirectories(outputDir)
         val stderr = ByteArrayOutputStream()
         val exitCode =
@@ -1024,7 +1217,7 @@ class KotlinWitBindingsCompileTest {
                     kotlinCompileClasspath(),
                     "-d",
                     outputDir.toString(),
-                    generatedFile.toString(),
+                    *generatedFiles.map(Path::toString).toTypedArray(),
                     usageFile.toString(),
                 )
 
@@ -1032,8 +1225,36 @@ class KotlinWitBindingsCompileTest {
         return outputDir
     }
 
-    private fun compileWasmWasi(generated: String, usage: String) {
+    private fun compileWasmWasi(generated: String, usage: String): String {
         val projectDir = tempDir.resolve("wasm-wasi-compile")
+        return runWasmWasiGradleTask(projectDir, generated, usage, "compileKotlinWasmWasi")
+    }
+
+    private fun buildWasmWasiExecutable(name: String, generated: String, usage: String): Path {
+        val projectDir = tempDir.resolve(name)
+        val output = runWasmWasiGradleTask(projectDir, generated, usage, "compileProductionExecutableKotlinWasmWasi")
+        val outputRoot = projectDir.resolve("build/compileSync/wasmWasi/main/productionExecutable")
+        val wasmFiles =
+            Files.walk(outputRoot).use { paths ->
+                paths
+                    .filter { path -> Files.isRegularFile(path) }
+                    .filter { path -> path.fileName.toString().endsWith(".wasm") }
+                    .collect(Collectors.toList())
+            }
+        if (wasmFiles.size != 1) {
+            throw AssertionError(
+                "Expected exactly one compiled Wasm file under $outputRoot, got $wasmFiles\n$output"
+            )
+        }
+        return wasmFiles.single()
+    }
+
+    private fun runWasmWasiGradleTask(
+        projectDir: Path,
+        generated: String,
+        usage: String,
+        taskName: String,
+    ): String {
         copyTestFixtureProject("wasm-wasi-generated-compile", projectDir)
         val sourceDir = projectDir.resolve("src/wasmWasiMain/kotlin/example/generated/suvio")
         Files.createDirectories(sourceDir)
@@ -1050,7 +1271,7 @@ class KotlinWitBindingsCompileTest {
                     "--no-daemon",
                     "--stacktrace",
                     "-q",
-                    "compileKotlinWasmWasi",
+                    taskName,
                 )
                 .directory(projectDir.toFile())
                 .redirectErrorStream(true)
@@ -1070,6 +1291,7 @@ class KotlinWitBindingsCompileTest {
             }
         assertTrue(finished, failureOutput)
         assertEquals(0, process.exitValue(), failureOutput)
+        return output
     }
 
     private fun compileFailureOutput(output: String, sourceDir: Path): String {

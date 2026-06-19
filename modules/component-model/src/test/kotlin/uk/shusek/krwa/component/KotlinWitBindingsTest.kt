@@ -1,6 +1,7 @@
 package uk.shusek.krwa.component
 
 import java.nio.charset.StandardCharsets
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -33,6 +34,112 @@ class KotlinWitBindingsTest {
     }
 
     @Test
+    fun splitBindingsExposeStablePublicApiSnapshot() {
+        val witPackage =
+            WitPackage.parse(
+                """
+                package example:snapshot@1.2.3;
+
+                interface types {
+                  resource movie-id;
+
+                  record context {
+                    user-id: option<string>,
+                    flags: list<string>,
+                  }
+                }
+
+                interface media {
+                  use types.{movie-id};
+
+                  record movie {
+                    id: movie-id,
+                    title: string,
+                    tags: list<string>,
+                  }
+
+                  variant lookup-error {
+                    not-found(movie-id),
+                    blocked,
+                    backend(string),
+                  }
+
+                  search: async func(query: string, limit: option<u32>) ->
+                    result<list<movie>, lookup-error>;
+                }
+
+                interface host {
+                  log: func(message: string);
+                }
+
+                world plugin {
+                  use types.{context};
+                  import host;
+                  export media;
+                  export init: func(context: context) -> result<string, string>;
+                }
+                """
+                    .trimIndent()
+            )
+
+        val snapshot =
+            KotlinWitBindings.builder(witPackage)
+                .withPackageName("example.generated.snapshot")
+                .withPluginHelpers(true)
+                .build()
+                .generateFiles()
+                .publicApiSnapshot()
+
+        assertEquals(
+            """
+            == example/generated/snapshot/Host.kt ==
+            public interface Host {
+            public fun log(message: String)
+
+            == example/generated/snapshot/Media.kt ==
+            public interface Media {
+            public typealias MovieId = Types.MovieId
+            public data class Movie(
+            public val id: MovieId,
+            public val title: String,
+            public val tags: List<String>
+            public sealed interface LookupError {
+            public data class NotFound(public val value: MovieId) : LookupError
+            public object Blocked : LookupError
+            public data class Backend(public val value: String) : LookupError
+            public suspend fun search(query: String, limit: UInt?): WitResult<List<Movie>, LookupError>
+
+            == example/generated/snapshot/Plugin.kt ==
+            public object Plugin {
+            public typealias Context = Types.Context
+            public interface Host {
+            public val host: example.generated.snapshot.Host
+            public interface Guest {
+            public val media: example.generated.snapshot.Media
+            public fun init(context: Context): WitResult<String, String>
+            public const val WIT_PACKAGE: String = "example:snapshot@1.2.3"
+            public const val WIT_PACKAGE_VERSION: String = "1.2.3"
+            public const val WIT_PACKAGE_MAJOR_VERSION: Int = 1
+            public const val WIT_WORLD: String = "plugin"
+            public const val WIT_QUALIFIED_WORLD: String = "example:snapshot/plugin@1.2.3"
+            public fun installHost(builder: uk.shusek.krwa.component.WasmPlugin.Builder, host: Host): uk.shusek.krwa.component.WasmPlugin.Builder =
+            public fun build(builder: uk.shusek.krwa.component.WasmPlugin.Builder, host: Host): uk.shusek.krwa.component.WasmPlugin =
+            public fun guest(plugin: uk.shusek.krwa.component.WasmPlugin): Guest =
+            public fun guest(invoker: uk.shusek.krwa.component.WasiComponentInvoker): Guest =
+
+            == example/generated/snapshot/Types.kt ==
+            public interface Types {
+            public typealias MovieId = WitResource<MovieIdTag>
+            public object MovieIdTag
+            public data class Context(
+            public val userId: String?,
+            public val flags: List<String>
+            """.trimIndent(),
+            snapshot,
+        )
+    }
+
+    @Test
     fun mapsWitCharToUnicodeScalarInt() {
         val witPackage =
             WitPackage.parse(
@@ -49,6 +156,18 @@ class KotlinWitBindingsTest {
 
         assertTrue(kotlin.contains("public fun mark(value: Int): Int"))
     }
+
+    private fun List<KotlinWitBindings.GeneratedFile>.publicApiSnapshot(): String =
+        sortedBy { file -> file.relativePath.toString() }
+            .joinToString("\n\n") { file ->
+                val publicLines =
+                    file.content
+                        .lineSequence()
+                        .map(String::trim)
+                        .filter { line -> line.startsWith("public ") }
+                        .joinToString("\n")
+                "== ${file.relativePath} ==\n$publicLines"
+            }
 
     @Test
     fun generatesGuestExportAdaptersWhenRequested() {

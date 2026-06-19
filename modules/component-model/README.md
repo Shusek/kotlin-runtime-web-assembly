@@ -169,6 +169,18 @@ KotlinWitBindings.write(
 )
 ```
 
+To generate source-set friendly split files, write to a directory instead. KRWA
+creates package directories below the output root and emits separate files for
+WIT interfaces, worlds, runtime aliases, and guest export adapters:
+
+```kotlin
+KotlinWitBindings.writeDirectory(
+    "wit".toPath(normalize = true),
+    "example.plugins.generated",
+    "build/generated/krwa".toPath(normalize = true),
+)
+```
+
 The same path is available as a CLI entry point:
 
 ```shell
@@ -177,6 +189,8 @@ java -cp krwa-component-model.jar uk.shusek.krwa.component.KotlinWitBindgen \
   --out build/generated/krwa/PluginBindings.kt \
   wit/plugin.wit
 ```
+
+Use `--out-dir build/generated/krwa` for split-file output.
 
 For a Kotlin/Wasm guest module that implements an exported world, add
 `--guest-exports`. This emits top-level `@WasmExport` adapter functions and a
@@ -190,12 +204,21 @@ java -cp krwa-component-model.jar uk.shusek.krwa.component.KotlinWitBindgen \
   wit/plugin.wit
 ```
 
-Install the guest implementation before exported functions are invoked:
+Install the guest implementation before exported functions are invoked. When
+the module is loaded through `WasmPlugin`, export `krwa_guest_init`; KRWA calls
+that initializer after instantiation and before binding component exports:
 
 ```kotlin
-KrwaGuestExports.installPlugin(object : Plugin.Guest {
+import kotlin.wasm.WasmExport
+
+object MyGuest : Plugin.Guest {
     override val movies: Movies = MoviesImpl()
-})
+}
+
+@WasmExport("krwa_guest_init")
+fun krwaGuestInit() {
+    KrwaGuestExports.installPlugin(MyGuest)
+}
 ```
 
 The generated adapters lower and lift canonical ABI values for scalars, strings,

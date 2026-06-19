@@ -32,10 +32,10 @@ object KotlinWitBindgen {
                     .withPluginHelpers(options.pluginHelpers)
                     .withGuestExportAdapters(options.guestExports)
                     .build()
-            if (options.output == null) {
-                out.print(generator.generate())
-            } else {
-                generator.writeTo(options.output)
+            when {
+                options.outputFile != null -> generator.writeTo(options.outputFile)
+                options.outputDirectory != null -> generator.writeToDirectory(options.outputDirectory)
+                else -> out.print(generator.generate())
             }
             0
         } catch (e: IllegalArgumentException) {
@@ -53,7 +53,7 @@ object KotlinWitBindgen {
 
     private fun usage(stream: PrintStream) {
         stream.println(
-                "Usage: KotlinWitBindgen [--package <name>] [--out <file>] " +
+                "Usage: KotlinWitBindgen [--package <name>] [--out <file>|--out-dir <directory>] " +
                 "[--runtime-types] [--runtime-package <name>] [--plugin-helpers] " +
                 "[--guest-exports] " +
                 "<wit-or-component>"
@@ -62,7 +62,8 @@ object KotlinWitBindgen {
 
     private data class Options(
         val input: Path,
-        val output: Path?,
+        val outputFile: Path?,
+        val outputDirectory: Path?,
         val packageName: String,
         val runtimePackageName: String,
         val runtimeTypes: Boolean,
@@ -72,7 +73,8 @@ object KotlinWitBindgen {
         companion object {
             fun parse(args: Array<String>): Options {
                 var input: Path? = null
-                var output: Path? = null
+                var outputFile: Path? = null
+                var outputDirectory: Path? = null
                 var packageName = "uk.shusek.krwa.generated"
                 var runtimePackageName = "uk.shusek.krwa.component"
                 var runtimeTypes = false
@@ -86,7 +88,9 @@ object KotlinWitBindgen {
                         "--package",
                         "-p" -> packageName = requireValue(args, ++index, arg)
                         "--out",
-                        "-o" -> output = requireValue(args, ++index, arg).toPath(normalize = true)
+                        "-o" -> outputFile = requireValue(args, ++index, arg).toPath(normalize = true)
+                        "--out-dir" ->
+                            outputDirectory = requireValue(args, ++index, arg).toPath(normalize = true)
                         "--runtime-package" -> runtimePackageName = requireValue(args, ++index, arg)
                         "--runtime-types" -> runtimeTypes = true
                         "--plugin-helpers" -> pluginHelpers = true
@@ -105,10 +109,14 @@ object KotlinWitBindgen {
                     }
                     index++
                 }
+                if (outputFile != null && outputDirectory != null) {
+                    throw IllegalArgumentException("configure only one of --out or --out-dir")
+                }
 
                 return Options(
                     input ?: throw IllegalArgumentException("missing WIT/component input path"),
-                    output,
+                    outputFile,
+                    outputDirectory,
                     packageName,
                     runtimePackageName,
                     runtimeTypes,
