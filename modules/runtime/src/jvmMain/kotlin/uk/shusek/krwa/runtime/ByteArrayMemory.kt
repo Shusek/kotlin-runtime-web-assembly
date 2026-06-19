@@ -261,6 +261,13 @@ class ByteArrayMemory(private val limits: MemoryLimits) : Memory {
             throw outOfBoundsException(e, addr, 1)
         }
 
+    override fun readU8Int(addr: Int): Int =
+        try {
+            page(addr ushr PAGE_SHIFT)[addr and PAGE_MASK].toInt() and 0xFF
+        } catch (e: RuntimeException) {
+            throw outOfBoundsException(e, addr, 1)
+        }
+
     override fun readBytes(addr: Int, len: Int): ByteArray {
         checkBounds(addr, len, sizeInBytes(), ::WasmRuntimeException)
         val result = ByteArray(len)

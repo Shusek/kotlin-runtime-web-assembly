@@ -519,11 +519,11 @@ internal object Emitters {
     }
 
     fun I32_LOAD(ctx: Context, ins: CompilerInstruction, asm: InstructionAdapter) {
-        emitLoadOrStore(ctx, ins, asm, ShadedRefs.MEMORY_READ_INT)
+        emitDirectMemoryRead(ctx, ins, asm, ShadedRefs.MEMORY_READ_INT_DIRECT)
     }
 
     fun I32_LOAD8_S(ctx: Context, ins: CompilerInstruction, asm: InstructionAdapter) {
-        emitLoadOrStore(ctx, ins, asm, ShadedRefs.MEMORY_READ_BYTE)
+        emitDirectMemoryRead(ctx, ins, asm, ShadedRefs.MEMORY_READ_DIRECT)
     }
 
     fun I32_LOAD8_U(ctx: Context, ins: CompilerInstruction, asm: InstructionAdapter) {
@@ -531,7 +531,7 @@ internal object Emitters {
     }
 
     fun I32_LOAD16_S(ctx: Context, ins: CompilerInstruction, asm: InstructionAdapter) {
-        emitLoadOrStore(ctx, ins, asm, ShadedRefs.MEMORY_READ_SHORT)
+        emitDirectMemoryRead(ctx, ins, asm, ShadedRefs.MEMORY_READ_SHORT_DIRECT)
     }
 
     fun I32_LOAD16_U(ctx: Context, ins: CompilerInstruction, asm: InstructionAdapter) {
@@ -541,11 +541,11 @@ internal object Emitters {
     }
 
     fun F32_LOAD(ctx: Context, ins: CompilerInstruction, asm: InstructionAdapter) {
-        emitLoadOrStore(ctx, ins, asm, ShadedRefs.MEMORY_READ_FLOAT)
+        emitDirectMemoryRead(ctx, ins, asm, ShadedRefs.MEMORY_READ_FLOAT_DIRECT)
     }
 
     fun I64_LOAD(ctx: Context, ins: CompilerInstruction, asm: InstructionAdapter) {
-        emitLoadOrStore(ctx, ins, asm, ShadedRefs.MEMORY_READ_LONG)
+        emitDirectMemoryRead(ctx, ins, asm, ShadedRefs.MEMORY_READ_LONG_DIRECT)
     }
 
     fun I64_LOAD8_S(ctx: Context, ins: CompilerInstruction, asm: InstructionAdapter) {
@@ -581,7 +581,7 @@ internal object Emitters {
     }
 
     fun F64_LOAD(ctx: Context, ins: CompilerInstruction, asm: InstructionAdapter) {
-        emitLoadOrStore(ctx, ins, asm, ShadedRefs.MEMORY_READ_DOUBLE)
+        emitDirectMemoryRead(ctx, ins, asm, ShadedRefs.MEMORY_READ_DOUBLE_DIRECT)
     }
 
     fun I32_STORE(ctx: Context, ins: CompilerInstruction, asm: InstructionAdapter) {
@@ -955,9 +955,7 @@ internal object Emitters {
         ins: CompilerInstruction,
         asm: InstructionAdapter,
     ) {
-        emitDirectMemoryRead(ctx, ins, asm, ShadedRefs.MEMORY_READ_DIRECT)
-        asm.iconst(0xFF)
-        asm.visitInsn(Opcodes.IAND)
+        emitDirectMemoryRead(ctx, ins, asm, ShadedRefs.MEMORY_READ_U8_DIRECT)
     }
 
     private fun emitDirectMemoryRead(

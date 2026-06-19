@@ -133,6 +133,18 @@ object ShadedRefs {
 
     @JvmField val MEMORY_READ_DIRECT: Method = method(Memory::class.java, "read", Integer.TYPE)
 
+    @JvmField val MEMORY_READ_U8_DIRECT: Method = method(Memory::class.java, "readU8Int", Integer.TYPE)
+
+    @JvmField val MEMORY_READ_SHORT_DIRECT: Method = method(Memory::class.java, "readShort", Integer.TYPE)
+
+    @JvmField val MEMORY_READ_INT_DIRECT: Method = method(Memory::class.java, "readInt", Integer.TYPE)
+
+    @JvmField val MEMORY_READ_LONG_DIRECT: Method = method(Memory::class.java, "readLong", Integer.TYPE)
+
+    @JvmField val MEMORY_READ_FLOAT_DIRECT: Method = method(Memory::class.java, "readFloat", Integer.TYPE)
+
+    @JvmField val MEMORY_READ_DOUBLE_DIRECT: Method = method(Memory::class.java, "readDouble", Integer.TYPE)
+
     @JvmField
     val MEMORY_READ_SHORT: Method =
         method(

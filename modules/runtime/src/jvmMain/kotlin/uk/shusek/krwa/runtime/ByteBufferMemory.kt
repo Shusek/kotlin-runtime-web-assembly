@@ -32,6 +32,8 @@ class ByteBufferMemory(private val limits: MemoryLimits) : Memory {
     // Individual pages are never reallocated once created, enabling lock-free reads.
     private val pages: Array<ByteBuffer?> =
         arrayOfNulls(min(limits.maximumPages(), Memory.RUNTIME_MAX_PAGES))
+    private val pageArrays: Array<ByteArray?> =
+        arrayOfNulls(min(limits.maximumPages(), Memory.RUNTIME_MAX_PAGES))
 
     private var dataSegments: Array<DataSegment>? = null
 
@@ -46,6 +48,7 @@ class ByteBufferMemory(private val limits: MemoryLimits) : Memory {
     init {
         for (i in 0 until limits.initialPages()) {
             pages[i] = ByteBuffer.allocate(Memory.PAGE_SIZE).order(ByteOrder.LITTLE_ENDIAN)
+            pageArrays[i] = pages[i]!!.array()
         }
     }
 
@@ -168,6 +171,7 @@ class ByteBufferMemory(private val limits: MemoryLimits) : Memory {
 
         for (i in prevPages until numPages) {
             pages[i] = ByteBuffer.allocate(Memory.PAGE_SIZE).order(ByteOrder.LITTLE_ENDIAN)
+            pageArrays[i] = pages[i]!!.array()
         }
 
         nPages = numPages
@@ -259,8 +263,16 @@ class ByteBufferMemory(private val limits: MemoryLimits) : Memory {
     }
 
     override fun read(addr: Int): Byte {
-        return try {
-            page(addr ushr PAGE_SHIFT).get(addr and PAGE_MASK)
+        try {
+            return pageArrays[addr ushr PAGE_SHIFT]!![addr and PAGE_MASK]
+        } catch (e: RuntimeException) {
+            throw outOfBoundsException(e, addr, 1)
+        }
+    }
+
+    override fun readU8Int(addr: Int): Int {
+        try {
+            return pageArrays[addr ushr PAGE_SHIFT]!![addr and PAGE_MASK].toInt() and 0xFF
         } catch (e: RuntimeException) {
             throw outOfBoundsException(e, addr, 1)
         }
@@ -418,7 +430,7 @@ class ByteBufferMemory(private val limits: MemoryLimits) : Memory {
 
     override fun writeByte(addr: Int, data: Byte) {
         try {
-            page(addr ushr PAGE_SHIFT).put(addr and PAGE_MASK, data)
+            pageArrays[addr ushr PAGE_SHIFT]!![addr and PAGE_MASK] = data
         } catch (e: RuntimeException) {
             throw outOfBoundsException(e, addr, 1)
         }

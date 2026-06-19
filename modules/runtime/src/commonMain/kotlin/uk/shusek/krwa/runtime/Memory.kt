@@ -174,7 +174,9 @@ interface Memory {
 
     fun writeByte(addr: Int, data: Byte)
 
-    fun readU8(addr: Int): Long = read(addr).toLong() and 0xFFL
+    fun readU8(addr: Int): Long = readU8Int(addr).toLong()
+
+    fun readU8Int(addr: Int): Int = read(addr).toInt() and 0xFF
 
     fun readI8(addr: Int): Long = read(addr).toLong()
 
