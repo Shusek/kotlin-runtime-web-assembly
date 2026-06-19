@@ -1,8 +1,6 @@
 package uk.shusek.krwa.testing
 
-import io.roastedroot.zerofs.Configuration
-import io.roastedroot.zerofs.ZeroFs
-import java.util.List
+import java.nio.file.Files
 import org.junit.jupiter.api.Test
 import uk.shusek.krwa.log.SystemLogger
 import uk.shusek.krwa.runtime.ImportValues
@@ -15,34 +13,35 @@ class ZigTestsuiteTest {
     @Test
     @Throws(Exception::class)
     fun shouldRunZigStdlibTestsuite() {
-        ZeroFs.newFileSystem(Configuration.unix().toBuilder().setAttributeViews("unix").build())
-            .use { fs ->
-                val target = fs.getPath(".")
+        val target = Files.createTempDirectory("krwa-zig-testsuite-")
+        try {
+            Files.createDirectories(target.resolve(".zig-cache").resolve("tmp"))
 
-                val wasiOpts =
-                    WasiOptions.builder()
-                        .inheritSystem()
-                        .withArguments(List.of("test.wasm"))
-                        .withDirectory(target.toString(), target)
-                        .build()
-                val wasi =
-                    WasiPreview1.builder().withLogger(SystemLogger()).withOptions(wasiOpts).build()
+            val wasiOpts =
+                WasiOptions.builder()
+                    .inheritSystem()
+                    .withArguments(listOf("test.wasm"))
+                    .withDirectory(".", target)
+                    .build()
+            val wasi = WasiPreview1.builder().withLogger(SystemLogger()).withOptions(wasiOpts).build()
 
-                val instance =
-                    Instance.builder(ZigModule.load())
-                        .withImportValues(
-                            ImportValues.builder().addFunction(wasi.toHostFunctions()).build()
-                        )
-                        .withMachineFactory(ZigModule::create)
+            val instance =
+                Instance.builder(ZigModule.load())
+                    .withImportValues(
+                        ImportValues.builder().addFunction(*wasi.toHostFunctions()).build()
+                    )
+                    .withMachineFactory(ZigModule::create)
 
-                try {
-                    instance.build()
-                } catch (e: WasiExitException) {
-                    if (e.exitCode() != 0) {
-                        throw RuntimeException("exit with errors: " + e.exitCode())
-                    }
-                    println("Success!!!")
+            try {
+                instance.build()
+            } catch (e: WasiExitException) {
+                if (e.exitCode() != 0) {
+                    throw RuntimeException("exit with errors: " + e.exitCode())
                 }
+                println("Success!!!")
             }
+        } finally {
+            target.toFile().deleteRecursively()
+        }
     }
 }

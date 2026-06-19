@@ -1,5 +1,6 @@
 import java.io.File
 import org.gradle.api.tasks.testing.Test
+import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.gradle.kotlin.dsl.configure
 import org.gradle.kotlin.dsl.get
 import org.gradle.kotlin.dsl.register
@@ -20,8 +21,7 @@ registerKrwaCompile(
     taskName = "generateZigTestsuiteModule",
     generatedType = "uk.shusek.krwa.testing.ZigModule",
     wasmFile = zigWasm,
-    interpretedFunctions =
-        listOf(1216, 2185, 5699, 5709, 5716, 5983, 5986, 5989, 8184, 8352, 8400, 10138),
+    interpreterFallback = "WARN",
     skipWhenWasmMissing = true,
 )
 
@@ -30,5 +30,11 @@ tasks.matching {
 }.configureEach {
     onlyIf("Zig testsuite wasm exists") {
         zigWasm.get().asFile.isFile
+    }
+}
+
+tasks.withType<Test>().configureEach {
+    testLogging {
+        exceptionFormat = TestExceptionFormat.FULL
     }
 }
