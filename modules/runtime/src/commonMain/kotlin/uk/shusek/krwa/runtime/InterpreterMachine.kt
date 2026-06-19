@@ -1363,41 +1363,234 @@ open class InterpreterMachine(private val instance: Instance) : ResumableMachine
     ): StackFrame? {
         var currentFrame = frame
         var gcPoll = 0
+        val opcodes = loweredFunction.opcodes
+        val operands = loweredFunction.operands
+        val operands2 = loweredFunction.operands2
+        val operands3 = loweredFunction.operands3
+        val labelTrue = loweredFunction.labelTrue
+        val labelFalse = loweredFunction.labelFalse
+        val locals = currentFrame.localSlots()
+        val memory0 = instance.memory(0)
+        var pc = currentFrame.loweredPc()
 
-        while (!currentFrame.terminated() && currentFrame.ctrlStackSize() > 0) {
-            when (currentFrame.loadLoweredOpcode(loweredFunction)) {
+        while (currentFrame.ctrlStackSize() > 0) {
+            val index = pc
+            pc = index + 1
+            when (opcodes[index]) {
                 LoweredFunction.NOP -> {}
+                LoweredFunction.UNREACHABLE -> {
+                    throw TrapException("Trapped on unreachable instruction")
+                }
+                LoweredFunction.BLOCK -> {
+                    val paramsSize = currentFrame.controlStartValuesAt(index)
+                    val returnsSize = currentFrame.controlEndValuesAt(index)
+                    currentFrame.pushCtrlPreallocated(OpCode.BLOCK, paramsSize, returnsSize, stack.size() - paramsSize)
+                }
                 LoweredFunction.LOOP -> {
-                    currentFrame.pushCtrl(OpCode.LOOP, 0, 0, stack.size())
+                    val paramsSize = currentFrame.controlStartValuesAt(index)
+                    val returnsSize = currentFrame.controlEndValuesAt(index)
+                    currentFrame.pushCtrlPreallocated(OpCode.LOOP, paramsSize, returnsSize, stack.size() - paramsSize)
+                }
+                LoweredFunction.IF -> {
+                    val pred = stack.pop()
+                    val paramsSize = currentFrame.controlStartValuesAt(index)
+                    val returnsSize = currentFrame.controlEndValuesAt(index)
+                    currentFrame.pushCtrlPreallocated(OpCode.IF, paramsSize, returnsSize, stack.size() - paramsSize)
+                    pc =
+                        if (pred == 0L) {
+                            labelFalse[index]
+                        } else {
+                            labelTrue[index]
+                        }
+                }
+                LoweredFunction.ELSE -> {
+                    pc = labelTrue[index]
                 }
                 LoweredFunction.END -> {
                     currentFrame.popCtrlAndTransfer(stack)
                     if (currentFrame.ctrlStackSize() == 0) {
+                        currentFrame.updateLoweredPc(pc)
                         return completeFrame(currentFrame, callStack)
                     }
                 }
+                LoweredFunction.BR -> {
+                    if (!usesPeriodicInterruptionPolling) {
+                        checkInterruption()
+                    }
+                    currentFrame.branchTo(operands[index].toInt(), stack)
+                    pc = labelTrue[index]
+                }
                 LoweredFunction.BR_IF -> {
-                    val pred = stack.pop().toInt()
+                    if (!usesPeriodicInterruptionPolling) {
+                        checkInterruption()
+                    }
+                    val pred = stack.popI32()
                     if (pred == 0) {
-                        currentFrame.jumpTo(currentFrame.currentLoweredLabelFalse(loweredFunction))
+                        pc = labelFalse[index]
                     } else {
-                        currentFrame.branchTo(currentFrame.currentLoweredOperand(loweredFunction).toInt(), stack)
-                        currentFrame.jumpTo(currentFrame.currentLoweredLabelTrue(loweredFunction))
+                        currentFrame.branchTo(operands[index].toInt(), stack)
+                        pc = labelTrue[index]
                     }
                 }
+                LoweredFunction.BR_TABLE -> {
+                    if (!usesPeriodicInterruptionPolling) {
+                        checkInterruption()
+                    }
+                    val pred = stack.popI32()
+                    val depths = loweredFunction.brTableDepths[index]!!
+                    val labels = loweredFunction.brTableLabels[index]!!
+                    val target =
+                        if (pred < 0 || pred >= depths.size - 1) {
+                            depths.size - 1
+                        } else {
+                            pred
+                        }
+                    currentFrame.branchTo(depths[target], stack)
+                    pc = labels[target]
+                }
+                LoweredFunction.CALL -> {
+                    currentFrame.updateLoweredPc(pc)
+                    val nextFrame = CALL(currentFrame)
+                    if (nextFrame != null) {
+                        return nextFrame
+                    }
+                }
+                LoweredFunction.RETURN -> {
+                    currentFrame.popCtrlTillCallAndTransfer(stack)
+                    currentFrame.updateLoweredPc(pc)
+                    return completeFrame(currentFrame, callStack)
+                }
                 LoweredFunction.LOCAL_GET -> {
-                    stack.push(currentFrame.localSlots()[currentFrame.currentLoweredOperand(loweredFunction).toInt()])
+                    stack.push(locals[operands[index].toInt()])
                 }
                 LoweredFunction.LOCAL_SET -> {
-                    currentFrame.localSlots()[currentFrame.currentLoweredOperand(loweredFunction).toInt()] =
-                        stack.pop()
+                    locals[operands[index].toInt()] = stack.pop()
                 }
                 LoweredFunction.LOCAL_TEE -> {
-                    currentFrame.localSlots()[currentFrame.currentLoweredOperand(loweredFunction).toInt()] =
-                        stack.peek()
+                    locals[operands[index].toInt()] = stack.peek()
+                }
+                LoweredFunction.LOCAL_GET_I32_CONST_I32_ADD -> {
+                    val value = locals[operands[index].toInt()].toInt() + operands2[index]
+                    stack.push(value)
+                    pc = index + 3
+                }
+                LoweredFunction.LOCAL_GET_I32_CONST_I32_ADD_LOCAL_SET -> {
+                    val value = locals[operands[index].toInt()].toInt() + operands2[index]
+                    locals[operands3[index]] = value.toLong()
+                    pc = index + 4
+                }
+                LoweredFunction.LOCAL_GET_I32_CONST_I32_ADD_LOCAL_TEE -> {
+                    val value = locals[operands[index].toInt()].toInt() + operands2[index]
+                    locals[operands3[index]] = value.toLong()
+                    stack.push(value)
+                    pc = index + 4
+                }
+                LoweredFunction.LOCAL_GET_I32_CONST_I32_AND_LOCAL_TEE -> {
+                    val value = locals[operands[index].toInt()].toInt() and operands2[index]
+                    locals[operands3[index]] = value.toLong()
+                    stack.push(value)
+                    pc = index + 4
+                }
+                LoweredFunction.LOCAL_GET_I32_CONST_I32_SHL_LOCAL_SET -> {
+                    val value = locals[operands[index].toInt()].toInt() shl operands2[index]
+                    locals[operands3[index]] = value.toLong()
+                    pc = index + 4
+                }
+                LoweredFunction.LOCAL_GET_I32_CONST_I32_AND -> {
+                    val value = locals[operands[index].toInt()].toInt() and operands2[index]
+                    stack.push(value)
+                    pc = index + 3
+                }
+                LoweredFunction.LOCAL_GET_I32_CONST_I32_SHL -> {
+                    val value = locals[operands[index].toInt()].toInt() shl operands2[index]
+                    stack.push(value)
+                    pc = index + 3
+                }
+                LoweredFunction.LOCAL_GET_I32_CONST_I32_SHR_U -> {
+                    val value = locals[operands[index].toInt()].toInt() ushr operands2[index]
+                    stack.push(value)
+                    pc = index + 3
+                }
+                LoweredFunction.LOCAL_SET_LOCAL_GET -> {
+                    val value = stack.pop()
+                    locals[operands[index].toInt()] = value
+                    stack.push(locals[operands2[index]])
+                    pc = index + 2
+                }
+                LoweredFunction.LOCAL_GET_LOCAL_SET -> {
+                    locals[operands2[index]] = locals[operands[index].toInt()]
+                    pc = index + 2
+                }
+                LoweredFunction.I32_CONST_LOCAL_SET -> {
+                    locals[operands2[index]] = operands[index]
+                    pc = index + 2
+                }
+                LoweredFunction.I32_ADD_LOCAL_SET -> {
+                    val b = stack.popI32()
+                    val a = stack.popI32()
+                    locals[operands[index].toInt()] = (a + b).toLong()
+                    pc = index + 2
+                }
+                LoweredFunction.I32_ADD_LOCAL_TEE -> {
+                    val b = stack.popI32()
+                    val a = stack.popI32()
+                    val value = a + b
+                    locals[operands[index].toInt()] = value.toLong()
+                    stack.push(value)
+                    pc = index + 2
+                }
+                LoweredFunction.LOCAL_GET_I32_LOAD -> {
+                    val ptr = readLoweredMemPtr(locals[operands2[index]], operands[index])
+                    val memoryIndex = operands3[index]
+                    val value = (if (memoryIndex == 0) memory0 else instance.memory(memoryIndex)).readI32(ptr)
+                    stack.push(value)
+                    pc = index + 2
+                }
+                LoweredFunction.LOCAL_GET_I32_LOAD8_U -> {
+                    val ptr = readLoweredMemPtr(locals[operands2[index]], operands[index])
+                    val memoryIndex = operands3[index]
+                    val value = (if (memoryIndex == 0) memory0 else instance.memory(memoryIndex)).readU8(ptr)
+                    stack.push(value)
+                    pc = index + 2
+                }
+                LoweredFunction.LOCAL_GET_I32_LOAD16_S -> {
+                    val ptr = readLoweredMemPtr(locals[operands2[index]], operands[index])
+                    val memoryIndex = operands3[index]
+                    val value = (if (memoryIndex == 0) memory0 else instance.memory(memoryIndex)).readI16(ptr)
+                    stack.push(value)
+                    pc = index + 2
+                }
+                LoweredFunction.LOCAL_GET_I32_LOAD16_U -> {
+                    val ptr = readLoweredMemPtr(locals[operands2[index]], operands[index])
+                    val memoryIndex = operands3[index]
+                    val value = (if (memoryIndex == 0) memory0 else instance.memory(memoryIndex)).readU16(ptr)
+                    stack.push(value)
+                    pc = index + 2
+                }
+                LoweredFunction.LOCAL_GET_I64_LOAD -> {
+                    val ptr = readLoweredMemPtr(locals[operands2[index]], operands[index])
+                    val memoryIndex = operands3[index]
+                    val value = (if (memoryIndex == 0) memory0 else instance.memory(memoryIndex)).readI64(ptr)
+                    stack.push(value)
+                    pc = index + 2
+                }
+                LoweredFunction.LOCAL_GET_LOCAL_GET_I32_LOAD8_U_I32_STORE8 -> {
+                    val memoryIndex = operands[index].toInt()
+                    val memory = if (memoryIndex == 0) memory0 else instance.memory(memoryIndex)
+                    val srcPtr = readLoweredMemPtr(locals[operands3[index]], 0)
+                    val value = memory.readU8(srcPtr).toByte()
+                    val dstPtr = readLoweredMemPtr(locals[operands2[index]], 0)
+                    memory.writeByte(dstPtr, value)
+                    pc = index + 4
                 }
                 LoweredFunction.I32_CONST -> {
-                    stack.push(currentFrame.currentLoweredOperand(loweredFunction))
+                    stack.push(operands[index])
+                }
+                LoweredFunction.I64_CONST -> {
+                    stack.push(operands[index])
+                }
+                LoweredFunction.F64_CONST -> {
+                    stack.push(operands[index])
                 }
                 LoweredFunction.I32_ADD -> {
                     stack.i32Add()
@@ -1405,37 +1598,239 @@ open class InterpreterMachine(private val instance: Instance) : ResumableMachine
                 LoweredFunction.I32_SUB -> {
                     stack.i32Sub()
                 }
+                LoweredFunction.I32_MUL -> {
+                    stack.i32Mul()
+                }
+                LoweredFunction.I32_DIV_U -> {
+                    stack.i32DivU()
+                }
+                LoweredFunction.I32_REM_S -> {
+                    stack.i32RemS()
+                }
+                LoweredFunction.I32_AND -> {
+                    stack.i32And()
+                }
+                LoweredFunction.I32_OR -> {
+                    stack.i32Or()
+                }
+                LoweredFunction.I32_XOR -> {
+                    stack.i32Xor()
+                }
+                LoweredFunction.I32_SHL -> {
+                    stack.i32Shl()
+                }
+                LoweredFunction.I32_SHR_S -> {
+                    stack.i32ShrS()
+                }
+                LoweredFunction.I32_SHR_U -> {
+                    stack.i32ShrU()
+                }
+                LoweredFunction.I32_EQZ -> {
+                    stack.i32Eqz()
+                }
+                LoweredFunction.I32_EQ -> {
+                    stack.i32Eq()
+                }
+                LoweredFunction.I32_NE -> {
+                    stack.i32Ne()
+                }
+                LoweredFunction.I32_LT_S -> {
+                    stack.i32LtS()
+                }
+                LoweredFunction.I32_LT_U -> {
+                    stack.i32LtU()
+                }
+                LoweredFunction.I32_GT_S -> {
+                    stack.i32GtS()
+                }
+                LoweredFunction.I32_GT_U -> {
+                    stack.i32GtU()
+                }
+                LoweredFunction.I32_LE_S -> {
+                    stack.i32LeS()
+                }
+                LoweredFunction.I32_LE_U -> {
+                    stack.i32LeU()
+                }
+                LoweredFunction.I32_GE_S -> {
+                    stack.i32GeS()
+                }
+                LoweredFunction.I32_GE_U -> {
+                    stack.i32GeU()
+                }
+                LoweredFunction.I64_SUB -> {
+                    stack.i64Sub()
+                }
+                LoweredFunction.I32_LOAD -> {
+                    val ptr = readLoweredMemPtr(stack, operands[index])
+                    val memoryIndex = operands2[index]
+                    val value = (if (memoryIndex == 0) memory0 else instance.memory(memoryIndex)).readI32(ptr)
+                    stack.push(value)
+                }
+                LoweredFunction.I32_LOAD8_U -> {
+                    val ptr = readLoweredMemPtr(stack, operands[index])
+                    val memoryIndex = operands2[index]
+                    val value = (if (memoryIndex == 0) memory0 else instance.memory(memoryIndex)).readU8(ptr)
+                    stack.push(value)
+                }
+                LoweredFunction.I32_LOAD16_S -> {
+                    val ptr = readLoweredMemPtr(stack, operands[index])
+                    val memoryIndex = operands2[index]
+                    val value = (if (memoryIndex == 0) memory0 else instance.memory(memoryIndex)).readI16(ptr)
+                    stack.push(value)
+                }
+                LoweredFunction.I32_LOAD16_U -> {
+                    val ptr = readLoweredMemPtr(stack, operands[index])
+                    val memoryIndex = operands2[index]
+                    val value = (if (memoryIndex == 0) memory0 else instance.memory(memoryIndex)).readU16(ptr)
+                    stack.push(value)
+                }
+                LoweredFunction.I64_LOAD -> {
+                    val ptr = readLoweredMemPtr(stack, operands[index])
+                    val memoryIndex = operands2[index]
+                    val value = (if (memoryIndex == 0) memory0 else instance.memory(memoryIndex)).readI64(ptr)
+                    stack.push(value)
+                }
+                LoweredFunction.I32_STORE -> {
+                    val value = stack.popI32()
+                    val ptr = readLoweredMemPtr(stack, operands[index])
+                    val memoryIndex = operands2[index]
+                    (if (memoryIndex == 0) memory0 else instance.memory(memoryIndex)).writeI32(ptr, value)
+                }
+                LoweredFunction.I32_STORE8 -> {
+                    val value = stack.popI8()
+                    val ptr = readLoweredMemPtr(stack, operands[index])
+                    val memoryIndex = operands2[index]
+                    (if (memoryIndex == 0) memory0 else instance.memory(memoryIndex)).writeByte(ptr, value)
+                }
+                LoweredFunction.I32_STORE16 -> {
+                    val value = stack.popI16()
+                    val ptr = readLoweredMemPtr(stack, operands[index])
+                    val memoryIndex = operands2[index]
+                    (if (memoryIndex == 0) memory0 else instance.memory(memoryIndex)).writeShort(ptr, value)
+                }
+                LoweredFunction.I64_STORE -> {
+                    val value = stack.pop()
+                    val ptr = readLoweredMemPtr(stack, operands[index])
+                    val memoryIndex = operands2[index]
+                    (if (memoryIndex == 0) memory0 else instance.memory(memoryIndex)).writeLong(ptr, value)
+                }
+                LoweredFunction.SELECT -> {
+                    val pred = stack.popI32()
+                    if (operands[index] == ValType.ID.V128.toLong()) {
+                        val b1 = stack.pop()
+                        val b2 = stack.pop()
+                        val a1 = stack.pop()
+                        val a2 = stack.pop()
+                        if (pred == 0) {
+                            stack.push(b2)
+                            stack.push(b1)
+                        } else {
+                            stack.push(a2)
+                            stack.push(a1)
+                        }
+                    } else {
+                        val b = stack.pop()
+                        val a = stack.pop()
+                        if (pred == 0) {
+                            stack.push(b)
+                        } else {
+                            stack.push(a)
+                        }
+                    }
+                }
+                LoweredFunction.GLOBAL_GET -> {
+                    val idx = operands[index].toInt()
+                    val global = instance.global(idx)
+                    stack.push(global.valueLow)
+                    if (global.type == ValType.V128) {
+                        stack.push(global.valueHigh)
+                    }
+                }
+                LoweredFunction.GLOBAL_SET -> {
+                    val idx = operands[index].toInt()
+                    val global = instance.global(idx)
+                    if (global.type == ValType.V128) {
+                        val high = stack.pop()
+                        val low = stack.pop()
+                        global.valueLow = low
+                        global.valueHigh = high
+                    } else {
+                        global.value = stack.pop()
+                    }
+                }
+                LoweredFunction.F64_DIV -> {
+                    F64_DIV(stack)
+                }
+                LoweredFunction.F64_LT -> {
+                    F64_LT(stack)
+                }
+                LoweredFunction.F64_GE -> {
+                    F64_GE(stack)
+                }
+                LoweredFunction.F64_CONVERT_I64_U -> {
+                    F64_CONVERT_I64_U(stack)
+                }
+                LoweredFunction.F64_CONVERT_I32_U -> {
+                    F64_CONVERT_I32_U(stack)
+                }
+                LoweredFunction.I32_TRUNC_F64_U -> {
+                    I32_TRUNC_F64_U(stack)
+                }
+                LoweredFunction.F32_DEMOTE_F64 -> {
+                    F32_DEMOTE_F64(stack)
+                }
                 LoweredFunction.I32_COUNTDOWN_BRANCH -> {
-                    val locals = currentFrame.localSlots()
-                    val localSlot = currentFrame.currentLoweredOperand(loweredFunction).toInt()
+                    val localSlot = operands[index].toInt()
                     val value =
                         locals[localSlot].toInt() -
-                            currentFrame.currentLoweredOperand2(loweredFunction)
+                            operands2[index]
                     locals[localSlot] = value.toLong()
+                    if (!usesPeriodicInterruptionPolling) {
+                        checkInterruption()
+                    }
                     if (value == 0) {
-                        currentFrame.jumpTo(currentFrame.currentLoweredLabelFalse(loweredFunction))
+                        pc = labelFalse[index]
                     } else {
-                        val branchDepth = currentFrame.currentLoweredOperand3(loweredFunction)
+                        val branchDepth = operands3[index]
                         if (branchDepth == LoweredFunction.CURRENT_PARAMETERLESS_LOOP_DEPTH) {
                             currentFrame.branchToCurrentParameterlessLoopUnchecked(stack)
                         } else {
                             currentFrame.branchTo(branchDepth, stack)
                         }
-                        currentFrame.jumpTo(currentFrame.currentLoweredLabelTrue(loweredFunction))
+                        pc = labelTrue[index]
                     }
                 }
                 else -> error("Unsupported lowered opcode")
             }
 
             gcPoll++
-            if (gcPoll == GC_POLL_INTERVAL) {
+            if (gcPoll >= GC_POLL_INTERVAL) {
+                currentFrame.updateLoweredPc(pc)
                 checkInterruption()
                 instance.gcSafePoint(stack, callStack)
                 gcPoll = 0
             }
         }
 
+        currentFrame.updateLoweredPc(pc)
         return if (callStack.isEmpty()) null else callStack.last()
+    }
+
+    private fun readLoweredMemPtr(stack: MStack, offset: Long): Int {
+        return readLoweredMemPtr(stack.popI32(), offset)
+    }
+
+    private fun readLoweredMemPtr(addressValue: Long, offset: Long): Int {
+        return readLoweredMemPtr(addressValue.toInt(), offset)
+    }
+
+    private fun readLoweredMemPtr(address: Int, offset: Long): Int {
+        val ptr = offset + address
+        if (offset < 0 || offset >= Int.MAX_VALUE || address < 0 || ptr < 0 || ptr >= Int.MAX_VALUE) {
+            throw WasmRuntimeException("out of bounds memory access")
+        }
+        return ptr.toInt()
     }
 
     private fun completeFrame(
@@ -2305,7 +2700,11 @@ open class InterpreterMachine(private val instance: Instance) : ResumableMachine
             call(stack, instance, callStack, funcId, args, type, false)
             return null
         }
-        if (instance.executionListener() == null && tryApplyFastFunction(instance, funcId, func)) {
+        if (
+            instance.executionListener() == null &&
+                shouldTryFastFunction(funcId) &&
+                tryApplyFastFunction(instance, funcId, func)
+        ) {
             return null
         }
         val stackFrame =
@@ -3223,7 +3622,11 @@ open class InterpreterMachine(private val instance: Instance) : ResumableMachine
             call(stack, targetInstance, callStack, funcId, args, type, false)
             return null
         }
-        if (targetInstance.executionListener() == null && tryApplyFastFunction(targetInstance, funcId, func)) {
+        if (
+            targetInstance.executionListener() == null &&
+                shouldTryFastFunction(funcId) &&
+                tryApplyFastFunction(targetInstance, funcId, func)
+        ) {
             return null
         }
         val stackFrame =
@@ -3233,6 +3636,11 @@ open class InterpreterMachine(private val instance: Instance) : ResumableMachine
         checkCallStackDepth(callStack)
         callStack.addLast(stackFrame)
         return stackFrame
+    }
+
+    private fun shouldTryFastFunction(funcId: Int): Boolean {
+        val kinds = fastFunctionKinds ?: return true
+        return funcId < 0 || funcId >= kinds.size || kinds[funcId] != FAST_FUNCTION_NONE
     }
 
     private fun tryApplyFastFunction(targetInstance: Instance, funcId: Int, func: FunctionBody): Boolean {

@@ -11,8 +11,8 @@ class InterpreterLoopBenchmarkIosTest {
     fun benchmarksInterpreterLoop() {
         if (argument(EnabledArgument) != "true" && env(EnabledEnv) != "true") return
 
-        val result =
-            InterpreterLoopBenchmarkSupport.run(
+        val results =
+            InterpreterLoopBenchmarkSupport.runAll(
                 iterations = intOption(IterationsArgument, IterationsEnv, DefaultIterations),
                 repetitions = intOption(RepetitionsArgument, RepetitionsEnv, DefaultRepetitions),
                 warmupRepetitions =
@@ -22,7 +22,9 @@ class InterpreterLoopBenchmarkIosTest {
                         DefaultWarmupRepetitions,
                     ),
             )
-        println(result.formatted("iosSimulatorArm64"))
+        for (result in results) {
+            println(result.formatted("iosSimulatorArm64"))
+        }
     }
 
     private fun intOption(argumentName: String, envName: String, defaultValue: Int): Int =

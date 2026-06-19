@@ -2,6 +2,7 @@ package uk.shusek.krwa.runtime
 
 open class MStack {
     private var count = 0
+
     private var elements = LongArray(MIN_CAPACITY)
 
     private fun increaseCapacity() {
@@ -28,6 +29,21 @@ open class MStack {
         return elements[count]
     }
 
+    fun popI32(): Int {
+        count--
+        return elements[count].toInt()
+    }
+
+    fun popI16(): Short {
+        count--
+        return elements[count].toShort()
+    }
+
+    fun popI8(): Byte {
+        count--
+        return elements[count].toByte()
+    }
+
     fun i32Add() {
         val result = elements[count - 1].toInt() + elements[count - 2].toInt()
         count--
@@ -38,6 +54,66 @@ open class MStack {
         val result = elements[count - 2].toInt() - elements[count - 1].toInt()
         count--
         elements[count - 1] = result.toLong()
+    }
+
+    fun i32Mul() {
+        val result = elements[count - 2].toInt() * elements[count - 1].toInt()
+        count--
+        elements[count - 1] = result.toLong()
+    }
+
+    fun i32DivU() {
+        val result = OpcodeOps.I32_DIV_U(elements[count - 2].toInt(), elements[count - 1].toInt())
+        count--
+        elements[count - 1] = result.toLong()
+    }
+
+    fun i32RemS() {
+        val result = OpcodeOps.I32_REM_S(elements[count - 2].toInt(), elements[count - 1].toInt())
+        count--
+        elements[count - 1] = result.toLong()
+    }
+
+    fun i32And() {
+        val result = elements[count - 2].toInt() and elements[count - 1].toInt()
+        count--
+        elements[count - 1] = result.toLong()
+    }
+
+    fun i32Or() {
+        val result = elements[count - 2].toInt() or elements[count - 1].toInt()
+        count--
+        elements[count - 1] = result.toLong()
+    }
+
+    fun i32Xor() {
+        val result = elements[count - 2].toInt() xor elements[count - 1].toInt()
+        count--
+        elements[count - 1] = result.toLong()
+    }
+
+    fun i32Shl() {
+        val result = elements[count - 2].toInt() shl elements[count - 1].toInt()
+        count--
+        elements[count - 1] = result.toLong()
+    }
+
+    fun i32ShrS() {
+        val result = elements[count - 2].toInt() shr elements[count - 1].toInt()
+        count--
+        elements[count - 1] = result.toLong()
+    }
+
+    fun i32ShrU() {
+        val result = elements[count - 2].toInt() ushr elements[count - 1].toInt()
+        count--
+        elements[count - 1] = result.toLong()
+    }
+
+    fun i64Sub() {
+        val result = elements[count - 2] - elements[count - 1]
+        count--
+        elements[count - 1] = result
     }
 
     fun i32Eqz() {

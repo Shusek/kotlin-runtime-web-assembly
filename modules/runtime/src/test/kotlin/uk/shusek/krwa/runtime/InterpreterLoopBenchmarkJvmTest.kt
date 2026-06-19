@@ -7,13 +7,15 @@ class InterpreterLoopBenchmarkJvmTest {
     fun benchmarksInterpreterLoop() {
         if (!benchmarkEnabled()) return
 
-        val result =
-            InterpreterLoopBenchmarkSupport.run(
+        val results =
+            InterpreterLoopBenchmarkSupport.runAll(
                 iterations = intProperty(IterationsProperty, DefaultIterations),
                 repetitions = intProperty(RepetitionsProperty, DefaultRepetitions),
                 warmupRepetitions = intProperty(WarmupRepetitionsProperty, DefaultWarmupRepetitions),
             )
-        println(result.formatted("jvm"))
+        for (result in results) {
+            println(result.formatted("jvm"))
+        }
     }
 
     private fun benchmarkEnabled(): Boolean =

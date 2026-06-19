@@ -5,9 +5,27 @@ import kotlin.time.TimeSource
 import uk.shusek.krwa.wasm.WasmParser
 
 internal object InterpreterLoopBenchmarkSupport {
+    fun runAll(iterations: Int, repetitions: Int, warmupRepetitions: Int): List<InterpreterLoopBenchmarkResult> =
+        InterpreterLoopBenchmarkBackend.entries.map { backend ->
+            run(iterations, repetitions, warmupRepetitions, backend)
+        }
+
     fun run(iterations: Int, repetitions: Int, warmupRepetitions: Int): InterpreterLoopBenchmarkResult {
+        return run(iterations, repetitions, warmupRepetitions, InterpreterLoopBenchmarkBackend.STANDARD)
+    }
+
+    fun run(
+        iterations: Int,
+        repetitions: Int,
+        warmupRepetitions: Int,
+        backend: InterpreterLoopBenchmarkBackend,
+    ): InterpreterLoopBenchmarkResult {
         val module = WasmParser.parse(LOOP_WASM)
-        val instance = Instance.builder(module).build()
+        val builder = Instance.builder(module)
+        if (backend == InterpreterLoopBenchmarkBackend.EXPERIMENTAL_FAST) {
+            builder.withExperimentalFastInterpreter()
+        }
+        val instance = builder.build()
         val run = instance.export("run")
         val expected = triangularI32(iterations)
 
@@ -24,6 +42,7 @@ internal object InterpreterLoopBenchmarkSupport {
         }
         val elapsedNs = mark.elapsedNow().inWholeNanoseconds
         return InterpreterLoopBenchmarkResult(
+            backend = backend,
             iterations = iterations,
             repetitions = repetitions,
             elapsedNs = elapsedNs,
@@ -42,6 +61,8 @@ internal object InterpreterLoopBenchmarkSupport {
             0x01, 0x60, 0x01, 0x7F, 0x01, 0x7F,
             0x03, 0x02,
             0x01, 0x00,
+            0x05, 0x03,
+            0x01, 0x00, 0x01,
             0x07, 0x07,
             0x01, 0x03, 0x72, 0x75, 0x6E, 0x00, 0x00,
             0x0A, 0x1F,
@@ -65,7 +86,13 @@ internal object InterpreterLoopBenchmarkSupport {
         )
 }
 
+internal enum class InterpreterLoopBenchmarkBackend(val label: String) {
+    STANDARD("standard"),
+    EXPERIMENTAL_FAST("experimentalFast"),
+}
+
 internal data class InterpreterLoopBenchmarkResult(
+    val backend: InterpreterLoopBenchmarkBackend,
     val iterations: Int,
     val repetitions: Int,
     val elapsedNs: Long,
@@ -76,7 +103,7 @@ internal data class InterpreterLoopBenchmarkResult(
         val elapsedMs = elapsedNs / 1_000_000
         val nsPerIteration = if (totalIterations == 0L) 0L else elapsedNs / totalIterations
         return "KRWA interpreter loop benchmark: platform=$platform, " +
-            "iterations=$iterations, repetitions=$repetitions, " +
+            "backend=${backend.label}, iterations=$iterations, repetitions=$repetitions, " +
             "elapsedMs=$elapsedMs, nsPerIteration=$nsPerIteration, checksum=$checksum"
     }
 }

@@ -5,7 +5,7 @@ import uk.shusek.krwa.wasm.WasmModule
 import uk.shusek.krwa.wasm.types.MemoryLimits
 
 internal actual object RuntimePlatform {
-    actual fun defaultMemoryFactory(): (MemoryLimits) -> Memory = { limits -> ByteBufferMemory(limits) }
+    actual fun defaultMemoryFactory(): (MemoryLimits) -> Memory = { limits -> ByteArrayMemory(limits) }
 
     actual fun defaultMachineFactory(): (Instance) -> Machine =
         RuntimeDefaults.defaultMachineFactory { Thread.currentThread().isInterrupted }

@@ -62,6 +62,7 @@ class StackFrame {
         args.copyInto(this.locals, endIndex = minOf(args.size, this.locals.size))
         this.localTypes = layout.localTypes
         this.localIdx = layout.localIdx
+        ensureCtrlCapacity(layout.maxControlDepth + 1)
     }
 
     constructor(
@@ -81,6 +82,7 @@ class StackFrame {
         }
         this.localTypes = layout.localTypes
         this.localIdx = layout.localIdx
+        ensureCtrlCapacity(layout.maxControlDepth + 1)
     }
 
     fun reset(args: LongArray) {
@@ -174,6 +176,14 @@ class StackFrame {
     internal fun loadLoweredOpcode(loweredFunction: LoweredFunction): Int =
         loweredFunction.opcodes[pc++]
 
+    internal fun loadLoweredIndex(): Int = pc++
+
+    internal fun loweredPc(): Int = pc
+
+    internal fun updateLoweredPc(newPc: Int) {
+        pc = newPc
+    }
+
     internal fun currentLoweredOperand(loweredFunction: LoweredFunction): Long =
         loweredFunction.operands[pc - 1]
 
@@ -194,6 +204,10 @@ class StackFrame {
     fun currentControlStartValues(): Int = layout.controlStartSlots[pc - 1]
 
     fun currentControlEndValues(): Int = layout.controlEndSlots[pc - 1]
+
+    internal fun controlStartValuesAt(index: Int): Int = layout.controlStartSlots[index]
+
+    internal fun controlEndValuesAt(index: Int): Int = layout.controlEndSlots[index]
 
     fun currentLiteralValue(): Long = layout.literalValues[pc - 1]
 
@@ -254,6 +268,15 @@ class StackFrame {
         ctrlEndValues[ctrlStackSize] = returnValues
         ctrlHeights[ctrlStackSize] = height
         ctrlPcs[ctrlStackSize] = pc
+        ctrlStackSize += 1
+    }
+
+    fun pushCtrlPreallocated(opcode: OpCode, startValues: Int, returnValues: Int, height: Int) {
+        ctrlOpCodes[ctrlStackSize] = opcode.ordinal
+        ctrlStartValues[ctrlStackSize] = startValues
+        ctrlEndValues[ctrlStackSize] = returnValues
+        ctrlHeights[ctrlStackSize] = height
+        ctrlPcs[ctrlStackSize] = 0
         ctrlStackSize += 1
     }
 
@@ -388,6 +411,7 @@ class StackFrame {
         val initialCastNullable: Boolean
         val initialCastLocalSlot: Int
         val initialCastKeepsStack: Boolean
+        val maxControlDepth: Int
         internal val loweredFunction: LoweredFunction?
 
         init {
@@ -446,6 +470,7 @@ class StackFrame {
             callBodies = arrayOfNulls(this.code.size)
             val controlParameterlessLoopStack = BooleanArray(this.code.size + 1)
             var controlDepth = 0
+            var maxControlDepth = 0
             for (i in this.code.indices) {
                 val instruction = this.code[i]
                 when (instruction.opcode()) {
@@ -521,6 +546,9 @@ class StackFrame {
                             instruction.opcode() == OpCode.LOOP &&
                             instruction.operand(0).toInt() == 0x40
                         controlDepth++
+                        if (controlDepth > maxControlDepth) {
+                            maxControlDepth = controlDepth
+                        }
                     }
 
                     OpCode.END -> {
@@ -530,6 +558,7 @@ class StackFrame {
                     else -> {}
                 }
             }
+            this.maxControlDepth = maxControlDepth
             loweredFunction = LoweredFunction.tryBuild(this.code, localIdx, localTypes)
             val initialLocalGet = predecodeInitialLocalGet()
             initialLocalGetSlot = initialLocalGet.localSlot

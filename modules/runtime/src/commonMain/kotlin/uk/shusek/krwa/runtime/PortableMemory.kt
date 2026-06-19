@@ -137,6 +137,8 @@ class PortableMemory(private val limits: MemoryLimits) : Memory {
         }
     }
 
+    override fun readU8(addr: Int): Long = read(addr).toLong() and 0xFFL
+
     override fun readBytes(addr: Int, len: Int): ByteArray {
         checkBounds(addr, len, sizeInBytes(), ::WasmRuntimeException)
         val result = ByteArray(len)
@@ -199,6 +201,8 @@ class PortableMemory(private val limits: MemoryLimits) : Memory {
         }
     }
 
+    override fun readI32(addr: Int): Long = readInt(addr).toLong()
+
     override fun writeLong(addr: Int, data: Long) {
         checkBounds(addr, 8, sizeInBytes(), ::WasmRuntimeException)
         val pageOffset = addr and PAGE_MASK
@@ -231,6 +235,8 @@ class PortableMemory(private val limits: MemoryLimits) : Memory {
         return result
     }
 
+    override fun readI64(addr: Int): Long = readLong(addr)
+
     override fun writeShort(addr: Int, data: Short) {
         checkBounds(addr, 2, sizeInBytes(), ::WasmRuntimeException)
         val pageOffset = addr and PAGE_MASK
@@ -256,6 +262,8 @@ class PortableMemory(private val limits: MemoryLimits) : Memory {
             (readByteUnchecked(addr) or (readByteUnchecked(addr + 1) shl 8)).toShort()
         }
     }
+
+    override fun readI16(addr: Int): Long = readShort(addr).toLong()
 
     override fun readU16(addr: Int): Long = readShort(addr).toLong() and 0xFFFFL
 

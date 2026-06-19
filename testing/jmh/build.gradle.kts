@@ -23,3 +23,16 @@ tasks.register<JavaExec>("jmh") {
     mainClass.set("org.openjdk.jmh.Main")
     classpath = mainSourceSet().runtimeClasspath
 }
+
+tasks.register<JavaExec>("coremarkKrwa") {
+    group = "benchmark"
+    description = "Runs Chasm's CoreMark wasm benchmark on KRWA backends."
+    dependsOn("classes")
+    workingDir = rootProject.layout.projectDirectory.asFile
+    mainClass.set("uk.shusek.krwa.bench.CoremarkRunnerKt")
+    classpath = mainSourceSet().runtimeClasspath
+    System.getProperties()
+        .stringPropertyNames()
+        .filter { it.startsWith("krwa.coremark.") }
+        .forEach { systemProperty(it, System.getProperty(it)) }
+}
