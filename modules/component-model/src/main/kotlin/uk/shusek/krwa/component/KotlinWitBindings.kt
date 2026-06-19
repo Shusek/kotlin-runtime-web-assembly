@@ -37,6 +37,8 @@ class KotlinWitBindings private constructor(builder: Builder) {
     private val worldTypeNames: Map<WorldDeclaration, String> =
         worldTypeNames(builder.witPackage.worlds())
     private val canonicalAbi: CanonicalAbi = CanonicalAbi.of(builder.witPackage)
+    private val guestExportStoreHelpers: Map<TypeDeclaration, GuestExportStoreHelper> =
+        if (includeGuestExportAdapters) guestExportStoreHelpers() else emptyMap()
 
     fun generate(): String {
         val out = StringBuilder()
@@ -1428,6 +1430,7 @@ class KotlinWitBindings private constructor(builder: Builder) {
         }
         out.append("}\n\n")
         appendGuestExportRuntime(out, hasAsyncExport)
+        appendGuestExportStoreHelpers(out)
         val usedNames = LinkedHashMap<String, Int>()
         val taskReturnFunctions =
             if (hasAsyncExport) appendGuestTaskReturnImports(out, bindings) else emptyMap()
@@ -1599,6 +1602,37 @@ class KotlinWitBindings private constructor(builder: Builder) {
         out.append("  }\n")
         out.append("  return ptr\n")
         out.append("}\n\n")
+        out.append("private fun krwaStoreString(ptr: Int, value: String) {\n")
+        out.append("  val bytes = value.encodeToByteArray()\n")
+        out.append("  val bytesPtr = krwaStoreBytes(bytes)\n")
+        out.append("  krwaStoreI32(ptr, bytesPtr)\n")
+        out.append("  krwaStoreI32(ptr + 4, bytes.size)\n")
+        out.append("}\n\n")
+        out.append("private fun krwaStoreOptionString(ptr: Int, value: String?) {\n")
+        out.append("  if (value == null) {\n")
+        out.append("    krwaStoreI8(ptr, 0.toByte())\n")
+        out.append("    return\n")
+        out.append("  }\n")
+        out.append("  krwaStoreI8(ptr, 1.toByte())\n")
+        out.append("  krwaStoreString(krwaAlignTo(ptr + 1, 4), value)\n")
+        out.append("}\n\n")
+        out.append("private fun krwaStoreOptionInt(ptr: Int, value: Int?) {\n")
+        out.append("  if (value == null) {\n")
+        out.append("    krwaStoreI8(ptr, 0.toByte())\n")
+        out.append("    return\n")
+        out.append("  }\n")
+        out.append("  krwaStoreI8(ptr, 1.toByte())\n")
+        out.append("  krwaStoreI32(krwaAlignTo(ptr + 1, 4), value)\n")
+        out.append("}\n\n")
+        out.append("private fun krwaStoreStringList(value: List<String>): Int {\n")
+        out.append("  val ptr = krwaAlloc(8 * value.size)\n")
+        out.append("  var index = 0\n")
+        out.append("  while (index < value.size) {\n")
+        out.append("    krwaStoreString(ptr + (index * 8), value[index])\n")
+        out.append("    index++\n")
+        out.append("  }\n")
+        out.append("  return ptr\n")
+        out.append("}\n\n")
         out.append("private fun krwaLoadUByteArray(ptr: Int, len: Int): UByteArray {\n")
         out.append("  val bytes = UByteArray(len)\n")
         out.append("  var index = 0\n")
@@ -1617,6 +1651,39 @@ class KotlinWitBindings private constructor(builder: Builder) {
         out.append("  }\n")
         out.append("  return bytes\n")
         out.append("}\n\n")
+    }
+
+    private fun appendGuestExportStoreHelpers(out: StringBuilder) {
+        for ((declaration, helper) in guestExportStoreHelpers) {
+            val typeName = adapterTypeName(declaration.name())
+            out.append("private fun ")
+                .append(helper.storeFunctionName)
+                .append("(ptr: Int, value: ")
+                .append(typeName)
+                .append(") {\n")
+            for (line in storeRecordLines("value", declaration.fields(), "ptr", helper.storeFunctionName)) {
+                out.append("  ").append(line).append("\n")
+            }
+            out.append("}\n\n")
+
+            val elementType = TypeRef.named(declaration.name())
+            val stride = listStride(elementType)
+            out.append("private fun ")
+                .append(helper.storeListFunctionName)
+                .append("(value: List<")
+                .append(typeName)
+                .append(">): Int {\n")
+            out.append("  val ptr = krwaAlloc($stride * value.size)\n")
+            out.append("  var index = 0\n")
+            out.append("  while (index < value.size) {\n")
+            out.append("    ")
+                .append(helper.storeFunctionName)
+                .append("(ptr + (index * $stride), value[index])\n")
+            out.append("    index++\n")
+            out.append("  }\n")
+            out.append("  return ptr\n")
+            out.append("}\n\n")
+        }
     }
 
     private fun appendGuestTaskReturnImports(
@@ -3123,14 +3190,7 @@ class KotlinWitBindings private constructor(builder: Builder) {
             "f32" -> listOf("krwaStoreF32($ptr, $value)")
             "f64" -> listOf("krwaStoreF64($ptr, $value)")
             "string" -> {
-                val bytes = localName("${hint}Bytes")
-                val bytesPtr = localName("${hint}BytesPtr")
-                listOf(
-                    "val $bytes = $value.encodeToByteArray()",
-                    "val $bytesPtr = krwaStoreBytes($bytes)",
-                    "krwaStoreI32($ptr, $bytesPtr)",
-                    "krwaStoreI32($ptr + 4, $bytes.size)",
-                )
+                listOf("krwaStoreString($ptr, $value)")
             }
             else -> listOf("error(\"unsupported primitive WIT type in guest export adapter: $name\")")
         }
@@ -3145,7 +3205,10 @@ class KotlinWitBindings private constructor(builder: Builder) {
         when (declaration.kind()) {
             TypeDeclaration.Kind.ALIAS -> storeValueLines(value, declaration.target()!!, ptr, hint)
             TypeDeclaration.Kind.RESOURCE -> listOf("krwaStoreI32($ptr, $value.handle.toInt())")
-            TypeDeclaration.Kind.RECORD -> storeRecordLines(value, declaration.fields(), ptr, hint)
+            TypeDeclaration.Kind.RECORD ->
+                guestExportStoreHelpers[declaration]?.let { helper ->
+                    listOf("${helper.storeFunctionName}($ptr, $value)")
+                } ?: storeRecordLines(value, declaration.fields(), ptr, hint)
             TypeDeclaration.Kind.FLAGS -> storeFlagsLines(value, declaration.cases(), ptr)
             TypeDeclaration.Kind.ENUM ->
                 listOf(storeDiscriminantStatement(ptr, "$value.ordinal", declaration.cases().size))
@@ -3219,6 +3282,14 @@ class KotlinWitBindings private constructor(builder: Builder) {
         hint: String,
     ): StoredRange {
         val resolved = resolveAlias(elementType)
+        if (resolved.kind() == TypeRef.TypeKind.PRIMITIVE && resolved.name() == "string") {
+            val ptr = localName("${hint}Ptr")
+            return StoredRange(listOf("val $ptr = krwaStoreStringList($value)"), ptr, "$value.size")
+        }
+        recordStoreHelperForType(resolved)?.let { helper ->
+            val ptr = localName("${hint}Ptr")
+            return StoredRange(listOf("val $ptr = ${helper.storeListFunctionName}($value)"), ptr, "$value.size")
+        }
         if (resolved.kind() == TypeRef.TypeKind.PRIMITIVE && resolved.name() == "s8") {
             val ptr = localName("${hint}Ptr")
             return StoredRange(listOf("val $ptr = krwaStoreBytes($value)"), ptr, "$value.size")
@@ -3289,6 +3360,19 @@ class KotlinWitBindings private constructor(builder: Builder) {
         ptr: String,
         hint: String,
     ): List<String> {
+        if (typeName.endsWith("?") && cases.size == 2 && cases[0].name == "none") {
+            val someType = cases[1].type
+            if (someType != null) {
+                val resolvedSomeType = resolveAlias(someType)
+                if (resolvedSomeType.kind() == TypeRef.TypeKind.PRIMITIVE) {
+                    when (resolvedSomeType.name()) {
+                        "string" -> return listOf("krwaStoreOptionString($ptr, $value)")
+                        "s32",
+                        "u32" -> return listOf("krwaStoreOptionInt($ptr, $value)")
+                    }
+                }
+            }
+        }
         val lines = ArrayList<String>()
         val subject = localName("${hint}Value")
         lines.add("val $subject = $value")
@@ -3571,6 +3655,11 @@ class KotlinWitBindings private constructor(builder: Builder) {
         val lengthExpression: String,
     )
 
+    private data class GuestExportStoreHelper(
+        val storeFunctionName: String,
+        val storeListFunctionName: String,
+    )
+
     private data class VariantCase(val name: String, val type: TypeRef?)
 
     private class ArgCursor(var next: Int = 0)
@@ -3813,6 +3902,63 @@ class KotlinWitBindings private constructor(builder: Builder) {
             }
         }
         return null
+    }
+
+    private fun allTypeDeclarations(): List<TypeDeclaration> {
+        val result = ArrayList<TypeDeclaration>()
+        for (declaration in witPackage.declarations()) {
+            collectTypeDeclarations(declaration, result)
+        }
+        return result
+    }
+
+    private fun collectTypeDeclarations(
+        declaration: Declaration,
+        result: MutableList<TypeDeclaration>,
+    ) {
+        when (declaration) {
+            is TypeDeclaration -> result.add(declaration)
+            is InterfaceDeclaration -> {
+                for (member in declaration.members()) {
+                    if (member is TypeDeclaration) {
+                        result.add(member)
+                    }
+                }
+            }
+            is WorldDeclaration -> {
+                for (member in declaration.declarations()) {
+                    collectTypeDeclarations(member, result)
+                }
+            }
+        }
+    }
+
+    private fun guestExportStoreHelpers(): Map<TypeDeclaration, GuestExportStoreHelper> {
+        val usedNames = LinkedHashMap<String, Int>()
+        val result = LinkedHashMap<TypeDeclaration, GuestExportStoreHelper>()
+        for (declaration in allTypeDeclarations()) {
+            if (declaration.kind() != TypeDeclaration.Kind.RECORD) {
+                continue
+            }
+            result[declaration] =
+                GuestExportStoreHelper(
+                    uniqueGeneratedFunctionName("__krwa_store_${declaration.name()}", usedNames),
+                    uniqueGeneratedFunctionName("__krwa_store_${declaration.name()}_list", usedNames),
+                )
+        }
+        return result
+    }
+
+    private fun recordStoreHelperForType(type: TypeRef): GuestExportStoreHelper? {
+        val resolved = resolveAlias(type)
+        if (resolved.kind() != TypeRef.TypeKind.NAMED) {
+            return null
+        }
+        val declaration = findTypeDeclaration(resolved.name()!!) ?: return null
+        if (declaration.kind() != TypeDeclaration.Kind.RECORD) {
+            return null
+        }
+        return guestExportStoreHelpers[declaration]
     }
 
     private fun resolveAlias(type: TypeRef): TypeRef {
