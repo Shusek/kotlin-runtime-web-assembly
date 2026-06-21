@@ -314,6 +314,34 @@ KRWA interpreter p50 is `266.045898 / 316.530823 = 0.8405` of the in-harness
 Chasm interpreter p50. The branch is now measurable against Chasm directly; the
 next runtime change must close this gap without relying on compiled backends.
 
+Clean-check diagnostic reports from `/private/tmp/krwa-perf-check.sncYjL`:
+
+- Static raw CoreMark shape: 15 functions, 3765 instructions. Top raw triple is
+  `local_get i32_const i32_add` with count 128.
+- Static lowered shape: 2855 lowered dispatches, dispatch ratio `0.758`. Top
+  lowered pair is `local_get local_get` with count 128.
+- Dynamic call profile through `ExecutionListener`: `func=8` dominates with
+  3,184,640 calls, raw 270 instructions, lowered 206 dispatches, weighted
+  lowered dispatches 656,035,840. Next is `func=10` with 908,124 calls and
+  215,225,388 weighted lowered dispatches.
+
+Rejected temp candidate from `/private/tmp/krwa-perf-check.sncYjL`: add a
+lowered opcode for the CoreMark counter-increment shape
+`local_get, local_get, i32_load, i32_const 1, i32_add, i32_store`, restricted to
+memory 0 and equal load/store offsets. It compiled, but the benchmark produced
+one invalid KRWA run and did not beat the clean baseline:
+
+```text
+interpreter run=1 score=0.000000 ms=15870.802
+interpreter run=2 score=213.736115 ms=19016.168
+interpreter score_avg=106.868057 score_min=0.000000 score_p50=213.736115 score_best=213.736115 valid_runs=1 invalid_runs=1 ms_avg=17443.485 ms_min=15870.802 ms_p50=19016.168 ms_max=19016.168
+```
+
+Do not port this fusion as-is. The next runtime attempt should either prove the
+exact raw stack semantics with a targeted wasm test first, or target a safer
+existing lowered shape such as `local_get_i32_load i32_const` / `i32_const
+i32_and` in hot `func=8`/`func=10`.
+
 Upstream Chasm source comparison:
 
 - Repo cloned for inspection: `/private/tmp/chasm-src`
