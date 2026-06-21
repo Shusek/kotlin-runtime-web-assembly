@@ -20,6 +20,8 @@ internal actual object RuntimePlatform {
             ExecutionBackend.INTERPRETER -> null
             ExecutionBackend.NATIVE ->
                 throw WasmEngineException("native WebAssembly execution is only available on wasmJs")
+            ExecutionBackend.CHASM ->
+                throw WasmEngineException("Chasm execution is only available on JVM")
         }
 
     actual fun usesPeriodicInterruptionPolling(): Boolean = true

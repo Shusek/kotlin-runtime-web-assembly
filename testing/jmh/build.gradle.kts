@@ -6,7 +6,6 @@ import uk.shusek.krwa.gradle.*
 apply(plugin = "org.jetbrains.kotlin.kapt")
 
 dependencies {
-    add("implementation", libs.chasmJvm)
     add("implementation", libs.jmhCore)
     add("implementation", krwa("compiler"))
     add("implementation", krwa("runtime"))

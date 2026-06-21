@@ -3,6 +3,7 @@ package uk.shusek.krwa.bench
 import uk.shusek.krwa.compiler.MachineFactoryCompiler
 import uk.shusek.krwa.runtime.ByteArrayMemory
 import uk.shusek.krwa.runtime.ByteBufferMemory
+import uk.shusek.krwa.runtime.ExecutionBackend
 import uk.shusek.krwa.runtime.ExecutionListener
 import uk.shusek.krwa.runtime.HostFunction
 import uk.shusek.krwa.runtime.ImportValues
@@ -40,9 +41,6 @@ object ChasmCoremark {
     }
 
     fun run(module: WasmModule, backend: CoremarkBackend): CoremarkResult {
-        if (backend == CoremarkBackend.CHASM_INTERPRETER) {
-            return ChasmInterpreterCoremark.run(loadModuleBytes())
-        }
         val start = System.nanoTime()
         val instance = newInstance(module, backend)
         val scoreBits = instance.export("run").apply()[0]
@@ -101,8 +99,7 @@ object ChasmCoremark {
                         override fun isInterrupted(): Boolean = Thread.currentThread().isInterrupted
                     }
                 }
-            CoremarkBackend.CHASM_INTERPRETER ->
-                error("Chasm interpreter backend does not use KRWA Instance")
+            CoremarkBackend.CHASM_INTERPRETER -> builder.withExecutionBackend(ExecutionBackend.CHASM)
             CoremarkBackend.EXPERIMENTAL_FAST -> builder.withExperimentalFastInterpreter()
             CoremarkBackend.COMPILED_COLD -> builder.withMachineFactory { MachineFactoryCompiler.compile(it) }
             CoremarkBackend.COMPILED -> builder.withMachineFactory(compiledFactoryFor(module))

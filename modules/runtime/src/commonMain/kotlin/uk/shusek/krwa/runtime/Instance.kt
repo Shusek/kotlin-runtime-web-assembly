@@ -952,9 +952,9 @@ private constructor(
         fun build(): Instance {
             if (executionBackend != ExecutionBackend.INTERPRETER) {
                 if (!canUsePlatformExecution()) {
-                    if (executionBackend == ExecutionBackend.NATIVE) {
+                    if (executionBackend != ExecutionBackend.AUTO) {
                         throw WasmEngineException(
-                            "native WebAssembly execution cannot honor custom interpreter builder options"
+                            "${executionBackend.name.lowercase()} execution cannot honor custom interpreter builder options"
                         )
                     }
                 } else {

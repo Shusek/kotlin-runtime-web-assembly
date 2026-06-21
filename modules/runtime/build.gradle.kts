@@ -8,6 +8,7 @@ import org.gradle.kotlin.dsl.get
 import org.gradle.kotlin.dsl.named
 import org.gradle.kotlin.dsl.register
 import org.gradle.kotlin.dsl.withType
+import org.gradle.process.CommandLineArgumentProvider
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 import org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNativeTest
 import uk.shusek.krwa.gradle.*
@@ -27,6 +28,11 @@ extensions.configure<KotlinMultiplatformExtension> {
     sourceSets.named("commonMain") {
         dependencies {
             api(project(":wasm"))
+        }
+    }
+    sourceSets.named("jvmMain") {
+        dependencies {
+            implementation(libs.chasmJvm)
         }
     }
     sourceSets.named("commonTest") {
@@ -101,6 +107,13 @@ tasks.withType<JavaCompile>().configureEach {
     options.release.set(25)
     options.encoding = "UTF-8"
     options.compilerArgs.add("-parameters")
+}
+tasks.named<JavaCompile>("compileJvmMainJava") {
+    options.compilerArgumentProviders.add(
+        CommandLineArgumentProvider {
+            listOf("--module-path", configurations.getByName("jvmCompileClasspath").asPath)
+        }
+    )
 }
 patchKmpJvmModuleInfo()
 

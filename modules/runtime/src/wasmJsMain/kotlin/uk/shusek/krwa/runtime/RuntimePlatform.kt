@@ -17,6 +17,9 @@ internal actual object RuntimePlatform {
         backend: ExecutionBackend,
         hostInstance: Instance,
     ): PlatformInstanceExecution? {
+        if (backend == ExecutionBackend.CHASM) {
+            throw WasmEngineException("Chasm execution is only available on JVM")
+        }
         if (backend == ExecutionBackend.INTERPRETER) {
             return null
         }

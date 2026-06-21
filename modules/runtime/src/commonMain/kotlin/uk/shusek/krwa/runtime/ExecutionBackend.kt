@@ -6,6 +6,7 @@ enum class ExecutionBackend {
     AUTO,
     INTERPRETER,
     NATIVE,
+    CHASM,
 }
 
 internal interface PlatformInstanceExecution {
