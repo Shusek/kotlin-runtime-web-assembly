@@ -25,6 +25,8 @@ internal class SlotPlanProbeMachine(
     private lateinit var types: Array<FunctionType>
     private lateinit var slotPools: Array<ArrayDeque<LongArray>>
     private val stackPool = ArrayDeque<LongArray>()
+    private val callArgPools = Array(MAX_POOLED_CALL_ARRAY_SIZE + 1) { ArrayDeque<LongArray>() }
+    private val resultPools = Array(MAX_POOLED_CALL_ARRAY_SIZE + 1) { ArrayDeque<LongArray>() }
     private val memory0 by lazy { instance.memory(0) }
 
     override fun call(funcId: Int, args: LongArray): LongArray {
@@ -176,14 +178,18 @@ internal class SlotPlanProbeMachine(
                     OP_CALL -> {
                         val target = plan.target0[pc]
                         val argCount = plan.target1[pc]
-                        val callArgs = LongArray(argCount)
+                        val callArgs = borrowCallArray(callArgPools, argCount)
                         for (index in 0 until argCount) {
                             callArgs[index] = stack[sp - argCount + index]
                         }
                         sp -= argCount
                         val results = executeFunction(target, callArgs)
+                        recycleCallArray(callArgPools, callArgs)
                         for (result in results) {
                             stack[sp++] = result
+                        }
+                        if (bodies[target] != null) {
+                            recycleCallArray(resultPools, results)
                         }
                         pc++
                     }
@@ -982,6 +988,25 @@ internal class SlotPlanProbeMachine(
         }
     }
 
+    private fun borrowCallArray(pools: Array<ArrayDeque<LongArray>>, size: Int): LongArray =
+        if (size == 0) {
+            EMPTY_LONG_ARRAY
+        } else if (size <= MAX_POOLED_CALL_ARRAY_SIZE) {
+            val pool = pools[size]
+            if (pool.isEmpty()) LongArray(size) else pool.removeLast()
+        } else {
+            LongArray(size)
+        }
+
+    private fun recycleCallArray(pools: Array<ArrayDeque<LongArray>>, array: LongArray) {
+        val size = array.size
+        if (size == 0 || size > MAX_POOLED_CALL_ARRAY_SIZE) return
+        val pool = pools[size]
+        if (pool.size < MAX_REUSABLE_CALL_ARRAYS_PER_SIZE) {
+            pool.addLast(array)
+        }
+    }
+
     private fun callImport(funcId: Int, args: LongArray): LongArray {
         val import = instance.imports().function(funcId)
         val handle = import.handle() ?: throw WasmEngineException("imported function has no host handle")
@@ -1026,8 +1051,8 @@ internal class SlotPlanProbeMachine(
         }.toLong()
 
     private fun popResults(stack: LongArray, sp: Int, count: Int): LongArray {
-        if (count == 0) return LongArray(0)
-        val results = LongArray(count)
+        if (count == 0) return EMPTY_LONG_ARRAY
+        val results = borrowCallArray(resultPools, count)
         for (index in 0 until count) {
             results[index] = stack[sp - count + index]
         }
@@ -1257,6 +1282,9 @@ internal class SlotPlanProbeMachine(
         private const val STACK_CAPACITY = 4096
         private const val MAX_REUSABLE_FRAMES_PER_FUNCTION = 64
         private const val MAX_REUSABLE_STACKS = 256
+        private const val MAX_POOLED_CALL_ARRAY_SIZE = 8
+        private const val MAX_REUSABLE_CALL_ARRAYS_PER_SIZE = 256
+        private val EMPTY_LONG_ARRAY = LongArray(0)
 
         private const val SRC_NONE = 0
         private const val SRC_SLOT = 1

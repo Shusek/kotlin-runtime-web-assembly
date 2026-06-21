@@ -2268,3 +2268,86 @@ they were reverted. The useful progress from this pass is stability in the
 full comparison (`3/3` valid for slot-plan instead of the previous `2/3`) plus
 some isolated runs near the standard interpreter, but the branch still has not
 met the Chasm target.
+
+Rejected follow-up on 2026-06-21: eager-prebuilding all function slot-plans in
+`initializeCaches()` before running the first function. This looked promising
+in an isolated slot-plan run:
+
+```text
+slot_plan_probe run=1 score=249.771042 ms=17071.469
+slot_plan_probe run=2 score=255.705429 ms=19966.820
+slot_plan_probe run=3 score=262.950317 ms=19372.522
+slot_plan_probe score_avg=256.142263 score_min=249.771042 score_p50=255.705429 score_best=262.950317 valid_runs=3 invalid_runs=0 ms_avg=18803.604 ms_min=17071.469 ms_p50=19372.522 ms_max=19966.820
+```
+
+But it regressed the full comparison:
+
+```text
+interpreter run=1 score=276.529541 ms=18265.126
+interpreter run=2 score=279.115204 ms=18481.459
+interpreter run=3 score=279.759399 ms=18406.981
+interpreter score_avg=278.468048 score_min=276.529541 score_p50=279.115204 score_best=279.759399 valid_runs=3 invalid_runs=0 ms_avg=18384.522 ms_min=18265.126 ms_p50=18406.981 ms_max=18481.459
+
+slot_plan_probe run=1 score=217.754227 ms=19172.583
+slot_plan_probe run=2 score=211.714890 ms=19148.223
+slot_plan_probe run=3 score=213.568741 ms=19034.326
+slot_plan_probe score_avg=214.345952 score_min=211.714890 score_p50=213.568741 score_best=217.754227 valid_runs=3 invalid_runs=0 ms_avg=19118.377 ms_min=19034.326 ms_p50=19148.223 ms_max=19172.583
+
+chasm_interpreter run=1 score=342.387573 ms=20782.938
+chasm_interpreter run=2 score=345.105255 ms=20614.662
+chasm_interpreter run=3 score=352.961945 ms=20209.064
+chasm_interpreter score_avg=346.818258 score_min=342.387573 score_p50=345.105255 score_best=352.961945 valid_runs=3 invalid_runs=0 ms_avg=20535.554 ms_min=20209.064 ms_p50=20614.662 ms_max=20782.938
+```
+
+The eager prebuild change was reverted. Do not repeat it unchanged; the full
+comparison is the relevant signal for the goal, not the isolated run.
+
+Follow-up on 2026-06-21: added small-array pooling for internal `OP_CALL`
+argument/result arrays. This targets a real slot-plan overhead: every wasm
+function call previously allocated a `LongArray` for arguments and the callee
+allocated another for results. The pool is bounded to small arrays and
+internally produced results are recycled only after the caller has copied them
+back to its stack.
+
+Self-check stayed green:
+
+```text
+CoreMark slot-plan self-check
+direct_function_cases=4
+case=func2_forward_seed match=true interpreter_result=[0] slot_plan_result=[0] interpreter_mem_crc=cd8ac382 slot_plan_mem_crc=cd8ac382
+case=func2_reverse_seed match=true interpreter_result=[0] slot_plan_result=[0] interpreter_mem_crc=cd8ac382 slot_plan_mem_crc=cd8ac382
+case=func10_crc_a match=true interpreter_result=[29700] slot_plan_result=[29700] interpreter_mem_crc=cd8ac382 slot_plan_mem_crc=cd8ac382
+case=func10_crc_b match=true interpreter_result=[59156] slot_plan_result=[59156] interpreter_mem_crc=cd8ac382 slot_plan_mem_crc=cd8ac382
+case=export_run clock_step_ms=10000 match=true interpreter_result=[1073741824] slot_plan_result=[1073741824] interpreter_mem_crc=a4cb5eda slot_plan_mem_crc=a4cb5eda
+```
+
+Isolated slot-plan:
+
+```text
+slot_plan_probe run=1 score=220.329025 ms=18969.462
+slot_plan_probe run=2 score=233.553909 ms=17846.081
+slot_plan_probe run=3 score=231.821350 ms=18041.126
+slot_plan_probe score_avg=228.568095 score_min=220.329025 score_p50=231.821350 score_best=233.553909 valid_runs=3 invalid_runs=0 ms_avg=18285.556 ms_min=17846.081 ms_p50=18041.126 ms_max=18969.462
+```
+
+Full comparison:
+
+```text
+interpreter run=1 score=282.745453 ms=18110.987
+interpreter run=2 score=281.809204 ms=17949.820
+interpreter run=3 score=274.725281 ms=18725.244
+interpreter score_avg=279.759979 score_min=274.725281 score_p50=281.809204 score_best=282.745453 valid_runs=3 invalid_runs=0 ms_avg=18262.017 ms_min=17949.820 ms_p50=18110.987 ms_max=18725.244
+
+slot_plan_probe run=1 score=235.719330 ms=18151.615
+slot_plan_probe run=2 score=225.767609 ms=18070.557
+slot_plan_probe run=3 score=220.345215 ms=18265.518
+slot_plan_probe score_avg=227.277384 score_min=220.345215 score_p50=225.767609 score_best=235.719330 valid_runs=3 invalid_runs=0 ms_avg=18162.563 ms_min=18070.557 ms_p50=18151.615 ms_max=18265.518
+
+chasm_interpreter run=1 score=332.152344 ms=21132.223
+chasm_interpreter run=2 score=347.001343 ms=20505.385
+chasm_interpreter run=3 score=356.612183 ms=20004.716
+chasm_interpreter score_avg=345.255290 score_min=332.152344 score_p50=347.001343 score_best=356.612183 valid_runs=3 invalid_runs=0 ms_avg=20547.441 ms_min=20004.716 ms_p50=20505.385 ms_max=21132.223
+```
+
+This is a modest but real full-comparison improvement over the previous
+slot-plan `score_p50=216.528336`, still far below Chasm.
