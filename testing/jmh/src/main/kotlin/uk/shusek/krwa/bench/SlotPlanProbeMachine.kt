@@ -268,6 +268,18 @@ internal class SlotPlanProbeMachine(
                         sp = sp0
                         pc++
                     }
+                    OP_I32_BIN_SLOT_CONST -> {
+                        val left = slots[plan.src0[pc].toInt()].toInt()
+                        val right = plan.src1[pc].toInt()
+                        slots[plan.dst[pc]] = i32Binary(plan.mode[pc], left, right)
+                        pc++
+                    }
+                    OP_I32_BIN_SLOT_SLOT -> {
+                        val left = slots[plan.src0[pc].toInt()].toInt()
+                        val right = slots[plan.src1[pc].toInt()].toInt()
+                        slots[plan.dst[pc]] = i32Binary(plan.mode[pc], left, right)
+                        pc++
+                    }
                     OP_I64_BIN -> {
                         var sp0 = sp
                         val right =
@@ -364,6 +376,21 @@ internal class SlotPlanProbeMachine(
                                 else -> error("bad load op ${plan.mode[pc]}")
                             }
                         sp = sp0
+                        pc++
+                    }
+                    OP_LOAD_SLOT -> {
+                        val address = slots[plan.src0[pc].toInt()].toInt()
+                        val memory = memory(plan.target0[pc])
+                        val ptr = ptr(address, plan.src1[pc])
+                        slots[plan.dst[pc]] =
+                            when (plan.mode[pc]) {
+                                LOAD_I32 -> memory.readI32(ptr).toInt().toLong()
+                                LOAD_I32_8_U -> memory.readU8(ptr)
+                                LOAD_I32_16_S -> memory.readI16(ptr)
+                                LOAD_I32_16_U -> memory.readU16(ptr)
+                                LOAD_I64 -> memory.readI64(ptr)
+                                else -> error("bad load op ${plan.mode[pc]}")
+                            }
                         pc++
                     }
                     OP_STORE -> {
@@ -741,7 +768,14 @@ internal class SlotPlanProbeMachine(
         }
 
         private fun addBinary(opcode: Int, modeValue: Int, destination: Int, left: Source, right: Source) {
-            addOp(opcode, modeValue, destination, left, right, NO_SOURCE, 0, 0, 0, 0)
+            when {
+                opcode == OP_I32_BIN && left.kind == SRC_SLOT && right.kind == SRC_CONST ->
+                    addOp(OP_I32_BIN_SLOT_CONST, modeValue, destination, left, right, NO_SOURCE, 0, 0, 0, 0)
+                opcode == OP_I32_BIN && left.kind == SRC_SLOT && right.kind == SRC_SLOT ->
+                    addOp(OP_I32_BIN_SLOT_SLOT, modeValue, destination, left, right, NO_SOURCE, 0, 0, 0, 0)
+                else ->
+                    addOp(opcode, modeValue, destination, left, right, NO_SOURCE, 0, 0, 0, 0)
+            }
         }
 
         private fun addUnary(mode: Int, destination: Int, source: Source) {
@@ -749,7 +783,13 @@ internal class SlotPlanProbeMachine(
         }
 
         private fun addLoad(mode: Int, destination: Int, address: Source, memoryIndex: Int, offset: Long) {
-            addOp(OP_LOAD, mode, destination, address, Source(SRC_CONST, offset), NO_SOURCE, memoryIndex, 0, 0, 0)
+            val opcode =
+                if (address.kind == SRC_SLOT) {
+                    OP_LOAD_SLOT
+                } else {
+                    OP_LOAD
+                }
+            addOp(opcode, mode, destination, address, Source(SRC_CONST, offset), NO_SOURCE, memoryIndex, 0, 0, 0)
         }
 
         private fun addStore(mode: Int, address: Source, value: Source, memoryIndex: Int, offset: Long) {
@@ -958,6 +998,32 @@ internal class SlotPlanProbeMachine(
         }
         return ptr.toInt()
     }
+
+    private fun i32Binary(mode: Int, left: Int, right: Int): Long =
+        when (mode) {
+            I32_ADD -> left + right
+            I32_SUB -> left - right
+            I32_MUL -> left * right
+            I32_DIV_U -> OpcodeOps.I32_DIV_U(left, right)
+            I32_REM_S -> OpcodeOps.I32_REM_S(left, right)
+            I32_AND -> left and right
+            I32_OR -> left or right
+            I32_XOR -> left xor right
+            I32_SHL -> left shl right
+            I32_SHR_S -> left shr right
+            I32_SHR_U -> left ushr right
+            I32_EQ -> if (left == right) 1 else 0
+            I32_NE -> if (left != right) 1 else 0
+            I32_LT_S -> if (left < right) 1 else 0
+            I32_LT_U -> if (left.toUInt() < right.toUInt()) 1 else 0
+            I32_GT_S -> if (left > right) 1 else 0
+            I32_GT_U -> if (left.toUInt() > right.toUInt()) 1 else 0
+            I32_LE_S -> if (left <= right) 1 else 0
+            I32_LE_U -> if (left.toUInt() <= right.toUInt()) 1 else 0
+            I32_GE_S -> if (left >= right) 1 else 0
+            I32_GE_U -> if (left.toUInt() >= right.toUInt()) 1 else 0
+            else -> error("bad i32 op $mode")
+        }.toLong()
 
     private fun popResults(stack: LongArray, sp: Int, count: Int): LongArray {
         if (count == 0) return LongArray(0)
@@ -1233,6 +1299,9 @@ internal class SlotPlanProbeMachine(
         private const val OP_MATERIALIZE_CONST = 24
         private const val OP_SET_SLOT_SLOT = 25
         private const val OP_SET_SLOT_CONST = 26
+        private const val OP_I32_BIN_SLOT_CONST = 27
+        private const val OP_I32_BIN_SLOT_SLOT = 28
+        private const val OP_LOAD_SLOT = 29
 
         private const val I32_ADD = 1
         private const val I32_SUB = 2

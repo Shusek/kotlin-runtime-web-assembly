@@ -2205,3 +2205,66 @@ with measurement, not assumed allocation wins: reduce separate stack arrays per
 nested call, specialize more hot op/source combinations, and consider
 prebuilding all function plans at instance creation so no plan construction is
 charged to the measured run.
+
+Follow-up on 2026-06-21: specialized more source-kind combinations in
+`SlotPlanProbeMachine`:
+
+- `OP_I32_BIN_SLOT_CONST`
+- `OP_I32_BIN_SLOT_SLOT`
+- `OP_LOAD_SLOT`
+
+The deterministic self-check still passes:
+
+```text
+CoreMark slot-plan self-check
+direct_function_cases=4
+case=func2_forward_seed match=true interpreter_result=[0] slot_plan_result=[0] interpreter_mem_crc=cd8ac382 slot_plan_mem_crc=cd8ac382
+case=func2_reverse_seed match=true interpreter_result=[0] slot_plan_result=[0] interpreter_mem_crc=cd8ac382 slot_plan_mem_crc=cd8ac382
+case=func10_crc_a match=true interpreter_result=[29700] slot_plan_result=[29700] interpreter_mem_crc=cd8ac382 slot_plan_mem_crc=cd8ac382
+case=func10_crc_b match=true interpreter_result=[59156] slot_plan_result=[59156] interpreter_mem_crc=cd8ac382 slot_plan_mem_crc=cd8ac382
+case=export_run clock_step_ms=10000 match=true interpreter_result=[1073741824] slot_plan_result=[1073741824] interpreter_mem_crc=a4cb5eda slot_plan_mem_crc=a4cb5eda
+```
+
+Isolated slot-plan runs stayed valid:
+
+```text
+best isolated check during this change:
+slot_plan_probe run=1 score=242.973999 ms=17208.963
+slot_plan_probe run=2 score=244.424072 ms=20829.049
+slot_plan_probe run=3 score=257.400269 ms=16369.786
+slot_plan_probe score_avg=248.266113 score_min=242.973999 score_p50=244.424072 score_best=257.400269 valid_runs=3 invalid_runs=0 ms_avg=18135.932 ms_min=16369.786 ms_p50=17208.963 ms_max=20829.049
+
+final isolated recheck:
+slot_plan_probe run=1 score=223.847183 ms=18499.746
+slot_plan_probe run=2 score=210.452469 ms=19521.050
+slot_plan_probe run=3 score=219.410522 ms=18707.201
+slot_plan_probe score_avg=217.903392 score_min=210.452469 score_p50=219.410522 score_best=223.847183 valid_runs=3 invalid_runs=0 ms_avg=18909.332 ms_min=18499.746 ms_p50=18707.201 ms_max=19521.050
+```
+
+Current full comparison after keeping only the useful source-kind
+specializations:
+
+```text
+interpreter run=1 score=248.097916 ms=16833.443
+interpreter run=2 score=244.798035 ms=16691.565
+interpreter run=3 score=242.101440 ms=20942.546
+interpreter score_avg=244.999130 score_min=242.101440 score_p50=244.798035 score_best=248.097916 valid_runs=3 invalid_runs=0 ms_avg=18155.851 ms_min=16691.565 ms_p50=16833.443 ms_max=20942.546
+
+slot_plan_probe run=1 score=222.982010 ms=18535.552
+slot_plan_probe run=2 score=213.507935 ms=19374.321
+slot_plan_probe run=3 score=216.528336 ms=19336.282
+slot_plan_probe score_avg=217.672760 score_min=213.507935 score_p50=216.528336 score_best=222.982010 valid_runs=3 invalid_runs=0 ms_avg=19082.052 ms_min=18535.552 ms_p50=19336.282 ms_max=19374.321
+
+chasm_interpreter run=1 score=333.083527 ms=15423.021
+chasm_interpreter run=2 score=344.086029 ms=15494.931
+chasm_interpreter run=3 score=342.348511 ms=15036.950
+chasm_interpreter score_avg=339.839355 score_min=333.083527 score_p50=342.348511 score_best=344.086029 valid_runs=3 invalid_runs=0 ms_avg=15318.301 ms_min=15036.950 ms_p50=15423.021 ms_max=15494.931
+```
+
+Rejected in the same pass: slot-specialized `IF`, `BR_IF`, and `BR_TABLE`
+variants. They kept the self-check passing but regressed the isolated
+slot-plan run to `score_p50=220.783051` from the best `244.424072` check, so
+they were reverted. The useful progress from this pass is stability in the
+full comparison (`3/3` valid for slot-plan instead of the previous `2/3`) plus
+some isolated runs near the standard interpreter, but the branch still has not
+met the Chasm target.
