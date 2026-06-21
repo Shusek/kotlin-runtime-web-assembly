@@ -2012,3 +2012,70 @@ from the prior stable `166.78` p50 to `208.38` p50, yet the standard KRWA
 interpreter still wins. The next implementation should keep this predecode and
 then build a real executable plan where `local.get`/`const` are sources on the
 consumer op, not standalone dispatch entries.
+
+Rejected candidate on 2026-06-21 in `/private/tmp/krwa-chasm-runtime`: add a
+standard `LoweredFunction` superinstruction for the hot CoreMark function 8
+shape `local_get; i32_load; i32_const; i32_add`. This was deliberately smaller
+than the earlier invalid load-add-store fusion and kept the final `i32_store`
+outside the new opcode. It compiled, but regressed the sequential interpreter
+benchmark:
+
+```text
+clean a966955e baseline, same command:
+interpreter run=1 score=273.205383 ms=18652.374
+interpreter run=2 score=265.480865 ms=19202.395
+interpreter run=3 score=260.044220 ms=19601.362
+interpreter score_avg=266.243490 score_min=260.044220 score_p50=265.480865 score_best=273.205383 valid_runs=3 invalid_runs=0 ms_avg=19152.043 ms_min=18652.374 ms_p50=19202.395 ms_max=19601.362
+
+candidate:
+interpreter run=1 score=229.902679 ms=17803.153
+interpreter run=2 score=221.043320 ms=18608.284
+interpreter run=3 score=236.910690 ms=17710.126
+interpreter score_avg=229.285563 score_min=221.043320 score_p50=229.902679 score_best=236.910690 valid_runs=3 invalid_runs=0 ms_avg=18040.521 ms_min=17710.126 ms_p50=17803.153 ms_max=18608.284
+```
+
+Do not repeat this as a standard `MStack`-based superinstruction. It reduces
+dispatch count, but still round-trips through `MStack` and appears to interfere
+with the benchmark's internal clock/score enough to lose badly. Treat this as
+more evidence that the next useful implementation should be a Chasm-style
+slot-op plan with local/const operands and direct temp destinations, not another
+small central-`when` fusion.
+
+Temp `SlotPlanProbeMachine` check from `/private/tmp/krwa-coremark-clean.50FtIX/repo`
+on 2026-06-21, run with
+`-Dkrwa.coremark.backends=interpreter,slot_plan_probe -Dkrwa.coremark.warmups=1
+-Dkrwa.coremark.repetitions=3 -Dkrwa.coremark.printRuns=true`:
+
+```text
+interpreter run=1 score=272.405334 ms=15401.262
+interpreter run=2 score=270.398163 ms=19163.771
+interpreter run=3 score=277.829224 ms=15321.997
+interpreter score_avg=273.544240 score_min=270.398163 score_p50=272.405334 score_best=277.829224 valid_runs=3 invalid_runs=0 ms_avg=16629.010 ms_min=15321.997 ms_p50=15401.262 ms_max=19163.771
+
+slot_plan_probe run=1 score=0.000000 ms=18810.191
+slot_plan_probe run=2 score=0.000000 ms=47091.787
+slot_plan_probe run=3 score=0.000000 ms=13451.090
+slot_plan_probe score_avg=0.000000 score_min=0.000000 score_p50=0.000000 score_best=0.000000 valid_runs=0 invalid_runs=3 ms_avg=26451.022 ms_min=13451.090 ms_p50=18810.191 ms_max=47091.787
+```
+
+Do not port `SlotPlanProbeMachine` as-is. The source shape is closer to Chasm
+than the old `FrameSlotProbeMachine`, but it is currently invalid for CoreMark.
+Any continuation should first debug its control/stack materialization semantics
+or rebuild the slot-op plan inside runtime with targeted tests before
+benchmarking.
+
+Rejected candidate on 2026-06-21 in `/private/tmp/krwa-chasm-runtime`: add an
+`offset == 0` fast path to `InterpreterMachine.readLoweredMemPtr`. It compiled
+but regressed the standard interpreter:
+
+```text
+candidate:
+interpreter run=1 score=248.282715 ms=16813.197
+interpreter run=2 score=229.498169 ms=17964.967
+interpreter run=3 score=238.227585 ms=17579.446
+interpreter score_avg=238.669490 score_min=229.498169 score_p50=238.227585 score_best=248.282715 valid_runs=3 invalid_runs=0 ms_avg=17452.536 ms_min=16813.197 ms_p50=17579.446 ms_max=17964.967
+```
+
+This confirms that tiny pointer/math shortcuts are not moving toward the goal.
+Keep the next attempt focused on the slot-op model or on measured Chasm-style
+predecode, not micro-branches in the existing lowered loop.
