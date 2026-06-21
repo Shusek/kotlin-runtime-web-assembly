@@ -296,6 +296,24 @@ Optional JFR for the benchmark JVM:
 
 ## Current Reference Results
 
+Clean committed branch baseline from `HEAD` `593acbf2`, exported with
+`git archive` to `/private/tmp/krwa-perf-baseline.5YDcg8` and run with
+`./gradlew --no-daemon :jmh:coremarkChasmInterpreterReport --quiet
+-Dkrwa.coremark.repetitions=2`:
+
+```text
+interpreter run=1 score=266.045898 ms=19132.727
+interpreter run=2 score=260.943298 ms=19514.767
+interpreter score_avg=263.494598 score_min=260.943298 score_p50=266.045898 score_best=266.045898 valid_runs=2 invalid_runs=0 ms_avg=19323.747 ms_min=19132.727 ms_p50=19514.767 ms_max=19514.767
+chasm_interpreter run=1 score=316.530823 ms=16726.284
+chasm_interpreter run=2 score=306.654388 ms=22933.138
+chasm_interpreter score_avg=311.592606 score_min=306.654388 score_p50=316.530823 score_best=316.530823 valid_runs=2 invalid_runs=0 ms_avg=19829.711 ms_min=16726.284 ms_p50=22933.138 ms_max=22933.138
+```
+
+KRWA interpreter p50 is `266.045898 / 316.530823 = 0.8405` of the in-harness
+Chasm interpreter p50. The branch is now measurable against Chasm directly; the
+next runtime change must close this gap without relying on compiled backends.
+
 Upstream Chasm source comparison:
 
 - Repo cloned for inspection: `/private/tmp/chasm-src`
