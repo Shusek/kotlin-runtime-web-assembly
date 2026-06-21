@@ -105,6 +105,8 @@ private fun selectedBackends(args: Array<String>): List<CoremarkBackend> {
                 "interpreter", "interpreted", "int" -> CoremarkBackend.INTERPRETER
                 "chasm", "chasm_interpreter", "chasm-interpreter", "upstream_chasm", "upstream-chasm" ->
                     CoremarkBackend.CHASM_INTERPRETER
+                "slot_plan_probe", "slot-plan-probe", "slot_plan", "slot-plan", "plan_probe", "plan-probe" ->
+                    CoremarkBackend.SLOT_PLAN_PROBE
                 "experimental", "experimental_fast", "experimental-fast", "fast" ->
                     CoremarkBackend.EXPERIMENTAL_FAST
                 "compiled_cold",

@@ -2079,3 +2079,56 @@ interpreter score_avg=238.669490 score_min=229.498169 score_p50=238.227585 score
 This confirms that tiny pointer/math shortcuts are not moving toward the goal.
 Keep the next attempt focused on the slot-op model or on measured Chasm-style
 predecode, not micro-branches in the existing lowered loop.
+
+Follow-up on 2026-06-21 in `/private/tmp/krwa-chasm-runtime`: ported the
+slot-op prototype into the active performance branch as benchmark-local backend
+`slot_plan_probe`, and fixed the first clear semantic bug. The old plan treated
+`local_get` as a live pointer to the local slot. That is not a Wasm stack
+snapshot: if a later `local_set` overwrites the same local before the abstract
+source is consumed, the consumer reads the new local value. The current probe
+flushes pending abstract stack values before writing a local slot when the
+pending stack contains a source from that slot. It also treats branch targets as
+basic-block boundaries so branch paths do not execute materialization emitted
+for a previous sequential path.
+
+Correctness improved from always invalid to mixed valid/invalid, but the probe
+is not stable enough to promote:
+
+```text
+single correctness check:
+slot_plan_probe run=1 score=221.713104 ms=19105.977
+slot_plan_probe score_avg=221.713104 score_min=221.713104 score_p50=221.713104 score_best=221.713104 valid_runs=1 invalid_runs=0 ms_avg=19105.977 ms_min=19105.977 ms_p50=19105.977 ms_max=19105.977
+
+sequential comparison:
+interpreter run=1 score=261.164795 ms=19283.228
+interpreter run=2 score=252.972427 ms=19784.795
+interpreter run=3 score=250.899048 ms=16566.339
+interpreter score_avg=255.012090 score_min=250.899048 score_p50=252.972427 score_best=261.164795 valid_runs=3 invalid_runs=0 ms_avg=18544.787 ms_min=16566.339 ms_p50=19283.228 ms_max=19784.795
+
+slot_plan_probe run=1 score=87.922394 ms=39146.863
+slot_plan_probe run=2 score=0.000000 ms=10507.277
+slot_plan_probe run=3 score=228.850403 ms=18167.788
+slot_plan_probe score_avg=105.590932 score_min=0.000000 score_p50=87.922394 score_best=228.850403 valid_runs=2 invalid_runs=1 ms_avg=22607.309 ms_min=10507.277 ms_p50=18167.788 ms_max=39146.863
+
+chasm_interpreter run=1 score=316.180542 ms=16998.189
+chasm_interpreter run=2 score=290.107330 ms=17516.936
+chasm_interpreter run=3 score=332.115570 ms=15682.215
+chasm_interpreter score_avg=312.801147 score_min=290.107330 score_p50=316.180542 score_best=332.115570 valid_runs=3 invalid_runs=0 ms_avg=16732.447 ms_min=15682.215 ms_p50=16998.189 ms_max=17516.936
+
+slot-plan-only repeat:
+slot_plan_probe run=1 score=217.312561 ms=19179.437
+slot_plan_probe run=2 score=0.000000 ms=7339.409
+slot_plan_probe run=3 score=205.212402 ms=20131.104
+slot_plan_probe run=4 score=114.055428 ms=31332.903
+slot_plan_probe run=5 score=94.591110 ms=13096.210
+slot_plan_probe score_avg=126.234300 score_min=0.000000 score_p50=114.055428 score_best=217.312561 valid_runs=4 invalid_runs=1 ms_avg=18215.813 ms_min=7339.409 ms_p50=19179.437 ms_max=31332.903
+```
+
+Do not use `slot_plan_probe` as a Chasm comparison score yet. The next useful
+step is a deterministic self-check that calls hot CoreMark functions directly,
+especially `func=2 (i32, i32) -> i32`, without the CoreMark clock loop. The
+earlier debug comparison showed the first visible divergence around
+`func=4 pc=341`, where a call to `func=2 args=[432, 1]` returned a different
+value than the valid frame-slot probe. That may still be a prior-memory-state
+symptom, so the direct function harness should compare isolated function
+results and relevant memory mutations against the standard interpreter.

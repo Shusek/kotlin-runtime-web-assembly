@@ -19,6 +19,7 @@ import uk.shusek.krwa.wasm.types.ValType
 enum class CoremarkBackend {
     INTERPRETER,
     CHASM_INTERPRETER,
+    SLOT_PLAN_PROBE,
     EXPERIMENTAL_FAST,
     COMPILED_COLD,
     COMPILED,
@@ -100,6 +101,7 @@ object ChasmCoremark {
                     }
                 }
             CoremarkBackend.CHASM_INTERPRETER -> builder.withExecutionBackend(ExecutionBackend.CHASM)
+            CoremarkBackend.SLOT_PLAN_PROBE -> builder.withMachineFactory(::SlotPlanProbeMachine)
             CoremarkBackend.EXPERIMENTAL_FAST -> builder.withExperimentalFastInterpreter()
             CoremarkBackend.COMPILED_COLD -> builder.withMachineFactory { MachineFactoryCompiler.compile(it) }
             CoremarkBackend.COMPILED -> builder.withMachineFactory(compiledFactoryFor(module))
