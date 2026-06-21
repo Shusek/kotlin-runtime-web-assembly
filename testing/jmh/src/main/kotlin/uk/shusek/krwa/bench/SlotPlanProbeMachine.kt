@@ -46,10 +46,39 @@ internal class SlotPlanProbeMachine(
     private fun executeFunction(funcId: Int, args: LongArray): LongArray {
         val body = bodies[funcId] ?: return callImport(funcId, args)
         val type = types[funcId]
+        return executeFunctionBody(funcId, body, type, args, null, 0, args.size)
+    }
+
+    private fun executeFunctionFromStack(
+        funcId: Int,
+        callerStack: LongArray,
+        argBase: Int,
+        argCount: Int,
+    ): LongArray {
+        val body = bodies[funcId] ?: error("executeFunctionFromStack called for import $funcId")
+        val type = types[funcId]
+        return executeFunctionBody(funcId, body, type, null, callerStack, argBase, argCount)
+    }
+
+    private fun executeFunctionBody(
+        funcId: Int,
+        body: FunctionBody,
+        type: FunctionType,
+        args: LongArray?,
+        callerStack: LongArray?,
+        argBase: Int,
+        argCount: Int,
+    ): LongArray {
         val plan = plan(funcId, type, body)
         val slots = borrowSlots(funcId, plan.slotCount)
         val stack = borrowStack()
-        args.copyInto(slots, endIndex = args.size)
+        if (callerStack == null) {
+            args!!.copyInto(slots, endIndex = args.size)
+        } else {
+            for (index in 0 until argCount) {
+                slots[index] = callerStack[argBase + index]
+            }
+        }
 
         val ctrlOps = IntArray(plan.maxControlDepth + 2)
         val ctrlStart = IntArray(plan.maxControlDepth + 2)
@@ -178,17 +207,25 @@ internal class SlotPlanProbeMachine(
                     OP_CALL -> {
                         val target = plan.target0[pc]
                         val argCount = plan.target1[pc]
-                        val callArgs = borrowCallArray(callArgPools, argCount)
-                        for (index in 0 until argCount) {
-                            callArgs[index] = stack[sp - argCount + index]
-                        }
+                        val argBase = sp - argCount
                         sp -= argCount
-                        val results = executeFunction(target, callArgs)
-                        recycleCallArray(callArgPools, callArgs)
+                        val targetBody = bodies[target]
+                        val results =
+                            if (targetBody == null) {
+                                val callArgs = borrowCallArray(callArgPools, argCount)
+                                for (index in 0 until argCount) {
+                                    callArgs[index] = stack[argBase + index]
+                                }
+                                callImport(target, callArgs).also {
+                                    recycleCallArray(callArgPools, callArgs)
+                                }
+                            } else {
+                                executeFunctionFromStack(target, stack, argBase, argCount)
+                            }
                         for (result in results) {
                             stack[sp++] = result
                         }
-                        if (bodies[target] != null) {
+                        if (targetBody != null) {
                             recycleCallArray(resultPools, results)
                         }
                         pc++

@@ -2351,3 +2351,56 @@ chasm_interpreter score_avg=345.255290 score_min=332.152344 score_p50=347.001343
 
 This is a modest but real full-comparison improvement over the previous
 slot-plan `score_p50=216.528336`, still far below Chasm.
+
+Follow-up on 2026-06-21: internal wasm-to-wasm `OP_CALL` now copies arguments
+directly from the caller operand stack into the callee slots instead of
+borrowing and filling a temporary argument array. Host imports still use a
+`LongArray` because that is their handle API.
+
+Self-check stayed green:
+
+```text
+CoreMark slot-plan self-check
+direct_function_cases=4
+case=func2_forward_seed match=true interpreter_result=[0] slot_plan_result=[0] interpreter_mem_crc=cd8ac382 slot_plan_mem_crc=cd8ac382
+case=func2_reverse_seed match=true interpreter_result=[0] slot_plan_result=[0] interpreter_mem_crc=cd8ac382 slot_plan_mem_crc=cd8ac382
+case=func10_crc_a match=true interpreter_result=[29700] slot_plan_result=[29700] interpreter_mem_crc=cd8ac382 slot_plan_mem_crc=cd8ac382
+case=func10_crc_b match=true interpreter_result=[59156] slot_plan_result=[59156] interpreter_mem_crc=cd8ac382 slot_plan_mem_crc=cd8ac382
+case=export_run clock_step_ms=10000 match=true interpreter_result=[1073741824] slot_plan_result=[1073741824] interpreter_mem_crc=a4cb5eda slot_plan_mem_crc=a4cb5eda
+```
+
+Isolated slot-plan:
+
+```text
+slot_plan_probe run=1 score=206.171402 ms=20242.339
+slot_plan_probe run=2 score=240.925156 ms=17673.216
+slot_plan_probe run=3 score=230.786987 ms=17555.581
+slot_plan_probe score_avg=225.961182 score_min=206.171402 score_p50=230.786987 score_best=240.925156 valid_runs=3 invalid_runs=0 ms_avg=18490.379 ms_min=17555.581 ms_p50=17673.216 ms_max=20242.339
+```
+
+Full comparison:
+
+```text
+interpreter run=1 score=280.682068 ms=18189.672
+interpreter run=2 score=281.076538 ms=17956.353
+interpreter run=3 score=280.059753 ms=15247.456
+interpreter score_avg=280.606120 score_min=280.059753 score_p50=280.682068 score_best=281.076538 valid_runs=3 invalid_runs=0 ms_avg=17131.160 ms_min=15247.456 ms_p50=17956.353 ms_max=18189.672
+
+slot_plan_probe run=1 score=236.257675 ms=18288.804
+slot_plan_probe run=2 score=224.651794 ms=18152.688
+slot_plan_probe run=3 score=230.503265 ms=17700.922
+slot_plan_probe score_avg=230.470912 score_min=224.651794 score_p50=230.503265 score_best=236.257675 valid_runs=3 invalid_runs=0 ms_avg=18047.471 ms_min=17700.922 ms_p50=18152.688 ms_max=18288.804
+
+chasm_interpreter run=1 score=329.815308 ms=21356.394
+chasm_interpreter run=2 score=340.232483 ms=20937.215
+chasm_interpreter run=3 score=344.352631 ms=15083.286
+chasm_interpreter score_avg=338.133474 score_min=329.815308 score_p50=340.232483 score_best=344.352631 valid_runs=3 invalid_runs=0 ms_avg=19125.631 ms_min=15083.286 ms_p50=20937.215 ms_max=21356.394
+```
+
+This keeps a small full-comparison gain over the previous slot-plan
+`score_p50=225.767609`, but it does not change the main conclusion: the
+slot-plan prototype is still slower than the standard KRWA interpreter in this
+run and far below Chasm. To actually "use Chasm as an interpreter
+implementation" outside the benchmark, the next useful work is a real runtime
+adapter for Chasm's store/import/memory/global model rather than more tiny
+allocation tweaks in this prototype.
