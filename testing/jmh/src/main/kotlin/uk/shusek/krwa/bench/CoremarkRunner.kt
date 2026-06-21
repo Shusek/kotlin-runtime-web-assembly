@@ -113,12 +113,6 @@ private fun selectedBackends(args: Array<String>): List<CoremarkBackend> {
                 "compiler-cold",
                 "jit_cold",
                 "jit-cold" -> CoremarkBackend.COMPILED_COLD
-                "compiled_no_interrupt",
-                "compiled-no-interrupt",
-                "compiler_no_interrupt",
-                "compiler-no-interrupt",
-                "jit_no_interrupt",
-                "jit-no-interrupt" -> CoremarkBackend.COMPILED_NO_INTERRUPT
                 "compiled", "compiler", "jit" -> CoremarkBackend.COMPILED
                 "" -> null
                 else -> error("Unknown backend: $value")

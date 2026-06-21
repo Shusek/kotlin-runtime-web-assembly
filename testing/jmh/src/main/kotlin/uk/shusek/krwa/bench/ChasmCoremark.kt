@@ -21,7 +21,6 @@ enum class CoremarkBackend {
     EXPERIMENTAL_FAST,
     COMPILED_COLD,
     COMPILED,
-    COMPILED_NO_INTERRUPT,
 }
 
 data class CoremarkResult(
@@ -107,8 +106,6 @@ object ChasmCoremark {
             CoremarkBackend.EXPERIMENTAL_FAST -> builder.withExperimentalFastInterpreter()
             CoremarkBackend.COMPILED_COLD -> builder.withMachineFactory { MachineFactoryCompiler.compile(it) }
             CoremarkBackend.COMPILED -> builder.withMachineFactory(compiledFactoryFor(module))
-            CoremarkBackend.COMPILED_NO_INTERRUPT ->
-                builder.withMachineFactory(compiledNoInterruptFactoryFor(module))
         }
 
         return builder.build()
@@ -126,25 +123,8 @@ object ChasmCoremark {
         }
     }
 
-    private fun compiledNoInterruptFactoryFor(module: WasmModule): (Instance) -> Machine {
-        val factory = compiledNoInterruptFactory
-        if (factory != null && compiledNoInterruptModule === module) {
-            return factory
-        }
-
-        return MachineFactoryCompiler.builder(module)
-            .withInterruptionChecks(false)
-            .compile()
-            .also {
-                compiledNoInterruptModule = module
-                compiledNoInterruptFactory = it
-            }
-    }
-
     private var compiledModule: WasmModule? = null
     private var compiledFactory: ((Instance) -> Machine)? = null
-    private var compiledNoInterruptModule: WasmModule? = null
-    private var compiledNoInterruptFactory: ((Instance) -> Machine)? = null
 
     private const val RESOURCE = "/benchmark/chasm-coremark.wasm"
 }
