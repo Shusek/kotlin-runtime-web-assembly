@@ -1,0 +1,1968 @@
+# Chasm CoreMark Notes
+
+This branch uses Chasm's `coremark.wasm` fixture to compare KRWA backends and to
+guide interpreter performance work.
+
+## Rules
+
+- Do not switch global runtime defaults to run this benchmark. The `interpreter`
+  backend must construct `InterpreterMachine` explicitly in `ChasmCoremark`.
+- Run runtime experiments in an isolated `/private/tmp` copy first. Move only a
+  measured win back to the main worktree.
+- Compare interpreter changes against the clean isolated baseline below, not
+  against a worktree that also contains unrelated runtime edits.
+- Treat `modules/runtime/**` in the main worktree as shared state. Do not edit it
+  for exploratory performance work while another agent or user is resolving
+  conflicts there.
+
+## Coordination Protocol
+
+Use this branch as the shared ledger, not as the scratchpad:
+
+1. Keep benchmark harness changes and measurements in the main worktree.
+2. Copy clean `HEAD` to `/private/tmp`, apply only the benchmark harness patch,
+   and make runtime experiments there.
+3. Record every attempted runtime change in this file with the score and whether
+   it beat the clean isolated baseline.
+4. Bring a runtime patch back to `modules/runtime/**` only after it wins against
+   the clean isolated baseline and passes a normal build/test sanity check.
+5. If the main worktree runtime is dirty, measure it only as a sanity check and
+   do not use that result as the optimization baseline.
+
+Agent contract for shared work:
+
+- Do not change `RuntimeDefaults.kt` or any global backend selection just to run
+  this benchmark.
+- Do not leave speculative `modules/runtime/**` edits in the main worktree. If a
+  runtime idea is not reproduced in main after a temp win, revert that idea and
+  record it below.
+- If another agent or the user is resolving conflicts in runtime files, treat the
+  main runtime as read-only and continue only in `/private/tmp` copies plus this
+  ledger.
+- Use candidate names in notes and temp directory names so parallel experiments
+  are easy to compare and discard.
+
+Current coordination decision:
+
+- Freeze `modules/runtime/**` in the main worktree while conflicts are being
+  resolved. Runtime ideas may continue only in isolated `/private/tmp` copies.
+- Treat interpreter-vs-interpreter as the active target: KRWA `interpreter`
+  versus local upstream Chasm JVM interpreter. Prefer the real
+  `chasm_interpreter` backend over the historical fixed p50 `337.83783`.
+- Keep compiled-backend checks as optional compiler sanity only. They are not
+  the success criterion for this branch.
+- A second agent can safely work on runtime conflicts if this branch only
+  updates the harness, compiler diagnostics, and this ledger.
+
+## Commands
+
+```bash
+./gradlew --no-daemon :jmh:classes
+./gradlew --no-daemon :jmh:coremarkKrwa \
+  -Dkrwa.coremark.backends=interpreter \
+  -Dkrwa.coremark.warmups=1 \
+  -Dkrwa.coremark.repetitions=3
+```
+
+For the direct interpreter-vs-interpreter comparison, use the in-harness Chasm
+backend:
+
+```bash
+./gradlew --no-daemon :jmh:coremarkChasmInterpreterReport
+```
+
+This report runs sequentially by default. Interleaving once produced a Chasm
+`score=0` invalid run in this harness, while Chasm-only and sequential mixed
+runs were valid.
+
+When comparing noisy candidates, print individual repetitions:
+
+```bash
+./gradlew --no-daemon :jmh:coremarkKrwa \
+  -Dkrwa.coremark.backends=interpreter,experimental_fast \
+  -Dkrwa.coremark.warmups=1 \
+  -Dkrwa.coremark.repetitions=5 \
+  -Dkrwa.coremark.printRuns=true
+```
+
+When comparing two or more candidates in one JVM, prefer interleaving so order,
+GC, and late JIT effects are shared instead of applying to one backend block:
+
+```bash
+./gradlew --no-daemon :jmh:coremarkKrwa \
+  -Dkrwa.coremark.backends=interpreter,experimental_fast \
+  -Dkrwa.coremark.warmups=1 \
+  -Dkrwa.coremark.repetitions=5 \
+  -Dkrwa.coremark.printRuns=true \
+  -Dkrwa.coremark.interleave=true
+```
+
+To make "do we beat Chasm's interpreter?" explicit in CI or local checks, use
+the interpreter-only gate:
+
+```bash
+./gradlew --no-daemon :jmh:coremarkInterpreterChasmGate
+```
+
+For a quick interpreter-only report without failing the build:
+
+```bash
+./gradlew --no-daemon :jmh:coremarkInterpreterChasmReport
+```
+
+For a less noisy interpreter-only report:
+
+```bash
+./gradlew --no-daemon :jmh:coremarkInterpreterChasmStableReport
+```
+
+For a legacy diagnostic report of both main backends:
+
+```bash
+./gradlew --no-daemon :jmh:coremarkChasmReport
+```
+
+For a static opcode/pattern report used to choose Chasm-style predecode
+candidates:
+
+```bash
+./gradlew --no-daemon :jmh:coremarkOpcodeReport \
+  -Dkrwa.coremark.report.top=12
+```
+
+For a dynamic opcode/pattern profile through the standard interpreter listener:
+
+```bash
+./gradlew --no-daemon :jmh:coremarkDynamicOpcodeReport \
+  -Dkrwa.coremark.report.top=12
+```
+
+For a dynamic function-call target profile combined with static lowered body
+size:
+
+```bash
+./gradlew --no-daemon :jmh:coremarkFunctionCallReport \
+  -Dkrwa.coremark.report.top=12
+```
+
+For a static opcode/pattern profile of the actual lowered dispatch stream:
+
+```bash
+./gradlew --no-daemon :jmh:coremarkLoweredOpcodeReport \
+  -Dkrwa.coremark.report.top=12
+```
+
+For a per-function view of the actual lowered dispatch stream, useful when
+mapping Chasm-style predecode/fusion work to specific CoreMark functions:
+
+```bash
+./gradlew --no-daemon :jmh:coremarkLoweredFunctionReport \
+  -Dkrwa.coremark.report.functions=8 \
+  -Dkrwa.coremark.report.top=6
+```
+
+To dump generated compiled CoreMark classes for bytecode inspection:
+
+```bash
+./gradlew --no-daemon :jmh:coremarkCompiledClassDump \
+  -Dkrwa.coremark.dump.dir=/private/tmp/krwa-coremark-compiled-classes
+```
+
+For a less noisy interpreter-only diagnostic report, use one warmup and three
+repetitions:
+
+```bash
+./gradlew --no-daemon :jmh:coremarkInterpreterChasmStableReport
+```
+
+For the interpreter-only Chasm gate:
+
+```bash
+./gradlew --no-daemon :jmh:coremarkInterpreterChasmGate
+```
+
+To avoid measuring a dirty shared runtime while conflicts are being resolved,
+run the same gate in a clean `HEAD` copy plus only the benchmark/compiler patch:
+
+```bash
+scripts/coremark-clean-worktree.sh :jmh:coremarkInterpreterChasmGate
+```
+
+The same isolation should be used for reports when the main runtime does not
+compile:
+
+```bash
+scripts/coremark-clean-worktree.sh :jmh:coremarkOpcodeReport \
+  -Dkrwa.coremark.report.top=12
+```
+
+```bash
+scripts/coremark-clean-worktree.sh :jmh:coremarkDynamicOpcodeReport \
+  -Dkrwa.coremark.report.top=12
+```
+
+```bash
+scripts/coremark-clean-worktree.sh :jmh:coremarkFunctionCallReport \
+  -Dkrwa.coremark.report.top=12
+```
+
+```bash
+scripts/coremark-clean-worktree.sh :jmh:coremarkLoweredOpcodeReport \
+  -Dkrwa.coremark.report.top=12
+```
+
+```bash
+scripts/coremark-clean-worktree.sh :jmh:coremarkLoweredFunctionReport \
+  -Dkrwa.coremark.report.functions=8 \
+  -Dkrwa.coremark.report.top=6
+```
+
+The equivalent manual runner command is:
+
+```bash
+./gradlew --no-daemon :jmh:coremarkKrwa \
+  -Dkrwa.coremark.backends=interpreter \
+  -Dkrwa.coremark.warmups=1 \
+  -Dkrwa.coremark.repetitions=3 \
+  -Dkrwa.coremark.referenceName=chasm_upstream_jvm_interpreter \
+  -Dkrwa.coremark.referenceScore=337.83783 \
+  -Dkrwa.coremark.referenceMetric=p50 \
+  -Dkrwa.coremark.failBelowReference=true
+```
+
+Optional JMH wall-clock gate:
+
+```bash
+./gradlew --no-daemon :jmh:jmh --args \
+  'BenchmarkChasmCoremarkExecution -p backendName=INTERPRETER -wi 1 -i 3 -f 1 -tu s'
+```
+
+Use JMH `s/op` as a stability and wall-clock sanity check only. The primary
+CoreMark performance metric is the score returned by `coremark.wasm`, printed by
+`coremarkKrwa` as `score_avg`, `score_p50`, and `score_best`. Prefer
+`score_p50`/raw repetitions when one run has a large outlier; do not call a
+candidate a win from `score_best` alone. Any raw run with `score=0` is a
+correctness/timing failure signal for that candidate unless independently
+explained; do not hide it inside averages. The summary exposes this as
+`invalid_runs`.
+
+Harness sanity after adding raw repetition output and score distribution fields:
+
+```text
+compiled run=1 score=7776.599609 ms=16378.862
+compiled score_avg=7776.599609 score_min=7776.599609 score_p50=7776.599609 score_best=7776.599609 valid_runs=1 invalid_runs=0 ms_avg=16378.862 ms_min=16378.862 ms_p50=16378.862 ms_max=16378.862
+```
+
+Interleaved harness sanity, with one repetition only to validate ordering and
+format:
+
+```text
+Benchmark: Chasm coremark.wasm on KRWA
+Warmups: 0, repetitions: 1, interleave: true
+compiled run=1 score=8040.935547 ms=15350.786
+compiled_no_interrupt run=1 score=8372.659180 ms=14683.696
+compiled score_avg=8040.935547 score_min=8040.935547 score_p50=8040.935547 score_best=8040.935547 valid_runs=1 invalid_runs=0 ms_avg=15350.786 ms_min=15350.786 ms_p50=15350.786 ms_max=15350.786
+compiled_no_interrupt score_avg=8372.659180 score_min=8372.659180 score_p50=8372.659180 score_best=8372.659180 valid_runs=1 invalid_runs=0 ms_avg=14683.696 ms_min=14683.696 ms_p50=14683.696 ms_max=14683.696
+```
+
+Backend names:
+
+- `interpreter`: explicitly constructs `InterpreterMachine`, independent from
+  global runtime defaults.
+- `experimental_fast`: uses `withExperimentalFastInterpreter()`.
+- `compiled`: steady-state compiled backend; compiles the module once and reuses
+  the machine factory across fresh instances.
+- `compiled_cold`: old compile-per-instance path, useful when measuring
+  instantiation plus compiler cost.
+- `compiled_no_interrupt`: diagnostic steady-state compiled backend compiled
+  with `MachineFactoryCompiler.Builder.withInterruptionChecks(false)`. This is
+  not a default runtime mode and must not be used for semantic correctness
+  checks that depend on interruption.
+
+Memory configuration:
+
+- On JVM, `krwa.coremark.memory=default` uses `ByteArrayMemory`.
+- `krwa.coremark.memory=bytearray` is therefore equivalent to the JVM default.
+- `krwa.coremark.memory=bytebuffer` is diagnostic only unless it reproduces a
+  clear win for the target backend.
+
+Optional JFR for the benchmark JVM:
+
+```bash
+./gradlew --no-daemon :jmh:coremarkKrwa \
+  -Dkrwa.coremark.backends=interpreter \
+  -Dkrwa.coremark.jfr=/private/tmp/krwa-coremark.jfr
+```
+
+## Current Reference Results
+
+Upstream Chasm source comparison:
+
+- Repo cloned for inspection: `/private/tmp/chasm-src`
+- GitHub repository: `CharlieTap/chasm`
+- JVM task: `./gradlew --no-daemon :benchmark:coremark`
+- Single run on this machine:
+
+```text
+CoreMark 1.0 : 289.81308
+```
+
+This branch's target is interpreter-vs-interpreter. The current clean KRWA
+`interpreter` baseline below is behind Chasm on this fixture; the next win has
+to come from structural interpreter/predecode work, not from using the compiled
+backend as proof.
+
+Current clean-copy interpreter-only baseline after adding the interpreter Chasm
+tasks, in `/private/tmp/krwa-coremark-clean.3QZ6oV/repo`:
+
+```text
+interpreter run=1 score=235.552765 ms=17362.730
+interpreter run=2 score=232.162201 ms=17521.675
+interpreter run=3 score=239.501831 ms=17291.658
+interpreter run=4 score=249.791840 ms=16692.869
+interpreter run=5 score=239.291702 ms=20970.121
+interpreter score_avg=239.260068 score_min=232.162201 score_p50=239.291702 score_best=249.791840 valid_runs=5 invalid_runs=0 ms_avg=17967.811 ms_min=16692.869 ms_p50=17362.730 ms_max=20970.121
+interpreter reference=chasm_upstream_jvm_interpreter metric=score_p50 score=239.291702 reference_score=289.813080 ratio=0.826 status=fail
+```
+
+An earlier 3-repetition clean-copy report in the same temp worktree produced
+one invalid `score=0` run and p50 `230.043701`; the 5-repetition rerun above is
+the cleaner current baseline because it has no invalid runs. Either way, KRWA
+does not currently copy Chasm's interpreter score.
+
+Refreshed clean-copy interpreter-only baseline from current `HEAD`, in
+`/private/tmp/krwa-coremark-clean.eRoh2s/repo`. The raw report below was run
+before the Chasm reference refresh and still prints the older `289.813080`
+reference:
+
+```text
+interpreter run=1 score=249.361008 ms=20426.468
+interpreter run=2 score=250.469635 ms=20166.186
+interpreter run=3 score=271.057800 ms=18813.655
+interpreter run=4 score=226.564713 ms=21869.365
+interpreter run=5 score=271.204834 ms=19045.132
+interpreter score_avg=253.731598 score_min=226.564713 score_p50=250.469635 score_best=271.204834 valid_runs=5 invalid_runs=0 ms_avg=20064.161 ms_min=18813.655 ms_p50=20166.186 ms_max=21869.365
+interpreter reference=chasm_upstream_jvm_interpreter metric=score_p50 score=250.469635 reference_score=289.813080 ratio=0.864 status=fail
+```
+
+Use p50 `250.469635` as the current clean target baseline unless a newer
+clean-copy report supersedes it.
+
+Dirty worktree sanity after conflict-resolution/runtime edits on
+`perf/chasm-coremark-interpreter`, measured directly after `:wasm:clean`:
+
+```text
+interpreter run=1 score=241.857468 ms=18078.708
+interpreter run=2 score=226.894577 ms=17818.377
+interpreter run=3 score=242.145401 ms=20850.637
+interpreter score_avg=236.965815 score_min=226.894577 score_p50=241.857468 score_best=242.145401 valid_runs=3 invalid_runs=0 ms_avg=18915.907 ms_min=17818.377 ms_p50=18078.708 ms_max=20850.637
+interpreter reference=chasm_upstream_jvm_interpreter metric=score_p50 score=241.857468 reference_score=337.837830 ratio=0.716 status=fail
+```
+
+This dirty runtime is not a winning interpreter baseline. Keep runtime
+performance experiments isolated until a candidate beats the refreshed clean
+standard interpreter p50 and then rerun it on the main worktree.
+
+Local Chasm reference refresh in `/private/tmp/chasm-latest`, using Chasm's own
+`:benchmark:coremark` JavaExec task on the same host:
+
+```text
+run=1 CoreMark 1.0 : 348.1288
+run=2 CoreMark 1.0 : 337.83783
+run=3 CoreMark 1.0 : 337.83783
+score_p50=337.83783
+```
+
+The benchmark tasks now use `337.83783` as the Chasm JVM interpreter reference.
+Against that target, KRWA's clean interpreter p50 `250.469635` is ratio `0.741`
+and needs about a `34.9%` p50 speedup. The older `289.813080` reference should
+be treated as stale for current local Chasm comparisons.
+
+Chasm ablation with `RuntimeConfig(bytecodeFusion = false)`, measured by
+temporarily patching `/private/tmp/chasm-latest/benchmark/.../CoremarkBenchmark.kt`
+and then restoring it:
+
+```text
+run=1 CoreMark 1.0 : 169.96204
+run=2 CoreMark 1.0 : 168.59616
+run=3 CoreMark 1.0 : 88.48134
+score_p50=168.59616
+```
+
+This is below KRWA's current standard interpreter p50, so Chasm's current lead
+is primarily their bytecode-fusion/predecoded-dispatch shape, not merely their
+base stack implementation. The next high-leverage KRWA work should copy the
+shape of Chasm's `FusionPass`/dispatchables instead of continuing isolated
+`MStack.push` experiments.
+
+Chasm JFR comparison on 2026-06-20, measured by temporarily adding a
+`chasm.coremark.jfr` JVM arg hook to
+`/private/tmp/chasm-latest/benchmark/build.gradle.kts` and running
+`:benchmark:coremark`, wrote `/private/tmp/chasm-coremark-interpreter.jfr`.
+
+```text
+CoreMark 1.0 : 313.50418
+```
+
+The score is lower than the non-JFR Chasm reference because JFR adds overhead,
+but the hot-method distribution is useful for shape comparison:
+
+| method | samples | percent |
+| --- | ---: | ---: |
+| `ValueStack.getFrameSlot(int)` | 300 | 46.73 |
+| `InstructionStack.execute(...)` | 179 | 27.88 |
+| `Arrays.copyInto(Object[],Object[],...)` | 111 | 17.29 |
+| `CopySlotsDispatcher...` | 42 | 6.54 |
+
+Compared with KRWA's refreshed JFR (`evalLowered` plus `MStack.push` dominate),
+Chasm's cost has moved into frame-slot reads and predecoded instruction stack
+execution. This is direct evidence that the performance gap is structural:
+KRWA needs a value-frame/predecoded executor path to copy Chasm's result, not
+another small central-`when` superinstruction.
+
+KRWA reference gate sanity after adding `krwa.coremark.reference*` options:
+
+```text
+compiled score_avg=8112.692871 score_min=8112.692871 score_p50=8112.692871 score_best=8112.692871 valid_runs=1 invalid_runs=0 ms_avg=15244.357 ms_min=15244.357 ms_p50=15244.357 ms_max=15244.357
+compiled reference=chasm_upstream_jvm metric=score_p50 score=8112.692871 reference_score=289.813080 ratio=27.993 status=pass
+```
+
+Dedicated `:jmh:coremarkChasmGate` sanity:
+
+```text
+compiled score_avg=7811.390625 score_min=7811.390625 score_p50=7811.390625 score_best=7811.390625 valid_runs=1 invalid_runs=0 ms_avg=15713.231 ms_min=15713.231 ms_p50=15713.231 ms_max=15713.231
+compiled reference=chasm_upstream_jvm metric=score_p50 score=7811.390625 reference_score=289.813080 ratio=26.953 status=pass
+```
+
+Negative gate sanity with `referenceScore=999999` intentionally failed with
+exit code 1:
+
+```text
+compiled reference=impossible_reference metric=score_p50 score=7513.661133 reference_score=999999.000000 ratio=0.008 status=fail
+java.lang.IllegalStateException: CoreMark reference comparison failed: compiled score_p50 7513.6611328125 < impossible_reference 999999.0
+```
+
+Dedicated `:jmh:coremarkChasmReport` sanity on the current dirty worktree:
+
+```text
+interpreter score_avg=239.788986 score_min=239.788986 score_p50=239.788986 score_best=239.788986 valid_runs=1 invalid_runs=0 ms_avg=17311.578 ms_min=17311.578 ms_p50=17311.578 ms_max=17311.578
+compiled score_avg=7795.336914 score_min=7795.336914 score_p50=7795.336914 score_best=7795.336914 valid_runs=1 invalid_runs=0 ms_avg=15815.489 ms_min=15815.489 ms_p50=15815.489 ms_max=15815.489
+interpreter reference=chasm_upstream_jvm metric=score_p50 score=239.788986 reference_score=289.813080 ratio=0.827 status=fail
+compiled reference=chasm_upstream_jvm metric=score_p50 score=7795.336914 reference_score=289.813080 ratio=26.898 status=pass
+```
+
+This report intentionally does not fail the build. It highlights dirty runtime
+interpreter regressions; the compiled line is legacy sanity data only.
+
+Dedicated `:jmh:coremarkChasmStableReport` sanity on the current dirty
+worktree:
+
+```text
+interpreter score_avg=244.992915 score_min=236.369370 score_p50=247.647354 score_best=250.962021 valid_runs=3 invalid_runs=0 ms_avg=17283.292 ms_min=16391.779 ms_p50=16563.357 ms_max=18894.739
+compiled score_avg=7756.016439 score_min=7594.062988 score_p50=7832.526367 score_best=7841.459961 valid_runs=3 invalid_runs=0 ms_avg=15552.662 ms_min=15388.592 ms_p50=15445.507 ms_max=15823.888
+interpreter reference=chasm_upstream_jvm metric=score_p50 score=247.647354 reference_score=289.813080 ratio=0.855 status=fail
+compiled reference=chasm_upstream_jvm metric=score_p50 score=7832.526367 reference_score=289.813080 ratio=27.026 status=pass
+```
+
+Even after warmup, the current dirty interpreter remains below the upstream
+Chasm single-run score. Keep this as a dirty-worktree diagnostic; the current
+clean interpreter-only baseline is also below Chasm.
+
+Dedicated `:jmh:coremarkChasmStableGate` sanity on the current dirty
+worktree:
+
+```text
+compiled score_avg=6519.463867 score_min=5592.272461 score_p50=6863.846191 score_best=7102.272949 valid_runs=3 invalid_runs=0 ms_avg=18900.639 ms_min=17364.234 ms_p50=18226.835 ms_max=21110.847
+compiled reference=chasm_upstream_jvm metric=score_p50 score=6863.846191 reference_score=289.813080 ratio=23.684 status=pass
+```
+
+This is a legacy compiled sanity gate: it fails only if the compiled backend
+drops below Chasm's measured JVM interpreter CoreMark score. It is not the
+current interpreter success criterion.
+
+Dedicated clean-copy sanity via `scripts/coremark-clean-worktree.sh
+:jmh:coremarkChasmStableGate`:
+
+```text
+compiled score_avg=7441.907878 score_min=7302.177246 score_p50=7338.225586 score_best=7685.320801 valid_runs=3 invalid_runs=0 ms_avg=16269.813 ms_min=15673.732 ms_p50=16330.709 ms_max=16804.999
+compiled reference=chasm_upstream_jvm metric=score_p50 score=7338.225586 reference_score=289.813080 ratio=25.321 status=pass
+```
+
+Fresh clean-copy stable gate after adding the per-function lowered report, in
+`/private/tmp/krwa-coremark-clean.FHUYbm/repo`:
+
+```text
+compiled score_avg=7904.749512 score_min=7582.546387 score_p50=7923.359375 score_best=8208.342773 valid_runs=3 invalid_runs=0 ms_avg=15323.372 ms_min=14745.637 ms_p50=15343.278 ms_max=15881.202
+compiled reference=chasm_upstream_jvm metric=score_p50 score=7923.359375 reference_score=289.813080 ratio=27.340 status=pass
+```
+
+Fresh clean-copy stable gate after adding the dynamic function-call report, in
+`/private/tmp/krwa-coremark-clean.dXh0e2/repo`:
+
+```text
+compiled score_avg=7460.755697 score_min=7063.507324 score_p50=7539.410645 score_best=7779.349121 valid_runs=3 invalid_runs=0 ms_avg=16241.959 ms_min=15532.036 ms_p50=15944.570 ms_max=17249.272
+compiled reference=chasm_upstream_jvm metric=score_p50 score=7539.410645 reference_score=289.813080 ratio=26.015 status=pass
+```
+
+Noisy clean-copy stable gate after extending the function-call report with
+call-weighted static patterns, in `/private/tmp/krwa-coremark-clean.EXMV8l/repo`:
+
+```text
+compiled score_avg=2341.798462 score_min=1851.680420 score_p50=1934.610229 score_best=3239.104736 valid_runs=3 invalid_runs=0 ms_avg=24927.783 ms_min=18201.501 ms_p50=20657.721 ms_max=35924.128
+compiled reference=chasm_upstream_jvm metric=score_p50 score=1934.610229 reference_score=289.813080 ratio=6.675 status=pass
+```
+
+This is a pass but not a new performance baseline: the change only affects a
+diagnostic report class, not the compiled benchmark path, and prior clean-copy
+stable gates on the same branch were around 26x-27x Chasm. Treat this as a
+noisy sanity run unless reproduced.
+
+The clean-copy workflow archives `HEAD` into `/private/tmp`, applies only the
+current benchmark/compiler diff, and leaves `modules/runtime/**` from the main
+worktree out of the measurement. Use this for coordination whenever the main
+runtime is dirty.
+
+Static opcode report via `scripts/coremark-clean-worktree.sh
+:jmh:coremarkOpcodeReport -Dkrwa.coremark.report.top=12`:
+
+```text
+CoreMark static opcode report
+functions=15 instructions=3765
+
+opcodes:
+01 count=979 pattern=local_get
+02 count=581 pattern=i32_const
+03 count=370 pattern=local_set
+04 count=217 pattern=i32_add
+05 count=202 pattern=end
+06 count=169 pattern=local_tee
+07 count=125 pattern=i32_load
+08 count=122 pattern=br_if
+09 count=93 pattern=i32_and
+10 count=72 pattern=i32_store
+11 count=68 pattern=loop
+12 count=67 pattern=call
+
+pairs:
+01 count=283 pattern=local_get i32_const
+02 count=212 pattern=local_set local_get
+03 count=187 pattern=local_get local_get
+04 count=153 pattern=i32_const i32_add
+05 count=103 pattern=end local_get
+06 count=99 pattern=local_get i32_load
+07 count=98 pattern=local_get local_set
+08 count=91 pattern=i32_const i32_and
+09 count=88 pattern=i32_add local_set
+10 count=82 pattern=i32_const local_set
+11 count=64 pattern=local_tee i32_const
+12 count=58 pattern=i32_add local_tee
+
+triples:
+01 count=128 pattern=local_get i32_const i32_add
+02 count=72 pattern=i32_add local_set local_get
+03 count=69 pattern=local_set local_get i32_const
+04 count=66 pattern=local_set local_get local_set
+05 count=53 pattern=i32_const i32_add local_set
+06 count=47 pattern=local_get local_set local_get
+07 count=44 pattern=i32_const i32_add local_tee
+08 count=44 pattern=local_set i32_const local_set
+09 count=41 pattern=local_set loop local_get
+10 count=39 pattern=end local_get local_get
+11 count=38 pattern=local_get local_get i32_const
+12 count=36 pattern=end local_get i32_const
+```
+
+This is static coverage, not dynamic execution frequency. Use it to choose
+predecode candidates, then require isolated `/private/tmp` benchmark proof
+before changing `modules/runtime/**`.
+
+Static lowered-dispatch opcode report via
+`scripts/coremark-clean-worktree.sh :jmh:coremarkLoweredOpcodeReport
+-Dkrwa.coremark.report.top=12`:
+
+```text
+CoreMark static lowered opcode report
+functions=15 lowered_functions=15 raw_instructions=3765 lowered_dispatches=2855 dispatch_ratio=0.758
+profile_path=static_stackframe_layout lowered_fast_path=true
+
+lowered opcodes:
+01 count=507 pattern=local_get
+02 count=309 pattern=i32_const
+03 count=202 pattern=end
+04 count=122 pattern=br_if
+05 count=106 pattern=local_tee
+06 count=82 pattern=i32_const_local_set
+07 count=80 pattern=local_get_i32_load
+08 count=75 pattern=local_get_local_set
+09 count=74 pattern=local_set_local_get
+10 count=72 pattern=i32_store
+11 count=71 pattern=i32_and
+12 count=68 pattern=loop
+
+lowered pairs:
+01 count=128 pattern=local_get local_get
+02 count=81 pattern=local_get i32_const
+03 count=69 pattern=i32_const i32_and
+04 count=63 pattern=end local_get
+05 count=57 pattern=br_if end
+06 count=50 pattern=local_tee i32_const
+07 count=47 pattern=br end
+08 count=36 pattern=block block
+09 count=32 pattern=br_if local_get
+10 count=31 pattern=local_get i32_add_local_set
+11 count=28 pattern=i32_store local_get
+12 count=28 pattern=local_get call
+
+lowered triples:
+01 count=31 pattern=end local_get local_get
+02 count=24 pattern=local_get local_get i32_store
+03 count=23 pattern=block block block
+04 count=21 pattern=br_if end end
+05 count=20 pattern=local_get local_get i32_add_local_set
+06 count=19 pattern=br_if end local_get
+07 count=19 pattern=local_get call local_set_local_get
+08 count=18 pattern=i32_const i32_and local_tee
+09 count=18 pattern=i32_ne br_if end
+10 count=17 pattern=call local_set_local_get i32_load
+11 count=17 pattern=local_tee i32_const i32_shr_u
+12 count=16 pattern=br end local_get
+```
+
+This report uses `StackFrame.Layout` and reflection to inspect the actual
+`LoweredFunction` dispatch array without attaching an `ExecutionListener`.
+It is static, so it does not say which lowered slots are hottest at runtime, but
+it does prevent raw-listener profiles from being mistaken for lowered-dispatch
+shape.
+
+Static per-function lowered-dispatch report via
+`scripts/coremark-clean-worktree.sh :jmh:coremarkLoweredFunctionReport
+-Dkrwa.coremark.report.functions=6 -Dkrwa.coremark.report.top=5` in
+`/private/tmp/krwa-coremark-clean.7yao4m/repo`:
+
+```text
+CoreMark lowered function report
+functions=15 lowered_functions=15 raw_instructions=3765 lowered_dispatches=2855 dispatch_ratio=0.758
+profile_path=static_stackframe_layout lowered_fast_path=true
+
+functions_by_lowered_dispatch:
+01 body=3 func=4 raw=764 lowered=625 ratio=0.818 top_opcode=local_get:113 top_pair=local_get i32_const:33
+02 body=1 func=2 raw=675 lowered=514 ratio=0.761 top_opcode=local_get:66 top_pair=br end:20
+03 body=4 func=5 raw=702 lowered=445 ratio=0.634 top_opcode=local_get:97 top_pair=local_get local_get:30
+04 body=2 func=3 raw=359 lowered=269 ratio=0.749 top_opcode=local_get:51 top_pair=local_get i32_const:12
+05 body=9 func=10 raw=272 lowered=237 ratio=0.871 top_opcode=i32_const:62 top_pair=i32_const i32_and:29
+06 body=7 func=8 raw=270 lowered=206 ratio=0.763 top_opcode=i32_const:33 top_pair=block block:10
+```
+
+Use this report to choose function-local Chasm-style predecode candidates, but
+do not treat static size as dynamic heat. The earlier dynamic entry profile put
+functions 8 and 10 near the top by call count, while this static report shows
+function 4 as the largest lowered body. A candidate should have both a
+function-local static shape and either dynamic-count or JFR evidence before
+touching runtime.
+
+Dynamic function-call target profile via
+`scripts/coremark-clean-worktree.sh :jmh:coremarkFunctionCallReport
+-Dkrwa.coremark.report.top=12` in
+`/private/tmp/krwa-coremark-clean.xA87Cp/repo`:
+
+```text
+CoreMark function call profile
+backend=interpreter profile_path=raw_listener score=132.388962 score_valid=true ms=25117.430 instructions=2553498367 calls=5430498
+note=ExecutionListener disables lowered fast paths; use call targets as dynamic control-flow evidence, not lowered opcode timing.
+
+call_targets:
+01 func=8 calls=3184640 raw=270 lowered=206 weighted_lowered=656035840 top_opcode=i32_const:33 top_pair=block block:10
+02 func=10 calls=908124 raw=272 lowered=237 weighted_lowered=215225388 top_opcode=i32_const:62 top_pair=i32_const i32_and:29
+03 func=1 calls=690830 raw=105 lowered=80 weighted_lowered=55266400 top_opcode=local_get:14 top_pair=i32_const i32_and:3
+04 func=5 calls=12440 raw=702 lowered=445 weighted_lowered=5535800 top_opcode=local_get:97 top_pair=local_get local_get:30
+05 func=2 calls=6220 raw=675 lowered=514 weighted_lowered=3197080 top_opcode=local_get:66 top_pair=br end:20
+06 func=7 calls=12440 raw=255 lowered=205 weighted_lowered=2550200 top_opcode=local_get:49 top_pair=local_get call:16
+07 func=12 calls=416744 raw=6 lowered=4 weighted_lowered=1666976 top_opcode=call:1 top_pair=call end:1
+08 func=11 calls=199040 raw=10 lowered=6 weighted_lowered=1194240 top_opcode=call:2 top_pair=call call:1
+```
+
+This profile explains why static function size alone is misleading: function 4
+has the largest lowered body, but it is not a hot call target. Prefer function 8
+and function 10 for the next Chasm-style predecode investigation. Function 8's
+dominant static pair is still `block block`, but `FAST_BLOCK_RUN` failed to
+reproduce in main; any new function-8 candidate needs a different structural
+angle or stronger dynamic evidence than just consecutive empty blocks. Function
+10's CRC-style bit extraction remains the second-largest weighted target, but
+`LOCAL_TEE_I32_CONST_I32_SHR_U_I32_CONST_I32_AND` already regressed; do not
+repeat that exact fusion unchanged.
+
+Extended call-weighted static pattern output via
+`scripts/coremark-clean-worktree.sh :jmh:coremarkFunctionCallReport
+-Dkrwa.coremark.report.top=10` in
+`/private/tmp/krwa-coremark-clean.M9q8Ks/repo`:
+
+```text
+weighted_static_pairs:
+01 func=8 weighted=31846400 calls=3184640 static_count=10 pattern=block block
+02 func=8 weighted=28661760 calls=3184640 static_count=9 pattern=br end
+03 func=8 weighted=28661760 calls=3184640 static_count=9 pattern=i32_add i32_store
+04 func=8 weighted=28661760 calls=3184640 static_count=9 pattern=i32_const i32_add
+05 func=8 weighted=28661760 calls=3184640 static_count=9 pattern=local_get local_get_i32_load
+06 func=8 weighted=28661760 calls=3184640 static_count=9 pattern=local_get_i32_load i32_const
+07 func=10 weighted=26335596 calls=908124 static_count=29 pattern=i32_const i32_and
+08 func=10 weighted=26335596 calls=908124 static_count=29 pattern=local_tee i32_const
+
+weighted_static_triples:
+01 func=8 weighted=28661760 calls=3184640 static_count=9 pattern=i32_const i32_add i32_store
+02 func=8 weighted=28661760 calls=3184640 static_count=9 pattern=local_get local_get_i32_load i32_const
+03 func=8 weighted=28661760 calls=3184640 static_count=9 pattern=local_get_i32_load i32_const i32_add
+04 func=8 weighted=25477120 calls=3184640 static_count=8 pattern=block block block
+05 func=8 weighted=19107840 calls=3184640 static_count=6 pattern=i32_const i32_and i32_const
+06 func=8 weighted=19107840 calls=3184640 static_count=6 pattern=local_get_i32_const_i32_add i32_const i32_and
+07 func=8 weighted=15923200 calls=3184640 static_count=5 pattern=end local_get local_get_i32_load
+08 func=8 weighted=15923200 calls=3184640 static_count=5 pattern=i32_const_local_set br end
+09 func=10 weighted=13621860 calls=908124 static_count=15 pattern=i32_const i32_and local_tee
+10 func=10 weighted=13621860 calls=908124 static_count=15 pattern=i32_const i32_shr_u i32_const
+```
+
+This points away from another generic global superinstruction sweep. The next
+candidate should inspect function 8's actual control/dataflow around the
+`local_get_i32_load -> i32_const -> i32_add -> i32_store` windows and decide
+whether there is a Chasm-style linked/predecoded memory-update shape that
+removes more than one dispatch without adding broad interpreter complexity.
+Avoid repeating the prior `FAST_BLOCK_RUN` and function-10 bit-extract fusion
+unchanged.
+
+Temporary dynamic lowered-dispatch profile in
+`/private/tmp/krwa-coremark-clean.JYyres/repo`:
+
+```text
+KRWA lowered dynamic profile run=1 lowered_fast_path=true instructions=71432036
+lowered_dynamic_opcodes
+01 count=10865133 pattern=local_get
+02 count=7326487 pattern=i32_const
+03 count=6418782 pattern=block
+04 count=5324911 pattern=br_if
+05 count=3594629 pattern=local_tee
+06 count=2608667 pattern=end
+07 count=2413670 pattern=local_get_i32_const_i32_add_local_set
+08 count=2387568 pattern=local_get_i32_load
+09 count=2298755 pattern=i32_and
+10 count=1960061 pattern=local_set_local_get
+11 count=1702317 pattern=i32_add_local_set
+12 count=1551737 pattern=i32_store
+
+lowered_dynamic_pairs
+01 count=5383652 pattern=block block
+02 count=2296234 pattern=i32_const i32_and
+03 count=1911870 pattern=local_get local_get
+04 count=1826111 pattern=br_if local_get
+05 count=1732807 pattern=local_get i32_const
+06 count=1425295 pattern=local_tee i32_const
+07 count=1417576 pattern=br_if local_get_i32_load
+08 count=1341467 pattern=local_get i32_add_local_set
+09 count=1231761 pattern=local_get_i32_const_i32_add_local_set local_get
+10 count=1047570 pattern=local_get_i32_load local_tee
+11 count=1011570 pattern=local_get_i32_const_i32_add_local_tee br_if
+12 count=996954 pattern=local_get i32_store
+
+lowered_dynamic_triples
+01 count=4656481 pattern=block block block
+02 count=878100 pattern=local_tee i32_const i32_shr_u
+03 count=875580 pattern=i32_const i32_shr_u i32_const
+04 count=875580 pattern=i32_shr_u i32_const i32_and
+05 count=802562 pattern=local_get i32_const i32_eq
+06 count=747947 pattern=local_get local_get i32_add_local_set
+07 count=743049 pattern=local_get i32_add_local_set local_get_i32_const_i32_add_local_tee
+08 count=734640 pattern=local_tee i32_load local_set_local_get
+09 count=734429 pattern=local_get i32_store local_get_local_set
+10 count=734428 pattern=local_get local_tee i32_load
+11 count=734400 pattern=i32_load local_set_local_get local_get
+12 count=734400 pattern=i32_store local_get_local_set local_get
+```
+
+This was a temp runtime probe, not a benchmark: the instrumented run returned
+`score=0`, so it is useful only for dispatch frequency. It confirms that
+`block block block` is dynamically hot even after lowering, but the earlier
+`BLOCK_BLOCK_BLOCK` fusion already regressed because it did not remove control
+frame work. Prefer candidates that remove stack/memory/control work, not just
+one `when` dispatch.
+
+Dynamic opcode profile via `scripts/coremark-clean-worktree.sh
+:jmh:coremarkDynamicOpcodeReport -Dkrwa.coremark.report.top=12`:
+
+```text
+CoreMark dynamic opcode profile
+backend=interpreter lowered_fast_path=false profile_path=raw_listener score=54.909855 score_valid=true ms=13673.523 instructions=582979643
+note=ExecutionListener disables lowered fast paths; use this for raw interpreter control-flow shape, not lowered dispatch ranking.
+
+opcodes:
+01 count=149232271 pattern=local_get
+02 count=85140640 pattern=i32_const
+03 count=50644309 pattern=local_set
+04 count=42255834 pattern=i32_add
+05 count=37971983 pattern=block
+06 count=31497030 pattern=br_if
+07 count=30562617 pattern=local_tee
+08 count=18811788 pattern=i32_load
+09 count=18658187 pattern=i32_and
+10 count=15429160 pattern=end
+11 count=10792925 pattern=i32_shr_u
+12 count=9179848 pattern=i32_store
+
+pairs:
+01 count=47420107 pattern=local_get i32_const
+02 count=44688026 pattern=local_set local_get
+03 count=31848692 pattern=block block
+04 count=29354252 pattern=i32_const i32_add
+05 count=24344728 pattern=i32_add local_set
+06 count=23116831 pattern=local_get local_get
+07 count=22559408 pattern=br_if local_get
+08 count=18643276 pattern=i32_const i32_and
+09 count=14326408 pattern=local_get i32_load
+10 count=12252703 pattern=local_get local_set
+11 count=10792925 pattern=i32_const i32_shr_u
+12 count=10220989 pattern=end local_get
+
+triples:
+01 count=27547301 pattern=block block block
+02 count=26697129 pattern=local_get i32_const i32_add
+03 count=23241017 pattern=i32_add local_set local_get
+04 count=20364132 pattern=local_set local_get i32_const
+05 count=14337878 pattern=i32_const i32_add local_set
+06 count=10664797 pattern=local_get local_set local_get
+07 count=9052688 pattern=local_set local_get local_get
+08 count=8509855 pattern=local_tee br_if local_get
+09 count=8386163 pattern=br_if local_get i32_load
+10 count=7936487 pattern=local_get i32_add local_set
+11 count=7377615 pattern=local_set local_get br_if
+12 count=7353791 pattern=local_get br_if local_get
+```
+
+The dynamic profiler runs code on the interpreter hot path, so its CoreMark
+score is diagnostic only and should not be compared to normal benchmark scores.
+It also attaches `ExecutionListener`, which forces `canUseFastLocalPaths=false`
+in `InterpreterMachine`; therefore this is a raw/unlowered interpreter profile,
+not a lowered-dispatch profile. The counts are useful for understanding
+control-flow shape, but not enough to rank lowered superinstruction candidates.
+
+The first control-entry experiment below shows why dynamic frequency is not
+enough by itself: fusing dispatch around `block block block` did not remove the
+real cost of pushing three control frames and regressed the benchmark.
+
+Important source-level differences from Chasm:
+
+- `benchmark/.../CoremarkBenchmark.kt` loads `benchmark/coremark.wasm`, imports
+  `env.clock_ms`, instantiates, and invokes `run`; there is no separate magic in
+  the harness.
+- `executor/.../ThreadExecutor.kt` executes an `InstructionStack` of already
+  predecoded `DispatchableInstruction` lambdas.
+- `runtime/.../ValueStack.kt` uses a single `LongArray` plus `framePointer` and
+  typed `pushI32`/`popI32` helpers.
+- `predecoder/.../*SuperInstructionPredecoder.kt` contains broad control,
+  variable, numeric, and memory superinstruction support.
+
+So "copying Chasm's result" means copying architectural choices from their
+predecoder/interpreter pipeline, not copying the wasm fixture. For this branch,
+KRWA has to win on the interpreter path, so the useful comparison is Chasm's
+predecoded interpreter design versus KRWA's lowered interpreter design.
+Candidate work should be based on systematic predecode/superinstruction
+coverage rather than one-off hot-pattern patches.
+
+Current interpreter parity plan:
+
+1. Keep `:jmh:coremarkInterpreterChasmStableReport` as the primary report and
+   `:jmh:coremarkInterpreterChasmGate` as the "are we there yet?" gate. The
+   refreshed clean p50 `250.469635` needs about a 34.9% speedup to reach local
+   Chasm p50 `337.83783`.
+2. Chasm-style slot/dataflow work is still the right direction, but a simple
+   new `evalLowered` case is not enough. The first `func=8` memory increment
+   fusion below removed dispatches and still regressed, so the next attempt
+   should reduce broader structural cost without growing the central `when`
+   loop in the same way.
+3. Use the existing call-weighted report to target `func=8` patterns around
+   `local_get_i32_load -> i32_const -> i32_add -> i32_store`. The goal is to
+   remove stack traffic and repeated memory lookup on that whole dataflow, not
+   merely reduce dispatch count.
+4. Control-frame work comes after a slot/dataflow experiment. Prior
+   `BLOCK_BLOCK_BLOCK` fusion showed that reducing dispatch without avoiding
+   the real control-frame push/transfer cost regresses badly.
+5. Do all runtime candidates in `/private/tmp` and record rejected results here.
+   Do not modify the main `modules/runtime/**` worktree while conflicts are
+   being resolved.
+
+Older clean `HEAD` plus benchmark isolation result from an earlier branch
+state, kept as historical context and not as the current baseline:
+
+| backend | score_avg | score_best |
+| --- | ---: | ---: |
+| interpreter | 288.517151 | 292.376282 |
+| experimental_fast | 149.314987 | 158.353134 |
+| compiled | 8468.081380 | 8489.619141 |
+
+This historical report did not include raw repetitions or p50. Current attempts
+to reproduce an obvious harness explanation did not recover it: `bytebuffer`
+memory and direct `InterpreterMachine(instance)` both lost against the refreshed
+clean p50 below. Treat the old `288.517151 avg` as non-authoritative unless a
+full raw-run report reproduces it.
+
+Current dirty worktree sanity check after splitting `compiled` and
+`compiled_cold`:
+
+```text
+compiled_cold score_avg=7837.225586 score_best=7950.274414 ms_avg=15706.614
+compiled score_avg=7850.714355 score_best=7918.226074 ms_avg=15344.189
+```
+
+This is a benchmark-harness cleanup, not an interpreter runtime optimization.
+
+Current dirty runtime sanity check after later runtime/component changes:
+
+```text
+interpreter score_avg=236.257004 score_best=252.509308 ms_avg=20157.887
+experimental_fast score_avg=141.529627 score_best=144.613159 ms_avg=22101.760
+```
+
+The dirty interpreter result is far below the clean isolated interpreter
+baseline. Do not tune against this mixed worktree state.
+
+## Candidate Wins
+
+These were tested in isolated `/private/tmp` copies and beat the matching clean
+isolated baseline. When moved into the main worktree, keep the dirty-worktree
+numbers separate from the clean-isolated proof.
+
+| candidate | backend | clean isolated result | status |
+| --- | --- | --- | --- |
+| `FastFrame` pooling per function id | `experimental_fast` | 161.590970 avg, 169.894669 best | moved into main dirty runtime; `:jmh:classes` and `:runtime:jvmTest --tests '*ExperimentalFastInterpreterMachineTest'` pass |
+| lower `BR_TABLE` in `FastFunction` | `experimental_fast` | 168.729129 avg, 169.558578 best | moved into main dirty runtime; `:jmh:classes` and `:runtime:jvmTest --tests '*ExperimentalFastInterpreterMachineTest'` pass |
+| inline compiled interruption check | `compiled` | fresh clean baseline: 8028.377604 avg, 7970.437012 p50; patched clean-copy main: 8101.802409 avg, 8361.204102 p50 | moved into compiler; default interruption semantics preserved; `InterruptionTest` passes |
+
+`BR_TABLE` was tested in isolated copy
+`/private/tmp/krwa-coremark-fast-brtable.TbSqY0`. Two full 2-warmup/5-repetition
+runs gave:
+
+```text
+experimental_fast score_avg=156.742209 score_best=172.811066 ms_avg=23428.641
+experimental_fast score_avg=168.729129 score_best=169.558578 ms_avg=22050.865
+```
+
+This came from profile evidence rather than guessing: JFR had
+`executeAnnotated(...)` at 22.62%, and dynamic coverage showed functions #8 and
+#1 stayed annotated because lowering did not support `BR_TABLE`.
+
+The inline compiled interruption check was tested then as a compiled-backend
+lead because JFR showed `CompiledMachineShaded.checkInterruption()`
+as the largest sampled compiled hot method. The patch keeps the same polling
+locations and frequency, but emits the fast path directly:
+`Thread.currentThread().isInterrupted`, branch if false, then call a shaded
+throw helper only on the interrupted slow path.
+
+Fresh clean unpatched baseline via `scripts/coremark-clean-worktree.sh`:
+
+```text
+compiled run=1 score=7852.095215 ms=15376.480
+compiled run=2 score=7970.437012 ms=15406.032
+compiled run=3 score=8262.600586 ms=14774.956
+compiled score_avg=8028.377604 score_min=7852.095215 score_p50=7970.437012 score_best=8262.600586 valid_runs=3 invalid_runs=0 ms_avg=15185.823
+compiled_no_interrupt run=1 score=8598.452148 ms=14040.521
+compiled_no_interrupt run=2 score=8607.199219 ms=14029.641
+compiled_no_interrupt run=3 score=8664.829102 ms=14148.346
+compiled_no_interrupt score_avg=8623.493490 score_min=8598.452148 score_p50=8607.199219 score_best=8664.829102 valid_runs=3 invalid_runs=0
+```
+
+Temp patched candidate in `/private/tmp/krwa-coremark-clean.XQtvMX/repo`:
+
+```text
+compiled run=1 score=8107.311523 ms=15038.052
+compiled run=2 score=8083.480469 ms=14923.408
+compiled run=3 score=8159.026855 ms=14815.104
+compiled score_avg=8116.606283 score_min=8083.480469 score_p50=8107.311523 score_best=8159.026855 valid_runs=3 invalid_runs=0 ms_avg=14925.521
+compiled_no_interrupt run=1 score=8765.638672 ms=13862.604
+compiled_no_interrupt run=2 score=8276.900391 ms=14548.981
+compiled_no_interrupt run=3 score=8737.092773 ms=13839.801
+compiled_no_interrupt score_avg=8593.210612 score_min=8276.900391 score_p50=8737.092773 score_best=8765.638672 valid_runs=3 invalid_runs=0
+```
+
+After moving the compiler patch into main, clean-copy verification in
+`/private/tmp/krwa-coremark-clean.jwbt3S/repo`:
+
+```text
+compiled run=1 score=8361.204102 ms=14452.322
+compiled_no_interrupt run=1 score=8699.778320 ms=14003.622
+compiled run=2 score=8363.747070 ms=14590.490
+compiled_no_interrupt run=2 score=8218.768555 ms=14699.011
+compiled run=3 score=7580.456055 ms=15843.458
+compiled_no_interrupt run=3 score=5228.385254 ms=22501.030
+compiled score_avg=8101.802409 score_min=7580.456055 score_p50=8361.204102 score_best=8363.747070 valid_runs=3 invalid_runs=0 ms_avg=14962.090
+compiled_no_interrupt score_avg=7382.310710 score_min=5228.385254 score_p50=8218.768555 score_best=8699.778320 valid_runs=3 invalid_runs=0 ms_avg=17067.888
+```
+
+The `compiled_no_interrupt` line in the main verification has one noisy slow
+run and is diagnostic only. The semantic result to keep is `compiled`: patched
+clean-copy p50 `8361.204102` versus fresh clean baseline p50 `7970.437012`.
+`uk.shusek.krwa.compiler.internal.InterruptionTest` passed in clean copy
+`/private/tmp/krwa-coremark-clean.HGUWpV/repo`.
+
+Dirty main-worktree sanity check after moving `FastFrame` pooling:
+
+```text
+experimental_fast score_avg=153.588516 score_best=156.936600 ms_avg=20257.573
+```
+
+This is better than the previous dirty `experimental_fast` sanity result
+(`141.529627 avg`) but should not replace the clean isolated baseline.
+
+Dirty main-worktree sanity check after moving `BR_TABLE` lowering:
+
+```text
+experimental_fast score_avg=164.674445 score_best=166.251038 ms_avg=20061.487
+```
+
+This is better than the previous dirty `experimental_fast` sanity result after
+`FastFrame` pooling (`153.588516 avg`) but should not replace the clean isolated
+baseline.
+
+## Rejected Interpreter Experiments
+
+These were tested in isolated `/private/tmp` copies and should not be repeated
+unchanged:
+
+| experiment | result |
+| --- | --- |
+| lazy `memory(0)` lookup helper in lowered loads/stores | 283.207225 avg, below baseline |
+| `LOCAL_GET_LOCAL_GET` superinstruction | 264.742859 quick score |
+| `I32_CONST_I32_EQ` superinstruction | 258.782440 quick score |
+| zero-result `END` fast path in `popCtrlAndTransfer` | 277.874268 quick score |
+| `MStack.pushI32` for int-producing lowered ops | 247.504333 quick score |
+| storing control slot arrays on `LoweredFunction` | 229.340271 quick score |
+| general current parameterless loop branch sentinel for `br`/`br_if`/`br_table` | 281.398671 avg, below baseline |
+| `I32_EQ_BR_IF` lowered superinstruction | 242.126180 avg, below baseline |
+| `MStack.push` capacity pre-check before write | 282.676473 avg, below baseline |
+| final `MStack` class instead of `open class` | 275.603729 avg, below baseline |
+| hardcoded fast-function prototype for CoreMark function 10 CRC update | 242.822047 avg, below baseline |
+| lowered-loop stack preallocation plus `pushUnchecked` | 256.773804 avg, below baseline |
+| standard-interpreter lowered `EMPTY_BLOCK_TYPE` fast path for `BLOCK`/`LOOP`/`IF` | 147.758466 avg, 245.911713 best, below dirty sanity 219.904129 avg |
+| post-lowering `BLOCK_BLOCK_BLOCK` dispatch fusion | baseline in `/private/tmp/krwa-coremark-clean.1PmNDd`: 279.622620 avg, 280.820007 p50, 284.393890 best; candidate: 178.514895 avg, 223.114685 p50, 229.621124 best; rejected |
+| `BR_IF_LOCAL_GET_I32_LOAD` fallthrough fusion for memory 0 | baseline in `/private/tmp/krwa-coremark-clean.J3dLd3`: 222.439000 avg, 211.819534 p50, 254.841995 best; candidate: 207.137828 avg, 209.966400 p50, 210.172348 best; rejected |
+| `LOCAL_TEE_I32_CONST_I32_SHR_U_I32_CONST_I32_AND` bit-extract fusion | baseline in `/private/tmp/krwa-coremark-clean.fxxnV2`: 252.813929 avg, 253.421188 p50, 253.469360 best; candidate: 127.965421 avg, 85.528564 p50, 219.282211 best; rejected |
+| `local.get; local.get; i32.load; i32.const; i32.add; i32.store` memory increment fusion for same local/offset on memory 0 | candidate in `/private/tmp/krwa-coremark-clean.paYJuK/repo`: static `func=8` lowered dispatches improved 206 -> 170, but score regressed to 211.513400 avg, 211.879364 p50, 230.167252 best vs current clean baseline 239.291702 p50; rejected |
+| local stack pointer in standard `evalLowered` plus direct scalar stack operations | candidate in `/private/tmp/krwa-coremark-clean.3QZ6oV/repo`: 129.389764 avg, 155.287537 p50, 217.485870 best, one invalid run; rejected |
+| generic Chasm-style `I32_ADD_FUSED` with encoded source/destination kinds | candidate in `/private/tmp/krwa-coremark-clean.Y3SrjE/repo`: 159.833273 avg, 207.382828 p50, 217.233887 best vs clean baseline 239.291702 p50; rejected |
+| inline `MStack` fast helpers in lowered `evalLowered` hot push/pop/peek sites | candidate in `/private/tmp/krwa-coremark-clean.KOjKOh/repo`: 114.960852 avg, 164.149704 p50, 171.188904 best, one invalid run, ratio 0.566 vs Chasm; rejected |
+| CoreMark function 8 specialized lowered executor with a smaller opcode subset `when` | candidate in `/private/tmp/krwa-coremark-clean.zZauL8/repo`: 126.556750 avg, 169.548996 p50, 188.205765 best, one invalid run, ratio 0.585 vs Chasm; rejected |
+| remove lowered-path `gcPoll`/`gcSafePoint` from `evalLowered` | candidate in `/private/tmp/krwa-coremark-clean.eRoh2s/repo`: 194.947955 avg, 197.745697 p50, 228.154236 best vs refreshed baseline 250.469635 p50; rejected |
+| set JVM `usesPeriodicInterruptionPolling()` to `true` to skip branch-local checks while keeping periodic lowered safepoints | candidate in `/private/tmp/krwa-coremark-clean.qckkh9/repo`: 193.394360 avg, 198.504593 p50, 206.668503 best vs refreshed baseline 250.469635 p50; rejected |
+| use `ByteBufferMemory` for CoreMark interpreter benchmark | candidate in `/private/tmp/krwa-coremark-clean.TxxyQM/repo`: 247.617770 avg, 248.802643 p50, 250.920044 best vs refreshed baseline 250.469635 p50; rejected |
+| construct direct `InterpreterMachine(instance)` in the benchmark harness instead of the anonymous interruption-checking subclass | candidate in `/private/tmp/krwa-coremark-clean.TxxyQM/repo`: 193.907364 avg, 191.546417 p50, 201.870667 best vs refreshed baseline 250.469635 p50; rejected |
+| refreshed retest: final `MStack` class instead of `open class` | candidate in `/private/tmp/krwa-coremark-clean.Bxm1WF/repo`: 205.141136 avg, 228.362640 p50, 237.116669 best vs refreshed baseline 250.469635 p50; rejected |
+| refreshed retest: `MStack.push` capacity pre-check before write | candidate in `/private/tmp/krwa-coremark-clean.Bxm1WF/repo`: 107.203201 avg, 89.474541 p50, 235.923248 best, one invalid run; rejected as both slower and semantically risky because it changes the spare-capacity invariant |
+| clean `experimental_fast` CoreMark backend | candidate in `/private/tmp/krwa-coremark-clean.moNKjQ/repo`: 143.906625 avg, 149.387512 p50, 150.875076 best vs standard interpreter baseline 250.469635 p50; rejected for current parity work |
+| disable optional lowered superinstruction and countdown-branch building | candidate in `/private/tmp/krwa-coremark-clean.moNKjQ/repo`: 245.270547 avg, 242.718445 p50, 249.734650 best vs refreshed baseline 250.469635 p50; rejected; existing fusions are net-positive despite central `when` cost |
+| diagnostic branchless `MStack.push` with `MIN_CAPACITY = 1 shl 20` and no capacity check | candidate in `/private/tmp/krwa-coremark-clean.chwEKp/repo`: 136.871613 avg, 141.502762 p50, 229.025116 best, one invalid run; rejected; `MStack.push` hotness is not solved by removing only the capacity branch |
+| Chasm-style `MStack.push` using `try/catch` capacity growth | candidate in `/private/tmp/krwa-coremark-clean.spQprx/repo`: 174.742215 avg, 221.165543 p50, 237.812134 best vs refreshed baseline 250.469635 p50; rejected; copying only Chasm's branch-free push without its whole `ValueStack` shape regresses |
+| Chasm-style local-slot fusion inside KRWA's existing central lowered `when`: `local.get local.get i32.add local.set/tee` plus memory-0 `local.get local.get i32.store` | candidate in `/private/tmp/krwa-coremark-clean.OzQSIV/repo`: static replacements were 20 `local_get_local_get_i32_add_local_set` and 24 `local_get_local_get_i32_store`; score 239.615451 avg, 238.265427 p50, 250.328552 best vs refreshed baseline 250.469635 p50; rejected; isolated source/destination fusion still loses when implemented as more cases in the central dispatch loop |
+
+The memory increment fusion matched 9 static sites in `func=8` and converted
+the hot repeated sequence into one lowered opcode:
+
+```text
+local_get_i32_load_i32_const_i32_add_i32_store count=9
+interpreter run=1 score=228.067505 ms=18669.460
+interpreter run=2 score=192.381683 ms=20871.379
+interpreter run=3 score=230.167252 ms=18582.411
+interpreter run=4 score=211.879364 ms=19236.912
+interpreter run=5 score=195.071198 ms=20908.557
+interpreter score_avg=211.513400 score_min=192.381683 score_p50=211.879364 score_best=230.167252 valid_runs=5 invalid_runs=0 ms_avg=19653.744 ms_min=18582.411 ms_p50=19236.912 ms_max=20908.557
+```
+
+This confirms the current pattern: reducing lowered dispatch count alone is not
+predictive. Adding another arm to the central `evalLowered` `when` can hurt JIT
+layout/register pressure enough to overwhelm removed stack traffic. Do not port
+this candidate unchanged.
+
+The local stack-pointer experiment tried to target the clean JFR's `MStack.push`
+hotspot without adding new opcodes. It added raw stack size/capacity helpers and
+kept `sp`/`stackValues` locals inside `evalLowered`, syncing back to `MStack`
+for control-flow, calls, GC, and fallback float/global paths. It compiled, but
+the benchmark regressed badly:
+
+```text
+interpreter run=1 score=155.287537 ms=25610.223
+interpreter run=2 score=170.823364 ms=21371.967
+interpreter run=3 score=103.352051 ms=34120.615
+interpreter run=4 score=0.000000 ms=6687.901
+interpreter run=5 score=217.485870 ms=19051.083
+interpreter score_avg=129.389764 score_min=0.000000 score_p50=155.287537 score_best=217.485870 valid_runs=4 invalid_runs=1 ms_avg=21368.358 ms_min=6687.901 ms_p50=21371.967 ms_max=34120.615
+interpreter reference=chasm_upstream_jvm_interpreter metric=score_p50 score=155.287537 reference_score=289.813080 ratio=0.536 status=fail
+```
+
+Do not repeat this as a broad rewrite of `evalLowered`: the larger hot loop and
+extra synchronization points appear worse for JVM optimization than the removed
+`MStack` calls.
+
+Memory-factory diagnostic in `/private/tmp/krwa-coremark-clean.YvHUNP/repo`,
+1 warmup and 3 interleaved repetitions:
+
+| memory | backend | score_avg | score_p50 | score_best | interpretation |
+| --- | --- | ---: | ---: | ---: | --- |
+| default / `ByteArrayMemory` | interpreter | 184.262937 | 173.257675 | 282.306458 | noisy interpreter run with two low outliers |
+| default / `ByteArrayMemory` | compiled | 5548.010986 | 7218.321289 | 7316.748535 | noisy but still the better compiled memory path |
+| `ByteBufferMemory` | interpreter | 246.570084 | 251.994965 | 253.399780 | not a clear interpreter win versus clean baselines |
+| `ByteBufferMemory` | compiled | 5079.386556 | 5028.341797 | 5290.538574 | clear compiled regression versus default p50 |
+
+Do not switch the CoreMark harness or runtime defaults to `ByteBufferMemory` for
+this benchmark. It does not produce a stable interpreter win.
+
+Do not choose the next lowered-superinstruction experiment only from
+`coremarkDynamicOpcodeReport`: the listener disables lowered fast paths. Start
+from `coremarkLoweredOpcodeReport` for static lowered-dispatch shape, then use
+JFR around `evalLowered(...)` or a temp runtime probe before trying more simple
+dispatch fusions.
+
+## Standard Interpreter JFR
+
+Clean-copy diagnostic JFR in `/private/tmp/krwa-coremark-clean.3QZ6oV/repo`,
+with `-Dkrwa.coremark.backends=interpreter -Dkrwa.coremark.warmups=1
+-Dkrwa.coremark.repetitions=2`, wrote
+`/private/tmp/krwa-coremark-interpreter-clean-current.jfr`.
+
+```text
+interpreter run=1 score=231.356522 ms=18846.782
+interpreter run=2 score=277.392517 ms=18438.650
+interpreter score_avg=254.374519 score_min=231.356522 score_p50=277.392517 score_best=277.392517 valid_runs=2 invalid_runs=0
+```
+
+Clean JFR hot methods:
+
+| method | samples | percent |
+| --- | ---: | ---: |
+| `InterpreterMachine.evalLowered(...)` | 3,757 | 70.63 |
+| `MStack.push(long)` | 957 | 17.99 |
+| `StackFrame.pushCtrlPreallocated(...)` | 170 | 3.20 |
+| `StackFrame.doControlTransfer(...)` | 164 | 3.08 |
+| `InterpreterMachine.checkInterruption()` | 48 | 0.90 |
+| `MStack.popI32()` | 43 | 0.81 |
+| `InterpreterMachine.pushInitialLocalGetIfAvailable(...)` | 29 | 0.55 |
+| `MStack.peek()` | 29 | 0.55 |
+| `StackFrame.reset(MStack,int)` | 26 | 0.49 |
+| `ArrayDeque.ensureCapacity(...)` | 23 | 0.43 |
+
+Refreshed clean-copy JFR on 2026-06-20 in
+`/private/tmp/krwa-coremark-clean.uTMrzJ/repo`, using one warmup and one
+measured interpreter-only run, wrote
+`/private/tmp/krwa-standard-interpreter-coremark.jfr`.
+
+```text
+interpreter run=1 score=251.524872 ms=20030.150
+interpreter score_avg=251.524872 score_min=251.524872 score_p50=251.524872 score_best=251.524872 valid_runs=1 invalid_runs=0
+```
+
+Refreshed hot methods:
+
+| method | samples | percent |
+| --- | ---: | ---: |
+| `InterpreterMachine.evalLowered(...)` | 2,203 | 77.08 |
+| `MStack.push(long)` | 373 | 13.05 |
+| `StackFrame.pushCtrlPreallocated(...)` | 86 | 3.01 |
+| `StackFrame.doControlTransfer(...)` | 75 | 2.62 |
+| `MStack.popI32()` | 27 | 0.94 |
+| `InterpreterMachine.checkInterruption()` | 26 | 0.91 |
+
+This refreshed profile matches the older one: the standard interpreter is still
+dominated by the central lowered loop plus `MStack.push`. Since isolated
+`MStack.push` rewrites and additional central-`when` fusion cases have already
+regressed, the next meaningful experiment should compare or prototype the
+predecoded executor/value-frame shape rather than another small stack method
+rewrite.
+
+Clean JFR allocation pressure:
+
+| object type | pressure |
+| --- | ---: |
+| `byte[]` | 86.68% |
+| `int[]` | 6.88% |
+| `AnnotatedInstruction$Builder` | 3.23% |
+| `ConcurrentHashMap$Node` | 3.22% |
+
+Diagnostic JFR run on the dirty main worktree, with
+`-Dkrwa.coremark.backends=interpreter -Dkrwa.coremark.warmups=1
+-Dkrwa.coremark.repetitions=2`, wrote
+`/private/tmp/krwa-coremark-interpreter-latest.jfr`.
+
+The benchmark score from this run is not a baseline because JFR added visible
+overhead and variance:
+
+```text
+interpreter score_avg=123.892708 score_best=247.785416 ms_avg=17727.452
+```
+
+Current dirty-worktree non-JFR sanity for the same backend:
+
+```text
+interpreter score_avg=219.904129 score_best=252.482742 ms_avg=20689.047
+```
+
+JMH wall-clock sanity on the dirty main worktree:
+
+| backend | JMH avg time |
+| --- | ---: |
+| `INTERPRETER` | 16.967 s/op |
+| `EXPERIMENTAL_FAST` | 20.332 s/op |
+| `COMPILED` | 15.610 s/op |
+
+This is not a replacement for CoreMark score. `COMPILED` has only a modestly
+lower wall-clock time in this JMH gate while its CoreMark score is much higher,
+so use this table to catch large regressions, not to rank final backend
+performance.
+
+The strategic implication for interpreter-vs-interpreter work is that
+`experimental_fast` is not currently the best CoreMark path: in JMH wall-clock
+it is slower than `INTERPRETER`, and in CoreMark score it trails the clean
+standard-interpreter baseline. Treat `INTERPRETER` as the target path until a
+measured runtime experiment proves otherwise in an isolated clean copy.
+
+Hot methods from `jfr view hot-methods`:
+
+| method | samples | percent |
+| --- | ---: | ---: |
+| `InterpreterMachine.evalLowered(...)` | 2,804 | 69.84 |
+| `MStack.push(long)` | 670 | 16.69 |
+| `StackFrame.pushCtrlPreallocated(...)` | 170 | 4.23 |
+| `StackFrame.doControlTransfer(...)` | 97 | 2.42 |
+| `StackFrame.controlEndValuesAt(...)` | 53 | 1.32 |
+| `StackFrame.controlStartValuesAt(...)` | 34 | 0.85 |
+| `MStack.popI32()` | 32 | 0.80 |
+| `InterpreterMachine.pushInitialLocalGetIfAvailable(...)` | 26 | 0.65 |
+| `InterpreterMachine.checkInterruption()` | 25 | 0.62 |
+| `MStack.peek()` | 23 | 0.57 |
+
+Allocation pressure from `jfr view allocation-by-class`:
+
+| object type | pressure |
+| --- | ---: |
+| `byte[]` | 89.67% |
+| `long[]` | 6.91% |
+| `String` | 3.42% |
+
+This profile explains why many small lowered-dispatch superinstructions did not
+help: the remaining standard-interpreter cost is dominated by stack push,
+control-frame push/transfer, and the lowered eval loop itself. Do not repeat
+plain `MStack.push` pre-check/final-class/unchecked-push experiments unchanged;
+they already lost despite targeting the apparent hotspot.
+
+## Compiled Backend JFR
+
+Diagnostic JFR run on the dirty main worktree, with
+`-Dkrwa.coremark.backends=compiled -Dkrwa.coremark.warmups=1
+-Dkrwa.coremark.repetitions=2`, wrote
+`/private/tmp/krwa-coremark-compiled-latest.jfr`.
+
+```text
+compiled score_avg=7998.567627 score_best=8048.583984 ms_avg=15123.554
+```
+
+Hot methods from `jfr view hot-methods`:
+
+| method | samples | percent |
+| --- | ---: | ---: |
+| `CompiledMachineShaded.checkInterruption()` | 1,286 | 33.17 |
+| `CompiledMachineFuncGroup_0.func_2(...)` | 1,202 | 31.00 |
+| `CompiledMachineFuncGroup_0.func_5(...)` | 533 | 13.75 |
+| `CompiledMachineFuncGroup_0.func_8(...)` | 445 | 11.48 |
+| `ByteArrayMemory.page(int)` | 179 | 4.62 |
+
+This profile says the compiled backend spends a surprising amount of sampled
+time in interruption polling. The response is an opt-in compiler/benchmark
+switch, not a runtime default change.
+
+Clean-copy JFR after moving the inline interruption check into the compiler
+patch, written to `/private/tmp/krwa-coremark-inline-compiled.jfr` from
+`/private/tmp/krwa-coremark-clean.JepjM7/repo`:
+
+```text
+compiled run=1 score=8033.888184 ms=15028.775
+compiled run=2 score=8271.920898 ms=14604.636
+compiled score_avg=8152.904541 score_min=8033.888184 score_p50=8271.920898 score_best=8271.920898 valid_runs=2 invalid_runs=0 ms_avg=14816.706
+```
+
+Hot methods after the inline check:
+
+| method | samples | percent |
+| --- | ---: | ---: |
+| `CompiledMachineFuncGroup_0.func_2(...)` | 1,988 | 58.78 |
+| `CompiledMachineFuncGroup_0.func_5(...)` | 524 | 15.49 |
+| `CompiledMachineFuncGroup_0.func_8(...)` | 385 | 11.38 |
+| `CompiledMachineFuncGroup_0.func_7(...)` | 155 | 4.58 |
+| `ByteArrayMemory.page(int)` | 142 | 4.20 |
+| `CompiledMachineFuncGroup_0.func_11(...)` | 62 | 1.83 |
+| `CompiledMachineFuncGroup_0.func_12(...)` | 49 | 1.45 |
+
+This confirms that the old `checkInterruption()` hotspot was removed. The next
+compiled-backend work should inspect generated code in `func_2`/memory access
+rather than further reducing interruption semantics.
+
+Generated class dump diagnostic via
+`scripts/coremark-clean-worktree.sh :jmh:coremarkCompiledClassDump
+-Dkrwa.coremark.dump.dir=/private/tmp/krwa-coremark-inline-classes` in
+`/private/tmp/krwa-coremark-clean.2ZguVE/repo`:
+
+```text
+CoreMark compiled class dump
+output_dir=/private/tmp/krwa-coremark-inline-classes
+interruption_checks=true
+cache_key=sha-256:d9odiKFtQypsdNPmDR4jkAPyrcHlCzESVQe7jhda8Fo=
+jar=/private/tmp/krwa-coremark-inline-classes/coremark-compiled-classes.jar
+main_class=uk.shusek.krwa.$gen.CompiledMachine
+classes:
+01 uk.shusek.krwa.$gen.CompiledMachine
+02 uk.shusek.krwa.$gen.CompiledMachineFuncGroup_0
+03 uk.shusek.krwa.$gen.CompiledMachineMachineCall
+04 uk.shusek.krwa.$gen.CompiledMachineShaded
+```
+
+`javap` on `CompiledMachineFuncGroup_0.func_2` showed many simple integer
+relation operations still compiled as `OpcodeImpl.I32_*` helper calls. That
+looked like a reasonable next candidate, but the isolated experiment below
+regressed, so do not repeat it unchanged.
+
+## Compiled No-Interruption Diagnostic
+
+Added an opt-in compiler flag:
+`MachineFactoryCompiler.Builder.withInterruptionChecks(false)`. The builder
+default remains `true`, so existing compiled machines still emit interruption
+checks unless a caller explicitly opts out. `InterruptionTest` passes with the
+default path after this change.
+
+Isolated temp result from
+`/private/tmp/krwa-coremark-compiled-nointerrupt.jP3tod`:
+
+```text
+compiled score_avg=6080.226807 score_best=7520.853516 ms_avg=16338.878
+compiled_no_interrupt score_avg=7919.262695 score_best=7994.767090 ms_avg=15530.438
+```
+
+Clean `HEAD` snapshot plus only the benchmark/compiler diagnostic patch,
+`/private/tmp/krwa-coremark-clean-harness.wyFUS9`, interleaved 1 warmup and 5
+repetitions:
+
+```text
+compiled run=1 score=8042.699219 ms=15112.823
+compiled_no_interrupt run=1 score=8216.313477 ms=14670.946
+compiled run=2 score=7953.148926 ms=15204.513
+compiled_no_interrupt run=2 score=8384.785156 ms=14397.689
+compiled run=3 score=8059.198242 ms=15005.276
+compiled_no_interrupt run=3 score=7775.500000 ms=15424.570
+compiled run=4 score=7366.729004 ms=16727.935
+compiled_no_interrupt run=4 score=7042.704590 ms=17019.280
+compiled run=5 score=4720.422363 ms=24933.049
+compiled_no_interrupt run=5 score=7385.028320 ms=16262.261
+compiled score_avg=7228.439551 score_min=4720.422363 score_p50=7953.148926 score_best=8059.198242 valid_runs=5 invalid_runs=0 ms_avg=17396.719 ms_min=15005.276 ms_p50=15204.513 ms_max=24933.049
+compiled_no_interrupt score_avg=7760.866309 score_min=7042.704590 score_p50=7775.500000 score_best=8384.785156 valid_runs=5 invalid_runs=0 ms_avg=15554.949 ms_min=14397.689 ms_p50=15424.570 ms_max=17019.280
+```
+
+In that compiled-only exploration, this clean run kept interruption checks as
+the best compiled-backend variant: `compiled_no_interrupt` improves avg/best
+and avoids invalid runs here, but its score p50 does not beat `compiled`. The
+direct `no_interrupt` backend is still a diagnostic, not a semantic default.
+
+Dirty main-worktree sanity check:
+
+```text
+compiled score_avg=7289.759928 score_best=8024.511230 ms_avg=16619.171
+compiled_no_interrupt score_avg=3490.339355 score_best=7737.215820 ms_avg=23426.437
+```
+
+The main sanity run has one large outlier in `compiled_no_interrupt`
+(`ms_max=41710.420`), while the best run stays close to compiled. Treat this as
+a diagnostic backend for profiling interruption overhead, not as a reproduced
+candidate win.
+
+Interleaved 5-repetition dirty main-worktree check with raw runs:
+
+```text
+compiled run=1 score=7539.927246 ms=15911.957
+compiled_no_interrupt run=1 score=7895.492188 ms=15217.829
+compiled run=2 score=7341.164063 ms=16457.759
+compiled_no_interrupt run=2 score=7631.469238 ms=15985.659
+compiled run=3 score=7628.823242 ms=15746.810
+compiled_no_interrupt run=3 score=7251.153809 ms=16535.641
+compiled run=4 score=7211.696289 ms=16859.205
+compiled_no_interrupt run=4 score=3833.153320 ms=30720.112
+compiled run=5 score=2159.710693 ms=23118.400
+compiled_no_interrupt run=5 score=0.000000 ms=10499.650
+compiled score_avg=6376.264307 score_min=2159.710693 score_p50=7341.164063 score_best=7628.823242 ms_avg=17618.826 ms_min=15746.810 ms_p50=16457.759 ms_max=23118.400
+compiled_no_interrupt score_avg=5322.253711 score_min=0.000000 score_p50=7251.153809 score_best=7895.492188 ms_avg=17791.778 ms_min=10499.650 ms_p50=15985.659 ms_max=30720.112
+```
+
+The dirty main run is not a clean optimization baseline because unrelated
+runtime/component edits and outliers are present. Keep `compiled_no_interrupt`
+as a diagnostic backend only; use the clean snapshot above when reasoning about
+the interruption-polling opportunity.
+
+## Rejected Compiled Polling Experiments
+
+These were tested in isolated copy
+`/private/tmp/krwa-coremark-loop-poll.ihaLLs` made from clean `HEAD` with only
+benchmark/compiler polling experiments applied. Default compiled interruption
+tests passed:
+
+```text
+./gradlew --no-daemon :jmh:classes :compiler:test --tests 'uk.shusek.krwa.compiler.internal.InterruptionTest' ...
+BUILD SUCCESSFUL
+```
+
+`compiled_loop_poll` removed interruption checks from direct `CALL` while
+leaving loop/backedge polling. It looked stable when the baseline run had an
+outlier, but it weakens direct-recursion interruption semantics and did not beat
+a healthy baseline:
+
+```text
+compiled score_avg=4767.628223 score_best=7237.794434 ms_avg=20707.692 ms_max=39733.287
+compiled_loop_poll score_avg=7102.483008 score_best=7359.336426 ms_avg=17066.098 ms_max=17885.786
+
+compiled_loop_poll score_avg=5963.725993 score_best=7475.873535 ms_avg=16434.628 ms_max=17680.490
+compiled score_avg=1735.971436 score_best=2610.511719 ms_avg=18147.208 ms_max=25913.754
+```
+
+`compiled_recursive_call_poll` kept direct-call polling only for functions in a
+direct-call recursion cycle. This preserves the existing compiled interruption
+tests but did not reproduce a win:
+
+```text
+compiled score_avg=7539.001953 score_best=8095.974121 ms_avg=16144.618
+compiled_recursive_call_poll score_avg=7260.944336 score_best=7893.792480 ms_avg=16941.651
+compiled_loop_poll score_avg=7157.080404 score_best=7876.270996 ms_avg=16989.441
+```
+
+Do not port either call-polling variant unchanged. The useful takeaway is only
+that `checkInterruption()` is worth profiling further; direct-call polling needs
+a better semantic model or a stronger benchmark win before it belongs in main.
+
+`compiled_call_poll_{8,16,64}` used a per-function local counter to poll every
+N direct calls, while preserving normal backedge polling. This was tested in
+isolated copy `/private/tmp/krwa-coremark-callpoll.l31etS`; `:jmh:classes` and
+`uk.shusek.krwa.compiler.internal.InterruptionTest` passed, so it did not simply
+remove interruption semantics. Screening result with 1 warmup, 3 interleaved
+repetitions:
+
+```text
+compiled score_avg=4630.281738 score_min=3126.421143 score_p50=3242.542236 score_best=7521.881836 valid_runs=3 invalid_runs=0 ms_avg=23264.839 ms_min=16125.807 ms_p50=16668.417 ms_max=37000.294
+compiled_call_poll_8 score_avg=6174.234619 score_min=3664.101807 score_p50=7224.484375 score_best=7634.117676 valid_runs=3 invalid_runs=0 ms_avg=21505.747 ms_min=15828.978 ms_p50=16790.310 ms_max=31897.953
+compiled_call_poll_16 score_avg=6379.854167 score_min=4543.389160 score_p50=7075.319824 score_best=7520.853516 valid_runs=3 invalid_runs=0 ms_avg=16568.260 ms_min=16265.438 ms_p50=16467.482 ms_max=16971.860
+compiled_call_poll_64 score_avg=6903.803874 score_min=5688.282227 score_p50=7192.833496 score_best=7830.295898 valid_runs=3 invalid_runs=0 ms_avg=17819.460 ms_min=15506.509 ms_p50=16681.127 ms_max=21270.743
+compiled_no_interrupt score_avg=7581.359863 score_min=7045.410645 score_p50=7831.411133 score_best=7867.257813 valid_runs=3 invalid_runs=0 ms_avg=16018.808 ms_min=15304.311 ms_p50=15426.547 ms_max=17325.566
+```
+
+Do not port this unchanged. The best semantic interval (`64`) still lags
+`no_interrupt`, and this run's baseline had large outliers. The local counter
+probably costs enough bytecode/register pressure to erase much of the saved
+polling overhead. The next compiled lead should compare against Chasm/source
+strategy or use a cheaper shared polling model, not another local-counter tweak.
+
+`compiled_shared_call_poll_64` replaced direct `CALL` checks with a static
+shaded helper that polls every 64 calls while keeping normal backedge checks.
+This tested the cheaper shared-polling idea without per-function local counter
+pressure. It was tested in `/private/tmp/krwa-coremark-clean.8i5vL8/repo`;
+`:jmh:classes` and
+`uk.shusek.krwa.compiler.internal.InterruptionTest` passed:
+
+```text
+BUILD SUCCESSFUL in 18s
+```
+
+Baseline in the same isolated copy, before the patch:
+
+```text
+compiled score_avg=5864.839925 score_min=3130.335693 score_p50=7224.484375 score_best=7239.699707 valid_runs=3 invalid_runs=0 ms_avg=23457.334 ms_min=16727.355 ms_p50=16900.841 ms_max=36743.807
+compiled_no_interrupt score_avg=6837.258789 score_min=5631.783691 score_p50=7266.481934 score_best=7613.510742 valid_runs=3 invalid_runs=0 ms_avg=18088.363 ms_min=15977.534 ms_p50=16777.393 ms_max=21510.163
+```
+
+Candidate result:
+
+```text
+compiled score_avg=6925.854329 score_min=6504.642090 score_p50=6605.812988 score_best=7667.107910 valid_runs=3 invalid_runs=0 ms_avg=17574.405 ms_min=15744.132 ms_p50=18268.001 ms_max=18711.081
+compiled_no_interrupt score_avg=7331.032552 score_min=7224.484375 score_p50=7297.817383 score_best=7470.795898 valid_runs=3 invalid_runs=0 ms_avg=16451.025 ms_min=16083.283 ms_p50=16449.680 ms_max=16820.111
+```
+
+Do not port this unchanged. It improves average only because the pre-patch
+baseline had a large outlier; p50 regresses versus the same-copy baseline and
+still trails `compiled_no_interrupt`.
+
+## Rejected Compiled Codegen Experiments
+
+`inline_i32_relops` changed `I32_EQZ`, `I32_EQ`, `I32_NE`, and signed/unsigned
+`I32_LT/GT/LE/GE` from `OpcodeImpl` helper calls to direct JVM branch bytecode.
+Unsigned compares used the standard `x xor Int.MIN_VALUE` transform before a
+signed compare. This preserved interruption behavior:
+
+```text
+scripts/coremark-clean-worktree.sh :compiler:test --tests uk.shusek.krwa.compiler.internal.InterruptionTest
+BUILD SUCCESSFUL
+```
+
+Candidate result in `/private/tmp/krwa-coremark-clean.mk43Gm/repo`, one warmup
+and three interleaved repetitions:
+
+```text
+compiled run=1 score=4196.230957 ms=27586.109
+compiled_no_interrupt run=1 score=5065.000977 ms=14884.157
+compiled run=2 score=7785.405762 ms=15447.555
+compiled_no_interrupt run=2 score=8455.034180 ms=14269.728
+compiled run=3 score=8300.007813 ms=14533.251
+compiled_no_interrupt run=3 score=6259.246582 ms=18854.840
+compiled score_avg=6760.548177 score_min=4196.230957 score_p50=7785.405762 score_best=8300.007813 valid_runs=3 invalid_runs=0 ms_avg=19188.972
+compiled_no_interrupt score_avg=6593.093913 score_min=5065.000977 score_p50=6259.246582 score_best=8455.034180 valid_runs=3 invalid_runs=0 ms_avg=16002.908
+```
+
+Rejected: normal `compiled` p50 dropped below the inline-check baseline
+(`8361.204102` p50 in clean-copy main verification). The likely cause is extra
+branch bytecode and temp-slot pressure hurting JIT shape more than removing the
+small helper calls helps. Keep the class dump diagnostic, but do not port this
+relop inlining unchanged.
+
+`direct_memory_store` replaced compiled store helper calls such as
+`CompiledMachineShaded.memoryWriteInt` with direct `Memory.write*`
+`invokeinterface` calls, mirroring the existing direct read path. The semantic
+sanity check passed in `/private/tmp/krwa-coremark-clean.Y0djGH/repo`:
+
+```text
+scripts/coremark-clean-worktree.sh :compiler:test --tests uk.shusek.krwa.compiler.internal.InterruptionTest
+BUILD SUCCESSFUL
+```
+
+The full clean-copy benchmark build then failed before CoreMark ran, in
+`/private/tmp/krwa-coremark-clean.WnucSj/repo`, at
+`:wabt:generateWast2JsonModule`:
+
+```text
+MethodTooLargeException: uk/shusek/krwa/wabt/Wast2JsonModuleMachineFuncGroup_0.func_587
+```
+
+Rejected: broad direct store emission increases generated bytecode enough to hit
+the JVM method-size limit in another generated module. Do not port this
+unchanged. Any memory-store work needs method-size-aware heuristics or narrower
+profiling before it can be considered a candidate. After reverting the
+candidate, `:jmh:coremarkCompiledClassDump` succeeded in clean copy
+`/private/tmp/krwa-coremark-clean.wwN0rQ/repo`, including
+`:wabt:generateWast2JsonModule`, and dumped the generated CoreMark classes to
+`/private/tmp/krwa-coremark-final-compiled-classes`.
+
+## Rejected Compiled Memory Experiments
+
+Dirty main-worktree memory-factory comparison for `compiled`, using
+`-Dkrwa.coremark.warmups=1 -Dkrwa.coremark.repetitions=3`:
+
+```text
+default memory:
+compiled score_avg=6179.167480 score_best=7352.449707 ms_avg=20371.343 ms_max=26198.129
+
+bytebuffer memory:
+compiled score_avg=4827.923340 score_best=5179.883301 ms_avg=18017.537 ms_max=23283.501
+```
+
+`ByteBufferMemory` is worse by the primary CoreMark score, so do not switch the
+benchmark or runtime default to it for this fixture.
+
+In isolated copy `/private/tmp/krwa-coremark-loop-poll.ihaLLs`, an opt-in
+`compiled_bytearray_read_cast` backend cast memory index 0 from `Memory` to
+`ByteArrayMemory` for compiled reads and used `invokevirtual` instead of
+`invokeinterface`. It built and passed the compiled interruption test, but did
+not beat baseline by CoreMark score:
+
+```text
+compiled score_avg=6481.583008 score_best=7785.957031 ms_avg=19981.279 ms_max=28292.005
+compiled_bytearray_read_cast score_avg=4868.478678 score_best=7398.937012 ms_avg=15094.712 ms_max=17007.470
+```
+
+The wall-clock `ms_avg` looked better because the baseline had a large outlier,
+but the wasm-reported CoreMark score regressed. Do not port this read-cast
+variant unchanged.
+
+## Rejected Experimental Fast Experiments
+
+These were tested against a copy of the current dirty main worktree and should
+not be repeated unchanged:
+
+| experiment | result |
+| --- | --- |
+| allocation-free `FastValueStack.transferTo` fast paths for 0/1/2 slots | 142.927014 avg, below dirty baseline 153.588516 |
+| direct internal `CALL` from `FastValueStack` without args/results `LongArray` | 149.994803 avg, below dirty baseline 153.588516 |
+| precomputed control-frame start/end slot counts for lowered `BLOCK`/`LOOP`/`IF` | 160.136975 avg, below dirty baseline after `BR_TABLE` 164.674445 |
+| array-backed `funcId` caches for lowered functions, unsupported flags, and frame pools | 159.913452 avg, below dirty baseline after `BR_TABLE` 164.674445 |
+| `local.get; i32.load; local.set/tee` superinstruction for default memory | 108.507254 avg, 143.936661 best, below dirty baseline after `BR_TABLE` 164.674445 |
+| generic linked-list relink loop-step superinstruction for function 2's hottest loop | 146.948782 avg, 162.271805 best, below dirty baseline after `BR_TABLE` 164.674445 |
+| `local.get; i32.const; i32.eq; br_if` superinstruction | 116.899802 avg, 155.593582 best, below dirty baseline after `BR_TABLE` 164.674445 |
+| `EMPTY_BLOCK_TYPE` fast path that bypasses control slot counting for lowered `BLOCK`/`LOOP`/`IF` | isolated temp looked slightly better at 166.083719 avg, 170.473923 best, but main sanity failed to reproduce average: 120.308601 avg / 180.223480 best; not retained |
+| `FAST_BLOCK_RUN` bulk push for consecutive parameterless `BLOCK`s | isolated temp won at 174.479315 avg, 177.588348 best, but main sanity failed to reproduce average: 70.438351 avg / 163.733109 best and 152.883377 avg / 168.975998 best; not retained |
+
+## Structural Analysis
+
+Empty `BLOCK` elimination is not a safe local optimization for this fixture:
+
+| item | count |
+| --- | ---: |
+| total blocks | 65 |
+| empty blocks | 54 |
+| empty untargeted blocks | 0 |
+| empty untargeted branchless blocks | 0 |
+
+All empty blocks are branch targets, so removing their push/pop frames would
+require a deeper branch-depth and stack-height rewrite.
+
+The byte-copy superinstruction is concentrated in one function:
+
+| pattern | functions | note |
+| --- | ---: | --- |
+| `local.get local.get i32.load8_u i32.store8` | 1 | function id 9, one static loop pattern |
+
+That function is not a standalone `memcpy`; it also updates CoreMark state and
+recursively calls function 13 for a tail segment. Avoid replacing it with a
+benchmark-specific intrinsic unless the optimization is made explicit and
+covered by tests.
+
+Dynamic `END` transfer shape in one instrumented repetition:
+
+| end result slots | count |
+| --- | ---: |
+| 0 | 80427667 |
+| 1 | 8882001 |
+| 2 | 0 |
+| other | 0 |
+
+The repeated regressions suggest that tiny additions to the lowered dispatch loop
+often hurt JIT inlining/register pressure more than they save. Prefer changes
+that remove larger structural costs or improve the compiled backend path.
+
+## Hot Function Diagnostics
+
+## Chasm Interpreter Shape
+
+Chasm's CoreMark benchmark calls the normal embedding `invoke(store, instance,
+"run")`; it is not using KRWA-style compiled machine generation. Its default
+`RuntimeConfig` has `bytecodeFusion=true`, and `Compiler` applies:
+
+```text
+ControlFlowPass -> FusionPass -> FrameSlotPass -> JumpPass -> GCPass
+```
+
+The important interpreter difference is structural:
+
+- Chasm predecodes instructions into `DispatchableInstruction` lambdas stored on
+  an `InstructionStack`, instead of running one central `when` over opcodes.
+- `ValueStack` stores locals and operands in one `LongArray` with a
+  `framePointer`; `local.get` can become a direct frame-slot read.
+- Fusion is general: `FusedOperandFactory` recognizes `i32.const`, `i64.const`,
+  `f32.const`, `f64.const`, and `local.get`; `FusedDestinationFactory`
+  recognizes following `local.set`.
+- Numeric, memory, and variable fusers produce instructions like
+  `I32Add(left, right, destination)`, `I32Load(address, destination, memArg)`,
+  `LocalSet(operand, localIdx)`, and runtime slot variants such as
+  `LocalSetI`, `LocalSetS`, `GlobalGetS`.
+
+This is the part worth copying conceptually. It is not enough to keep adding
+one-off lowered opcodes to KRWA's central `evalLowered` loop: repeated
+experiments show that larger dispatch-loop shape can regress the JVM even when
+static dispatch count falls.
+
+Fresh raw dynamic profile in clean copy
+`/private/tmp/krwa-coremark-clean.Y3SrjE/repo`, with
+`ExecutionListener` enabled and therefore `lowered_fast_path=false`:
+
+```text
+backend=interpreter score=35.350262 ms=19908.337 instructions=582979643
+```
+
+Top Chasm-style fusion targets from that profile:
+
+| dynamic pattern | count | interpretation |
+| --- | ---: | --- |
+| `local_get` | 149,232,271 | direct frame-slot operand source is the big target |
+| `local_set` | 50,644,309 | destination fusion can remove stack round-trips |
+| `local_get i32_const` | 47,420,107 | broad immediate/local operand source |
+| `local_set local_get` | 44,688,026 | already partially covered by KRWA `LOCAL_SET_LOCAL_GET` |
+| `i32_const i32_add` | 29,354,252 | should be operand-source fusion, not one special sequence |
+| `i32_add local_set` | 24,344,728 | should be destination fusion |
+| `local_get local_get` | 23,116,831 | two frame-slot operands |
+| `local_get i32_load` | 14,326,408 | address source fusion |
+| `local_get i32_const i32_add` | 26,697,129 | existing KRWA special case covers only part of the broader model |
+| `local_get local_get i32_add` | 4,956,328 | missing broad two-slot binop fusion |
+
+Recommended next runtime experiment, only in `/private/tmp`: add a compact
+operand-source/destination encoding to `LoweredFunction` for a small set of
+hot i32 operations (`add`, `and`, `xor`, shifts, comparisons, loads/stores)
+instead of adding more named superinstructions. Measure against the clean
+interpreter baseline p50 `239.291702` and reject it unless it beats that p50
+without invalid runs.
+
+The first compact-encoding experiment was run for `i32.add` only in
+`/private/tmp/krwa-coremark-clean.Y3SrjE/repo`. It added one generic
+`I32_ADD_FUSED` lowered opcode with source kinds `local`/`i32.const` and
+destination kinds `stack`/`local.set`/`local.tee`. It compiled and matched 153
+static lowered sites, but it lost:
+
+```text
+interpreter run=1 score=217.233887 ms=19304.323
+interpreter run=2 score=207.382828 ms=20013.475
+interpreter run=3 score=93.066544 ms=38670.682
+interpreter run=4 score=214.102203 ms=18676.108
+interpreter run=5 score=67.380905 ms=26916.999
+interpreter score_avg=159.833273 score_min=67.380905 score_p50=207.382828 score_best=217.233887 valid_runs=5 invalid_runs=0 ms_avg=24716.318 ms_min=18676.108 ms_p50=20013.475 ms_max=38670.682
+interpreter reference=chasm_upstream_jvm_interpreter metric=score_p50 score=207.382828 reference_score=289.813080 ratio=0.716 status=fail
+```
+
+Conclusion: copying Chasm's win requires copying more of the executor shape
+(`InstructionStack`/predecoded dispatchables/frame-slot value stack), not just
+encoding Chasm-like operands inside KRWA's current central lowered `when`.
+A later function-8-only smaller-dispatch-loop prototype also regressed, so the
+next serious attempt should change the value-frame/executor representation
+together rather than only shrinking or splitting the current `when`.
+
+Temporary instrumentation in `/private/tmp/krwa-coremark-hot.QF0Bai` counted
+function entries in one no-warmup diagnostic run:
+
+| function | entries | instructions | mode | note |
+| --- | ---: | ---: | --- | --- |
+| 8 | 5,232,640 | 270 | lowered | tokenizer/parser-like hot loop |
+| 10 | 1,492,124 | 272 | lowered | unrolled CRC-style update |
+| 1 | 1,135,078 | 105 | lowered | calls functions 7, 12, and 10 |
+| 12 | 684,744 | 6 | lowered | masks arg0 with `65535`, then calls function 10 |
+| 11 | 327,040 | 10 | lowered | splits arg0 and calls function 10 twice |
+| 5 | 20,440 | 702 | lowered | larger hot function |
+| 7 | 20,440 | 255 | lowered | larger hot function |
+| 2 | 10,220 | 675 | lowered | larger hot function |
+
+Frame pooling is effective: the hot functions allocate one frame each and then
+reuse pooled frames for subsequent entries. The remaining call cost is therefore
+mostly stack/dispatch/control transfer, not allocation.
+
+JFR after moving `BR_TABLE` lowering showed that `executeAnnotated(...)` fell
+from 22.62% to 0.17%:
+
+| method | samples | percent |
+| --- | ---: | ---: |
+| `ExperimentalFastInterpreterMachine.executeLowered(...)` | 5,005 | 93.45 |
+| `ValType.Companion.isValid(long)` | 160 | 2.99 |
+| `HashMap.getNode(Object)` | 44 | 0.82 |
+| `FastValueStack.popResults(int)` | 41 | 0.77 |
+| `ExperimentalFastInterpreterMachine.callFunction(int, long[])` | 40 | 0.75 |
+| `Arrays.fill(long[], int, int, long)` | 16 | 0.30 |
+| `ExperimentalFastInterpreterMachine.executeAnnotated(...)` | 9 | 0.17 |
+
+The `ValType.isValid` item motivated the isolated control-slot precompute
+experiment, but that run lost against the dirty baseline. Do not repeat it
+unchanged.
+
+Dynamic opcode/pair instrumentation after `BR_TABLE` pointed to a better target
+than load/store micro-fusion:
+
+| dynamic item | count |
+| --- | ---: |
+| `LOCAL_GET` | 614,238,509 |
+| `I32_CONST` | 352,606,176 |
+| `BLOCK` | 166,323,974 |
+| `BR_IF` | 137,956,849 |
+| `BLOCK -> BLOCK` | 139,503,090 |
+| `LOCAL_GET -> I32_CONST` | 207,693,708 |
+
+The hot static region had many consecutive parameterless `BLOCK`s before a
+`BR_TABLE`. `FAST_BLOCK_RUN` was a semantically safer candidate than empty-block
+elimination because it preserved those control frames and only bulk-pushed them,
+but it was not retained because main sanity runs did not reproduce the isolated
+average win.
+
+Function-id static index profiling in
+`/private/tmp/krwa-coremark-controlslots.XxPyyq` found the hottest static
+regions:
+
+| function/index window | dynamic count per listed index | static sequence |
+| --- | ---: | --- |
+| `func=2 idx=78..88` | 19,033,200 | `LOCAL_GET LOCAL_TEE I32_LOAD LOCAL_SET LOCAL_GET LOCAL_GET I32_STORE LOCAL_GET LOCAL_SET LOCAL_GET BR_IF` |
+| `func=8 idx=35..38` | 16,420,800 | `LOCAL_GET I32_CONST I32_EQ BR_IF` |
+| `func=8 idx=39..50` | 14,231,360 | consecutive parameterless `BLOCK`s before `BR_TABLE` |
+| `func=8 idx=242..257` | hot | later parser branch region |
+| `func=5 idx=351..371` | hot | larger lowered function region |
+
+Function 2's hottest loop is a generic linked-list relink/reversal step, not a
+fixture-specific intrinsic target:
+
+```text
+func 2 type=(I32,I32) -> (I32) body=1 locals=16 instr=675
+ 75 LOCAL_GET 4
+ 76 LOCAL_SET 2
+ 77 LOOP 64
+ 78 LOCAL_GET 2
+ 79 LOCAL_TEE 4
+ 80 I32_LOAD 2 0 0
+ 81 LOCAL_SET 2
+ 82 LOCAL_GET 4
+ 83 LOCAL_GET 5
+ 84 I32_STORE 2 0 0
+ 85 LOCAL_GET 4
+ 86 LOCAL_SET 5
+ 87 LOCAL_GET 2
+ 88 BR_IF 0 true=78 false=89
+ 89 END
+```
+
+Two plausible superinstructions from this profile both lost. Avoid repeating
+the linked-list step and `local.get; i32.const; i32.eq; br_if` candidates
+unchanged; their added dispatch-loop complexity appears to hurt more than the
+removed opcodes help.
+
+A later `EMPTY_BLOCK_TYPE` fast path also failed main reproduction even though
+it preserved control frames and only skipped slot counting for empty lowered
+blocks. This reinforces the rule that temp wins need main sanity before being
+kept; small dispatch-loop changes can produce high best scores while destroying
+the average.
+
+Clean-copy `experimental_fast` fallback diagnostic in
+`/private/tmp/krwa-coremark-clean.uTMrzJ/repo`:
+
+```text
+before extra lowering:
+experimental_fast_unsupported func=4 index=283 opcode=F64_CONVERT_I64_U instructions=764
+experimental_fast_unsupported func=1 index=29 opcode=BR_TABLE instructions=105
+experimental_fast_unsupported func=8 index=50 opcode=BR_TABLE instructions=270
+experimental_fast run=1 score=162.680984 ms=19354.777
+
+after adding FAST_BR_TABLE in temp:
+experimental_fast_unsupported func=4 index=283 opcode=F64_CONVERT_I64_U instructions=764
+experimental_fast run=1 score=140.686554 ms=21705.567
+
+after also adding F64_CONVERT_I64_U in temp:
+experimental_fast_unsupported func=4 index=285 opcode=F64_DIV instructions=764
+experimental_fast run=1 score=47.820194 ms=15847.164
+```
+
+This confirms that simply completing opcode coverage in the current
+`experimental_fast` central loop is not the Chasm path. `BR_TABLE` removes the
+annotated fallback for functions 1 and 8, but the score does not move toward
+the standard interpreter baseline or Chasm. The next useful copy-from-Chasm
+experiment should be a separate frame-slot/predecoded executor shape, not more
+coverage patches in `executeLowered`.
+
+Added `:jmh:coremarkFrameSlotPlanReport` to estimate the static dispatch-shape
+available from Chasm-style operand-source/destination lowering before writing
+the runtime executor. Verified in both the clean copy
+`/private/tmp/krwa-coremark-clean.qxG0OU/repo` and the main worktree:
+
+```text
+CoreMark frame-slot plan report
+functions=15 raw_instructions=3765 planned_dispatches=2087 ratio=0.554 elided_sources=1577 materializations=260 unsupported=2
+
+planned op shapes:
+01 count=202 pattern=end
+02 count=99 pattern=local_set(local)->local
+03 count=95 pattern=i32_add(local,const)->local
+04 count=91 pattern=br_if(temp)
+05 count=82 pattern=local_set(const)->local
+06 count=68 pattern=loop
+07 count=67 pattern=call
+08 count=65 pattern=block
+09 count=64 pattern=i32_load(local)->temp
+10 count=59 pattern=materialize(call)
+11 count=47 pattern=br
+12 count=41 pattern=i32_load(local)->local
+
+functions_by_dispatch_delta:
+01 body=4 func=5 raw=702 planned=320 ratio=0.456 elided=310 materialize=19 unsupported=0 top=local_set(local)->local:39
+02 body=3 func=4 raw=764 planned=457 ratio=0.598 elided=319 materialize=95 unsupported=2 top=end:41
+03 body=1 func=2 raw=675 planned=416 ratio=0.616 elided=239 materialize=36 unsupported=0 top=end:54
+04 body=2 func=3 raw=359 planned=197 ratio=0.549 elided=147 materialize=15 unsupported=0 top=end:24
+05 body=9 func=10 raw=272 planned=128 ratio=0.471 elided=128 materialize=1 unsupported=0 top=i32_shr_u(local,const)->temp:30
+06 body=7 func=8 raw=270 planned=151 ratio=0.559 elided=112 materialize=3 unsupported=0 top=end:21
+07 body=5 func=6 raw=151 planned=66 ratio=0.437 elided=69 materialize=0 unsupported=0 top=end:7
+08 body=6 func=7 raw=255 planned=173 ratio=0.678 elided=112 materialize=57 unsupported=0 top=i32_load(local)->temp:20
+```
+
+Existing KRWA lowered dispatch count is `2855` (`0.758` of raw instruction
+count), so the frame-slot plan exposes another roughly 27% static dispatch
+reduction before considering the bigger win: removing the `MStack.push/pop`
+round trip for local/const operands. The first runtime prototype should target
+this exact plan shape: sources `local/const/temp`, destinations
+`local/temp/stack materialization`, direct memory ops from local/temp address
+sources, and control/call barriers that materialize only live stack values.
+
+Chasm 1.4.6 source inspection from local Gradle cache/Maven sources:
+
+```text
+io.github.charlietap.chasm:core-jvm:1.4.6
+io.github.charlietap.chasm:invoker-jvm:1.4.6
+io.github.charlietap.chasm:predecoder-jvm:1.4.6
+io.github.charlietap.chasm:ir-jvm:1.4.6
+```
+
+Relevant Chasm shape:
+
+```text
+FusedOperand = I32Const/I64Const/F32Const/F64Const/LocalGet/FrameSlot/ValueStack
+FusedDestination = LocalSet/FrameSlot/ValueStack
+Runtime examples = LocalSetI, LocalSetS, I32AddIi, I32AddIs, I32AddSi, I32AddSs,
+                   I32LoadI, I32LoadS, I32StoreIi/Is/Si/Ss
+ValueStack = one LongArray with framePointer; locals and temps are frame slots.
+```
+
+This explains why Chasm's fused interpreter wins: the predecoder specializes
+operand and destination shapes before execution. The hot loop dispatches an
+already-shaped instruction like `I32AddSi(sourceSlot, immediate, destinationSlot)`
+and only performs direct frame-slot reads/writes. It does not repeatedly inspect
+`local.get`, `i32.const`, and a following `local.set` inside the execution loop.
+
+Temp CoreMark-only `FrameSlotProbeMachine` results in
+`/private/tmp/krwa-coremark-clean.50FtIX/repo`:
+
+```text
+pooled locals/stack probe:
+frame_slot_probe run=1 score=161.173340 ms=19949.296
+
+predecoded local/memory/call operands, raw labels:
+frame_slot_probe run=1 score=176.980713 ms=23025.208
+
+fixed sign extension + small local/const/load fusions:
+frame_slot_probe run=1 score=229.130066 ms=18990.043
+
+interleaved against standard KRWA interpreter:
+interpreter      score_p50=266.152100 ms_p50=18563.409
+frame_slot_probe score_p50=166.777847 ms_p50=20222.987
+
+diagnostic clockScale=2:
+frame_slot_probe score_p50=83.358597 ms_p50=7303.739 valid_runs=3
+```
+
+The `clockScale=2` run shows that CoreMark can return positive results below
+the normal elapsed-time window when its internal clock is scaled, so a
+`score=0` run around 10 seconds can be a benchmark-threshold artifact rather
+than a semantic failure. It must not be used as a Chasm comparison score.
+
+A later attempt to add more ad-hoc raw-loop lookahead (`const->local`,
+`local/local binop`, direct branch compare, and a small memory-copy pattern)
+regressed badly:
+
+```text
+frame_slot_probe run=1 score=67.371826 ms=31168.551
+```
+
+Do not repeat that direction unchanged. It adds more per-iteration branch
+checks in front of the old raw-opcode loop, which is the opposite of Chasm's
+model. The next useful implementation needs a separate compact slot-op array
+with raw-label-to-plan-PC mapping, not more `if (nextOpcode == ...)` checks in
+the current loop.
+
+Temp follow-up in `/private/tmp/krwa-coremark-clean.50FtIX/repo`: changed
+`FrameSlotProbeMachine` to predecode raw `OpCode` and label arrays so the hot
+loop no longer calls `AnnotatedInstruction.opcode()/label*()` for normal
+dispatch and branches. This is still not the final Chasm model because elided
+`local.get`/`const` sources are not removed from the dispatch stream, but it
+tests the cost of the raw instruction representation.
+
+```text
+single run after opcode/label predecode:
+frame_slot_probe run=1 score=229.007629 ms=18270.332
+
+interleaved stable-ish run:
+interpreter      score_p50=265.076202 ms_p50=19174.977
+frame_slot_probe score_p50=208.376740 ms_p50=19779.974
+```
+
+Interpretation: predecoded opcode/label arrays are a useful component, but not
+enough. They remove some `AnnotatedInstruction` overhead and improve the probe
+from the prior stable `166.78` p50 to `208.38` p50, yet the standard KRWA
+interpreter still wins. The next implementation should keep this predecode and
+then build a real executable plan where `local.get`/`const` are sources on the
+consumer op, not standalone dispatch entries.

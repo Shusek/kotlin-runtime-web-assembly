@@ -2,6 +2,7 @@
 approvalTests = "30.1.1"
 asm = "9.10.1"
 commonsLang = "3.20.0"
+chasm = "1.4.6"
 dokka = "2.2.0"
 errorProne = "2.49.0"
 jacksonAnnotations = "2.22"
@@ -32,6 +33,7 @@ asmBom = { module = "org.ow2.asm:asm-bom", version.ref = "asm" }
 asmCommons = { module = "org.ow2.asm:asm-commons" }
 asmUtil = { module = "org.ow2.asm:asm-util" }
 commonsLang3 = { module = "org.apache.commons:commons-lang3", version.ref = "commonsLang" }
+chasmJvm = { module = "io.github.charlietap.chasm:chasm-jvm", version.ref = "chasm" }
 errorProneAnnotations = { module = "com.google.errorprone:error_prone_annotations", version.ref = "errorProne" }
 jacksonAnnotations = { module = "com.fasterxml.jackson.core:jackson-annotations", version.ref = "jacksonAnnotations" }
 jacksonDatabind = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "jacksonDatabind" }

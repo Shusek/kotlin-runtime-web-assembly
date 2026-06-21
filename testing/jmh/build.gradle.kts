@@ -6,6 +6,7 @@ import uk.shusek.krwa.gradle.*
 apply(plugin = "org.jetbrains.kotlin.kapt")
 
 dependencies {
+    add("implementation", libs.chasmJvm)
     add("implementation", libs.jmhCore)
     add("implementation", krwa("compiler"))
     add("implementation", krwa("runtime"))
@@ -13,6 +14,19 @@ dependencies {
     add("implementation", krwa("wasm"))
     add("implementation", krwa("wasm-corpus"))
     add("kapt", libs.jmhGeneratorAnnprocess)
+}
+
+fun JavaExec.forwardCoremarkSystemProperties() {
+    System.getProperties()
+        .stringPropertyNames()
+        .filter { it.startsWith("krwa.coremark.") }
+        .forEach { systemProperty(it, System.getProperty(it)) }
+}
+
+fun JavaExec.defaultCoremarkSystemProperty(name: String, value: String) {
+    if (System.getProperty(name) == null) {
+        systemProperty(name, value)
+    }
 }
 
 tasks.register<JavaExec>("jmh") {
@@ -26,13 +40,218 @@ tasks.register<JavaExec>("jmh") {
 
 tasks.register<JavaExec>("coremarkKrwa") {
     group = "benchmark"
-    description = "Runs Chasm's CoreMark wasm benchmark on KRWA backends."
+    description = "Runs Chasm's CoreMark wasm benchmark on selected backends."
     dependsOn("classes")
     workingDir = rootProject.layout.projectDirectory.asFile
     mainClass.set("uk.shusek.krwa.bench.CoremarkRunnerKt")
     classpath = mainSourceSet().runtimeClasspath
-    System.getProperties()
-        .stringPropertyNames()
-        .filter { it.startsWith("krwa.coremark.") }
-        .forEach { systemProperty(it, System.getProperty(it)) }
+    forwardCoremarkSystemProperties()
+    System.getProperty("krwa.coremark.jfr")?.takeIf { it.isNotBlank() }?.let { recording ->
+        jvmArgs("-XX:StartFlightRecording=filename=$recording,settings=profile,dumponexit=true")
+    }
+}
+
+tasks.register<JavaExec>("coremarkChasmInterpreterReport") {
+    group = "benchmark"
+    description = "Runs KRWA interpreter and upstream Chasm JVM interpreter on the same CoreMark wasm fixture."
+    dependsOn("classes")
+    workingDir = rootProject.layout.projectDirectory.asFile
+    mainClass.set("uk.shusek.krwa.bench.CoremarkRunnerKt")
+    classpath = mainSourceSet().runtimeClasspath
+    forwardCoremarkSystemProperties()
+    defaultCoremarkSystemProperty("krwa.coremark.backends", "interpreter,chasm_interpreter")
+    defaultCoremarkSystemProperty("krwa.coremark.warmups", "1")
+    defaultCoremarkSystemProperty("krwa.coremark.repetitions", "3")
+    defaultCoremarkSystemProperty("krwa.coremark.printRuns", "true")
+    defaultCoremarkSystemProperty("krwa.coremark.interleave", "false")
+}
+
+tasks.register<JavaExec>("coremarkChasmGate") {
+    group = "verification"
+    description = "Legacy compiled-backend sanity gate against the measured upstream Chasm JVM interpreter score."
+    dependsOn("classes")
+    workingDir = rootProject.layout.projectDirectory.asFile
+    mainClass.set("uk.shusek.krwa.bench.CoremarkRunnerKt")
+    classpath = mainSourceSet().runtimeClasspath
+    forwardCoremarkSystemProperties()
+    defaultCoremarkSystemProperty("krwa.coremark.backends", "compiled")
+    defaultCoremarkSystemProperty("krwa.coremark.warmups", "0")
+    defaultCoremarkSystemProperty("krwa.coremark.repetitions", "1")
+    defaultCoremarkSystemProperty("krwa.coremark.referenceName", "chasm_upstream_jvm")
+    defaultCoremarkSystemProperty("krwa.coremark.referenceScore", "337.83783")
+    defaultCoremarkSystemProperty("krwa.coremark.referenceMetric", "p50")
+    defaultCoremarkSystemProperty("krwa.coremark.failBelowReference", "true")
+}
+
+tasks.register<JavaExec>("coremarkChasmReport") {
+    group = "benchmark"
+    description = "Legacy mixed KRWA interpreter/compiled CoreMark report against the measured upstream Chasm JVM interpreter score."
+    dependsOn("classes")
+    workingDir = rootProject.layout.projectDirectory.asFile
+    mainClass.set("uk.shusek.krwa.bench.CoremarkRunnerKt")
+    classpath = mainSourceSet().runtimeClasspath
+    forwardCoremarkSystemProperties()
+    defaultCoremarkSystemProperty("krwa.coremark.backends", "interpreter,compiled")
+    defaultCoremarkSystemProperty("krwa.coremark.warmups", "0")
+    defaultCoremarkSystemProperty("krwa.coremark.repetitions", "1")
+    defaultCoremarkSystemProperty("krwa.coremark.referenceName", "chasm_upstream_jvm")
+    defaultCoremarkSystemProperty("krwa.coremark.referenceScore", "337.83783")
+    defaultCoremarkSystemProperty("krwa.coremark.referenceMetric", "p50")
+    defaultCoremarkSystemProperty("krwa.coremark.failBelowReference", "false")
+}
+
+tasks.register<JavaExec>("coremarkInterpreterChasmReport") {
+    group = "benchmark"
+    description = "Prints KRWA interpreter CoreMark score against the measured upstream Chasm JVM interpreter score."
+    dependsOn("classes")
+    workingDir = rootProject.layout.projectDirectory.asFile
+    mainClass.set("uk.shusek.krwa.bench.CoremarkRunnerKt")
+    classpath = mainSourceSet().runtimeClasspath
+    forwardCoremarkSystemProperties()
+    defaultCoremarkSystemProperty("krwa.coremark.backends", "interpreter")
+    defaultCoremarkSystemProperty("krwa.coremark.warmups", "0")
+    defaultCoremarkSystemProperty("krwa.coremark.repetitions", "1")
+    defaultCoremarkSystemProperty("krwa.coremark.referenceName", "chasm_upstream_jvm_interpreter")
+    defaultCoremarkSystemProperty("krwa.coremark.referenceScore", "337.83783")
+    defaultCoremarkSystemProperty("krwa.coremark.referenceMetric", "p50")
+    defaultCoremarkSystemProperty("krwa.coremark.failBelowReference", "false")
+}
+
+tasks.register<JavaExec>("coremarkInterpreterChasmStableReport") {
+    group = "benchmark"
+    description = "Runs a less noisy KRWA interpreter-only CoreMark report against the measured upstream Chasm JVM interpreter score."
+    dependsOn("classes")
+    workingDir = rootProject.layout.projectDirectory.asFile
+    mainClass.set("uk.shusek.krwa.bench.CoremarkRunnerKt")
+    classpath = mainSourceSet().runtimeClasspath
+    forwardCoremarkSystemProperties()
+    defaultCoremarkSystemProperty("krwa.coremark.backends", "interpreter")
+    defaultCoremarkSystemProperty("krwa.coremark.warmups", "1")
+    defaultCoremarkSystemProperty("krwa.coremark.repetitions", "3")
+    defaultCoremarkSystemProperty("krwa.coremark.referenceName", "chasm_upstream_jvm_interpreter")
+    defaultCoremarkSystemProperty("krwa.coremark.referenceScore", "337.83783")
+    defaultCoremarkSystemProperty("krwa.coremark.referenceMetric", "p50")
+    defaultCoremarkSystemProperty("krwa.coremark.failBelowReference", "false")
+}
+
+tasks.register<JavaExec>("coremarkInterpreterChasmGate") {
+    group = "verification"
+    description = "Fails if KRWA interpreter CoreMark does not beat the measured upstream Chasm JVM interpreter score."
+    dependsOn("classes")
+    workingDir = rootProject.layout.projectDirectory.asFile
+    mainClass.set("uk.shusek.krwa.bench.CoremarkRunnerKt")
+    classpath = mainSourceSet().runtimeClasspath
+    forwardCoremarkSystemProperties()
+    defaultCoremarkSystemProperty("krwa.coremark.backends", "interpreter")
+    defaultCoremarkSystemProperty("krwa.coremark.warmups", "1")
+    defaultCoremarkSystemProperty("krwa.coremark.repetitions", "3")
+    defaultCoremarkSystemProperty("krwa.coremark.referenceName", "chasm_upstream_jvm_interpreter")
+    defaultCoremarkSystemProperty("krwa.coremark.referenceScore", "337.83783")
+    defaultCoremarkSystemProperty("krwa.coremark.referenceMetric", "p50")
+    defaultCoremarkSystemProperty("krwa.coremark.failBelowReference", "true")
+}
+
+tasks.register<JavaExec>("coremarkOpcodeReport") {
+    group = "benchmark"
+    description = "Prints static opcode and adjacent-pattern counts for Chasm's CoreMark wasm fixture."
+    dependsOn("classes")
+    workingDir = rootProject.layout.projectDirectory.asFile
+    mainClass.set("uk.shusek.krwa.bench.CoremarkOpcodeReportKt")
+    classpath = mainSourceSet().runtimeClasspath
+    forwardCoremarkSystemProperties()
+}
+
+tasks.register<JavaExec>("coremarkDynamicOpcodeReport") {
+    group = "benchmark"
+    description = "Profiles dynamic opcode and adjacent-pattern counts while running Chasm's CoreMark wasm fixture."
+    dependsOn("classes")
+    workingDir = rootProject.layout.projectDirectory.asFile
+    mainClass.set("uk.shusek.krwa.bench.CoremarkDynamicOpcodeReportKt")
+    classpath = mainSourceSet().runtimeClasspath
+    forwardCoremarkSystemProperties()
+}
+
+tasks.register<JavaExec>("coremarkFunctionCallReport") {
+    group = "benchmark"
+    description = "Profiles dynamic function call targets for Chasm's CoreMark wasm fixture."
+    dependsOn("classes")
+    workingDir = rootProject.layout.projectDirectory.asFile
+    mainClass.set("uk.shusek.krwa.bench.CoremarkFunctionCallReportKt")
+    classpath = mainSourceSet().runtimeClasspath
+    forwardCoremarkSystemProperties()
+}
+
+tasks.register<JavaExec>("coremarkLoweredOpcodeReport") {
+    group = "benchmark"
+    description = "Prints static lowered-dispatch opcode and adjacent-pattern counts for Chasm's CoreMark wasm fixture."
+    dependsOn("classes")
+    workingDir = rootProject.layout.projectDirectory.asFile
+    mainClass.set("uk.shusek.krwa.bench.CoremarkLoweredOpcodeReportKt")
+    classpath = mainSourceSet().runtimeClasspath
+    forwardCoremarkSystemProperties()
+}
+
+tasks.register<JavaExec>("coremarkLoweredFunctionReport") {
+    group = "benchmark"
+    description = "Prints per-function lowered-dispatch counts for Chasm's CoreMark wasm fixture."
+    dependsOn("classes")
+    workingDir = rootProject.layout.projectDirectory.asFile
+    mainClass.set("uk.shusek.krwa.bench.CoremarkLoweredFunctionReportKt")
+    classpath = mainSourceSet().runtimeClasspath
+    forwardCoremarkSystemProperties()
+}
+
+tasks.register<JavaExec>("coremarkFrameSlotPlanReport") {
+    group = "benchmark"
+    description = "Prints a Chasm-style frame-slot lowering plan for Chasm's CoreMark wasm fixture."
+    dependsOn("classes")
+    workingDir = rootProject.layout.projectDirectory.asFile
+    mainClass.set("uk.shusek.krwa.bench.CoremarkFrameSlotPlanReportKt")
+    classpath = mainSourceSet().runtimeClasspath
+    forwardCoremarkSystemProperties()
+}
+
+tasks.register<JavaExec>("coremarkCompiledClassDump") {
+    group = "benchmark"
+    description = "Dumps generated compiled CoreMark classes for bytecode inspection."
+    dependsOn("classes")
+    workingDir = rootProject.layout.projectDirectory.asFile
+    mainClass.set("uk.shusek.krwa.bench.CoremarkCompiledClassDumpKt")
+    classpath = mainSourceSet().runtimeClasspath
+    forwardCoremarkSystemProperties()
+}
+
+tasks.register<JavaExec>("coremarkChasmStableReport") {
+    group = "benchmark"
+    description = "Legacy mixed KRWA interpreter/compiled CoreMark report against the measured upstream Chasm JVM interpreter score."
+    dependsOn("classes")
+    workingDir = rootProject.layout.projectDirectory.asFile
+    mainClass.set("uk.shusek.krwa.bench.CoremarkRunnerKt")
+    classpath = mainSourceSet().runtimeClasspath
+    forwardCoremarkSystemProperties()
+    defaultCoremarkSystemProperty("krwa.coremark.backends", "interpreter,compiled")
+    defaultCoremarkSystemProperty("krwa.coremark.warmups", "1")
+    defaultCoremarkSystemProperty("krwa.coremark.repetitions", "3")
+    defaultCoremarkSystemProperty("krwa.coremark.interleave", "true")
+    defaultCoremarkSystemProperty("krwa.coremark.referenceName", "chasm_upstream_jvm")
+    defaultCoremarkSystemProperty("krwa.coremark.referenceScore", "337.83783")
+    defaultCoremarkSystemProperty("krwa.coremark.referenceMetric", "p50")
+    defaultCoremarkSystemProperty("krwa.coremark.failBelowReference", "false")
+}
+
+tasks.register<JavaExec>("coremarkChasmStableGate") {
+    group = "verification"
+    description = "Legacy compiled-backend sanity gate against the measured upstream Chasm JVM interpreter score."
+    dependsOn("classes")
+    workingDir = rootProject.layout.projectDirectory.asFile
+    mainClass.set("uk.shusek.krwa.bench.CoremarkRunnerKt")
+    classpath = mainSourceSet().runtimeClasspath
+    forwardCoremarkSystemProperties()
+    defaultCoremarkSystemProperty("krwa.coremark.backends", "compiled")
+    defaultCoremarkSystemProperty("krwa.coremark.warmups", "1")
+    defaultCoremarkSystemProperty("krwa.coremark.repetitions", "3")
+    defaultCoremarkSystemProperty("krwa.coremark.referenceName", "chasm_upstream_jvm")
+    defaultCoremarkSystemProperty("krwa.coremark.referenceScore", "337.83783")
+    defaultCoremarkSystemProperty("krwa.coremark.referenceMetric", "p50")
+    defaultCoremarkSystemProperty("krwa.coremark.failBelowReference", "true")
 }
