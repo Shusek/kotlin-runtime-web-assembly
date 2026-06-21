@@ -210,6 +210,16 @@ tasks.register<JavaExec>("coremarkFrameSlotPlanReport") {
     forwardCoremarkSystemProperties()
 }
 
+tasks.register<JavaExec>("coremarkSlotPlanSelfCheck") {
+    group = "verification"
+    description = "Compares the CoreMark slot-plan probe against the standard interpreter with deterministic inputs."
+    dependsOn("classes")
+    workingDir = rootProject.layout.projectDirectory.asFile
+    mainClass.set("uk.shusek.krwa.bench.CoremarkSlotPlanSelfCheckKt")
+    classpath = mainSourceSet().runtimeClasspath
+    forwardCoremarkSystemProperties()
+}
+
 tasks.register<JavaExec>("coremarkCompiledClassDump") {
     group = "benchmark"
     description = "Dumps generated compiled CoreMark classes for bytecode inspection."

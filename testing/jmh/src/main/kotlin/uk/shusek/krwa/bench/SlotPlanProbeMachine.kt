@@ -75,6 +75,14 @@ internal class SlotPlanProbeMachine(
                         stack[sp++] = materialized
                         pc++
                     }
+                    OP_MATERIALIZE_SLOT -> {
+                        stack[sp++] = slots[plan.src0[pc].toInt()]
+                        pc++
+                    }
+                    OP_MATERIALIZE_CONST -> {
+                        stack[sp++] = plan.src0[pc]
+                        pc++
+                    }
                     OP_UNREACHABLE -> throw WasmRuntimeException("unreachable")
                     OP_BLOCK,
                     OP_LOOP -> {
@@ -190,6 +198,14 @@ internal class SlotPlanProbeMachine(
                             }
                         slots[plan.dst[pc]] = stored
                         sp = sp0
+                        pc++
+                    }
+                    OP_SET_SLOT_SLOT -> {
+                        slots[plan.dst[pc]] = slots[plan.src0[pc].toInt()]
+                        pc++
+                    }
+                    OP_SET_SLOT_CONST -> {
+                        slots[plan.dst[pc]] = plan.src0[pc]
                         pc++
                     }
                     OP_GLOBAL_GET -> {
@@ -717,7 +733,11 @@ internal class SlotPlanProbeMachine(
         }
 
         private fun addSet(slot: Int, source: Source) {
-            addOp(OP_SET_SLOT, 0, slot, source, NO_SOURCE, NO_SOURCE, 0, 0, 0, 0)
+            when (source.kind) {
+                SRC_SLOT -> addOp(OP_SET_SLOT_SLOT, 0, slot, source, NO_SOURCE, NO_SOURCE, 0, 0, 0, 0)
+                SRC_CONST -> addOp(OP_SET_SLOT_CONST, 0, slot, source, NO_SOURCE, NO_SOURCE, 0, 0, 0, 0)
+                else -> addOp(OP_SET_SLOT, 0, slot, source, NO_SOURCE, NO_SOURCE, 0, 0, 0, 0)
+            }
         }
 
         private fun addBinary(opcode: Int, modeValue: Int, destination: Int, left: Source, right: Source) {
@@ -817,7 +837,11 @@ internal class SlotPlanProbeMachine(
         private fun materializeStack() {
             if (abstractStack.isEmpty()) return
             for (source in abstractStack) {
-                addOp(OP_MATERIALIZE, 0, -1, source, NO_SOURCE, NO_SOURCE, 0, 0, 0, 0)
+                when (source.kind) {
+                    SRC_SLOT -> addOp(OP_MATERIALIZE_SLOT, 0, -1, source, NO_SOURCE, NO_SOURCE, 0, 0, 0, 0)
+                    SRC_CONST -> addOp(OP_MATERIALIZE_CONST, 0, -1, source, NO_SOURCE, NO_SOURCE, 0, 0, 0, 0)
+                    else -> addOp(OP_MATERIALIZE, 0, -1, source, NO_SOURCE, NO_SOURCE, 0, 0, 0, 0)
+                }
             }
             abstractStack.clear()
         }
@@ -1205,6 +1229,10 @@ internal class SlotPlanProbeMachine(
         private const val OP_BLOCK = 20
         private const val OP_LOOP = 21
         private const val OP_END = 22
+        private const val OP_MATERIALIZE_SLOT = 23
+        private const val OP_MATERIALIZE_CONST = 24
+        private const val OP_SET_SLOT_SLOT = 25
+        private const val OP_SET_SLOT_CONST = 26
 
         private const val I32_ADD = 1
         private const val I32_SUB = 2

@@ -2132,3 +2132,76 @@ earlier debug comparison showed the first visible divergence around
 value than the valid frame-slot probe. That may still be a prior-memory-state
 symptom, so the direct function harness should compare isolated function
 results and relevant memory mutations against the standard interpreter.
+
+Follow-up on 2026-06-21: added `:jmh:coremarkSlotPlanSelfCheck`, a
+deterministic semantic check for the slot-plan probe. It compares selected hot
+CoreMark functions and a full `run` with a deterministic host `clock_ms`
+against the standard interpreter. Default `clock_step_ms=10000` forces a
+positive full-run result instead of the benchmark-threshold zero seen with
+smaller deterministic steps.
+
+```text
+CoreMark slot-plan self-check
+direct_function_cases=4
+case=func2_forward_seed match=true interpreter_result=[0] slot_plan_result=[0] interpreter_mem_crc=cd8ac382 slot_plan_mem_crc=cd8ac382
+case=func2_reverse_seed match=true interpreter_result=[0] slot_plan_result=[0] interpreter_mem_crc=cd8ac382 slot_plan_mem_crc=cd8ac382
+case=func10_crc_a match=true interpreter_result=[29700] slot_plan_result=[29700] interpreter_mem_crc=cd8ac382 slot_plan_mem_crc=cd8ac382
+case=func10_crc_b match=true interpreter_result=[59156] slot_plan_result=[59156] interpreter_mem_crc=cd8ac382 slot_plan_mem_crc=cd8ac382
+case=export_run clock_step_ms=10000 match=true interpreter_result=[1073741824] slot_plan_result=[1073741824] interpreter_mem_crc=a4cb5eda slot_plan_mem_crc=a4cb5eda
+```
+
+Also specialized four high-frequency slot-plan dispatches so the hot loop
+does not branch on `sourceKind` for common cases:
+
+- `OP_MATERIALIZE_SLOT`
+- `OP_MATERIALIZE_CONST`
+- `OP_SET_SLOT_SLOT`
+- `OP_SET_SLOT_CONST`
+
+The isolated slot-plan run improved and was stable:
+
+```text
+slot_plan_probe run=1 score=192.554550 ms=20992.390
+slot_plan_probe run=2 score=215.130875 ms=19484.622
+slot_plan_probe run=3 score=230.574127 ms=17785.111
+slot_plan_probe score_avg=212.753184 score_min=192.554550 score_p50=215.130875 score_best=230.574127 valid_runs=3 invalid_runs=0 ms_avg=19420.708 ms_min=17785.111 ms_p50=19484.622 ms_max=20992.390
+```
+
+Final recheck after rejecting the control-array pooling attempt:
+
+```text
+slot_plan_probe run=1 score=199.853439 ms=21211.081
+slot_plan_probe run=2 score=222.353989 ms=18915.547
+slot_plan_probe run=3 score=218.738602 ms=19472.332
+slot_plan_probe score_avg=213.648677 score_min=199.853439 score_p50=218.738602 score_best=222.353989 valid_runs=3 invalid_runs=0 ms_avg=19866.320 ms_min=18915.547 ms_p50=19472.332 ms_max=21211.081
+```
+
+But the sequential report with warmup is still not Chasm-level and still has a
+zero-score run:
+
+```text
+interpreter run=1 score=249.252243 ms=16665.492
+interpreter run=2 score=247.667801 ms=16789.289
+interpreter run=3 score=241.138168 ms=17196.271
+interpreter score_avg=246.019404 score_min=241.138168 score_p50=247.667801 score_best=249.252243 valid_runs=3 invalid_runs=0 ms_avg=16883.684 ms_min=16665.492 ms_p50=16789.289 ms_max=17196.271
+
+slot_plan_probe run=1 score=100.833557 ms=35535.905
+slot_plan_probe run=2 score=0.000000 ms=9860.267
+slot_plan_probe run=3 score=205.761322 ms=19889.262
+slot_plan_probe score_avg=102.198293 score_min=0.000000 score_p50=100.833557 score_best=205.761322 valid_runs=2 invalid_runs=1 ms_avg=21761.811 ms_min=9860.267 ms_p50=19889.262 ms_max=35535.905
+
+chasm_interpreter run=1 score=313.528778 ms=16670.252
+chasm_interpreter run=2 score=289.414673 ms=18022.778
+chasm_interpreter run=3 score=308.522949 ms=16827.790
+chasm_interpreter score_avg=303.822133 score_min=289.414673 score_p50=308.522949 score_best=313.528778 valid_runs=3 invalid_runs=0 ms_avg=17173.607 ms_min=16670.252 ms_p50=16827.790 ms_max=18022.778
+```
+
+Interpretation: the slot-plan executor now has a deterministic guardrail and
+some dispatch specialization, but it remains too slow and too noisy in the real
+CoreMark score. A simple per-function pool for the four control-stack arrays
+was tried and rejected because it regressed the isolated slot-plan run to
+`score_p50=175.623459`. The next optimization should target runtime overhead
+with measurement, not assumed allocation wins: reduce separate stack arrays per
+nested call, specialize more hot op/source combinations, and consider
+prebuilding all function plans at instance creation so no plan construction is
+charged to the measured run.
