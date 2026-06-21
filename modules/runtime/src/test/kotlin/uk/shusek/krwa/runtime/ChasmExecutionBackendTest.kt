@@ -1,6 +1,8 @@
 package uk.shusek.krwa.runtime
 
+import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Test
 import uk.shusek.krwa.wasm.WasmParser
 import uk.shusek.krwa.wasm.types.FunctionType
@@ -42,6 +44,40 @@ class ChasmExecutionBackendTest {
         assertEquals(14, instance.export("callDouble").apply(7)[0].toInt())
     }
 
+    @Test
+    fun exposesExportedMemoryView() {
+        val instance =
+            Instance.builder(WasmParser.parse(MEMORY_EXPORT_WASM))
+                .withExecutionBackend(ExecutionBackend.CHASM)
+                .build()
+
+        val memory = instance.exports().memory("memory")
+
+        assertEquals(ExecutionBackend.CHASM, instance.executionBackend())
+        assertEquals(1, memory.initialPages())
+        assertEquals(1, memory.pages())
+        assertEquals(2, memory.maximumPages())
+        assertFalse(memory.shared())
+
+        memory.writeI32(0, 0x11223344)
+        assertEquals(0x11223344, instance.export("read").apply(0)[0].toInt())
+
+        instance.export("write").apply(8, 0x22334455)
+        assertEquals(0x22334455, memory.readInt(8))
+
+        memory.writeShort(4, 0x5566.toShort())
+        assertEquals(0x5566L, memory.readU16(4))
+
+        memory.write(6, byteArrayOf(1, 2, 3))
+        val bytes = ByteArray(3)
+        memory.read(6, bytes, 0, bytes.size)
+        assertArrayEquals(byteArrayOf(1, 2, 3), bytes)
+
+        assertEquals(1, memory.grow(1))
+        assertEquals(2, memory.pages())
+        assertEquals(-1, memory.grow(1))
+    }
+
     private companion object {
         val ADD_WASM =
             byteArrayOf(
@@ -71,5 +107,42 @@ class ChasmExecutionBackendTest {
                 0x10, 0x00,
                 0x0B,
             )
+
+        val MEMORY_EXPORT_WASM =
+            b(
+                0x00, 0x61, 0x73, 0x6D,
+                0x01, 0x00, 0x00, 0x00,
+                0x01, 0x0B,
+                0x02,
+                0x60, 0x02, 0x7F, 0x7F, 0x00,
+                0x60, 0x01, 0x7F, 0x01, 0x7F,
+                0x03, 0x03,
+                0x02, 0x00, 0x01,
+                0x05, 0x04,
+                0x01,
+                0x01, 0x01, 0x02,
+                0x07, 0x19,
+                0x03,
+                0x06, 0x6D, 0x65, 0x6D, 0x6F, 0x72, 0x79,
+                0x02, 0x00,
+                0x05, 0x77, 0x72, 0x69, 0x74, 0x65,
+                0x00, 0x00,
+                0x04, 0x72, 0x65, 0x61, 0x64,
+                0x00, 0x01,
+                0x0A, 0x13,
+                0x02,
+                0x09, 0x00,
+                0x20, 0x00,
+                0x20, 0x01,
+                0x36, 0x02, 0x00,
+                0x0B,
+                0x07, 0x00,
+                0x20, 0x00,
+                0x28, 0x02, 0x00,
+                0x0B,
+            )
+
+        private fun b(vararg bytes: Int): ByteArray =
+            ByteArray(bytes.size) { index -> bytes[index].toByte() }
     }
 }

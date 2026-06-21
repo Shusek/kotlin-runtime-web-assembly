@@ -2404,3 +2404,70 @@ run and far below Chasm. To actually "use Chasm as an interpreter
 implementation" outside the benchmark, the next useful work is a real runtime
 adapter for Chasm's store/import/memory/global model rather than more tiny
 allocation tweaks in this prototype.
+
+Follow-up on 2026-06-21: the JVM `ExecutionBackend.CHASM` adapter now exposes
+exported memories through the KRWA `Memory` interface. The view is backed by
+Chasm's public embedding memory APIs (`read*`, `write*`, `growMemory`,
+`sizeMemory`) and maps Chasm byte-size reporting back to KRWA page counts.
+This makes the Chasm backend a more practical runtime implementation instead
+of only an exported-function call adapter. Imported memories/globals/tables/tags
+are still not supported by this backend.
+
+Verification:
+
+```text
+./gradlew --no-daemon :runtime:compileKotlinJvm --quiet
+./gradlew --no-daemon :runtime:jvmTest --tests uk.shusek.krwa.runtime.ChasmExecutionBackendTest --quiet
+```
+
+The Chasm backend test now covers:
+
+- numeric exported function calls,
+- host function imports,
+- exported memory `pages`, `grow`, `read`, and `write`.
+
+Performance sanity after the memory-view change:
+
+```text
+./gradlew --no-daemon :jmh:coremarkKrwa \
+  -Dkrwa.coremark.backends=interpreter,chasm_interpreter \
+  -Dkrwa.coremark.warmups=1 \
+  -Dkrwa.coremark.repetitions=3 \
+  -Dkrwa.coremark.printRuns=true --quiet
+
+interpreter run=1 score=267.236786 ms=19287.811
+interpreter run=2 score=253.807114 ms=20001.909
+interpreter run=3 score=213.481354 ms=22857.941
+interpreter score_avg=244.841751 score_min=213.481354 score_p50=253.807114 score_best=267.236786 valid_runs=3 invalid_runs=0 ms_avg=20715.887 ms_min=19287.811 ms_p50=20001.909 ms_max=22857.941
+
+chasm_interpreter run=1 score=0.000000 ms=17648.710
+chasm_interpreter run=2 score=157.263611 ms=29002.923
+chasm_interpreter run=3 score=0.000000 ms=16512.152
+chasm_interpreter score_avg=52.421204 score_min=0.000000 score_p50=0.000000 score_best=157.263611 valid_runs=1 invalid_runs=2 ms_avg=21054.595 ms_min=16512.152 ms_p50=17648.710 ms_max=29002.923
+```
+
+Do not use the mixed result above as a Chasm performance signal; it reproduced
+the already-known invalid zero-score issue when Chasm is run after another
+backend in this simple harness.
+
+Chasm-only was valid:
+
+```text
+./gradlew --no-daemon :jmh:coremarkKrwa \
+  -Dkrwa.coremark.backends=chasm_interpreter \
+  -Dkrwa.coremark.warmups=1 \
+  -Dkrwa.coremark.repetitions=3 \
+  -Dkrwa.coremark.printRuns=true --quiet
+
+chasm_interpreter run=1 score=279.271088 ms=18920.646
+chasm_interpreter run=2 score=274.499054 ms=18381.684
+chasm_interpreter run=3 score=273.635254 ms=18481.776
+chasm_interpreter score_avg=275.801799 score_min=273.635254 score_p50=274.499054 score_best=279.271088 valid_runs=3 invalid_runs=0 ms_avg=18594.702 ms_min=18381.684 ms_p50=18481.776 ms_max=18920.646
+```
+
+This valid Chasm-only score is lower than earlier `340+` runs, so the branch
+still should not claim stable Chasm-reference parity from a single local run.
+The functional direction is correct: if the user wants "put Chasm in as an
+interpreter implementation", the backend path is now more complete. The
+remaining adapter gaps are imported memories/globals/tables/tags and stronger,
+less noisy performance gating.
