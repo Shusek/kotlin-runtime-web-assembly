@@ -7,6 +7,7 @@ apply(plugin = "org.jetbrains.kotlin.kapt")
 
 dependencies {
     add("implementation", libs.jmhCore)
+    add("implementation", libs.chasmJvm)
     add("implementation", krwa("compiler"))
     add("implementation", krwa("runtime"))
     add("implementation", krwa("wabt"))
@@ -77,6 +78,52 @@ tasks.register<JavaExec>("coremarkChasmBackendReport") {
     defaultCoremarkSystemProperty("krwa.coremark.warmups", "1")
     defaultCoremarkSystemProperty("krwa.coremark.repetitions", "3")
     defaultCoremarkSystemProperty("krwa.coremark.printRuns", "true")
+}
+
+tasks.register<JavaExec>("coremarkChasmDirectReport") {
+    group = "benchmark"
+    description = "Runs direct Chasm embedding on the CoreMark wasm fixture without KRWA runtime adapters."
+    dependsOn("classes")
+    workingDir = rootProject.layout.projectDirectory.asFile
+    mainClass.set("uk.shusek.krwa.bench.CoremarkRunnerKt")
+    classpath = mainSourceSet().runtimeClasspath
+    forwardCoremarkSystemProperties()
+    defaultCoremarkSystemProperty("krwa.coremark.backends", "chasm_direct")
+    defaultCoremarkSystemProperty("krwa.coremark.warmups", "1")
+    defaultCoremarkSystemProperty("krwa.coremark.repetitions", "3")
+    defaultCoremarkSystemProperty("krwa.coremark.printRuns", "true")
+}
+
+tasks.register<JavaExec>("coremarkChasmAdapterDirectReport") {
+    group = "benchmark"
+    description = "Compares the KRWA Chasm backend adapter against direct Chasm embedding."
+    dependsOn("classes")
+    workingDir = rootProject.layout.projectDirectory.asFile
+    mainClass.set("uk.shusek.krwa.bench.CoremarkRunnerKt")
+    classpath = mainSourceSet().runtimeClasspath
+    forwardCoremarkSystemProperties()
+    defaultCoremarkSystemProperty("krwa.coremark.backends", "chasm_interpreter,chasm_direct")
+    defaultCoremarkSystemProperty("krwa.coremark.warmups", "1")
+    defaultCoremarkSystemProperty("krwa.coremark.repetitions", "3")
+    defaultCoremarkSystemProperty("krwa.coremark.printRuns", "true")
+}
+
+tasks.register<JavaExec>("coremarkChasmAdapterDirectGate") {
+    group = "verification"
+    description = "Fails if the KRWA Chasm backend adapter is below direct Chasm embedding in the same CoreMark run."
+    dependsOn("classes")
+    workingDir = rootProject.layout.projectDirectory.asFile
+    mainClass.set("uk.shusek.krwa.bench.CoremarkRunnerKt")
+    classpath = mainSourceSet().runtimeClasspath
+    forwardCoremarkSystemProperties()
+    defaultCoremarkSystemProperty("krwa.coremark.backends", "chasm_interpreter,chasm_direct")
+    defaultCoremarkSystemProperty("krwa.coremark.warmups", "1")
+    defaultCoremarkSystemProperty("krwa.coremark.repetitions", "3")
+    defaultCoremarkSystemProperty("krwa.coremark.printRuns", "true")
+    defaultCoremarkSystemProperty("krwa.coremark.referenceBackend", "chasm_direct")
+    defaultCoremarkSystemProperty("krwa.coremark.referenceMetric", "p50")
+    defaultCoremarkSystemProperty("krwa.coremark.referenceMinRatio", "1.0")
+    defaultCoremarkSystemProperty("krwa.coremark.failBelowReference", "true")
 }
 
 tasks.register<JavaExec>("coremarkChasmBackendGate") {

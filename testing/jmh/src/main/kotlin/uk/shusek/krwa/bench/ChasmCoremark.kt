@@ -1,5 +1,12 @@
 package uk.shusek.krwa.bench
 
+import io.github.charlietap.chasm.embedding.dsl.imports as directChasmImports
+import io.github.charlietap.chasm.embedding.invoke as directChasmInvoke
+import io.github.charlietap.chasm.embedding.instance as directChasmInstance
+import io.github.charlietap.chasm.embedding.module as directChasmModule
+import io.github.charlietap.chasm.embedding.shapes.ChasmResult
+import io.github.charlietap.chasm.embedding.store as directChasmStore
+import io.github.charlietap.chasm.runtime.value.NumberValue
 import uk.shusek.krwa.compiler.MachineFactoryCompiler
 import uk.shusek.krwa.runtime.ByteArrayMemory
 import uk.shusek.krwa.runtime.ByteBufferMemory
@@ -19,6 +26,7 @@ import uk.shusek.krwa.wasm.types.ValType
 enum class CoremarkBackend {
     INTERPRETER,
     CHASM_INTERPRETER,
+    CHASM_DIRECT,
     SLOT_PLAN_PROBE,
     EXPERIMENTAL_FAST,
     COMPILED_COLD,
@@ -42,6 +50,9 @@ object ChasmCoremark {
     }
 
     fun run(module: WasmModule, backend: CoremarkBackend): CoremarkResult {
+        if (backend == CoremarkBackend.CHASM_DIRECT) {
+            return runDirectChasm(module.originalBytes() ?: loadModuleBytes())
+        }
         val start = System.nanoTime()
         val instance = newInstance(module, backend)
         val scoreBits = instance.export("run").apply()[0]
@@ -54,7 +65,7 @@ object ChasmCoremark {
         backend: CoremarkBackend,
         listener: ExecutionListener,
     ): CoremarkResult {
-        require(backend != CoremarkBackend.CHASM_INTERPRETER) {
+        require(backend != CoremarkBackend.CHASM_INTERPRETER && backend != CoremarkBackend.CHASM_DIRECT) {
             "Chasm interpreter backend cannot be profiled by KRWA ExecutionListener"
         }
         val start = System.nanoTime()
@@ -104,6 +115,7 @@ object ChasmCoremark {
                     }
                 }
             CoremarkBackend.CHASM_INTERPRETER -> builder.withExecutionBackend(ExecutionBackend.CHASM)
+            CoremarkBackend.CHASM_DIRECT -> error("direct Chasm backend does not use KRWA Instance")
             CoremarkBackend.SLOT_PLAN_PROBE -> builder.withMachineFactory(::SlotPlanProbeMachine)
             CoremarkBackend.EXPERIMENTAL_FAST -> builder.withExperimentalFastInterpreter()
             CoremarkBackend.COMPILED_COLD -> builder.withMachineFactory { MachineFactoryCompiler.compile(it) }
@@ -112,6 +124,40 @@ object ChasmCoremark {
 
         return builder.build()
     }
+
+    private fun runDirectChasm(bytes: ByteArray): CoremarkResult {
+        val start = System.nanoTime()
+        val clockStart = System.nanoTime()
+        val store = directChasmStore()
+        val imports =
+            directChasmImports(store) {
+                function {
+                    moduleName = "env"
+                    entityName = "clock_ms"
+                    type {
+                        results { i64() }
+                    }
+                    reference {
+                        listOf(NumberValue.I64((System.nanoTime() - clockStart) / 1_000_000L))
+                    }
+                }
+            }
+
+        val decodedModule = directChasmModule(bytes).orThrow("decode direct Chasm module")
+        val instance = directChasmInstance(store, decodedModule, imports).orThrow("instantiate direct Chasm module")
+        val result = directChasmInvoke(store, instance, "run").orThrow("invoke direct Chasm run")
+        val elapsedNanos = System.nanoTime() - start
+        val score =
+            (result.firstOrNull() as? NumberValue.F32)?.value
+                ?: error("direct Chasm run returned unexpected result: $result")
+        return CoremarkResult(score, elapsedNanos)
+    }
+
+    private fun <S> ChasmResult<S, *>.orThrow(action: String): S =
+        when (this) {
+            is ChasmResult.Success -> result
+            is ChasmResult.Error -> throw IllegalStateException("Chasm $action failed: ${this.error}")
+        }
 
     private fun compiledFactoryFor(module: WasmModule): (Instance) -> Machine {
         val factory = compiledFactory

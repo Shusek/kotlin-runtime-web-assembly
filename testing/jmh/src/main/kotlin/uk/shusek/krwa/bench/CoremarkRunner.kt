@@ -101,30 +101,38 @@ private fun selectedBackends(args: Array<String>): List<CoremarkBackend> {
     return raw
         .split(',')
         .mapNotNull { value ->
-            when (value.trim().lowercase(Locale.ROOT)) {
-                "interpreter", "interpreted", "int" -> CoremarkBackend.INTERPRETER
-                "chasm", "chasm_interpreter", "chasm-interpreter", "upstream_chasm", "upstream-chasm" ->
-                    CoremarkBackend.CHASM_INTERPRETER
-                "slot_plan_probe", "slot-plan-probe", "slot_plan", "slot-plan", "plan_probe", "plan-probe" ->
-                    CoremarkBackend.SLOT_PLAN_PROBE
-                "experimental", "experimental_fast", "experimental-fast", "fast" ->
-                    CoremarkBackend.EXPERIMENTAL_FAST
-                "compiled_cold",
-                "compiled-cold",
-                "compiler_cold",
-                "compiler-cold",
-                "jit_cold",
-                "jit-cold" -> CoremarkBackend.COMPILED_COLD
-                "compiled", "compiler", "jit" -> CoremarkBackend.COMPILED
-                "" -> null
-                else -> error("Unknown backend: $value")
-            }
+            parseBackend(value) ?: if (value.isBlank()) null else error("Unknown backend: $value")
         }
         .ifEmpty { listOf(CoremarkBackend.INTERPRETER, CoremarkBackend.COMPILED) }
 }
 
+private fun parseBackend(value: String): CoremarkBackend? =
+    when (value.trim().lowercase(Locale.ROOT)) {
+        "interpreter", "interpreted", "int" -> CoremarkBackend.INTERPRETER
+        "chasm", "chasm_interpreter", "chasm-interpreter", "upstream_chasm", "upstream-chasm" ->
+            CoremarkBackend.CHASM_INTERPRETER
+        "chasm_direct", "chasm-direct", "direct_chasm", "direct-chasm", "upstream_chasm_direct",
+        "upstream-chasm-direct" -> CoremarkBackend.CHASM_DIRECT
+        "slot_plan_probe", "slot-plan-probe", "slot_plan", "slot-plan", "plan_probe", "plan-probe" ->
+            CoremarkBackend.SLOT_PLAN_PROBE
+        "experimental", "experimental_fast", "experimental-fast", "fast" ->
+            CoremarkBackend.EXPERIMENTAL_FAST
+        "compiled_cold",
+        "compiled-cold",
+        "compiler_cold",
+        "compiler-cold",
+        "jit_cold",
+        "jit-cold" -> CoremarkBackend.COMPILED_COLD
+        "compiled", "compiler", "jit" -> CoremarkBackend.COMPILED
+        "" -> null
+        else -> null
+    }
+
 private fun intProperty(name: String, defaultValue: Int): Int =
     System.getProperty(name)?.toIntOrNull() ?: defaultValue
+
+private fun doubleProperty(name: String, defaultValue: Double): Double =
+    System.getProperty(name)?.toDoubleOrNull() ?: defaultValue
 
 private fun booleanProperty(name: String, defaultValue: Boolean): Boolean =
     System.getProperty(name)?.let { value ->
@@ -136,14 +144,29 @@ private fun booleanProperty(name: String, defaultValue: Boolean): Boolean =
     } ?: defaultValue
 
 private fun referenceComparison(): ReferenceComparison? {
-    val score = System.getProperty("krwa.coremark.referenceScore")?.toDoubleOrNull() ?: return null
-    require(score > 0.0 && score.isFinite()) {
-        "krwa.coremark.referenceScore must be finite and positive"
+    val score = System.getProperty("krwa.coremark.referenceScore")?.toDoubleOrNull()
+    val backend =
+        System.getProperty("krwa.coremark.referenceBackend")?.let { value ->
+            parseBackend(value) ?: error("Unknown reference backend: $value")
+        }
+    if (score == null && backend == null) return null
+    if (score != null) {
+        require(score > 0.0 && score.isFinite()) {
+            "krwa.coremark.referenceScore must be finite and positive"
+        }
+    }
+    val minRatio = doubleProperty("krwa.coremark.referenceMinRatio", 1.0)
+    require(minRatio > 0.0 && minRatio.isFinite()) {
+        "krwa.coremark.referenceMinRatio must be finite and positive"
     }
     return ReferenceComparison(
-        name = System.getProperty("krwa.coremark.referenceName", "reference"),
+        name = System.getProperty("krwa.coremark.referenceName")
+            ?: backend?.name?.lowercase(Locale.ROOT)
+            ?: "reference",
         score = score,
+        backend = backend,
         metric = referenceMetric(),
+        minRatio = minRatio,
         failBelowReference = booleanProperty("krwa.coremark.failBelowReference", false),
     )
 }
@@ -219,11 +242,22 @@ private fun printReferenceComparison(
     reference: ReferenceComparison,
     summaries: List<CoremarkSummary>,
 ) {
+    val referenceSummary =
+        reference.backend?.let { backend ->
+            summaries.firstOrNull { it.backend == backend }
+                ?: error("Reference backend $backend was not measured")
+        }
+    val referenceScore = reference.score ?: reference.metric.select(referenceSummary!!)
+    val requiredScore = referenceScore * reference.minRatio
+    val referenceInvalidRuns = referenceSummary?.invalidRuns ?: 0
     val failures = ArrayList<String>()
     for (summary in summaries) {
+        if (reference.score == null && summary.backend == reference.backend) {
+            continue
+        }
         val score = reference.metric.select(summary)
-        val ratio = score / reference.score
-        val passed = summary.invalidRuns == 0 && score >= reference.score
+        val ratio = score / referenceScore
+        val passed = referenceInvalidRuns == 0 && summary.invalidRuns == 0 && score >= requiredScore
         val status = if (passed) "pass" else "fail"
         val backend = summary.backend.name.lowercase(Locale.ROOT)
         println(
@@ -234,13 +268,15 @@ private fun printReferenceComparison(
                 reference.name,
                 reference.metric.id,
                 score,
-                reference.score,
+                referenceScore,
                 ratio,
                 status,
             )
         )
         if (!passed) {
-            failures.add("$backend ${reference.metric.id} $score < ${reference.name} ${reference.score}")
+            failures.add(
+                "$backend ${reference.metric.id} $score < ${reference.name} $referenceScore * ${reference.minRatio}"
+            )
         }
     }
 
@@ -262,8 +298,10 @@ private data class CoremarkSummary(
 
 private data class ReferenceComparison(
     val name: String,
-    val score: Double,
+    val score: Double?,
+    val backend: CoremarkBackend?,
     val metric: ReferenceMetric,
+    val minRatio: Double,
     val failBelowReference: Boolean,
 )
 

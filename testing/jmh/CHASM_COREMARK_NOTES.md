@@ -71,6 +71,14 @@ backend:
 ./gradlew --no-daemon :jmh:coremarkChasmInterpreterReport
 ```
 
+For adapter overhead, compare the KRWA `ExecutionBackend.CHASM` adapter against
+direct upstream Chasm embedding in the same JVM:
+
+```bash
+./gradlew --no-daemon :jmh:coremarkChasmAdapterDirectReport
+./gradlew --no-daemon :jmh:coremarkChasmAdapterDirectGate
+```
+
 This report runs sequentially by default. Interleaving once produced a Chasm
 `score=0` invalid run in this harness, while Chasm-only and sequential mixed
 runs were valid.
@@ -269,6 +277,10 @@ Backend names:
 
 - `interpreter`: explicitly constructs `InterpreterMachine`, independent from
   global runtime defaults.
+- `chasm_interpreter`: uses KRWA runtime `ExecutionBackend.CHASM`. This is the
+  "Chasm as a runtime interpreter implementation" path.
+- `chasm_direct`: invokes upstream Chasm embedding directly from the benchmark,
+  bypassing KRWA runtime adapters. Use it only to measure adapter overhead.
 - `experimental_fast`: uses `withExperimentalFastInterpreter()`.
 - `compiled`: steady-state compiled backend; compiles the module once and reuses
   the machine factory across fresh instances.
@@ -2561,3 +2573,67 @@ chasm_interpreter score_avg=314.388153 score_min=300.367950 score_p50=318.962311
 This is still below the strict refreshed reference `337.83783`, so the branch
 has not met the final target yet. It does make the Chasm backend comparison
 usable again in a mixed run (`3/3` valid instead of zero-score invalid runs).
+
+Follow-up on 2026-06-22: added `chasm_direct`, a benchmark-only backend that
+uses Chasm's public embedding API directly. This is not a product runtime path;
+it exists to answer whether KRWA's Chasm adapter is materially slower than
+upstream Chasm under the same harness.
+
+The CoreMark runner can now use a measured backend as its reference:
+
+```text
+-Dkrwa.coremark.referenceBackend=chasm_direct
+-Dkrwa.coremark.referenceMetric=p50
+-Dkrwa.coremark.referenceMinRatio=1.0
+```
+
+`coremarkChasmAdapterDirectGate` uses that strict comparison. It may fail under
+local noise, but it is the right target gate for "our Chasm backend should be at
+least direct Chasm in the same run".
+
+Quick one-run adapter/direct sanity:
+
+```text
+./gradlew --no-daemon :jmh:coremarkChasmAdapterDirectReport \
+  -Dkrwa.coremark.warmups=0 \
+  -Dkrwa.coremark.repetitions=1 --quiet
+
+chasm_interpreter run=1 score=332.170746
+chasm_direct run=1 score=315.955780
+```
+
+Reference-backend comparison sanity after adding `referenceBackend` support:
+
+```text
+./gradlew --no-daemon :jmh:coremarkChasmAdapterDirectReport \
+  -Dkrwa.coremark.warmups=0 \
+  -Dkrwa.coremark.repetitions=1 \
+  -Dkrwa.coremark.referenceBackend=chasm_direct \
+  -Dkrwa.coremark.failBelowReference=false --quiet
+
+chasm_interpreter run=1 score=307.266876 ms=23125.905
+chasm_direct run=1 score=307.976593 ms=16423.362
+chasm_interpreter reference=chasm_direct metric=score_p50 score=307.266876 reference_score=307.976593 ratio=0.998 status=fail
+```
+
+Full adapter/direct comparison:
+
+```text
+./gradlew --no-daemon :jmh:coremarkChasmAdapterDirectReport --quiet
+
+chasm_interpreter run=1 score=327.573486 ms=16027.637
+chasm_interpreter run=2 score=322.658722 ms=16015.963
+chasm_interpreter run=3 score=327.135925 ms=21702.885
+chasm_interpreter score_avg=325.789378 score_min=322.658722 score_p50=327.135925 score_best=327.573486 valid_runs=3 invalid_runs=0 ms_avg=17915.495 ms_min=16015.963 ms_p50=16027.637 ms_max=21702.885
+
+chasm_direct run=1 score=325.256134 ms=15736.807
+chasm_direct run=2 score=329.082672 ms=15684.313
+chasm_direct run=3 score=328.245514 ms=15554.688
+chasm_direct score_avg=327.528107 score_min=325.256134 score_p50=328.245514 score_best=329.082672 valid_runs=3 invalid_runs=0 ms_avg=15658.603 ms_min=15554.688 ms_p50=15684.313 ms_max=15736.807
+```
+
+The KRWA adapter was `327.135925 / 328.245514 = 0.9966` of direct Chasm by p50
+in this run. That means the current Chasm-backed runtime path is already close
+to direct upstream Chasm for CoreMark; the remaining mismatch to older
+`337.83783` reference numbers is mostly run-condition/noise/reference drift, not
+a large adapter tax.
