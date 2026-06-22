@@ -108,6 +108,25 @@ tasks.register<JavaExec>("coremarkChasmAdapterDirectReport") {
     defaultCoremarkSystemProperty("krwa.coremark.printRuns", "true")
 }
 
+tasks.register<JavaExec>("coremarkChasmAdapterDirectFairReport") {
+    group = "benchmark"
+    description = "Compares the KRWA Chasm backend adapter against direct Chasm with rotated interleaving."
+    dependsOn("classes")
+    workingDir = rootProject.layout.projectDirectory.asFile
+    mainClass.set("uk.shusek.krwa.bench.CoremarkRunnerKt")
+    classpath = mainSourceSet().runtimeClasspath
+    forwardCoremarkSystemProperties()
+    defaultCoremarkSystemProperty("krwa.coremark.backends", "chasm_interpreter,chasm_direct")
+    defaultCoremarkSystemProperty("krwa.coremark.warmups", "1")
+    defaultCoremarkSystemProperty("krwa.coremark.repetitions", "4")
+    defaultCoremarkSystemProperty("krwa.coremark.printRuns", "true")
+    defaultCoremarkSystemProperty("krwa.coremark.interleave", "true")
+    defaultCoremarkSystemProperty("krwa.coremark.rotateInterleave", "true")
+    defaultCoremarkSystemProperty("krwa.coremark.referenceBackend", "chasm_direct")
+    defaultCoremarkSystemProperty("krwa.coremark.referenceMetric", "p50")
+    defaultCoremarkSystemProperty("krwa.coremark.failBelowReference", "false")
+}
+
 tasks.register<JavaExec>("coremarkChasmAdapterDirectGate") {
     group = "verification"
     description = "Fails if the KRWA Chasm backend adapter is below direct Chasm embedding in the same CoreMark run."

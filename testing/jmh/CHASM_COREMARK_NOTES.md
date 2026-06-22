@@ -76,6 +76,7 @@ direct upstream Chasm embedding in the same JVM:
 
 ```bash
 ./gradlew --no-daemon :jmh:coremarkChasmAdapterDirectReport
+./gradlew --no-daemon :jmh:coremarkChasmAdapterDirectFairReport
 ./gradlew --no-daemon :jmh:coremarkChasmAdapterDirectGate
 ```
 
@@ -2674,3 +2675,48 @@ This run is slower in absolute score than the previous direct comparison, so do
 not treat `298` as a new Chasm target. The useful signal is relative: the KRWA
 Chasm adapter was `298.284851 / 294.507446 = 1.0128` of direct Chasm by p50 in
 the same JVM, which is enough to keep the adapter/direct gate direction strict.
+
+Follow-up on 2026-06-22: the strict sequential adapter/direct gate passed:
+
+```text
+./gradlew --no-daemon :jmh:coremarkChasmAdapterDirectGate --quiet
+
+chasm_interpreter run=1 score=316.130554 ms=16329.499
+chasm_interpreter run=2 score=312.012482 ms=22726.681
+chasm_interpreter run=3 score=335.345398 ms=15439.875
+chasm_interpreter score_avg=321.162811 score_min=312.012482 score_p50=316.130554 score_best=335.345398 valid_runs=3 invalid_runs=0 ms_avg=18165.351 ms_min=15439.875 ms_p50=16329.499 ms_max=22726.681
+
+chasm_direct run=1 score=312.012482 ms=16369.677
+chasm_direct run=2 score=312.434906 ms=22328.847
+chasm_direct run=3 score=324.254211 ms=15751.396
+chasm_direct score_avg=316.233866 score_min=312.012482 score_p50=312.434906 score_best=324.254211 valid_runs=3 invalid_runs=0 ms_avg=18149.973 ms_min=15751.396 ms_p50=16369.677 ms_max=22328.847
+chasm_interpreter reference=chasm_direct metric=score_p50 score=316.130554 reference_score=312.434906 ratio=1.012 status=pass
+```
+
+However, fixed-order interleaving exposed an order-sensitive gap:
+
+```text
+./gradlew --no-daemon :jmh:coremarkChasmAdapterDirectGate \
+  -Dkrwa.coremark.interleave=true --quiet
+
+chasm_interpreter score_avg=310.961853 score_min=291.757843 score_p50=309.837341 score_best=331.290375 valid_runs=3 invalid_runs=0 ms_avg=18396.382 ms_min=15556.779 ms_p50=17224.837 ms_max=22407.529
+chasm_direct score_avg=324.707011 score_min=323.642059 score_p50=324.675323 score_best=325.803650 valid_runs=3 invalid_runs=0 ms_avg=19780.968 ms_min=16048.946 ms_p50=21548.653 ms_max=21745.306
+chasm_interpreter reference=chasm_direct metric=score_p50 score=309.837341 reference_score=324.675323 ratio=0.954 status=fail
+```
+
+The runner now supports `-Dkrwa.coremark.rotateInterleave=true`, and
+`coremarkChasmAdapterDirectFairReport` uses rotated interleaving with four
+repetitions so each backend gets equal first/second ordering. That fair report
+also showed a small adapter gap:
+
+```text
+chasm_interpreter score_avg=328.510422 score_min=321.405609 score_p50=328.461151 score_best=336.162689 valid_runs=4 invalid_runs=0 ms_avg=18756.952 ms_min=15860.074 ms_p50=21353.652 ms_max=21918.032
+chasm_direct score_avg=328.847847 score_min=323.127869 score_p50=331.180664 score_best=331.674957 valid_runs=4 invalid_runs=0 ms_avg=15816.573 ms_min=15506.661 ms_p50=15934.863 ms_max=16084.210
+chasm_interpreter reference=chasm_direct metric=score_p50 score=328.461151 reference_score=331.180664 ratio=0.992 status=fail
+```
+
+Rejected candidate in the same pass: a specialized Chasm adapter bridge for
+zero-argument `i64` host functions. It kept runtime tests passing, but the
+rotated fair gate still failed (`ratio=0.967` with one warmup, `ratio=0.937`
+with three warmups), so it was removed. The remaining difference is not solved
+by shaving the `clock_ms` return bridge alone.

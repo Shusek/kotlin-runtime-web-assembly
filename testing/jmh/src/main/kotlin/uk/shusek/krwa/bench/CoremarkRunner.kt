@@ -9,15 +9,19 @@ fun main(args: Array<String>) {
     val repetitions = intProperty("krwa.coremark.repetitions", 3).coerceAtLeast(1)
     val printRuns = booleanProperty("krwa.coremark.printRuns", false)
     val interleave = booleanProperty("krwa.coremark.interleave", false)
+    val rotateInterleave = booleanProperty("krwa.coremark.rotateInterleave", false)
     val reference = referenceComparison()
     val module = ChasmCoremark.loadModule()
 
     println("Benchmark: Chasm coremark.wasm")
-    println("Warmups: $warmups, repetitions: $repetitions, interleave: $interleave")
+    println(
+        "Warmups: $warmups, repetitions: $repetitions, interleave: $interleave, " +
+            "rotateInterleave: $rotateInterleave"
+    )
 
     val summaries =
         if (interleave) {
-            runInterleaved(module, backends, warmups, repetitions, printRuns)
+            runInterleaved(module, backends, warmups, repetitions, printRuns, rotateInterleave)
         } else {
             runSequential(module, backends, warmups, repetitions, printRuns)
         }
@@ -54,9 +58,10 @@ private fun runInterleaved(
     warmups: Int,
     repetitions: Int,
     printRuns: Boolean,
+    rotateInterleave: Boolean,
 ): List<CoremarkSummary> {
-    repeat(warmups) {
-        for (backend in backends) {
+    repeat(warmups) { index ->
+        forInterleavedBackend(backends, index, rotateInterleave) { backend ->
             ChasmCoremark.run(module, backend)
         }
     }
@@ -67,7 +72,7 @@ private fun runInterleaved(
     }
 
     repeat(repetitions) { index ->
-        for (backend in backends) {
+        forInterleavedBackend(backends, index, rotateInterleave) { backend ->
             results.getValue(backend).add(runMeasured(module, backend, index, printRuns))
         }
     }
@@ -77,6 +82,18 @@ private fun runInterleaved(
         summaries.add(printSummary(backend, results.getValue(backend)))
     }
     return summaries
+}
+
+private inline fun forInterleavedBackend(
+    backends: List<CoremarkBackend>,
+    index: Int,
+    rotate: Boolean,
+    block: (CoremarkBackend) -> Unit,
+) {
+    val offset = if (rotate && backends.isNotEmpty()) index % backends.size else 0
+    for (position in backends.indices) {
+        block(backends[(offset + position) % backends.size])
+    }
 }
 
 private fun runMeasured(
