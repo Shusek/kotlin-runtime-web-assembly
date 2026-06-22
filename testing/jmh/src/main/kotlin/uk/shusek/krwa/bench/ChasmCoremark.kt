@@ -69,13 +69,16 @@ object ChasmCoremark {
         backend: CoremarkBackend,
         listener: ExecutionListener? = null,
     ): Instance {
+        val clockStart = System.nanoTime()
+        val clockResult = LongArray(1)
         val clock =
             HostFunction(
                 "env",
                 "clock_ms",
                 FunctionType.returning(ValType.I64),
             ) { _, _ ->
-                longArrayOf(System.currentTimeMillis())
+                clockResult[0] = (System.nanoTime() - clockStart) / 1_000_000L
+                clockResult
             }
 
         val builder =

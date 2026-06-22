@@ -2503,3 +2503,61 @@ Warmups: 0, repetitions: 1, interleave: false
 chasm_interpreter run=1 score=298.351593 ms=17641.304
 chasm_interpreter score_avg=298.351593 score_min=298.351593 score_p50=298.351593 score_best=298.351593 valid_runs=1 invalid_runs=0 ms_avg=17641.304 ms_min=17641.304 ms_p50=17641.304 ms_max=17641.304
 ```
+
+Follow-up on 2026-06-22: reduced Chasm adapter overhead on hot host-import and
+export conversion paths. The JVM Chasm backend now reuses the empty KRWA
+argument array, precomputes import parameter/result type lists outside the host
+callback, and avoids generic array/list conversion for zero- and one-value
+calls. This directly targets CoreMark's `clock_ms` import shape without adding
+a CoreMark-specific branch to runtime code.
+
+The CoreMark harness now serves `clock_ms` from a monotonic `System.nanoTime()`
+base instead of wall-clock `System.currentTimeMillis()`, and reuses the
+one-element return array for that benchmark host function. The point is to
+stabilize timing and remove harness allocation noise while keeping the same
+KRWA host-function API.
+
+Verification:
+
+```text
+./gradlew --no-daemon :runtime:compileKotlinJvm --quiet
+./gradlew --no-daemon :runtime:jvmTest --tests uk.shusek.krwa.runtime.ChasmExecutionBackendTest --quiet
+./gradlew --no-daemon :jmh:compileKotlin --quiet
+```
+
+Chasm-only after the adapter conversion change:
+
+```text
+./gradlew --no-daemon :jmh:coremarkChasmBackendReport --quiet
+
+Benchmark: Chasm coremark.wasm
+Warmups: 1, repetitions: 3, interleave: false
+chasm_interpreter run=1 score=327.600342 ms=21398.658
+chasm_interpreter run=2 score=314.119690 ms=16520.937
+chasm_interpreter run=3 score=312.842163 ms=16590.900
+chasm_interpreter score_avg=318.187398 score_min=312.842163 score_p50=314.119690 score_best=327.600342 valid_runs=3 invalid_runs=0 ms_avg=18170.165 ms_min=16520.937 ms_p50=16590.900 ms_max=21398.658
+```
+
+Mixed interpreter/Chasm after monotonic clock:
+
+```text
+./gradlew --no-daemon :jmh:coremarkKrwa \
+  -Dkrwa.coremark.backends=interpreter,chasm_interpreter \
+  -Dkrwa.coremark.warmups=1 \
+  -Dkrwa.coremark.repetitions=3 \
+  -Dkrwa.coremark.printRuns=true --quiet
+
+interpreter run=1 score=199.004974 ms=20829.727
+interpreter run=2 score=208.159866 ms=18864.383
+interpreter run=3 score=177.914841 ms=21795.159
+interpreter score_avg=195.026560 score_min=177.914841 score_p50=199.004974 score_best=208.159866 valid_runs=3 invalid_runs=0 ms_avg=20496.423 ms_min=18864.383 ms_p50=20829.727 ms_max=21795.159
+
+chasm_interpreter run=1 score=300.367950 ms=17438.026
+chasm_interpreter run=2 score=318.962311 ms=22073.232
+chasm_interpreter run=3 score=323.834198 ms=16118.095
+chasm_interpreter score_avg=314.388153 score_min=300.367950 score_p50=318.962311 score_best=323.834198 valid_runs=3 invalid_runs=0 ms_avg=18543.118 ms_min=16118.095 ms_p50=17438.026 ms_max=22073.232
+```
+
+This is still below the strict refreshed reference `337.83783`, so the branch
+has not met the final target yet. It does make the Chasm backend comparison
+usable again in a mixed run (`3/3` valid instead of zero-score invalid runs).

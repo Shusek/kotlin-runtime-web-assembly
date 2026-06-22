@@ -145,6 +145,8 @@ private constructor(
                 imports(store) {
                     for (i in 0 until imports.functionCount()) {
                         val function = imports.function(i)
+                        val paramTypes = function.paramTypes()
+                        val returnTypes = function.returnTypes()
                         val handle =
                             function.handle()
                                 ?: throw WasmEngineException(
@@ -154,14 +156,14 @@ private constructor(
                             moduleName = function.module()
                             entityName = function.name()
                             type {
-                                params { function.paramTypes().forEach { addKrwaType(it) } }
-                                results { function.returnTypes().forEach { addKrwaType(it) } }
+                                params { paramTypes.forEach { addKrwaType(it) } }
+                                results { returnTypes.forEach { addKrwaType(it) } }
                             }
                             reference { values ->
                                 try {
-                                    val args = toKrwaValues(values, function.paramTypes())
-                                    val result = handle.apply(hostInstance, args) ?: LongArray(0)
-                                    toChasmValues(result, function.returnTypes())
+                                    val args = toKrwaValues(values, paramTypes)
+                                    val result = handle.apply(hostInstance, args) ?: EMPTY_LONG_ARRAY
+                                    toChasmValues(result, returnTypes)
                                 } catch (failure: Exception) {
                                     throw HostFunctionException(
                                         failure.message ?: failure.javaClass.simpleName
@@ -220,7 +222,11 @@ private constructor(
             if (values.size != types.size) {
                 throw WasmEngineException("Expected ${types.size} values, got ${values.size}")
             }
-            return values.indices.map { idx -> toChasmValue(values[idx], types[idx]) }
+            return when (values.size) {
+                0 -> emptyList()
+                1 -> listOf(toChasmValue(values[0], types[0]))
+                else -> values.indices.map { idx -> toChasmValue(values[idx], types[idx]) }
+            }
         }
 
         private fun toChasmValue(
@@ -245,7 +251,11 @@ private constructor(
             if (values.size != types.size) {
                 throw WasmEngineException("Expected ${types.size} values, got ${values.size}")
             }
-            return LongArray(values.size) { idx -> toKrwaValue(values[idx], types[idx]) }
+            return when (values.size) {
+                0 -> EMPTY_LONG_ARRAY
+                1 -> longArrayOf(toKrwaValue(values[0], types[0]))
+                else -> LongArray(values.size) { idx -> toKrwaValue(values[idx], types[idx]) }
+            }
         }
 
         private fun toKrwaValue(
@@ -283,6 +293,8 @@ private constructor(
                 is ChasmResult.Error ->
                     throw WasmEngineException("Chasm $action failed: ${error.error}")
             }
+
+        private val EMPTY_LONG_ARRAY = LongArray(0)
     }
 }
 
