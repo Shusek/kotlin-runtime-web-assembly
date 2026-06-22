@@ -49,11 +49,13 @@ private constructor(
 
     override fun export(name: String): ExportFunction {
         val type = exportType(name)
+        val paramKinds = numericValueKinds(type.params())
+        val returnKinds = numericValueKinds(type.returns())
         return ExportFunction { args ->
             val result =
-                chasmInvoke(store, instance, name, toChasmValues(args, type.params()))
+                chasmInvoke(store, instance, name, toChasmValues(args, paramKinds))
                     .orThrow("invoke export '$name'")
-            toKrwaValues(result, type.returns())
+            toKrwaValues(result, returnKinds)
         }
     }
 
@@ -147,6 +149,8 @@ private constructor(
                         val function = imports.function(i)
                         val paramTypes = function.paramTypes()
                         val returnTypes = function.returnTypes()
+                        val paramKinds = numericValueKinds(paramTypes)
+                        val returnKinds = numericValueKinds(returnTypes)
                         val handle =
                             function.handle()
                                 ?: throw WasmEngineException(
@@ -161,9 +165,9 @@ private constructor(
                             }
                             reference { values ->
                                 try {
-                                    val args = toKrwaValues(values, paramTypes)
+                                    val args = toKrwaValues(values, paramKinds)
                                     val result = handle.apply(hostInstance, args) ?: EMPTY_LONG_ARRAY
-                                    toChasmValues(result, returnTypes)
+                                    toChasmValues(result, returnKinds)
                                 } catch (failure: Exception) {
                                     throw HostFunctionException(
                                         failure.message ?: failure.javaClass.simpleName
@@ -215,77 +219,87 @@ private constructor(
             }
         }
 
+        private fun numericValueKinds(types: List<ValType>): Array<NumericValueKind> =
+            when (types.size) {
+                0 -> EMPTY_VALUE_KINDS
+                else -> Array(types.size) { idx -> numericValueKind(types[idx]) }
+            }
+
+        private fun numericValueKind(type: ValType): NumericValueKind =
+            when (type.opcode()) {
+                ValType.ID.I32 -> NumericValueKind.I32
+                ValType.ID.I64 -> NumericValueKind.I64
+                ValType.ID.F32 -> NumericValueKind.F32
+                ValType.ID.F64 -> NumericValueKind.F64
+                else ->
+                    throw WasmEngineException(
+                        "Chasm backend currently supports numeric value types only: $type"
+                    )
+            }
+
         private fun toChasmValues(
             values: LongArray,
-            types: List<ValType>,
+            kinds: Array<NumericValueKind>,
         ): List<ExecutionValue> {
-            if (values.size != types.size) {
-                throw WasmEngineException("Expected ${types.size} values, got ${values.size}")
+            if (values.size != kinds.size) {
+                throw WasmEngineException("Expected ${kinds.size} values, got ${values.size}")
             }
             return when (values.size) {
-                0 -> emptyList()
-                1 -> listOf(toChasmValue(values[0], types[0]))
-                else -> values.indices.map { idx -> toChasmValue(values[idx], types[idx]) }
+                0 -> EMPTY_CHASM_VALUES
+                1 -> listOf(toChasmValue(values[0], kinds[0]))
+                else -> values.indices.map { idx -> toChasmValue(values[idx], kinds[idx]) }
             }
         }
 
         private fun toChasmValue(
             value: Long,
-            type: ValType,
+            kind: NumericValueKind,
         ): ExecutionValue =
-            when (type.opcode()) {
-                ValType.ID.I32 -> NumberValue.I32(value.toInt())
-                ValType.ID.I64 -> NumberValue.I64(value)
-                ValType.ID.F32 -> NumberValue.F32(Float.fromBits(value.toInt()))
-                ValType.ID.F64 -> NumberValue.F64(Double.fromBits(value))
-                else ->
-                    throw WasmEngineException(
-                        "Chasm backend currently supports numeric value types only: $type"
-                    )
+            when (kind) {
+                NumericValueKind.I32 -> NumberValue.I32(value.toInt())
+                NumericValueKind.I64 -> NumberValue.I64(value)
+                NumericValueKind.F32 -> NumberValue.F32(Float.fromBits(value.toInt()))
+                NumericValueKind.F64 -> NumberValue.F64(Double.fromBits(value))
             }
 
         private fun toKrwaValues(
             values: List<ExecutionValue>,
-            types: List<ValType>,
+            kinds: Array<NumericValueKind>,
         ): LongArray {
-            if (values.size != types.size) {
-                throw WasmEngineException("Expected ${types.size} values, got ${values.size}")
+            if (values.size != kinds.size) {
+                throw WasmEngineException("Expected ${kinds.size} values, got ${values.size}")
             }
             return when (values.size) {
                 0 -> EMPTY_LONG_ARRAY
-                1 -> longArrayOf(toKrwaValue(values[0], types[0]))
-                else -> LongArray(values.size) { idx -> toKrwaValue(values[idx], types[idx]) }
+                1 -> longArrayOf(toKrwaValue(values[0], kinds[0]))
+                else -> LongArray(values.size) { idx -> toKrwaValue(values[idx], kinds[idx]) }
             }
         }
 
         private fun toKrwaValue(
             value: ExecutionValue,
-            type: ValType,
+            kind: NumericValueKind,
         ): Long =
-            when (type.opcode()) {
-                ValType.ID.I32 ->
+            when (kind) {
+                NumericValueKind.I32 ->
                     (value as? NumberValue.I32)?.value?.toLong()
-                        ?: unexpectedValue(value, type)
-                ValType.ID.I64 ->
+                        ?: unexpectedValue(value, kind)
+                NumericValueKind.I64 ->
                     (value as? NumberValue.I64)?.value
-                        ?: unexpectedValue(value, type)
-                ValType.ID.F32 ->
+                        ?: unexpectedValue(value, kind)
+                NumericValueKind.F32 ->
                     (value as? NumberValue.F32)?.value?.toRawBits()?.toLong()
-                        ?: unexpectedValue(value, type)
-                ValType.ID.F64 ->
+                        ?: unexpectedValue(value, kind)
+                NumericValueKind.F64 ->
                     (value as? NumberValue.F64)?.value?.toRawBits()
-                        ?: unexpectedValue(value, type)
-                else ->
-                    throw WasmEngineException(
-                        "Chasm backend currently supports numeric value types only: $type"
-                    )
+                        ?: unexpectedValue(value, kind)
             }
 
         private fun unexpectedValue(
             value: ExecutionValue,
-            type: ValType,
+            kind: NumericValueKind,
         ): Nothing =
-            throw WasmEngineException("Expected Chasm value of type $type, got $value")
+            throw WasmEngineException("Expected Chasm value of type $kind, got $value")
 
         private fun <S> ChasmResult<S, out ChasmError>.orThrow(action: String): S =
             when (this) {
@@ -295,6 +309,15 @@ private constructor(
             }
 
         private val EMPTY_LONG_ARRAY = LongArray(0)
+        private val EMPTY_VALUE_KINDS = emptyArray<NumericValueKind>()
+        private val EMPTY_CHASM_VALUES: List<ExecutionValue> = emptyList()
+    }
+
+    private enum class NumericValueKind {
+        I32,
+        I64,
+        F32,
+        F64,
     }
 }
 

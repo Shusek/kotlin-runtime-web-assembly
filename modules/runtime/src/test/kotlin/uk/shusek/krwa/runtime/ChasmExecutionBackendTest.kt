@@ -45,6 +45,64 @@ class ChasmExecutionBackendTest {
     }
 
     @Test
+    fun bridgesNumericHostImportAndExportValues() {
+        val hostImports =
+            ImportValues.builder()
+                .addFunction(
+                    HostFunction(
+                        "host",
+                        "id_i64",
+                        FunctionType.of(listOf(ValType.I64), listOf(ValType.I64)),
+                    ) { _, args ->
+                        longArrayOf(args[0] + 1)
+                    }
+                )
+                .addFunction(
+                    HostFunction(
+                        "host",
+                        "id_f32",
+                        FunctionType.of(listOf(ValType.F32), listOf(ValType.F32)),
+                    ) { _, args ->
+                        val value = Float.fromBits(args[0].toInt())
+                        longArrayOf((value * 2.0f).toRawBits().toLong())
+                    }
+                )
+                .addFunction(
+                    HostFunction(
+                        "host",
+                        "id_f64",
+                        FunctionType.of(listOf(ValType.F64), listOf(ValType.F64)),
+                    ) { _, args ->
+                        val value = Double.fromBits(args[0])
+                        longArrayOf((value * 2.0).toRawBits())
+                    }
+                )
+                .build()
+        val instance =
+            Instance.builder(WasmParser.parse(NUMERIC_VALUES_WASM))
+                .withImportValues(hostImports)
+                .withExecutionBackend(ExecutionBackend.CHASM)
+                .build()
+
+        val i64 = 0x1_0000_0000L + 9
+        val f32 = 1.25f
+        val f64 = 3.5
+
+        assertEquals(ExecutionBackend.CHASM, instance.executionBackend())
+        assertEquals(i64 + 1, instance.export("callI64").apply(i64)[0])
+        assertEquals(
+            f32 * 2.0f,
+            Float.fromBits(instance.export("callF32").apply(f32.toRawBits().toLong())[0].toInt()),
+        )
+        assertEquals(
+            f64 * 2.0,
+            Double.fromBits(instance.export("callF64").apply(f64.toRawBits())[0]),
+        )
+        assertEquals(1.25f, Float.fromBits(instance.export("constF32").apply()[0].toInt()))
+        assertEquals(3.5, Double.fromBits(instance.export("constF64").apply()[0]))
+    }
+
+    @Test
     fun exposesExportedMemoryView() {
         val instance =
             Instance.builder(WasmParser.parse(MEMORY_EXPORT_WASM))
@@ -106,6 +164,52 @@ class ChasmExecutionBackendTest {
                 0x20, 0x00,
                 0x10, 0x00,
                 0x0B,
+            )
+
+        val NUMERIC_VALUES_WASM =
+            b(
+                0x00, 0x61, 0x73, 0x6D,
+                0x01, 0x00, 0x00, 0x00,
+                0x01, 0x18,
+                0x05,
+                0x60, 0x01, 0x7E, 0x01, 0x7E,
+                0x60, 0x01, 0x7D, 0x01, 0x7D,
+                0x60, 0x01, 0x7C, 0x01, 0x7C,
+                0x60, 0x00, 0x01, 0x7D,
+                0x60, 0x00, 0x01, 0x7C,
+                0x02, 0x2B,
+                0x03,
+                0x04, 0x68, 0x6F, 0x73, 0x74,
+                0x06, 0x69, 0x64, 0x5F, 0x69, 0x36, 0x34,
+                0x00, 0x00,
+                0x04, 0x68, 0x6F, 0x73, 0x74,
+                0x06, 0x69, 0x64, 0x5F, 0x66, 0x33, 0x32,
+                0x00, 0x01,
+                0x04, 0x68, 0x6F, 0x73, 0x74,
+                0x06, 0x69, 0x64, 0x5F, 0x66, 0x36, 0x34,
+                0x00, 0x02,
+                0x03, 0x06,
+                0x05, 0x00, 0x01, 0x02, 0x03, 0x04,
+                0x07, 0x35,
+                0x05,
+                0x07, 0x63, 0x61, 0x6C, 0x6C, 0x49, 0x36, 0x34,
+                0x00, 0x03,
+                0x07, 0x63, 0x61, 0x6C, 0x6C, 0x46, 0x33, 0x32,
+                0x00, 0x04,
+                0x07, 0x63, 0x61, 0x6C, 0x6C, 0x46, 0x36, 0x34,
+                0x00, 0x05,
+                0x08, 0x63, 0x6F, 0x6E, 0x73, 0x74, 0x46, 0x33, 0x32,
+                0x00, 0x06,
+                0x08, 0x63, 0x6F, 0x6E, 0x73, 0x74, 0x46, 0x36, 0x34,
+                0x00, 0x07,
+                0x0A, 0x2A,
+                0x05,
+                0x06, 0x00, 0x20, 0x00, 0x10, 0x00, 0x0B,
+                0x06, 0x00, 0x20, 0x00, 0x10, 0x01, 0x0B,
+                0x06, 0x00, 0x20, 0x00, 0x10, 0x02, 0x0B,
+                0x07, 0x00, 0x43, 0x00, 0x00, 0xA0, 0x3F, 0x0B,
+                0x0B, 0x00, 0x44, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x0C, 0x40, 0x0B,
             )
 
         val MEMORY_EXPORT_WASM =

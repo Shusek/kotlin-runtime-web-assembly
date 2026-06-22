@@ -2637,3 +2637,40 @@ in this run. That means the current Chasm-backed runtime path is already close
 to direct upstream Chasm for CoreMark; the remaining mismatch to older
 `337.83783` reference numbers is mostly run-condition/noise/reference drift, not
 a large adapter tax.
+
+Follow-up on 2026-06-22: the Chasm runtime adapter now precomputes numeric value
+kinds for import/export bridges instead of reading `ValType.opcode()` on every
+host callback/export conversion. This is a generic adapter optimization for
+`i32/i64/f32/f64`, not a CoreMark-specific special case.
+
+Verification:
+
+```text
+./gradlew --no-daemon :runtime:compileKotlinJvm --quiet
+./gradlew --no-daemon :runtime:jvmTest --tests uk.shusek.krwa.runtime.ChasmExecutionBackendTest --quiet
+./gradlew --no-daemon :jmh:compileKotlin --quiet
+```
+
+The Chasm backend test now also covers `i64`, `f32`, and `f64` host import and
+export conversion.
+
+Full adapter/direct report after this bridge change:
+
+```text
+./gradlew --no-daemon :jmh:coremarkChasmAdapterDirectReport --quiet
+
+chasm_interpreter run=1 score=298.284851 ms=17617.251
+chasm_interpreter run=2 score=305.087341 ms=16782.534
+chasm_interpreter run=3 score=296.274353 ms=17200.753
+chasm_interpreter score_avg=299.882182 score_min=296.274353 score_p50=298.284851 score_best=305.087341 valid_runs=3 invalid_runs=0 ms_avg=17200.179 ms_min=16782.534 ms_p50=17200.753 ms_max=17617.251
+
+chasm_direct run=1 score=294.507446 ms=17463.029
+chasm_direct run=2 score=298.225555 ms=23426.808
+chasm_direct run=3 score=291.290405 ms=17455.379
+chasm_direct score_avg=294.674469 score_min=291.290405 score_p50=294.507446 score_best=298.225555 valid_runs=3 invalid_runs=0 ms_avg=19448.405 ms_min=17455.379 ms_p50=17463.029 ms_max=23426.808
+```
+
+This run is slower in absolute score than the previous direct comparison, so do
+not treat `298` as a new Chasm target. The useful signal is relative: the KRWA
+Chasm adapter was `298.284851 / 294.507446 = 1.0128` of direct Chasm by p50 in
+the same JVM, which is enough to keep the adapter/direct gate direction strict.
