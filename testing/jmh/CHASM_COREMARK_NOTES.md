@@ -2870,3 +2870,35 @@ Verification for this gate change:
 ./gradlew --no-daemon :jmh:compileKotlin --quiet
 ./gradlew --no-daemon :jmh:coremarkChasmAdapterDirectWallClockGate --quiet
 ```
+
+Rejected follow-up on 2026-06-22: a strict `coremarkChasmAdapterDirectJmhGate`
+prototype parsed JMH JSON and failed when a single benchmark operation outlier
+dominated the two-measurement average:
+
+```text
+BenchmarkChasmCoremarkExecution.coremark  CHASM_INTERPRETER  avgt    2  21.087 s/op
+BenchmarkChasmCoremarkExecution.coremark       CHASM_DIRECT  avgt    2  13.117 s/op
+chasm_interpreter jmh_s_op=21.0865661875 reference_jmh_s_op=13.1174696875 ratio=0.6220770878890638 required_ratio=1.0
+```
+
+At roughly 15-20 seconds per operation, JMH's default 10-second measurement
+iteration still usually observes only one CoreMark operation. A strict JMH JSON
+gate is therefore not stable unless the benchmark is restructured to run shorter
+fixed workloads or much longer/more expensive measurement windows. Keep
+`coremarkChasmAdapterDirectJmhReport` as a report, not as a blocking gate, until
+that is fixed.
+
+The strict score gate also failed in the same pass:
+
+```text
+./gradlew --no-daemon :jmh:coremarkChasmAdapterDirectGate --quiet
+
+chasm_interpreter score_avg=315.387461 score_min=285.306702 score_p50=324.070313 score_best=336.785370 valid_runs=3 invalid_runs=0 ms_avg=16374.612 ms_min=15213.606 ms_p50=16249.089 ms_max=17661.140
+chasm_direct score_avg=334.723765 score_min=326.078094 score_p50=337.609711 score_best=340.483490 valid_runs=3 invalid_runs=0 ms_avg=15539.810 ms_min=15348.935 ms_p50=15531.362 ms_max=15739.134
+chasm_interpreter reference=chasm_direct metric=score_p50 score=324.070313 reference_score=337.609711 ratio=0.960 status=fail
+```
+
+Do not claim full CoreMark-score parity yet. The remaining work is either to
+remove the small residual runtime/host-callback difference or to add a shorter
+fixed-workload benchmark that can produce stable pass/fail evidence without
+CoreMark's dynamic calibration noise.
