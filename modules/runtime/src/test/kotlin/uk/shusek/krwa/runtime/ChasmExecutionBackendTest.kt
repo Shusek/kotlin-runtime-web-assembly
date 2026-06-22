@@ -3,7 +3,9 @@ package uk.shusek.krwa.runtime
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
+import uk.shusek.krwa.wasm.WasmEngineException
 import uk.shusek.krwa.wasm.WasmParser
 import uk.shusek.krwa.wasm.types.FunctionType
 import uk.shusek.krwa.wasm.types.MemoryLimits
@@ -30,6 +32,18 @@ class ChasmExecutionBackendTest {
 
         assertEquals(ExecutionBackend.CHASM, instance.executionBackend())
         assertEquals(11, instance.export("add").apply(5, 6)[0].toInt())
+    }
+
+    @Test
+    fun platformBackendDoesNotExposeInterpreterMachineCalls() {
+        val instance =
+            Instance.builder(WasmParser.parse(ADD_WASM))
+                .withExecutionBackend(ExecutionBackend.CHASM)
+                .build()
+
+        assertThrows(WasmEngineException::class.java) {
+            instance.getMachine().call(0, longArrayOf(5, 6))
+        }
     }
 
     @Test

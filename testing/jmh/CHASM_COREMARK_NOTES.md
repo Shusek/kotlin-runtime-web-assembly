@@ -2806,3 +2806,32 @@ This puts the KRWA Chasm adapter at `18.913 / 19.779 = 0.956` of direct Chasm by
 wall-clock throughput in this short run. The remaining gap is small enough to be
 adapter/instantiation wrapper work, not evidence that the Chasm interpreter
 itself is missing from the runtime path.
+
+Follow-up on 2026-06-22: platform execution instances now use a lightweight
+throwing `Machine` instead of constructing a full `InterpreterMachine` that can
+never be used for actual execution. This removes interpreter-machine allocation
+from the JVM Chasm wrapper path and prevents accidental `getMachine().call(...)`
+from bypassing the selected platform backend.
+
+Verification:
+
+```text
+./gradlew --no-daemon :runtime:jvmTest --tests uk.shusek.krwa.runtime.ChasmExecutionBackendTest --quiet
+./gradlew --no-daemon :jmh:compileKotlin --quiet
+```
+
+Quick JMH sanity after the change:
+
+```text
+./gradlew --no-daemon :jmh:coremarkChasmAdapterDirectJmhReport \
+  -Dkrwa.coremark.jmh.warmups=0 \
+  -Dkrwa.coremark.jmh.measurements=1 --quiet
+
+BenchmarkChasmCoremarkExecution.coremark  CHASM_INTERPRETER  avgt  16.341 s/op
+BenchmarkChasmCoremarkExecution.coremark       CHASM_DIRECT  avgt  22.601 s/op
+```
+
+Treat this as a no-regression sanity check only; the direct Chasm run was a slow
+outlier in that single-measurement invocation. The useful code-level result is
+that the platform wrapper no longer pays for an interpreter machine it does not
+use.

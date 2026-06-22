@@ -958,7 +958,12 @@ private constructor(
                         )
                     }
                 } else {
-                    val hostInstance = buildInterpreter(initializeInstance = false, startInstance = false)
+                    val hostInstance =
+                        buildInterpreter(
+                            initializeInstance = false,
+                            startInstance = false,
+                            machineFactoryOverride = PLATFORM_EXECUTION_MACHINE_FACTORY,
+                        )
                     val platformExecution =
                         RuntimePlatform.createPlatformExecution(
                             module,
@@ -989,6 +994,7 @@ private constructor(
         private fun buildInterpreter(
             initializeInstance: Boolean,
             startInstance: Boolean,
+            machineFactoryOverride: ((Instance) -> Machine)? = null,
         ): Instance {
             val exports = genExports(module.exportSection())
             val globalInitializers = module.globalSection().globals()
@@ -1077,7 +1083,7 @@ private constructor(
                 }
             }
 
-            val machineFactory = machineFactory ?: defaultMachineFactory
+            val machineFactory = machineFactoryOverride ?: machineFactory ?: defaultMachineFactory
 
             return Instance(
                 module,
@@ -1102,6 +1108,12 @@ private constructor(
         }
 
         companion object {
+            private val PLATFORM_EXECUTION_MACHINE =
+                Machine { _, _ ->
+                    throw WasmEngineException("platform execution instances do not expose interpreter machine calls")
+                }
+            private val PLATFORM_EXECUTION_MACHINE_FACTORY: (Instance) -> Machine = { PLATFORM_EXECUTION_MACHINE }
+
             internal fun create(module: WasmModule): Builder =
                 Builder(
                     module,
