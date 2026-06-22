@@ -29,6 +29,9 @@ fun JavaExec.defaultCoremarkSystemProperty(name: String, value: String) {
     }
 }
 
+fun coremarkJmhArgument(name: String, defaultValue: String): String =
+    System.getProperty(name) ?: defaultValue
+
 tasks.register<JavaExec>("jmh") {
     group = "verification"
     description = "Runs JMH benchmarks."
@@ -125,6 +128,26 @@ tasks.register<JavaExec>("coremarkChasmAdapterDirectFairReport") {
     defaultCoremarkSystemProperty("krwa.coremark.referenceBackend", "chasm_direct")
     defaultCoremarkSystemProperty("krwa.coremark.referenceMetric", "p50")
     defaultCoremarkSystemProperty("krwa.coremark.failBelowReference", "false")
+}
+
+tasks.register<JavaExec>("coremarkChasmAdapterDirectJmhReport") {
+    group = "benchmark"
+    description = "Measures KRWA's Chasm adapter and direct Chasm embedding with JMH wall-clock timing."
+    dependsOn("classes")
+    workingDir = rootProject.layout.projectDirectory.asFile
+    mainClass.set("org.openjdk.jmh.Main")
+    classpath = mainSourceSet().runtimeClasspath
+    args(
+        "uk.shusek.krwa.bench.BenchmarkChasmCoremarkExecution.coremark",
+        "-p",
+        "backendName=CHASM_INTERPRETER,CHASM_DIRECT",
+        "-wi",
+        coremarkJmhArgument("krwa.coremark.jmh.warmups", "1"),
+        "-i",
+        coremarkJmhArgument("krwa.coremark.jmh.measurements", "2"),
+        "-f",
+        coremarkJmhArgument("krwa.coremark.jmh.forks", "1"),
+    )
 }
 
 tasks.register<JavaExec>("coremarkChasmAdapterDirectGate") {

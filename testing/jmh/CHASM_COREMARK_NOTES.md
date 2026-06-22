@@ -2772,3 +2772,37 @@ Verification:
 cd samples/sample && ./gradlew --no-daemon metadataKmpShowcaseMainClasses --quiet
 cd samples/sample && ./gradlew --no-daemon jvmMainClasses --quiet
 ```
+
+Follow-up on 2026-06-22: the adapter/direct comparison now has a JMH wall-clock
+task in addition to CoreMark's self-reported score:
+
+```text
+./gradlew --no-daemon :jmh:coremarkChasmAdapterDirectJmhReport --quiet
+```
+
+The benchmark parameter list now includes `CHASM_DIRECT`, and the task measures
+only `CHASM_INTERPRETER` and `CHASM_DIRECT`. The JMH task accepts:
+
+```text
+-Dkrwa.coremark.jmh.warmups=1
+-Dkrwa.coremark.jmh.measurements=2
+-Dkrwa.coremark.jmh.forks=1
+```
+
+This is needed because CoreMark's own score includes dynamic workload
+calibration. Under local scheduling noise, direct Chasm can produce low positive
+scores such as `94.258781` even when the external run time is not proportionally
+large, which makes small adapter/direct differences hard to interpret from p50
+score alone.
+
+Current wall-clock JMH result:
+
+```text
+BenchmarkChasmCoremarkExecution.coremark  CHASM_INTERPRETER  avgt    2  19.779 s/op
+BenchmarkChasmCoremarkExecution.coremark       CHASM_DIRECT  avgt    2  18.913 s/op
+```
+
+This puts the KRWA Chasm adapter at `18.913 / 19.779 = 0.956` of direct Chasm by
+wall-clock throughput in this short run. The remaining gap is small enough to be
+adapter/instantiation wrapper work, not evidence that the Chasm interpreter
+itself is missing from the runtime path.
