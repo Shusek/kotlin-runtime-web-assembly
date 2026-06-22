@@ -175,12 +175,12 @@ private fun printSummary(backend: CoremarkBackend, results: List<CoremarkResult>
     val validScores = scores.filter { it.isFinite() && it > 0.0 }
     val invalidRuns = scores.size - validScores.size
     val millis = results.map { it.elapsedNanos / 1_000_000.0 }
-    val sortedScores = scores.sorted()
+    val sortedScores = validScores.sorted()
     val sortedMillis = millis.sorted()
-    val bestScore = sortedScores.last()
-    val minScore = sortedScores.first()
-    val p50Score = sortedScores[sortedScores.size / 2]
-    val averageScore = scores.average()
+    val bestScore = sortedScores.lastOrNull() ?: Double.NaN
+    val minScore = sortedScores.firstOrNull() ?: Double.NaN
+    val p50Score = sortedScores.getOrNull(sortedScores.size / 2) ?: Double.NaN
+    val averageScore = validScores.average()
     val averageMillis = millis.average()
     val p50Millis = sortedMillis[sortedMillis.size / 2]
     val minMillis = sortedMillis.first()

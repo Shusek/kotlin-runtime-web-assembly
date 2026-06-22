@@ -65,6 +65,38 @@ tasks.register<JavaExec>("coremarkChasmInterpreterReport") {
     defaultCoremarkSystemProperty("krwa.coremark.interleave", "false")
 }
 
+tasks.register<JavaExec>("coremarkChasmBackendReport") {
+    group = "benchmark"
+    description = "Runs only the JVM Chasm execution backend on the CoreMark wasm fixture."
+    dependsOn("classes")
+    workingDir = rootProject.layout.projectDirectory.asFile
+    mainClass.set("uk.shusek.krwa.bench.CoremarkRunnerKt")
+    classpath = mainSourceSet().runtimeClasspath
+    forwardCoremarkSystemProperties()
+    defaultCoremarkSystemProperty("krwa.coremark.backends", "chasm_interpreter")
+    defaultCoremarkSystemProperty("krwa.coremark.warmups", "1")
+    defaultCoremarkSystemProperty("krwa.coremark.repetitions", "3")
+    defaultCoremarkSystemProperty("krwa.coremark.printRuns", "true")
+}
+
+tasks.register<JavaExec>("coremarkChasmBackendGate") {
+    group = "verification"
+    description = "Fails if the JVM Chasm execution backend is below the measured upstream Chasm interpreter score."
+    dependsOn("classes")
+    workingDir = rootProject.layout.projectDirectory.asFile
+    mainClass.set("uk.shusek.krwa.bench.CoremarkRunnerKt")
+    classpath = mainSourceSet().runtimeClasspath
+    forwardCoremarkSystemProperties()
+    defaultCoremarkSystemProperty("krwa.coremark.backends", "chasm_interpreter")
+    defaultCoremarkSystemProperty("krwa.coremark.warmups", "1")
+    defaultCoremarkSystemProperty("krwa.coremark.repetitions", "3")
+    defaultCoremarkSystemProperty("krwa.coremark.printRuns", "true")
+    defaultCoremarkSystemProperty("krwa.coremark.referenceName", "chasm_upstream_jvm_interpreter")
+    defaultCoremarkSystemProperty("krwa.coremark.referenceScore", "337.83783")
+    defaultCoremarkSystemProperty("krwa.coremark.referenceMetric", "p50")
+    defaultCoremarkSystemProperty("krwa.coremark.failBelowReference", "true")
+}
+
 tasks.register<JavaExec>("coremarkChasmGate") {
     group = "verification"
     description = "Legacy compiled-backend sanity gate against the measured upstream Chasm JVM interpreter score."

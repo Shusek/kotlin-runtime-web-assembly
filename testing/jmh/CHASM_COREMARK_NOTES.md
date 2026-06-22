@@ -2471,3 +2471,35 @@ The functional direction is correct: if the user wants "put Chasm in as an
 interpreter implementation", the backend path is now more complete. The
 remaining adapter gaps are imported memories/globals/tables/tags and stronger,
 less noisy performance gating.
+
+Follow-up on 2026-06-22: `CoremarkRunner` now computes score summary metrics
+from valid positive scores only. Invalid zero/NaN runs are still reported via
+`invalid_runs` and still fail reference comparisons, but they no longer poison
+the printed `score_p50`/`score_avg` values for diagnostics. This makes mixed
+reports easier to read when the known Chasm zero-score issue appears.
+
+Added Chasm-only tasks so measuring the Chasm backend no longer requires
+running after another backend in the same simple harness:
+
+```text
+./gradlew --no-daemon :jmh:coremarkChasmBackendReport
+./gradlew --no-daemon :jmh:coremarkChasmBackendGate
+```
+
+`coremarkChasmBackendGate` is intentionally strict and still uses the refreshed
+`337.83783` reference. It is the explicit "is our Chasm backend at the original
+Chasm target?" gate; local machine noise can still make it fail.
+
+Verification:
+
+```text
+./gradlew --no-daemon :jmh:compileKotlin --quiet
+./gradlew --no-daemon :jmh:coremarkChasmBackendReport \
+  -Dkrwa.coremark.warmups=0 \
+  -Dkrwa.coremark.repetitions=1 --quiet
+
+Benchmark: Chasm coremark.wasm
+Warmups: 0, repetitions: 1, interleave: false
+chasm_interpreter run=1 score=298.351593 ms=17641.304
+chasm_interpreter score_avg=298.351593 score_min=298.351593 score_p50=298.351593 score_best=298.351593 valid_runs=1 invalid_runs=0 ms_avg=17641.304 ms_min=17641.304 ms_p50=17641.304 ms_max=17641.304
+```
