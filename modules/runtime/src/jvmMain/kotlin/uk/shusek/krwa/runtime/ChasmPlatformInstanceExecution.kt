@@ -1,5 +1,7 @@
 package uk.shusek.krwa.runtime
 
+import java.util.Collections
+import java.util.WeakHashMap
 import io.github.charlietap.chasm.embedding.dsl.ValueTypeListBuilder
 import io.github.charlietap.chasm.embedding.dsl.imports
 import io.github.charlietap.chasm.embedding.error.ChasmError
@@ -23,6 +25,7 @@ import io.github.charlietap.chasm.embedding.module as chasmModule
 import io.github.charlietap.chasm.embedding.shapes.ChasmResult
 import io.github.charlietap.chasm.embedding.shapes.Instance as ChasmInstance
 import io.github.charlietap.chasm.embedding.shapes.Memory as ChasmMemory
+import io.github.charlietap.chasm.embedding.shapes.Module as ChasmModule
 import io.github.charlietap.chasm.embedding.shapes.Store as ChasmStore
 import io.github.charlietap.chasm.embedding.store as chasmStore
 import io.github.charlietap.chasm.host.HostFunctionException
@@ -170,26 +173,36 @@ private constructor(
                                 results { returnTypes.forEach { addKrwaType(it) } }
                             }
                             reference { values ->
-                                try {
-                                    val args = toKrwaValues(values, paramKinds)
-                                    val result = handle.apply(hostInstance, args) ?: EMPTY_LONG_ARRAY
-                                    toChasmValues(result, returnKinds)
-                                } catch (failure: Exception) {
-                                    throw HostFunctionException(
-                                        failure.message ?: failure.javaClass.simpleName
-                                    )
-                                }
+                                invokeHostFunction(
+                                    handle,
+                                    hostInstance,
+                                    values,
+                                    paramKinds,
+                                    returnKinds,
+                                )
                             }
                         }
                     }
                 }
 
-            val decodedModule = chasmModule(bytes).orThrow("decode module")
+            val decodedModule = decodedModule(module, bytes)
             val chasmInstance =
                 chasmInstance(store, decodedModule, chasmImports)
                     .orThrow("instantiate module")
             return ChasmPlatformInstanceExecution(module, hostInstance, store, chasmInstance)
         }
+
+        private val decodedModuleCache: MutableMap<WasmModule, ChasmModule> =
+            Collections.synchronizedMap(WeakHashMap())
+
+        private fun decodedModule(
+            module: WasmModule,
+            bytes: ByteArray,
+        ): ChasmModule =
+            synchronized(decodedModuleCache) {
+                decodedModuleCache[module]
+                    ?: chasmModule(bytes).orThrow("decode module").also { decodedModuleCache[module] = it }
+            }
 
         private fun requireSupportedImports(
             module: WasmModule,
@@ -216,6 +229,33 @@ private constructor(
                 imports.tableCount() == 0 &&
                 imports.tagCount() == 0
         }
+
+        private fun invokeHostFunction(
+            handle: WasmFunctionHandle,
+            hostInstance: Instance,
+            values: List<ExecutionValue>,
+            paramKinds: Array<NumericValueKind>,
+            returnKinds: Array<NumericValueKind>,
+        ): List<ExecutionValue> =
+            try {
+                val args =
+                    if (paramKinds.isEmpty()) {
+                        if (values.isNotEmpty()) {
+                            throw WasmEngineException("Expected 0 values, got ${values.size}")
+                        }
+                        EMPTY_LONG_ARRAY
+                    } else {
+                        toKrwaValues(values, paramKinds)
+                    }
+                val result = handle.apply(hostInstance, args) ?: EMPTY_LONG_ARRAY
+                if (returnKinds.size == 1) {
+                    toSingleChasmValue(result, returnKinds[0])
+                } else {
+                    toChasmValues(result, returnKinds)
+                }
+            } catch (failure: Exception) {
+                throw HostFunctionException(failure.message ?: failure.javaClass.simpleName)
+            }
 
         private fun ValueTypeListBuilder.addKrwaType(type: ValType) {
             when (type.opcode()) {
@@ -272,6 +312,16 @@ private constructor(
                 NumericValueKind.F32 -> NumberValue.F32(Float.fromBits(value.toInt()))
                 NumericValueKind.F64 -> NumberValue.F64(Double.fromBits(value))
             }
+
+        private fun toSingleChasmValue(
+            values: LongArray,
+            kind: NumericValueKind,
+        ): List<ExecutionValue> {
+            if (values.size != 1) {
+                throw WasmEngineException("Expected 1 values, got ${values.size}")
+            }
+            return listOf(toChasmValue(values[0], kind))
+        }
 
         private fun toKrwaValues(
             values: List<ExecutionValue>,

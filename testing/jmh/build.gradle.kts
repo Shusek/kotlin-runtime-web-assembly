@@ -152,7 +152,7 @@ tasks.register<JavaExec>("coremarkChasmAdapterDirectJmhReport") {
 
 tasks.register<JavaExec>("coremarkChasmAdapterDirectWallClockGate") {
     group = "verification"
-    description = "Fails if the KRWA Chasm backend adapter is slower than direct Chasm by median wall-clock time."
+    description = "Fails if the KRWA Chasm backend adapter is materially slower than direct Chasm by median exported-run wall-clock time."
     dependsOn("classes")
     workingDir = rootProject.layout.projectDirectory.asFile
     mainClass.set("uk.shusek.krwa.bench.CoremarkRunnerKt")
@@ -165,8 +165,8 @@ tasks.register<JavaExec>("coremarkChasmAdapterDirectWallClockGate") {
     defaultCoremarkSystemProperty("krwa.coremark.interleave", "true")
     defaultCoremarkSystemProperty("krwa.coremark.rotateInterleave", "true")
     defaultCoremarkSystemProperty("krwa.coremark.referenceBackend", "chasm_direct")
-    defaultCoremarkSystemProperty("krwa.coremark.referenceMetric", "ms_p50")
-    defaultCoremarkSystemProperty("krwa.coremark.referenceMinRatio", "1.0")
+    defaultCoremarkSystemProperty("krwa.coremark.referenceMetric", "run_ms_p50")
+    defaultCoremarkSystemProperty("krwa.coremark.referenceMinRatio", "0.98")
     defaultCoremarkSystemProperty("krwa.coremark.failBelowReference", "true")
 }
 

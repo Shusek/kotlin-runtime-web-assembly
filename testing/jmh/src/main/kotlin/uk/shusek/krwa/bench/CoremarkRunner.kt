@@ -198,6 +198,18 @@ private fun referenceMetric(): ReferenceMetric =
         "ms_min", "time_min", "time-minimum" -> ReferenceMetric.MS_MIN
         "ms_p50", "time_p50", "time_median" -> ReferenceMetric.MS_P50
         "ms_max", "time_max", "time-maximum" -> ReferenceMetric.MS_MAX
+        "init_ms_avg", "init-time-avg", "init_time_mean" -> ReferenceMetric.INIT_MS_AVG
+        "init_ms_min", "init-time-min" -> ReferenceMetric.INIT_MS_MIN
+        "init_ms_p50", "init-time-p50", "init_time_median" -> ReferenceMetric.INIT_MS_P50
+        "init_ms_max", "init-time-max" -> ReferenceMetric.INIT_MS_MAX
+        "run_ms_avg", "run-time-avg", "invoke_ms_avg", "execution_ms_avg" ->
+            ReferenceMetric.RUN_MS_AVG
+        "run_ms_min", "run-time-min", "invoke_ms_min", "execution_ms_min" ->
+            ReferenceMetric.RUN_MS_MIN
+        "run_ms_p50", "run-time-p50", "invoke_ms_p50", "execution_ms_p50",
+        "run_time_median" -> ReferenceMetric.RUN_MS_P50
+        "run_ms_max", "run-time-max", "invoke_ms_max", "execution_ms_max" ->
+            ReferenceMetric.RUN_MS_MAX
         else -> error("Unsupported krwa.coremark.referenceMetric")
     }
 
@@ -205,11 +217,13 @@ private fun printRun(backend: CoremarkBackend, run: Int, result: CoremarkResult)
     println(
         String.format(
             Locale.US,
-            "%s run=%d score=%.6f ms=%.3f",
+            "%s run=%d score=%.6f ms=%.3f init_ms=%.3f run_ms=%.3f",
             backend.name.lowercase(Locale.ROOT),
             run,
             result.score.toDouble(),
             result.elapsedNanos / 1_000_000.0,
+            result.initNanos / 1_000_000.0,
+            result.runNanos / 1_000_000.0,
         )
     )
 }
@@ -218,22 +232,19 @@ private fun printSummary(backend: CoremarkBackend, results: List<CoremarkResult>
     val scores = results.map { it.score.toDouble() }
     val validScores = scores.filter { it.isFinite() && it > 0.0 }
     val invalidRuns = scores.size - validScores.size
-    val millis = results.map { it.elapsedNanos / 1_000_000.0 }
+    val totalMillis = timingSummary(results.map { it.elapsedNanos / 1_000_000.0 })
+    val initMillis = timingSummary(results.map { it.initNanos / 1_000_000.0 })
+    val runMillis = timingSummary(results.map { it.runNanos / 1_000_000.0 })
     val sortedScores = validScores.sorted()
-    val sortedMillis = millis.sorted()
     val bestScore = sortedScores.lastOrNull() ?: Double.NaN
     val minScore = sortedScores.firstOrNull() ?: Double.NaN
     val p50Score = sortedScores.getOrNull(sortedScores.size / 2) ?: Double.NaN
     val averageScore = validScores.average()
-    val averageMillis = millis.average()
-    val p50Millis = sortedMillis[sortedMillis.size / 2]
-    val minMillis = sortedMillis.first()
-    val maxMillis = sortedMillis.last()
 
     println(
         String.format(
             Locale.US,
-            "%s score_avg=%.6f score_min=%.6f score_p50=%.6f score_best=%.6f valid_runs=%d invalid_runs=%d ms_avg=%.3f ms_min=%.3f ms_p50=%.3f ms_max=%.3f",
+            "%s score_avg=%.6f score_min=%.6f score_p50=%.6f score_best=%.6f valid_runs=%d invalid_runs=%d ms_avg=%.3f ms_min=%.3f ms_p50=%.3f ms_max=%.3f init_ms_avg=%.3f init_ms_min=%.3f init_ms_p50=%.3f init_ms_max=%.3f run_ms_avg=%.3f run_ms_min=%.3f run_ms_p50=%.3f run_ms_max=%.3f",
             backend.name.lowercase(Locale.ROOT),
             averageScore,
             minScore,
@@ -241,10 +252,18 @@ private fun printSummary(backend: CoremarkBackend, results: List<CoremarkResult>
             bestScore,
             validScores.size,
             invalidRuns,
-            averageMillis,
-            minMillis,
-            p50Millis,
-            max(maxMillis, minMillis),
+            totalMillis.avg,
+            totalMillis.min,
+            totalMillis.p50,
+            max(totalMillis.max, totalMillis.min),
+            initMillis.avg,
+            initMillis.min,
+            initMillis.p50,
+            max(initMillis.max, initMillis.min),
+            runMillis.avg,
+            runMillis.min,
+            runMillis.p50,
+            max(runMillis.max, runMillis.min),
         )
     )
 
@@ -254,12 +273,30 @@ private fun printSummary(backend: CoremarkBackend, results: List<CoremarkResult>
         scoreMin = minScore,
         scoreP50 = p50Score,
         scoreBest = bestScore,
-        msAvg = averageMillis,
-        msMin = minMillis,
-        msP50 = p50Millis,
-        msMax = maxMillis,
+        msAvg = totalMillis.avg,
+        msMin = totalMillis.min,
+        msP50 = totalMillis.p50,
+        msMax = totalMillis.max,
+        initMsAvg = initMillis.avg,
+        initMsMin = initMillis.min,
+        initMsP50 = initMillis.p50,
+        initMsMax = initMillis.max,
+        runMsAvg = runMillis.avg,
+        runMsMin = runMillis.min,
+        runMsP50 = runMillis.p50,
+        runMsMax = runMillis.max,
         validRuns = validScores.size,
         invalidRuns = invalidRuns,
+    )
+}
+
+private fun timingSummary(values: List<Double>): TimingSummary {
+    val sorted = values.sorted()
+    return TimingSummary(
+        avg = values.average(),
+        min = sorted.first(),
+        p50 = sorted[sorted.size / 2],
+        max = sorted.last(),
     )
 }
 
@@ -286,9 +323,17 @@ private fun printReferenceComparison(
             } else {
                 referenceScore / score
             }
+        val comparable =
+            score.isFinite() &&
+                score > 0.0 &&
+                referenceScore.isFinite() &&
+                referenceScore > 0.0
+        val validRuns =
+            !reference.metric.requiresValidScores ||
+                (referenceInvalidRuns == 0 && summary.invalidRuns == 0)
         val passed =
-            referenceInvalidRuns == 0 &&
-                summary.invalidRuns == 0 &&
+            comparable &&
+                validRuns &&
                 ratio >= reference.minRatio
         val status = if (passed) "pass" else "fail"
         val backend = summary.backend.name.lowercase(Locale.ROOT)
@@ -329,8 +374,23 @@ private data class CoremarkSummary(
     val msMin: Double,
     val msP50: Double,
     val msMax: Double,
+    val initMsAvg: Double,
+    val initMsMin: Double,
+    val initMsP50: Double,
+    val initMsMax: Double,
+    val runMsAvg: Double,
+    val runMsMin: Double,
+    val runMsP50: Double,
+    val runMsMax: Double,
     val validRuns: Int,
     val invalidRuns: Int,
+)
+
+private data class TimingSummary(
+    val avg: Double,
+    val min: Double,
+    val p50: Double,
+    val max: Double,
 )
 
 private data class ReferenceComparison(
@@ -345,15 +405,24 @@ private data class ReferenceComparison(
 private enum class ReferenceMetric(
     val id: String,
     val higherIsBetter: Boolean,
+    val requiresValidScores: Boolean,
 ) {
-    AVG("score_avg", true),
-    MIN("score_min", true),
-    P50("score_p50", true),
-    BEST("score_best", true),
-    MS_AVG("ms_avg", false),
-    MS_MIN("ms_min", false),
-    MS_P50("ms_p50", false),
-    MS_MAX("ms_max", false);
+    AVG("score_avg", true, true),
+    MIN("score_min", true, true),
+    P50("score_p50", true, true),
+    BEST("score_best", true, true),
+    MS_AVG("ms_avg", false, false),
+    MS_MIN("ms_min", false, false),
+    MS_P50("ms_p50", false, false),
+    MS_MAX("ms_max", false, false),
+    INIT_MS_AVG("init_ms_avg", false, false),
+    INIT_MS_MIN("init_ms_min", false, false),
+    INIT_MS_P50("init_ms_p50", false, false),
+    INIT_MS_MAX("init_ms_max", false, false),
+    RUN_MS_AVG("run_ms_avg", false, false),
+    RUN_MS_MIN("run_ms_min", false, false),
+    RUN_MS_P50("run_ms_p50", false, false),
+    RUN_MS_MAX("run_ms_max", false, false);
 
     fun select(summary: CoremarkSummary): Double =
         when (this) {
@@ -365,5 +434,13 @@ private enum class ReferenceMetric(
             MS_MIN -> summary.msMin
             MS_P50 -> summary.msP50
             MS_MAX -> summary.msMax
+            INIT_MS_AVG -> summary.initMsAvg
+            INIT_MS_MIN -> summary.initMsMin
+            INIT_MS_P50 -> summary.initMsP50
+            INIT_MS_MAX -> summary.initMsMax
+            RUN_MS_AVG -> summary.runMsAvg
+            RUN_MS_MIN -> summary.runMsMin
+            RUN_MS_P50 -> summary.runMsP50
+            RUN_MS_MAX -> summary.runMsMax
         }
 }

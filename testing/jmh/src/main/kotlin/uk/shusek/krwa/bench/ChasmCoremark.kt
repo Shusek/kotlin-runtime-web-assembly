@@ -36,6 +36,8 @@ enum class CoremarkBackend {
 data class CoremarkResult(
     val score: Float,
     val elapsedNanos: Long,
+    val initNanos: Long,
+    val runNanos: Long,
 )
 
 object ChasmCoremark {
@@ -57,9 +59,15 @@ object ChasmCoremark {
         }
         val start = System.nanoTime()
         val instance = newInstance(module, backend)
+        val runStart = System.nanoTime()
         val scoreBits = instance.export("run").apply()[0]
-        val elapsedNanos = System.nanoTime() - start
-        return CoremarkResult(Float.fromBits(scoreBits.toInt()), elapsedNanos)
+        val end = System.nanoTime()
+        return CoremarkResult(
+            score = Float.fromBits(scoreBits.toInt()),
+            elapsedNanos = end - start,
+            initNanos = runStart - start,
+            runNanos = end - runStart,
+        )
     }
 
     fun runProfiled(
@@ -72,9 +80,15 @@ object ChasmCoremark {
         }
         val start = System.nanoTime()
         val instance = newInstance(module, backend, listener)
+        val runStart = System.nanoTime()
         val scoreBits = instance.export("run").apply()[0]
-        val elapsedNanos = System.nanoTime() - start
-        return CoremarkResult(Float.fromBits(scoreBits.toInt()), elapsedNanos)
+        val end = System.nanoTime()
+        return CoremarkResult(
+            score = Float.fromBits(scoreBits.toInt()),
+            elapsedNanos = end - start,
+            initNanos = runStart - start,
+            runNanos = end - runStart,
+        )
     }
 
     private fun newInstance(
@@ -147,12 +161,18 @@ object ChasmCoremark {
 
         val decodedModule = directChasmModule(bytes).orThrow("decode direct Chasm module")
         val instance = directChasmInstance(store, decodedModule, imports).orThrow("instantiate direct Chasm module")
+        val runStart = System.nanoTime()
         val result = directChasmInvoke(store, instance, "run").orThrow("invoke direct Chasm run")
-        val elapsedNanos = System.nanoTime() - start
+        val end = System.nanoTime()
         val score =
             (result.firstOrNull() as? NumberValue.F32)?.value
                 ?: error("direct Chasm run returned unexpected result: $result")
-        return CoremarkResult(score, elapsedNanos)
+        return CoremarkResult(
+            score = score,
+            elapsedNanos = end - start,
+            initNanos = runStart - start,
+            runNanos = end - runStart,
+        )
     }
 
     private fun <S> ChasmResult<S, *>.orThrow(action: String): S =
