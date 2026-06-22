@@ -33,7 +33,8 @@ the JVM showcase, not a host runtime target.
 The wasmJs target runs under Node-backed Kotlin/Wasm JS. The shared KMP runtime
 pass uses `Instance.builder(...).withExecutionBackend(ExecutionBackend.AUTO)`,
 which selects the native browser/Node WebAssembly engine for supported modules
-and uses the interpreter on JVM and iOS. It demonstrates function exports, host
+uses the Chasm-backed interpreter on supported JVM modules, and falls back to
+the portable interpreter where needed. It demonstrates function exports, host
 imports, and exported memory access through the browser/Node `WebAssembly`
 engine, plus the memory-backed `wasi-preview3` facade filesystem.
 

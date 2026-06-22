@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Test
 import uk.shusek.krwa.wasm.WasmParser
 import uk.shusek.krwa.wasm.types.FunctionType
+import uk.shusek.krwa.wasm.types.MemoryLimits
 import uk.shusek.krwa.wasm.types.ValType
 
 class ChasmExecutionBackendTest {
@@ -18,6 +19,36 @@ class ChasmExecutionBackendTest {
 
         assertEquals(ExecutionBackend.CHASM, instance.executionBackend())
         assertEquals(11, instance.export("add").apply(5, 6)[0].toInt())
+    }
+
+    @Test
+    fun autoSelectsChasmWhenSupported() {
+        val instance =
+            Instance.builder(WasmParser.parse(ADD_WASM))
+                .withExecutionBackend(ExecutionBackend.AUTO)
+                .build()
+
+        assertEquals(ExecutionBackend.CHASM, instance.executionBackend())
+        assertEquals(11, instance.export("add").apply(5, 6)[0].toInt())
+    }
+
+    @Test
+    fun autoFallsBackToInterpreterWhenChasmCannotSupportImports() {
+        val memory = ByteArrayMemory(MemoryLimits(1))
+        val hostImports =
+            ImportValues.builder()
+                .addMemory(ImportMemory("env", "memory", memory))
+                .build()
+        val instance =
+            Instance.builder(WasmParser.parse(IMPORTED_MEMORY_WASM))
+                .withImportValues(hostImports)
+                .withExecutionBackend(ExecutionBackend.AUTO)
+                .build()
+
+        memory.writeI32(0, 0x11223344)
+
+        assertEquals(ExecutionBackend.INTERPRETER, instance.executionBackend())
+        assertEquals(0x11223344, instance.export("read").apply(0)[0].toInt())
     }
 
     @Test
@@ -163,6 +194,25 @@ class ChasmExecutionBackendTest {
                 0x0A, 0x08, 0x01, 0x06, 0x00,
                 0x20, 0x00,
                 0x10, 0x00,
+                0x0B,
+            )
+
+        val IMPORTED_MEMORY_WASM =
+            byteArrayOf(
+                0x00, 0x61, 0x73, 0x6D,
+                0x01, 0x00, 0x00, 0x00,
+                0x01, 0x06, 0x01, 0x60, 0x01, 0x7F, 0x01, 0x7F,
+                0x02, 0x0F, 0x01,
+                0x03, 0x65, 0x6E, 0x76,
+                0x06, 0x6D, 0x65, 0x6D, 0x6F, 0x72, 0x79,
+                0x02, 0x00, 0x01,
+                0x03, 0x02, 0x01, 0x00,
+                0x07, 0x08, 0x01,
+                0x04, 0x72, 0x65, 0x61, 0x64,
+                0x00, 0x00,
+                0x0A, 0x09, 0x01, 0x07, 0x00,
+                0x20, 0x00,
+                0x28, 0x02, 0x00,
                 0x0B,
             )
 

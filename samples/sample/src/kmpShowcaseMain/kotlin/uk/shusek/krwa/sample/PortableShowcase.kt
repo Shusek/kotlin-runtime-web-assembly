@@ -203,6 +203,8 @@ internal class PortableRuntimeShowcase(
                     "AUTO selected the native browser/Node WebAssembly engine while keeping Instance.builder(...) common."
                 ExecutionBackend.INTERPRETER ->
                     "AUTO selected the interpreter on this host while keeping Instance.builder(...) common."
+                ExecutionBackend.CHASM ->
+                    "AUTO selected the Chasm-backed JVM interpreter while keeping Instance.builder(...) common."
                 ExecutionBackend.AUTO ->
                     error("AUTO is a requested backend, not a concrete runtime backend")
             }
@@ -312,7 +314,7 @@ internal class PortableRuntimeShowcase(
                 .withArguments("kmp-showcase", "--storage")
                 .withEnvironment("KRWA_SAMPLE", "kmp")
                 .withPreopenedDirectory("/", storageRoot)
-                .withStreamBufferCapacity(1024)
+                .withResourceBudget(parallelism = 1, streamBufferCapacity = 1024)
                 .build()
         val fs = runtime.fileSystem("/")
 

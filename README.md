@@ -91,8 +91,11 @@ Use `wasi-preview3` when you want the Kotlin-first WASI 0.3 facade:
 ```kotlin
 val runtime = KotlinWasiPreview3.builder()
     .withNetworking()
-    .withStreamBufferCapacity(64 * 1024)
-    .withMaxPendingFutures(4_096)
+    .withResourceBudget(
+        parallelism = 2,
+        streamBufferCapacity = 64 * 1024,
+        maxPendingFutures = 4_096,
+    )
     .build()
 
 val future = runtime.completed("ready")
@@ -176,8 +179,9 @@ Ktor `HttpClient` wiring through WASIp3, and WASIp2 host wiring. The wasmJs
 showcase runs a web-targeted subset through
 `Instance.builder(...).withExecutionBackend(ExecutionBackend.AUTO)`, proving the
 same common API can select the host browser or Node WebAssembly engine on
-wasmJs while falling back to the interpreter on JVM and iOS. The iOS simulator
-showcase demonstrates the same portable parser/interpreter API surface for instance
+wasmJs, the Chasm-backed interpreter on supported JVM modules, or the portable
+interpreter fallback on JVM and iOS. The iOS simulator showcase demonstrates the
+same portable parser/interpreter API surface for instance
 construction, function exports, structured control flow, host imports,
 `Store`-based cross-module imports, traps, linear memory, WIT parsing, WASIp3
 metadata/contracts, and WASIp3 preopened storage from Kotlin/Native. See

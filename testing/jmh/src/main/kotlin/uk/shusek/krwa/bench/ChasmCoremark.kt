@@ -49,6 +49,8 @@ object ChasmCoremark {
         return Parser.parse(loadModuleBytes())
     }
 
+    fun clockModeName(): String = clockMode().id
+
     fun run(module: WasmModule, backend: CoremarkBackend): CoremarkResult {
         if (backend == CoremarkBackend.CHASM_DIRECT) {
             return runDirectChasm(module.originalBytes() ?: loadModuleBytes())
@@ -80,7 +82,7 @@ object ChasmCoremark {
         backend: CoremarkBackend,
         listener: ExecutionListener? = null,
     ): Instance {
-        val clockStart = System.nanoTime()
+        val coremarkClock = coremarkClockMillis()
         val clockResult = LongArray(1)
         val clock =
             HostFunction(
@@ -88,7 +90,7 @@ object ChasmCoremark {
                 "clock_ms",
                 FunctionType.returning(ValType.I64),
             ) { _, _ ->
-                clockResult[0] = (System.nanoTime() - clockStart) / 1_000_000L
+                clockResult[0] = coremarkClock()
                 clockResult
             }
 
@@ -127,7 +129,7 @@ object ChasmCoremark {
 
     private fun runDirectChasm(bytes: ByteArray): CoremarkResult {
         val start = System.nanoTime()
-        val clockStart = System.nanoTime()
+        val coremarkClock = coremarkClockMillis()
         val store = directChasmStore()
         val imports =
             directChasmImports(store) {
@@ -138,7 +140,7 @@ object ChasmCoremark {
                         results { i64() }
                     }
                     reference {
-                        listOf(NumberValue.I64((System.nanoTime() - clockStart) / 1_000_000L))
+                        listOf(NumberValue.I64(coremarkClock()))
                     }
                 }
             }
@@ -171,8 +173,30 @@ object ChasmCoremark {
         }
     }
 
+    private fun coremarkClockMillis(): () -> Long =
+        when (clockMode()) {
+            CoremarkClockMode.MONOTONIC -> {
+                val start = System.nanoTime()
+                val source = { (System.nanoTime() - start) / 1_000_000L }
+                source
+            }
+            CoremarkClockMode.WALL -> System::currentTimeMillis
+        }
+
+    private fun clockMode(): CoremarkClockMode =
+        when (System.getProperty("krwa.coremark.clock", "monotonic").trim().lowercase()) {
+            "monotonic", "nano", "nanotime" -> CoremarkClockMode.MONOTONIC
+            "wall", "wallclock", "currenttimemillis", "upstream" -> CoremarkClockMode.WALL
+            else -> error("Unsupported krwa.coremark.clock")
+        }
+
     private var compiledModule: WasmModule? = null
     private var compiledFactory: ((Instance) -> Machine)? = null
 
     private const val RESOURCE = "/benchmark/chasm-coremark.wasm"
+
+    private enum class CoremarkClockMode(val id: String) {
+        MONOTONIC("monotonic"),
+        WALL("wall"),
+    }
 }

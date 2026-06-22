@@ -2720,3 +2720,55 @@ zero-argument `i64` host functions. It kept runtime tests passing, but the
 rotated fair gate still failed (`ratio=0.967` with one warmup, `ratio=0.937`
 with three warmups), so it was removed. The remaining difference is not solved
 by shaving the `clock_ms` return bridge alone.
+
+Follow-up on 2026-06-22: JVM `ExecutionBackend.AUTO` now tries the Chasm-backed
+runtime path first when a side-effect-free preflight says the adapter can support
+the module bytes and import shape. It falls back to the portable interpreter when
+the parsed module has no original bytes or uses import kinds the Chasm adapter
+does not support yet. This makes Chasm a practical default JVM fast path for
+normal `Instance.builder(...).withExecutionBackend(ExecutionBackend.AUTO)`
+callers instead of only a manually selected backend. Explicit
+`ExecutionBackend.CHASM` still fails loudly on unsupported modules.
+
+The Chasm CoreMark harness also gained `-Dkrwa.coremark.clock=monotonic|wall`.
+`monotonic` preserves the previous benchmark clock, while `wall` matches
+upstream Chasm's epoch-millisecond `env.clock_ms` shape.
+
+Quick wall-clock sanity:
+
+```text
+./gradlew --no-daemon :jmh:coremarkChasmAdapterDirectFairReport \
+  -Dkrwa.coremark.clock=wall \
+  -Dkrwa.coremark.warmups=0 \
+  -Dkrwa.coremark.repetitions=1 --quiet
+
+chasm_interpreter score_p50=318.547424
+chasm_direct score_p50=301.340973
+chasm_interpreter reference=chasm_direct ratio=1.057 status=pass
+```
+
+Full rotated fair wall-clock report:
+
+```text
+./gradlew --no-daemon :jmh:coremarkChasmAdapterDirectFairReport \
+  -Dkrwa.coremark.clock=wall --quiet
+
+chasm_interpreter score_avg=302.571465 score_min=297.619049 score_p50=302.984406 score_best=308.975739 valid_runs=4 invalid_runs=0 ms_avg=18471.462 ms_min=17005.543 ms_p50=17124.938 ms_max=22693.750
+chasm_direct score_avg=307.573738 score_min=289.540344 score_p50=314.836670 score_best=316.080597 valid_runs=4 invalid_runs=0 ms_avg=18194.629 ms_min=16054.273 ms_p50=17565.404 ms_max=22659.325
+chasm_interpreter reference=chasm_direct metric=score_p50 score=302.984406 reference_score=314.836670 ratio=0.962 status=fail
+```
+
+Conclusion: matching upstream Chasm's wall-clock host import is useful for
+apples-to-apples benchmarking, but it does not explain the remaining adapter
+gap. The actionable runtime change from this pass is enabling Chasm through
+`AUTO`; further CoreMark parity work should target adapter/runtime behavior, not
+the clock callback alone.
+
+Verification:
+
+```text
+./gradlew --no-daemon :runtime:jvmTest --tests uk.shusek.krwa.runtime.ChasmExecutionBackendTest --quiet
+./gradlew --no-daemon :jmh:compileKotlin --quiet
+cd samples/sample && ./gradlew --no-daemon metadataKmpShowcaseMainClasses --quiet
+cd samples/sample && ./gradlew --no-daemon jvmMainClasses --quiet
+```

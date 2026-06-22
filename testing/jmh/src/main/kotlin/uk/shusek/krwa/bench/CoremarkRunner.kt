@@ -16,7 +16,7 @@ fun main(args: Array<String>) {
     println("Benchmark: Chasm coremark.wasm")
     println(
         "Warmups: $warmups, repetitions: $repetitions, interleave: $interleave, " +
-            "rotateInterleave: $rotateInterleave"
+            "rotateInterleave: $rotateInterleave, clock: ${ChasmCoremark.clockModeName()}"
     )
 
     val summaries =

@@ -132,6 +132,12 @@ private constructor(
     }
 
     companion object {
+        fun canCreate(
+            module: WasmModule,
+            imports: ImportValues,
+        ): Boolean =
+            module.originalBytes() != null && supportsImports(module, imports)
+
         fun create(
             module: WasmModule,
             imports: ImportValues,
@@ -189,21 +195,26 @@ private constructor(
             module: WasmModule,
             imports: ImportValues,
         ) {
-            val importSection = module.importSection()
-            if (
-                importSection.count(ExternalType.GLOBAL) != 0 ||
-                    importSection.count(ExternalType.MEMORY) != 0 ||
-                    importSection.count(ExternalType.TABLE) != 0 ||
-                    importSection.count(ExternalType.TAG) != 0 ||
-                    imports.globalCount() != 0 ||
-                    imports.memoryCount() != 0 ||
-                    imports.tableCount() != 0 ||
-                    imports.tagCount() != 0
-            ) {
+            if (!supportsImports(module, imports)) {
                 throw WasmEngineException(
                     "Chasm backend currently supports function imports only"
                 )
             }
+        }
+
+        private fun supportsImports(
+            module: WasmModule,
+            imports: ImportValues,
+        ): Boolean {
+            val importSection = module.importSection()
+            return importSection.count(ExternalType.GLOBAL) == 0 &&
+                importSection.count(ExternalType.MEMORY) == 0 &&
+                importSection.count(ExternalType.TABLE) == 0 &&
+                importSection.count(ExternalType.TAG) == 0 &&
+                imports.globalCount() == 0 &&
+                imports.memoryCount() == 0 &&
+                imports.tableCount() == 0 &&
+                imports.tagCount() == 0
         }
 
         private fun ValueTypeListBuilder.addKrwaType(type: ValType) {

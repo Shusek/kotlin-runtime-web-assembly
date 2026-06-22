@@ -17,8 +17,13 @@ internal actual object RuntimePlatform {
         hostInstance: Instance,
     ): PlatformInstanceExecution? =
         when (backend) {
-            ExecutionBackend.AUTO,
             ExecutionBackend.INTERPRETER -> null
+            ExecutionBackend.AUTO ->
+                if (ChasmPlatformInstanceExecution.canCreate(module, imports)) {
+                    ChasmPlatformInstanceExecution.create(module, imports, hostInstance)
+                } else {
+                    null
+                }
             ExecutionBackend.NATIVE ->
                 throw WasmEngineException("native WebAssembly execution is only available on wasmJs")
             ExecutionBackend.CHASM ->

@@ -29,15 +29,16 @@ Keep parser validation enabled when using this machine. The default
 combining `SimdInterpreterMachine` with `.withValidation(false)` is intended
 only for modules that were validated by another trusted tool first.
 
-On `wasmJs`, `Instance.builder(module).withExecutionBackend(ExecutionBackend.AUTO)`
-can instantiate parsed modules with the native browser or Node WebAssembly
-engine and fall back to the interpreter when native execution is unavailable or
-the provided imports require interpreter-owned objects. This keeps the common
-KMP entry point intact while still using the fast path for browser workloads
-where the module uses features supported by the host engine. `AUTO` does not
-hide native runtime traps during instantiation; a `WebAssembly.RuntimeError`
-becomes `NativeWasmRuntimeException` instead of retrying through the
-interpreter.
+`Instance.builder(module).withExecutionBackend(ExecutionBackend.AUTO)` keeps
+the common KMP entry point intact while still selecting a platform fast path
+when one fits. On JVM it tries the Chasm-backed interpreter and falls back to the
+portable interpreter when the parsed module has no original bytes or uses import
+shapes the Chasm adapter does not support yet. On `wasmJs`, it can instantiate
+parsed modules with the native browser or Node WebAssembly engine and fall back
+to the interpreter when native execution is unavailable or the provided imports
+require interpreter-owned objects. `AUTO` does not hide native runtime traps
+during wasmJs instantiation; a `WebAssembly.RuntimeError` becomes
+`NativeWasmRuntimeException` instead of retrying through the interpreter.
 
 ```kotlin
 val module = WasmParser.parse(bytes)
