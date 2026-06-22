@@ -194,6 +194,10 @@ private fun referenceMetric(): ReferenceMetric =
         "min", "minimum" -> ReferenceMetric.MIN
         "p50", "median" -> ReferenceMetric.P50
         "best", "max", "maximum" -> ReferenceMetric.BEST
+        "ms_avg", "time_avg", "time-average", "time_mean" -> ReferenceMetric.MS_AVG
+        "ms_min", "time_min", "time-minimum" -> ReferenceMetric.MS_MIN
+        "ms_p50", "time_p50", "time_median" -> ReferenceMetric.MS_P50
+        "ms_max", "time_max", "time-maximum" -> ReferenceMetric.MS_MAX
         else -> error("Unsupported krwa.coremark.referenceMetric")
     }
 
@@ -250,6 +254,10 @@ private fun printSummary(backend: CoremarkBackend, results: List<CoremarkResult>
         scoreMin = minScore,
         scoreP50 = p50Score,
         scoreBest = bestScore,
+        msAvg = averageMillis,
+        msMin = minMillis,
+        msP50 = p50Millis,
+        msMax = maxMillis,
         validRuns = validScores.size,
         invalidRuns = invalidRuns,
     )
@@ -265,7 +273,6 @@ private fun printReferenceComparison(
                 ?: error("Reference backend $backend was not measured")
         }
     val referenceScore = reference.score ?: reference.metric.select(referenceSummary!!)
-    val requiredScore = referenceScore * reference.minRatio
     val referenceInvalidRuns = referenceSummary?.invalidRuns ?: 0
     val failures = ArrayList<String>()
     for (summary in summaries) {
@@ -273,8 +280,16 @@ private fun printReferenceComparison(
             continue
         }
         val score = reference.metric.select(summary)
-        val ratio = score / referenceScore
-        val passed = referenceInvalidRuns == 0 && summary.invalidRuns == 0 && score >= requiredScore
+        val ratio =
+            if (reference.metric.higherIsBetter) {
+                score / referenceScore
+            } else {
+                referenceScore / score
+            }
+        val passed =
+            referenceInvalidRuns == 0 &&
+                summary.invalidRuns == 0 &&
+                ratio >= reference.minRatio
         val status = if (passed) "pass" else "fail"
         val backend = summary.backend.name.lowercase(Locale.ROOT)
         println(
@@ -292,7 +307,8 @@ private fun printReferenceComparison(
         )
         if (!passed) {
             failures.add(
-                "$backend ${reference.metric.id} $score < ${reference.name} $referenceScore * ${reference.minRatio}"
+                "$backend ${reference.metric.id} ratio $ratio < ${reference.name} ratio ${reference.minRatio} " +
+                    "(score=$score reference=$referenceScore)"
             )
         }
     }
@@ -309,6 +325,10 @@ private data class CoremarkSummary(
     val scoreMin: Double,
     val scoreP50: Double,
     val scoreBest: Double,
+    val msAvg: Double,
+    val msMin: Double,
+    val msP50: Double,
+    val msMax: Double,
     val validRuns: Int,
     val invalidRuns: Int,
 )
@@ -322,11 +342,18 @@ private data class ReferenceComparison(
     val failBelowReference: Boolean,
 )
 
-private enum class ReferenceMetric(val id: String) {
-    AVG("score_avg"),
-    MIN("score_min"),
-    P50("score_p50"),
-    BEST("score_best");
+private enum class ReferenceMetric(
+    val id: String,
+    val higherIsBetter: Boolean,
+) {
+    AVG("score_avg", true),
+    MIN("score_min", true),
+    P50("score_p50", true),
+    BEST("score_best", true),
+    MS_AVG("ms_avg", false),
+    MS_MIN("ms_min", false),
+    MS_P50("ms_p50", false),
+    MS_MAX("ms_max", false);
 
     fun select(summary: CoremarkSummary): Double =
         when (this) {
@@ -334,5 +361,9 @@ private enum class ReferenceMetric(val id: String) {
             MIN -> summary.scoreMin
             P50 -> summary.scoreP50
             BEST -> summary.scoreBest
+            MS_AVG -> summary.msAvg
+            MS_MIN -> summary.msMin
+            MS_P50 -> summary.msP50
+            MS_MAX -> summary.msMax
         }
 }

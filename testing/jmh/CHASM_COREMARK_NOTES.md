@@ -2835,3 +2835,38 @@ Treat this as a no-regression sanity check only; the direct Chasm run was a slow
 outlier in that single-measurement invocation. The useful code-level result is
 that the platform wrapper no longer pays for an interpreter machine it does not
 use.
+
+Fuller JMH wall-clock report after removing interpreter-machine allocation:
+
+```text
+./gradlew --no-daemon :jmh:coremarkChasmAdapterDirectJmhReport --quiet
+
+BenchmarkChasmCoremarkExecution.coremark  CHASM_INTERPRETER  avgt    2  15.522 s/op
+BenchmarkChasmCoremarkExecution.coremark       CHASM_DIRECT  avgt    2  15.728 s/op
+```
+
+This run puts the KRWA Chasm adapter at `15.728 / 15.522 = 1.013` of direct
+Chasm by wall-clock throughput.
+
+Follow-up on 2026-06-22: the CoreMark runner can now use wall-clock metrics in
+reference comparisons (`ms_avg`, `ms_min`, `ms_p50`, `ms_max`). For these
+metrics lower time is better, and the reported ratio is `reference_ms /
+backend_ms`, so `ratio >= 1.0` means the measured backend is at least as fast as
+the reference backend by that time metric.
+
+New gate:
+
+```text
+./gradlew --no-daemon :jmh:coremarkChasmAdapterDirectWallClockGate --quiet
+
+chasm_interpreter score_avg=315.961632 score_min=298.195923 score_p50=317.889221 score_best=341.646729 valid_runs=4 invalid_runs=0 ms_avg=16313.515 ms_min=15310.162 ms_p50=16671.234 ms_max=17182.562
+chasm_direct score_avg=330.477875 score_min=314.399506 score_p50=335.457886 score_best=345.363495 valid_runs=4 invalid_runs=0 ms_avg=18553.405 ms_min=15015.140 ms_p50=21556.057 ms_max=22232.351
+chasm_interpreter reference=chasm_direct metric=ms_p50 score=16671.233584 reference_score=21556.057250 ratio=1.293 status=pass
+```
+
+Verification for this gate change:
+
+```text
+./gradlew --no-daemon :jmh:compileKotlin --quiet
+./gradlew --no-daemon :jmh:coremarkChasmAdapterDirectWallClockGate --quiet
+```
