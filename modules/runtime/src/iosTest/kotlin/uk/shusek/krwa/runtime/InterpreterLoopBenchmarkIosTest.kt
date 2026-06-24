@@ -13,6 +13,7 @@ class InterpreterLoopBenchmarkIosTest {
 
         val result =
             InterpreterLoopBenchmarkSupport.run(
+                backend = ExecutionBackend.INTERPRETER,
                 iterations = intOption(IterationsArgument, IterationsEnv, DefaultIterations),
                 repetitions = intOption(RepetitionsArgument, RepetitionsEnv, DefaultRepetitions),
                 warmupRepetitions =

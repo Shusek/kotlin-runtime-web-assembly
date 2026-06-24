@@ -3,12 +3,38 @@ package uk.shusek.krwa.runtime
 import uk.shusek.krwa.wasm.types.FunctionType
 
 enum class ExecutionBackend {
+    /** Let the runtime choose its normal backend for the current platform. */
     AUTO,
+
+    /** Execute with KRWA's portable Kotlin interpreter. */
     INTERPRETER,
+
+    /** Execute with the host platform's native WebAssembly engine where available. */
     NATIVE,
+
+    /** Execute with Wasmtime Pulley where a platform binding is linked. */
+    PULLEY,
 }
 
-internal interface PlatformInstanceExecution {
+data class ExecutionBackendAvailability(
+    val available: Boolean,
+    val reason: String? = null,
+)
+
+fun ExecutionBackend.availability(): ExecutionBackendAvailability =
+    RuntimePlatform.executionBackendAvailability(this)
+
+fun ExecutionBackend.isAvailable(): Boolean = availability().available
+
+/**
+ * Execution surface used by host-backed engines selected through [ExecutionBackend].
+ *
+ * Implementations own the actual exported functions and linear memories, while
+ * KRWA still owns import wiring, component-model lifting/lowering, and host
+ * callback dispatch. Memory lookup by index should return `null` when the
+ * platform engine cannot expose that memory to KRWA.
+ */
+interface PlatformInstanceExecution {
     val backend: ExecutionBackend
 
     fun export(name: String): ExportFunction

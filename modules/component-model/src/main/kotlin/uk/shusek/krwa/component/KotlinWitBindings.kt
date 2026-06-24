@@ -1620,6 +1620,7 @@ class KotlinWitBindings private constructor(builder: Builder) {
             out.append("  val state = KrwaAsyncState(onReturn)\n")
             out.append("  val id = krwaStoreAsyncState(state)\n")
             out.append("  krwaContextSet0(id)\n")
+            out.append("  krwaFreeAllComponentModelReallocAllocatedMemory()\n")
             out.append("  block.startCoroutine(object : Continuation<T> {\n")
             out.append("    override val context = EmptyCoroutineContext\n")
             out.append("    override fun resumeWith(result: Result<T>) {\n")
@@ -1628,7 +1629,11 @@ class KotlinWitBindings private constructor(builder: Builder) {
             out.append("  })\n")
             out.append("  return krwaPollAsyncState(id)\n")
             out.append("}\n\n")
-            out.append("private fun krwaResumeSuspend(): Int = krwaPollAsyncState(krwaContextGet0())\n\n")
+            out.append("private fun krwaResumeSuspend(): Int {\n")
+            out.append("  val id = krwaContextGet0()\n")
+            out.append("  krwaFreeAllComponentModelReallocAllocatedMemory()\n")
+            out.append("  return krwaPollAsyncState(id)\n")
+            out.append("}\n\n")
             out.append("private fun krwaPollAsyncState(id: Int): Int {\n")
             out.append(
                 "  val state = krwaAsyncStates.getOrNull(id) ?: error(\"unknown WIT async" +
@@ -1637,6 +1642,7 @@ class KotlinWitBindings private constructor(builder: Builder) {
             out.append("  val completed = state.outcome ?: return KRWA_ASYNC_YIELD\n")
             out.append("  krwaAsyncStates[id] = null\n")
             out.append("  krwaFreeAsyncStateIds.add(id)\n")
+            out.append("  krwaFreeAllComponentModelReallocAllocatedMemory()\n")
             out.append("  state.onReturn(completed.getOrThrow())\n")
             out.append("  return KRWA_ASYNC_EXIT\n")
             out.append("}\n\n")

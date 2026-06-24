@@ -16,9 +16,13 @@ internal actual object RuntimePlatform {
         imports: ImportValues,
         backend: ExecutionBackend,
         hostInstance: Instance,
+        memoryLimits: MemoryLimits?,
     ): PlatformInstanceExecution? {
         if (backend == ExecutionBackend.INTERPRETER) {
             return null
+        }
+        if (backend == ExecutionBackend.PULLEY) {
+            return PulleyExecution.create(module, imports, hostInstance)
         }
         if (!NativeWasmFeatures.available()) {
             if (backend == ExecutionBackend.NATIVE) {
@@ -33,6 +37,7 @@ internal actual object RuntimePlatform {
                 NativeWasmInstance.instantiate(
                     module,
                     NativeWasmImports.fromImportValues(imports, hostInstance),
+                    memoryLimits,
                 ),
             )
         } catch (failure: Throwable) {
@@ -42,6 +47,22 @@ internal actual object RuntimePlatform {
             null
         }
     }
+
+    actual fun executionBackendAvailability(backend: ExecutionBackend): ExecutionBackendAvailability =
+        when (backend) {
+            ExecutionBackend.AUTO,
+            ExecutionBackend.INTERPRETER -> ExecutionBackendAvailability(available = true)
+            ExecutionBackend.NATIVE ->
+                if (NativeWasmFeatures.available()) {
+                    ExecutionBackendAvailability(available = true)
+                } else {
+                    ExecutionBackendAvailability(
+                        available = false,
+                        reason = "native WebAssembly execution is not available in this wasmJs host",
+                    )
+                }
+            ExecutionBackend.PULLEY -> PulleyExecution.availability()
+        }
 
     actual fun usesPeriodicInterruptionPolling(): Boolean = true
 

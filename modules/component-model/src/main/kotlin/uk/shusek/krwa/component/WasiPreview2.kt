@@ -2497,16 +2497,20 @@ class WasiPreview2 private constructor(builder: Builder) {
     private fun filesystemLinkAt(args: List<Any?>): Any? {
         requireArity("descriptor.link-at", args, 5)
         return filesystemResult {
+            val followSymlinks = flag(args.get(1), "symlink-follow")
             var oldPath =
                 resolvePath(
                     descriptors.get(handle(args, 0)),
                     args.get(2) as String,
-                    flag(args.get(1), "symlink-follow"),
+                    followSymlinks,
                 )
             val oldLinkPath =
-                if (flag(args.get(1), "symlink-follow")) {
+                if (followSymlinks) {
                     fileSystem.canonicalize(oldPath)
                 } else {
+                    if (descriptorType(oldPath) == "symbolic-link") {
+                        throw FsException("not-permitted")
+                    }
                     oldPath
                 }
             var newPath =
@@ -2531,7 +2535,8 @@ class WasiPreview2 private constructor(builder: Builder) {
             ) {
                 throw FsException("read-only")
             }
-            var path = resolvePath(base, args.get(2) as String, flag(args.get(1), "symlink-follow"))
+            val followSymlinks = flag(args.get(1), "symlink-follow")
+            var path = resolvePath(base, args.get(2) as String, followSymlinks)
             if (flag(openFlags, "exclusive") && fileSystem.exists(path)) {
                 throw FsException("exist")
             }
@@ -2540,6 +2545,9 @@ class WasiPreview2 private constructor(builder: Builder) {
             }
             if (!fileSystem.exists(path)) {
                 throw FsException("no-entry")
+            }
+            if (descriptorType(path) == "symbolic-link" && !followSymlinks) {
+                throw FsException("not-permitted")
             }
             if (flag(openFlags, "directory") && !isDirectory(path)) {
                 throw FsException("not-directory")

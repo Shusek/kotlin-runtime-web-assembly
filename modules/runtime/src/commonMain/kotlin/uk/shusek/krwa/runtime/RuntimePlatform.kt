@@ -13,7 +13,10 @@ internal expect object RuntimePlatform {
         imports: ImportValues,
         backend: ExecutionBackend,
         hostInstance: Instance,
+        memoryLimits: MemoryLimits?,
     ): PlatformInstanceExecution?
+
+    fun executionBackendAvailability(backend: ExecutionBackend): ExecutionBackendAvailability
 
     fun usesPeriodicInterruptionPolling(): Boolean
 

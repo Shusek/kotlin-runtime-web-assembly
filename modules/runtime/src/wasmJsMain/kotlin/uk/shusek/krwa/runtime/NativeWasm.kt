@@ -9,6 +9,8 @@ import kotlin.js.JsArray
 import kotlin.js.js
 import kotlin.js.toJsNumber
 import kotlin.js.unsafeCast
+import kotlinx.io.Buffer
+import kotlinx.io.readByteArray
 import org.khronos.webgl.ArrayBuffer
 import org.khronos.webgl.ArrayBufferView
 import org.khronos.webgl.DataView
@@ -19,6 +21,8 @@ import uk.shusek.krwa.wasm.InvalidException
 import uk.shusek.krwa.wasm.UnlinkableException
 import uk.shusek.krwa.wasm.WasmEngineException
 import uk.shusek.krwa.wasm.WasmModule
+import uk.shusek.krwa.wasm.WasmParser
+import uk.shusek.krwa.wasm.WasmWriter
 import uk.shusek.krwa.wasm.types.ExternalType
 import uk.shusek.krwa.wasm.types.FunctionImport
 import uk.shusek.krwa.wasm.types.FunctionType
@@ -42,6 +46,7 @@ class NativeWasmInstance
 internal constructor(
     private val module: WasmModule,
     private val imports: NativeWasmImports,
+    private val definedMemoryLimits: MemoryLimits? = null,
 ) {
     private lateinit var jsInstance: JsWebAssemblyInstance
     internal val references = NativeWasmReferences()
@@ -191,7 +196,12 @@ internal constructor(
         ) {
             throw InvalidException("unknown memory $memoryIndex")
         }
-        return memorySection.getMemory(definedIndex).limits()
+        val declaredLimits = memorySection.getMemory(definedIndex).limits()
+        return if (definedIndex == 0 && definedMemoryLimits != null) {
+            declaredLimits.cappedBy(definedMemoryLimits)
+        } else {
+            declaredLimits
+        }
     }
 
     private fun globalType(globalIndex: Int): Pair<ValType, MutabilityType> {
@@ -260,27 +270,160 @@ internal constructor(
         fun instantiate(
             module: WasmModule,
             imports: NativeWasmImports = NativeWasmImports.empty(),
+            memoryLimits: MemoryLimits? = null,
         ): NativeWasmInstance {
             val bytes =
                 module.originalBytes()
                     ?: throw IllegalArgumentException(
                         "Native WebAssembly execution needs original module bytes. Parse the module from complete bytes with WasmParser.parse(bytes)."
                     )
-            return instantiate(bytes, module, imports)
+            return instantiate(bytes, module, imports, memoryLimits)
         }
 
         fun instantiate(
             bytes: ByteArray,
             module: WasmModule,
             imports: NativeWasmImports = NativeWasmImports.empty(),
+            memoryLimits: MemoryLimits? = null,
         ): NativeWasmInstance {
             validateImports(module, imports)
-            val nativeInstance = NativeWasmInstance(module, imports)
-            val compiledModule = compileWebAssemblyModule(bytes.toUint8Array())
+            val moduleBytes = bytes.withCappedDefinedMemory(memoryLimits)
+            val nativeInstance = NativeWasmInstance(module, imports, memoryLimits)
+            val compiledModule = compileWebAssemblyModule(moduleBytes.toUint8Array())
             val jsImports = imports.toJsImportObject(nativeInstance)
             nativeInstance.bind(instantiateWebAssemblyOrThrow(compiledModule, jsImports))
             return nativeInstance
         }
+
+        private fun ByteArray.withCappedDefinedMemory(memoryLimits: MemoryLimits?): ByteArray {
+            memoryLimits ?: return this
+            if (memoryLimits.initialPages() > memoryLimits.maximumPages()) {
+                throw NativeWasmRuntimeException("native WebAssembly memory limit is smaller than the initial memory size")
+            }
+            if (size < WasmHeaderSize || !startsWithWasmHeader()) {
+                throw NativeWasmRuntimeException("native WebAssembly execution needs a complete module")
+            }
+            val writer = WasmWriter()
+            var offset = WasmHeaderSize
+            var rewritten = false
+            while (offset < size) {
+                val sectionId = this[offset++].toInt() and ByteMask
+                val sectionSize = readVarUInt32(offset)
+                offset = sectionSize.nextOffset
+                val sectionStart = offset
+                val sectionEnd = sectionStart + sectionSize.value
+                if (sectionEnd > size) {
+                    throw NativeWasmRuntimeException("native WebAssembly section length out of bounds")
+                }
+                val contents = copyOfRange(sectionStart, sectionEnd)
+                writer.writeSection(
+                    sectionId,
+                    if (sectionId == WasmMemorySectionId) {
+                        rewritten = true
+                        contents.withCappedFirstMemory(memoryLimits)
+                    } else {
+                        contents
+                    },
+                )
+                offset = sectionEnd
+            }
+            return if (rewritten) writer.bytes() else this
+        }
+
+        private fun ByteArray.withCappedFirstMemory(memoryLimits: MemoryLimits): ByteArray {
+            var offset = 0
+            val memoryCount = readVarUInt32(offset)
+            offset = memoryCount.nextOffset
+            if (memoryCount.value == 0) {
+                return this
+            }
+
+            val out = Buffer()
+            WasmWriter.writeVarUInt32(out, memoryCount.value)
+            for (index in 0 until memoryCount.value) {
+                val flags = readByteAt(offset++)
+                flags.requireSupportedMemoryLimitsFlags()
+                val initial = readVarUInt32(offset)
+                offset = initial.nextOffset
+                val declaredMaximum =
+                    if (flags == MemoryLimitHasMaximum || flags == MemoryLimitSharedHasMaximum) {
+                        val maximum = readVarUInt32(offset)
+                        offset = maximum.nextOffset
+                        maximum.value
+                    } else {
+                        MemoryLimits.MAX_PAGES
+                    }
+
+                if (index == 0) {
+                    val cappedMaximum = minOf(declaredMaximum, memoryLimits.maximumPages())
+                    if (initial.value > cappedMaximum) {
+                        throw NativeWasmRuntimeException(
+                            "native WebAssembly memory initial pages ${initial.value} exceed host limit $cappedMaximum"
+                        )
+                    }
+                    out.writeByte(
+                        if (flags == MemoryLimitSharedHasMaximum) {
+                            MemoryLimitSharedHasMaximum
+                        } else {
+                            MemoryLimitHasMaximum
+                        }.toByte(),
+                    )
+                    WasmWriter.writeVarUInt32(out, initial.value)
+                    WasmWriter.writeVarUInt32(out, cappedMaximum)
+                } else {
+                    out.writeByte(flags.toByte())
+                    WasmWriter.writeVarUInt32(out, initial.value)
+                    if (flags == MemoryLimitHasMaximum || flags == MemoryLimitSharedHasMaximum) {
+                        WasmWriter.writeVarUInt32(out, declaredMaximum)
+                    }
+                }
+            }
+            if (offset != size) {
+                throw NativeWasmRuntimeException("native WebAssembly memory section has trailing bytes")
+            }
+            return out.readByteArray()
+        }
+
+        private fun ByteArray.startsWithWasmHeader(): Boolean =
+            WasmParser.MAGIC_BYTES.indices.all { index -> this[index] == WasmParser.MAGIC_BYTES[index] } &&
+                WasmParser.VERSION_BYTES.indices.all { index ->
+                    this[WasmParser.MAGIC_BYTES.size + index] == WasmParser.VERSION_BYTES[index]
+                }
+
+        private fun ByteArray.readVarUInt32(offset: Int): VarUInt32 {
+            var value = 0
+            var shift = 0
+            var currentOffset = offset
+            while (true) {
+                if (currentOffset >= size || shift > MaxVarUInt32Shift) {
+                    throw NativeWasmRuntimeException("native WebAssembly varuint32 out of bounds")
+                }
+                val byte = readByteAt(currentOffset++)
+                value = value or ((byte and VarUIntPayloadMask) shl shift)
+                if ((byte and VarUIntContinuationMask) == 0) {
+                    return VarUInt32(value, currentOffset)
+                }
+                shift += VarUIntShift
+            }
+        }
+
+        private fun ByteArray.readByteAt(offset: Int): Int {
+            if (offset !in indices) {
+                throw NativeWasmRuntimeException("native WebAssembly byte out of bounds")
+            }
+            return this[offset].toInt() and ByteMask
+        }
+
+        private fun Int.requireSupportedMemoryLimitsFlags() {
+            if (this != MemoryLimitNoMaximum &&
+                this != MemoryLimitHasMaximum &&
+                this != MemoryLimitSharedHasMaximum
+            ) {
+                throw NativeWasmRuntimeException("native WebAssembly memory has unsupported limits flags $this")
+            }
+        }
+
+        private data class VarUInt32(val value: Int, val nextOffset: Int)
 
         private fun validateImports(module: WasmModule, imports: NativeWasmImports) {
             val importSection = module.importSection()
@@ -399,6 +542,9 @@ internal constructor(
         }
     }
 }
+
+private fun MemoryLimits.cappedBy(cap: MemoryLimits): MemoryLimits =
+    MemoryLimits(initialPages(), minOf(maximumPages(), cap.maximumPages()), shared())
 
 class NativeWasmRuntimeException(message: String) : WasmEngineException(message)
 
@@ -1367,6 +1513,17 @@ private fun ByteArray.toUint8Array(): Uint8Array {
     }
     return bytes
 }
+
+private const val WasmHeaderSize = 8
+private const val WasmMemorySectionId = 5
+private const val MemoryLimitNoMaximum = 0x00
+private const val MemoryLimitHasMaximum = 0x01
+private const val MemoryLimitSharedHasMaximum = 0x03
+private const val ByteMask = 0xFF
+private const val VarUIntPayloadMask = 0x7F
+private const val VarUIntContinuationMask = 0x80
+private const val VarUIntShift = 7
+private const val MaxVarUInt32Shift = 28
 
 internal class NativeWasmReferences {
     private var nextReference = 1L

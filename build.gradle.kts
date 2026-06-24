@@ -8,6 +8,7 @@ plugins {
     id("org.jetbrains.kotlin.jvm") apply false
     id("org.jetbrains.kotlin.kapt") apply false
     id("org.jetbrains.kotlin.multiplatform") apply false
+    alias(libs.plugins.androidMultiplatformLibrary) apply false
     alias(libs.plugins.ksp) apply false
     alias(libs.plugins.dokka)
 }

@@ -55,6 +55,43 @@ wasmJs-specific selector facade for exported globals, tables, and exception tags
 where callers need backend-specific wrappers such as `nativeOrNull()` or
 `interpreterOrNull()`.
 
+`ExecutionBackend.PULLEY` selects the Wasmtime Pulley integration where it is
+linked. Pulley is Wasmtime's portable Rust interpreter, so it belongs in the
+platform execution path rather than in `withMachineFactory`: a platform execution
+backend can own native exports and native linear memories while still receiving
+KRWA `ImportValues` for host callbacks. The JVM implementation loads the
+Wasmtime C API from `krwa.wasmtime.library`, `KRWA_WASMTIME_LIBRARY`, or common
+system library locations, and requires JVM native access. Android, iOS, and
+wasmJs currently fail fast until those platforms provide their own native
+bindings. Selecting `PULLEY` before the platform links a Wasmtime binding fails
+fast instead of falling back to the Kotlin interpreter, so runtime measurements
+cannot accidentally report the wrong engine.
+
+Use `ExecutionBackend.PULLEY.availability()` or `.isAvailable()` before exposing
+Pulley as a user-selectable mode. The availability check reports the same
+platform/linking requirements that explicit `PULLEY` execution would enforce.
+
+Embedders that package a platform-specific Pulley binding can install a provider
+without changing call sites that already select `ExecutionBackend.PULLEY`. This
+is the intended integration point for Android JNI and iOS cinterop bindings:
+
+```kotlin
+PulleyExecutionProviders.install(androidPulleyProvider)
+
+val instance =
+    Instance.builder(module)
+        .withExecutionBackend(ExecutionBackend.PULLEY)
+        .build()
+```
+
+On the JVM, a `PulleyExecutionProvider` can also be discovered through
+`ServiceLoader`. A manually installed provider takes precedence over
+ServiceLoader and over the built-in desktop Wasmtime FFM binding. KRWA checks
+the provider's availability before instantiation and rejects providers that do
+not return a `PlatformInstanceExecution` with `ExecutionBackend.PULLEY`, so a
+broken Android or iOS native binding fails at the backend boundary instead of
+silently falling through to another engine.
+
 Host imports are supplied with `NativeWasmImports`. Exported native memories,
 globals, tables, and exception tags are available as `NativeWasmMemory`,
 `NativeWasmGlobal`, `NativeWasmTable`, and `NativeWasmTag`; `NativeWasmMemory`
@@ -103,6 +140,8 @@ module, but JS-exported or imported functions should not expose `v128`.
   classes fit the deployment model.
 - Use the SIMD interpreter machine only for JVM modules that actually require
   WebAssembly SIMD support.
+- Use Wasmtime Pulley only after the embedding platform links the native binding
+  and needs a Rust interpreter with Wasmtime's proposal coverage.
 - Use native WebAssembly execution on `wasmJs` when browser or Node engine
   throughput matters and the module stays within the host engine's supported
   Wasm feature set.

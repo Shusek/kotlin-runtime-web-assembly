@@ -952,9 +952,9 @@ private constructor(
         fun build(): Instance {
             if (executionBackend != ExecutionBackend.INTERPRETER) {
                 if (!canUsePlatformExecution()) {
-                    if (executionBackend == ExecutionBackend.NATIVE) {
+                    if (executionBackend.requiresPlatformExecution()) {
                         throw WasmEngineException(
-                            "native WebAssembly execution cannot honor custom interpreter builder options"
+                            "${executionBackend.name.lowercase()} WebAssembly execution cannot honor custom interpreter builder options"
                         )
                     }
                 } else {
@@ -965,6 +965,7 @@ private constructor(
                             importValues ?: ImportValues.empty(),
                             executionBackend,
                             hostInstance,
+                            memoryLimits,
                         )
                     if (platformExecution != null) {
                         hostInstance.platformExecution = platformExecution
@@ -979,12 +980,18 @@ private constructor(
         private fun canUsePlatformExecution(): Boolean =
             initialize &&
                 start &&
-                memoryLimits == null &&
+                (memoryLimits == null || executionBackend.supportsPlatformMemoryLimits()) &&
                 memoryFactory == null &&
                 tableFactory == null &&
                 globalFactory == null &&
                 listener == null &&
                 machineFactory == null
+
+        private fun ExecutionBackend.requiresPlatformExecution(): Boolean =
+            this == ExecutionBackend.NATIVE || this == ExecutionBackend.PULLEY
+
+        private fun ExecutionBackend.supportsPlatformMemoryLimits(): Boolean =
+            this == ExecutionBackend.NATIVE
 
         private fun buildInterpreter(
             initializeInstance: Boolean,

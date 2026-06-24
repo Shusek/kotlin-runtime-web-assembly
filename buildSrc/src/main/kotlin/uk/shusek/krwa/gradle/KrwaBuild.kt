@@ -49,6 +49,7 @@ val krwaModuleByArtifact =
         "machine-tests" to ":machine-tests",
         "nightly-testsuite" to ":nightly-testsuite",
         "runtime" to ":runtime",
+        "runtime-wasmtime-android" to ":runtime-wasmtime-android",
         "runtime-tests" to ":runtime-tests",
         "simd" to ":simd",
         "test-gen-lib" to ":test-gen-lib",
@@ -605,6 +606,8 @@ fun Project.registerKrwaCompile(
 
     val sourceSet = extensions.getByType<SourceSetContainer>().named(sourceSetName).get()
     addKotlinSource(sourceSetName, files(generatedSourceDir).builtBy(generateTask))
+    (sourceSet.output.classesDirs as ConfigurableFileCollection)
+        .from(files(generatedClassDir).builtBy(generateTask))
     sourceSet.output.dir(mapOf("builtBy" to generateTask), generatedClassDir)
     sourceSet.output.dir(mapOf("builtBy" to generateTask), generatedResourceDir)
     if (sourceSetName == "main") {

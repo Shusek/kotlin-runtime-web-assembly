@@ -133,9 +133,9 @@ final class uk/shusek/krwa/$gen/CompiledMachineFuncGroup_0 {
     ALOAD 1
     INVOKESTATIC uk/shusek/krwa/$gen/CompiledMachineShaded.memoryWriteInt (IIILuk/shusek/krwa/runtime/Memory;)V
     ICONST_0
-    ICONST_0
     ALOAD 1
-    INVOKESTATIC uk/shusek/krwa/$gen/CompiledMachineShaded.memoryReadInt (IILuk/shusek/krwa/runtime/Memory;)I
+    SWAP
+    INVOKEINTERFACE uk/shusek/krwa/runtime/Memory.readInt (I)I (itf)
     IRETURN
    L0
     ATHROW
@@ -165,9 +165,9 @@ final class uk/shusek/krwa/$gen/CompiledMachineFuncGroup_0 {
     ALOAD 2
     INVOKESTATIC uk/shusek/krwa/$gen/CompiledMachineShaded.memoryWriteLong (IJILuk/shusek/krwa/runtime/Memory;)V
     ICONST_0
-    ICONST_0
     ALOAD 2
-    INVOKESTATIC uk/shusek/krwa/$gen/CompiledMachineShaded.memoryReadLong (IILuk/shusek/krwa/runtime/Memory;)J
+    SWAP
+    INVOKEINTERFACE uk/shusek/krwa/runtime/Memory.readLong (I)J (itf)
     LRETURN
    L0
     ATHROW

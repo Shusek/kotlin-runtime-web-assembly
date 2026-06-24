@@ -117,6 +117,22 @@ class NativeWasmTest {
     }
 
     @Test
+    fun nativeBackendHonorsInstanceMemoryLimit() {
+        val instance =
+            Instance.builder(WasmParser.parse(GROW_MEMORY_WASM))
+                .withExecutionBackend(ExecutionBackend.NATIVE)
+                .withMemoryLimits(MemoryLimits(1, 1))
+                .build()
+        val memory = instance.memory()
+
+        assertEquals(ExecutionBackend.NATIVE, instance.executionBackend())
+        assertEquals(1, memory.pages())
+        assertEquals(1, memory.maximumPages())
+        assertEquals(-1, instance.export("grow").apply()[0].toInt())
+        assertEquals(1, memory.pages())
+    }
+
+    @Test
     fun exposesExportedGlobalThroughSelectedNativeBackend() {
         val execution = WasmJsExecution.instantiate(WasmParser.parse(MUTABLE_GLOBAL_WASM))
         val global = execution.global("g")
@@ -761,6 +777,24 @@ class NativeWasmTest {
                 0x06, 0x6d, 0x65, 0x6d,
                 0x6f, 0x72, 0x79, 0x02,
                 0x00,
+            )
+
+        private val GROW_MEMORY_WASM =
+            byteArrayOf(
+                0x00, 0x61, 0x73, 0x6d,
+                0x01, 0x00, 0x00, 0x00,
+                0x01, 0x05, 0x01, 0x60,
+                0x00, 0x01, 0x7f, 0x03,
+                0x02, 0x01, 0x00, 0x05,
+                0x04, 0x01, 0x01, 0x01,
+                0x0a, 0x07, 0x11, 0x02,
+                0x06, 0x6d, 0x65, 0x6d,
+                0x6f, 0x72, 0x79, 0x02,
+                0x00, 0x04, 0x67, 0x72,
+                0x6f, 0x77, 0x00, 0x00,
+                0x0a, 0x08, 0x01, 0x06,
+                0x00, 0x41, 0x01, 0x40,
+                0x00, 0x0b,
             )
 
         private val MUTABLE_GLOBAL_WASM =

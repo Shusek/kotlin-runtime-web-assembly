@@ -203,6 +203,8 @@ internal class PortableRuntimeShowcase(
                     "AUTO selected the native browser/Node WebAssembly engine while keeping Instance.builder(...) common."
                 ExecutionBackend.INTERPRETER ->
                     "AUTO selected the interpreter on this host while keeping Instance.builder(...) common."
+                ExecutionBackend.PULLEY ->
+                    "Wasmtime Pulley was selected while keeping Instance.builder(...) common."
                 ExecutionBackend.AUTO ->
                     error("AUTO is a requested backend, not a concrete runtime backend")
             }

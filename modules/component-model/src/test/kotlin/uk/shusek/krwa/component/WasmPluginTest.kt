@@ -25,8 +25,10 @@ import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import uk.shusek.krwa.runtime.ExecutionBackend
 import uk.shusek.krwa.runtime.InterpreterMachine
 import uk.shusek.krwa.runtime.Instance
+import uk.shusek.krwa.runtime.isAvailable
 import uk.shusek.krwa.tools.wasm.Wat2Wasm
 import uk.shusek.krwa.wasi.WasiPreview1
 import uk.shusek.krwa.wasi.WasiOptions
@@ -34,6 +36,44 @@ import uk.shusek.krwa.wasm.Parser
 
 class WasmPluginTest {
     @TempDir lateinit var tempDir: Path
+
+    @Test
+    fun capsPluginLinearMemoryGrowth() {
+        val witPackage =
+            WitPackage.parse(
+                """
+                package example:memory-cap;
+
+                world plugin {
+                  export api;
+                }
+
+                interface api {
+                  grow: func() -> s32;
+                }
+                """
+                    .trimIndent()
+            )
+
+        val plugin =
+            WasmPlugin.builder(witPackage)
+                .withMaxMemoryPages(1)
+                .withModule(
+                    Wat2Wasm.parse(
+                        """
+                        (module
+                          (memory (export "memory") 1 10)
+                          (func (export "api.grow") (result i32)
+                            (memory.grow (i32.const 1)))
+                        )
+                        """
+                            .trimIndent()
+                    )
+                )
+                .build()
+
+        assertEquals(-1, plugin.call("api.grow"))
+    }
 
     @Test
     fun usesCompiledMachineForJvmPluginModules() {
@@ -74,6 +114,59 @@ class WasmPluginTest {
 
             assertEquals(42L, plugin.call("api.value"))
             assertFalse(plugin.instance().getMachine() is InterpreterMachine)
+        } finally {
+            if (previous == null) {
+                System.clearProperty("krwa.component.compiler")
+            } else {
+                System.setProperty("krwa.component.compiler", previous)
+            }
+        }
+    }
+
+    @Test
+    fun usesExplicitPulleyBackendForJvmPluginModulesWhenLinked() {
+        if (!ExecutionBackend.PULLEY.isAvailable()) {
+            return
+        }
+
+        val previous = System.getProperty("krwa.component.compiler")
+        try {
+            System.setProperty("krwa.component.compiler", "true")
+            val witPackage =
+                WitPackage.parse(
+                    """
+                    package example:pulley-backend;
+
+                    world plugin {
+                      export api;
+                    }
+
+                    interface api {
+                      value: func() -> u32;
+                    }
+                    """
+                        .trimIndent()
+                )
+
+            val plugin =
+                WasmPlugin.builder(witPackage)
+                    .withExecutionBackend(ExecutionBackend.PULLEY)
+                    .withModule(
+                        Wat2Wasm.parse(
+                            """
+                            (module
+                              (memory 1)
+                              (func (export "api.value") (result i32)
+                                (i32.const 42))
+                            )
+                            """
+                                .trimIndent()
+                        )
+                    )
+                    .build()
+
+            assertEquals(42L, plugin.call("api.value"))
+            assertEquals(ExecutionBackend.PULLEY, plugin.instance().executionBackend())
         } finally {
             if (previous == null) {
                 System.clearProperty("krwa.component.compiler")
@@ -1960,7 +2053,7 @@ class WasmPluginTest {
     }
 
     @Test
-    fun loadsComponentArtifactByUnbundlingCoreModule() {
+    fun loadsComponentArtifactByUnbundlingCoreModuleWithExplicitUnqualifiedWorld() {
         val witPath = tempDir.resolve("plugin.wit")
         val corePath = tempDir.resolve("plugin.core.wasm")
         val embeddedPath = tempDir.resolve("plugin.embedded.wasm")
@@ -2012,7 +2105,10 @@ class WasmPluginTest {
         )
         Files.write(componentPath, WasmComponentTools.componentNew(embeddedPath.toOkioPath()))
 
-        val plugin = WasmPlugin.builderFromComponent(componentPath.toOkioPath()).build()
+        val plugin =
+            WasmPlugin.builderFromComponent(componentPath.toOkioPath())
+                .withWorld("plugin")
+                .build()
 
         assertEquals(5L, plugin.call("api.len", "hello"))
     }

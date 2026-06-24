@@ -1,0 +1,228 @@
+package uk.shusek.krwa.runtime
+
+import kotlin.test.Test
+import kotlin.test.assertContains
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+
+class WasmtimeExecutionConfigTest {
+    @Test
+    fun preview3ComponentConfigRejectsEmptyComponentBytes() {
+        val error = assertFailsWith<IllegalArgumentException> {
+            preview3ComponentConfig(precompiledComponentBytes = byteArrayOf())
+        }
+
+        assertContains(error.message.orEmpty(), "component bytes must not be empty")
+    }
+
+    @Test
+    fun preview3ComponentConfigRejectsHostFilesystemRoot() {
+        val error = assertFailsWith<IllegalArgumentException> {
+            preview3ComponentConfig(hostPreopenRoot = "/")
+        }
+
+        assertContains(error.message.orEmpty(), "host preopen root must not be the filesystem root")
+    }
+
+    @Test
+    fun preview3ComponentConfigRejectsRelativeHostPreopenRoot() {
+        val error = assertFailsWith<IllegalArgumentException> {
+            preview3ComponentConfig(hostPreopenRoot = "suvio-plugin-cache/plugin")
+        }
+
+        assertContains(error.message.orEmpty(), "host preopen root must be absolute")
+    }
+
+    @Test
+    fun preview3ComponentConfigRejectsHostPreopenRootWhitespaceAndSegments() {
+        listOf(
+            " /tmp/suvio-plugin-cache/plugin",
+            "/tmp/../suvio-plugin-cache/plugin",
+            "/tmp/./plugin",
+        ).forEach { hostRoot ->
+            val error = assertFailsWith<IllegalArgumentException> {
+                preview3ComponentConfig(hostPreopenRoot = hostRoot)
+            }
+
+            assertContains(error.message.orEmpty(), "host preopen root")
+        }
+    }
+
+    @Test
+    fun preview3ComponentConfigAcceptsMultipleExplicitPreopens() {
+        val config = WasmtimePreview3ComponentConfig(
+            precompiledComponentBytes = byteArrayOf(1),
+            preopens = listOf(
+                WasmtimePreview3Preopen(
+                    hostRoot = "/tmp/suvio-plugin-cache/plugin/cache",
+                    guestRoot = "/suvio/cache",
+                ),
+                WasmtimePreview3Preopen(
+                    hostRoot = "/tmp/suvio-plugin-cache/plugin/data",
+                    guestRoot = "/suvio/data",
+                    writable = false,
+                ),
+            ),
+        )
+
+        assertEquals(2, config.preopens.size)
+        assertEquals("/suvio/cache", config.preopens[0].guestRoot)
+        assertEquals(false, config.preopens[1].writable)
+    }
+
+    @Test
+    fun preview3ComponentConfigCarriesArgumentsAndEnvironment() {
+        val config = preview3ComponentConfig(
+            arguments = listOf("plugin-id", "--warm-cache"),
+            environment = mapOf(
+                "SUVIO_PLUGIN_ID" to "dev.suvio.test",
+                "SUVIO_CACHE_DIR" to "/suvio/cache",
+            ),
+        )
+
+        assertEquals(listOf("plugin-id", "--warm-cache"), config.arguments)
+        assertEquals("dev.suvio.test", config.environment["SUVIO_PLUGIN_ID"])
+        assertEquals("/suvio/cache", config.environment["SUVIO_CACHE_DIR"])
+    }
+
+    @Test
+    fun preview3ComponentConfigCarriesNetworkPolicy() {
+        val config = preview3ComponentConfig(
+            networkPolicy = WasmtimePreview3NetworkPolicy(
+                allowedHosts = listOf("api.example.test", "*.cdn.example.test"),
+                blockedHosts = listOf("blocked.example.test"),
+                allowPrivateNetwork = true,
+            ),
+        )
+
+        assertEquals(listOf("api.example.test", "*.cdn.example.test"), config.networkPolicy.allowedHosts)
+        assertEquals(listOf("blocked.example.test"), config.networkPolicy.blockedHosts)
+        assertEquals(true, config.networkPolicy.allowPrivateNetwork)
+    }
+
+    @Test
+    fun preview3NetworkPolicyRejectsInvalidHostPatterns() {
+        listOf("", " api.example.test", "https://api.example.test", "api.example.test/path", "bad\u0000host")
+            .forEach { host ->
+                val error = assertFailsWith<IllegalArgumentException> {
+                    WasmtimePreview3NetworkPolicy(allowedHosts = listOf(host))
+                }
+
+                assertContains(error.message.orEmpty(), "network policy allowed host")
+            }
+    }
+
+    @Test
+    fun preview3ComponentConfigRejectsBlankEnvironmentKey() {
+        val error = assertFailsWith<IllegalArgumentException> {
+            preview3ComponentConfig(environment = mapOf("" to "value"))
+        }
+
+        assertContains(error.message.orEmpty(), "environment key must not be blank")
+    }
+
+    @Test
+    fun preview3ComponentConfigRejectsNulInArgumentsAndEnvironment() {
+        val argumentError = assertFailsWith<IllegalArgumentException> {
+            preview3ComponentConfig(arguments = listOf("bad\u0000arg"))
+        }
+        val environmentError = assertFailsWith<IllegalArgumentException> {
+            preview3ComponentConfig(environment = mapOf("KEY" to "bad\u0000value"))
+        }
+
+        assertContains(argumentError.message.orEmpty(), "argument 0 must not contain NUL")
+        assertContains(environmentError.message.orEmpty(), "environment entries must not contain NUL")
+    }
+
+    @Test
+    fun preview3ComponentConfigRejectsEmptyPreopenList() {
+        val error = assertFailsWith<IllegalArgumentException> {
+            WasmtimePreview3ComponentConfig(
+                precompiledComponentBytes = byteArrayOf(1),
+                preopens = emptyList(),
+            )
+        }
+
+        assertContains(error.message.orEmpty(), "preopen list must not be empty")
+    }
+
+    @Test
+    fun preview3ComponentConfigRejectsDuplicateGuestPreopenRoots() {
+        val error = assertFailsWith<IllegalArgumentException> {
+            WasmtimePreview3ComponentConfig(
+                precompiledComponentBytes = byteArrayOf(1),
+                preopens = listOf(
+                    WasmtimePreview3Preopen("/tmp/suvio-plugin-cache/plugin/cache-a", "/suvio/cache"),
+                    WasmtimePreview3Preopen("/tmp/suvio-plugin-cache/plugin/cache-b", "/suvio/cache/"),
+                ),
+            )
+        }
+
+        assertContains(error.message.orEmpty(), "guest preopen root must be unique")
+    }
+
+    @Test
+    fun preview3ComponentConfigRejectsNonPositiveMemoryLimit() {
+        val error = assertFailsWith<IllegalArgumentException> {
+            preview3ComponentConfig(maxMemoryBytes = 0)
+        }
+
+        assertContains(error.message.orEmpty(), "max memory bytes must be positive")
+    }
+
+    @Test
+    fun preview3ComponentConfigCarriesExecutionTimeout() {
+        val config = preview3ComponentConfig(executionTimeoutMillis = 12_345L)
+
+        assertEquals(12_345L, config.executionTimeoutMillis)
+    }
+
+    @Test
+    fun preview3ComponentConfigRejectsNegativeExecutionTimeout() {
+        val error = assertFailsWith<IllegalArgumentException> {
+            preview3ComponentConfig(executionTimeoutMillis = -1)
+        }
+
+        assertContains(error.message.orEmpty(), "execution timeout millis must not be negative")
+    }
+
+    @Test
+    fun preview3ComponentConfigRejectsRelativeGuestPreopenRoot() {
+        val error = assertFailsWith<IllegalArgumentException> {
+            preview3ComponentConfig(guestPreopenRoot = "suvio")
+        }
+
+        assertContains(error.message.orEmpty(), "guest preopen root must be absolute")
+    }
+
+    @Test
+    fun preview3ComponentConfigRejectsGuestParentSegments() {
+        listOf("/../suvio", "/./suvio", "\\suvio\\cache").forEach { guestRoot ->
+            val error = assertFailsWith<IllegalArgumentException> {
+                preview3ComponentConfig(guestPreopenRoot = guestRoot)
+            }
+
+            assertContains(error.message.orEmpty(), "guest preopen root")
+        }
+    }
+
+    private fun preview3ComponentConfig(
+        precompiledComponentBytes: ByteArray = byteArrayOf(1),
+        hostPreopenRoot: String = "/tmp/suvio-plugin-cache/plugin",
+        guestPreopenRoot: String = "/",
+        arguments: List<String> = emptyList(),
+        environment: Map<String, String> = emptyMap(),
+        networkPolicy: WasmtimePreview3NetworkPolicy = WasmtimePreview3NetworkPolicy(),
+        maxMemoryBytes: Long = DefaultWasmtimeMaxMemoryBytes,
+        executionTimeoutMillis: Long = 0,
+    ): WasmtimePreview3ComponentConfig = WasmtimePreview3ComponentConfig(
+        precompiledComponentBytes = precompiledComponentBytes,
+        hostPreopenRoot = hostPreopenRoot,
+        guestPreopenRoot = guestPreopenRoot,
+        arguments = arguments,
+        environment = environment,
+        networkPolicy = networkPolicy,
+        maxMemoryBytes = maxMemoryBytes,
+        executionTimeoutMillis = executionTimeoutMillis,
+    )
+}

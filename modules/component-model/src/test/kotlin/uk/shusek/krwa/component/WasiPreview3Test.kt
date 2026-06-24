@@ -4724,6 +4724,215 @@ class WasiPreview3Test {
     }
 
     @Test
+    fun filesystemPreopenRejectsPathAndSymlinkEscapes() {
+        val sandboxRoot = Files.createTempDirectory("krwa-wasi3-filesystem-sandbox")
+        val outsideRoot = Files.createTempDirectory("krwa-wasi3-filesystem-outside")
+        val outsideSecret = outsideRoot.resolve("secret.txt")
+        try {
+            Files.writeString(outsideSecret, "outside-secret", StandardCharsets.UTF_8)
+            Files.createSymbolicLink(sandboxRoot.resolve("secret-link"), outsideSecret)
+
+            val wasi =
+                WasiPreview3.builder().withPreopenedDirectory("/", sandboxRoot.toString()).build()
+            val imports = CapturingHostImports()
+            wasi.install(imports)
+
+            @Suppress("UNCHECKED_CAST")
+            val directories =
+                imports.call("preopens", "get-directories") as List<List<Any?>>
+            val base = handle(directories.single()[0])
+
+            fun openError(path: String, pathFlags: List<String> = emptyList()): String =
+                expectErr(
+                    imports.call(
+                        "types",
+                        "[method]descriptor.open-at",
+                        base,
+                        pathFlags,
+                        path,
+                        emptyList<String>(),
+                        listOf("read"),
+                    ),
+                    "descriptor.open-at $path",
+                ) as String
+
+            fun linkError(path: String, pathFlags: List<String> = emptyList()): String =
+                expectErr(
+                    imports.call(
+                        "types",
+                        "[method]descriptor.link-at",
+                        base,
+                        pathFlags,
+                        path,
+                        base,
+                        "linked-secret",
+                    ),
+                    "descriptor.link-at $path",
+                ) as String
+
+            assertEquals("not-permitted", openError("../${outsideRoot.fileName}/secret.txt"))
+            assertEquals("not-permitted", openError(outsideSecret.toAbsolutePath().toString()))
+            assertEquals("not-permitted", openError("secret-link", listOf("symlink-follow")))
+            assertEquals("not-permitted", openError("secret-link"))
+            assertEquals("not-permitted", linkError("secret-link", listOf("symlink-follow")))
+            assertEquals("not-permitted", linkError("secret-link"))
+            assertEquals(
+                "not-permitted",
+                expectErr(
+                    imports.call("types", "[method]descriptor.readlink-at", base, "secret-link"),
+                    "descriptor.readlink-at secret-link",
+                ),
+            )
+        } finally {
+            sandboxRoot.toFile().deleteRecursively()
+            outsideRoot.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun filesystemPreopensEnforceReadOnlyRootAndWritableCache() {
+        val root = Files.createTempDirectory("krwa-wasi3-filesystem-root")
+        val cache = root.resolve("suvio/cache")
+        val data = root.resolve("suvio/data")
+        val publicFile = root.resolve("public.txt")
+        try {
+            Files.createDirectories(cache)
+            Files.createDirectories(data)
+            Files.writeString(publicFile, "public", StandardCharsets.UTF_8)
+
+            val wasi =
+                WasiPreview3.builder()
+                    .withReadOnlyPreopenedDirectory("/", root.toString())
+                    .withPreopenedDirectory("/suvio/cache", cache.toString())
+                    .build()
+            val imports = CapturingHostImports()
+            wasi.install(imports)
+            try {
+                @Suppress("UNCHECKED_CAST")
+                val directories =
+                    imports.call("preopens", "get-directories") as List<List<Any?>>
+                val preopens = directories.associate { it[1] as String to handle(it[0]) }
+                val rootDescriptor = preopens.getValue("/")
+                val cacheDescriptor = preopens.getValue("/suvio/cache")
+
+                assertEquals(
+                    "read-only",
+                    expectErr(
+                        imports.call(
+                            "types",
+                            "[method]descriptor.open-at",
+                            rootDescriptor,
+                            emptyList<String>(),
+                            "blocked.txt",
+                            listOf("create"),
+                            listOf("write"),
+                        ),
+                        "descriptor.open-at read-only root create",
+                    ),
+                )
+                assertFalse(Files.exists(root.resolve("blocked.txt")))
+
+                expectOk<Any?>(
+                    imports.call(
+                        "types",
+                        "[method]descriptor.open-at",
+                        rootDescriptor,
+                        emptyList<String>(),
+                        "public.txt",
+                        emptyList<String>(),
+                        listOf("read"),
+                    ),
+                    "descriptor.open-at read-only root read",
+                )
+
+                expectOk<Any?>(
+                    imports.call(
+                        "types",
+                        "[method]descriptor.open-at",
+                        cacheDescriptor,
+                        emptyList<String>(),
+                        "cache.txt",
+                        listOf("create"),
+                        listOf("write"),
+                    ),
+                    "descriptor.open-at writable cache create",
+                )
+                assertTrue(Files.exists(cache.resolve("cache.txt")))
+                assertFalse(Files.exists(root.resolve("cache.txt")))
+
+                assertEquals(
+                    "not-permitted",
+                    expectErr(
+                        imports.call(
+                            "types",
+                            "[method]descriptor.open-at",
+                            cacheDescriptor,
+                            emptyList<String>(),
+                            "../data/leak.txt",
+                            listOf("create"),
+                            listOf("write"),
+                        ),
+                        "descriptor.open-at writable cache escape",
+                    ),
+                )
+                assertFalse(Files.exists(data.resolve("leak.txt")))
+            } finally {
+                wasi.close()
+            }
+        } finally {
+            root.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun filesystemWritablePreopenCannotEscapeThroughSymlink() {
+        val root = Files.createTempDirectory("krwa-wasi3-filesystem-root")
+        val cache = root.resolve("suvio/cache")
+        val outside = Files.createTempDirectory("krwa-wasi3-filesystem-outside")
+        try {
+            Files.createDirectories(cache)
+            Files.createSymbolicLink(cache.resolve("escape"), outside)
+
+            val wasi =
+                WasiPreview3.builder()
+                    .withReadOnlyPreopenedDirectory("/", root.toString())
+                    .withPreopenedDirectory("/suvio/cache", cache.toString())
+                    .build()
+            val imports = CapturingHostImports()
+            wasi.install(imports)
+            try {
+                @Suppress("UNCHECKED_CAST")
+                val directories =
+                    imports.call("preopens", "get-directories") as List<List<Any?>>
+                val preopens = directories.associate { it[1] as String to handle(it[0]) }
+                val cacheDescriptor = preopens.getValue("/suvio/cache")
+
+                assertEquals(
+                    "not-permitted",
+                    expectErr(
+                        imports.call(
+                            "types",
+                            "[method]descriptor.open-at",
+                            cacheDescriptor,
+                            emptyList<String>(),
+                            "escape/outside.txt",
+                            listOf("create"),
+                            listOf("write"),
+                        ),
+                        "descriptor.open-at writable cache symlink escape",
+                    ),
+                )
+                assertFalse(Files.exists(outside.resolve("outside.txt")))
+            } finally {
+                wasi.close()
+            }
+        } finally {
+            root.toFile().deleteRecursively()
+            outside.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
     fun exposesFilesystemReadViaStreamBytesToHost() {
         val version = WasiPreview3.DEFAULT_VERSION
         val tempDir = Files.createTempDirectory("krwa-wasi3-filesystem-stream")

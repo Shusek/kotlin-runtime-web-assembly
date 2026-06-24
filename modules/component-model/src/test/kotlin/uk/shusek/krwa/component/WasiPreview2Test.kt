@@ -1006,6 +1006,72 @@ class WasiPreview2Test {
     }
 
     @Test
+    fun filesystemPreopenRejectsPathAndSymlinkEscapes() {
+        val sandboxRoot = Files.createTempDirectory("krwa-wasi2-filesystem-sandbox")
+        val outsideRoot = Files.createTempDirectory("krwa-wasi2-filesystem-outside")
+        val outsideSecret = outsideRoot.resolve("secret.txt")
+        try {
+            Files.writeString(outsideSecret, "outside-secret", StandardCharsets.UTF_8)
+            Files.createSymbolicLink(sandboxRoot.resolve("secret-link"), outsideSecret)
+
+            val wasi =
+                WasiPreview2.builder().withPreopenedDirectory("/", sandboxRoot.toString()).build()
+            val imports = CapturingHostImports()
+            wasi.install(imports)
+
+            @Suppress("UNCHECKED_CAST")
+            val directories =
+                imports.call("preopens", "get-directories") as List<List<Any?>>
+            val base = handle(directories.single()[0])
+
+            fun openError(path: String, pathFlags: List<String> = emptyList()): String =
+                expectErr(
+                    imports.call(
+                        "types",
+                        "[method]descriptor.open-at",
+                        base,
+                        pathFlags,
+                        path,
+                        emptyList<String>(),
+                        listOf("read"),
+                    ),
+                    "descriptor.open-at $path",
+                ) as String
+
+            fun linkError(path: String, pathFlags: List<String> = emptyList()): String =
+                expectErr(
+                    imports.call(
+                        "types",
+                        "[method]descriptor.link-at",
+                        base,
+                        pathFlags,
+                        path,
+                        base,
+                        "linked-secret",
+                    ),
+                    "descriptor.link-at $path",
+                ) as String
+
+            assertEquals("not-permitted", openError("../${outsideRoot.fileName}/secret.txt"))
+            assertEquals("not-permitted", openError(outsideSecret.toAbsolutePath().toString()))
+            assertEquals("not-permitted", openError("secret-link", listOf("symlink-follow")))
+            assertEquals("not-permitted", openError("secret-link"))
+            assertEquals("not-permitted", linkError("secret-link", listOf("symlink-follow")))
+            assertEquals("not-permitted", linkError("secret-link"))
+            assertEquals(
+                "not-permitted",
+                expectErr(
+                    imports.call("types", "[method]descriptor.readlink-at", base, "secret-link"),
+                    "descriptor.readlink-at secret-link",
+                ),
+            )
+        } finally {
+            sandboxRoot.toFile().deleteRecursively()
+            outsideRoot.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
     fun linksTerminalHandlesWithoutJson() {
         val witPackage =
             WitPackage.parse(
@@ -1571,6 +1637,60 @@ class WasiPreview2Test {
 
         assertEquals(1, exit.statusCode())
     }
+
+    private class CapturingHostImports : WasiHostImportBuilder {
+        private val handlers = LinkedHashMap<String, HostHandler>()
+
+        override fun withHostImport(
+            interfaceName: String?,
+            functionName: String?,
+            handler: HostHandler,
+        ): WasiHostImportBuilder {
+            handlers[key(interfaceName, functionName)] = handler
+            return this
+        }
+
+        override fun withHostImport(
+            qualifiedName: String,
+            handler: HostHandler,
+        ): WasiHostImportBuilder {
+            handlers[qualifiedName] = handler
+            return this
+        }
+
+        fun call(
+            interfaceName: String,
+            functionName: String,
+            vararg arguments: Any?,
+        ): Any? {
+            val key = key(interfaceName, functionName)
+            val handler = handlers[key] ?: error("missing host import $key")
+            return handler.apply(arguments.asList())
+        }
+
+        private fun key(
+            interfaceName: String?,
+            functionName: String?,
+        ): String = "$interfaceName::$functionName"
+    }
+
+    private fun expectErr(
+        result: Any?,
+        operation: String,
+    ): Any? =
+        when (result) {
+            is WitResult.Ok<*, *> ->
+                throw AssertionError("expected $operation to fail, got ${result.value()}")
+            is WitResult.Err<*, *> -> result.value()
+            else -> throw AssertionError("expected $operation result, got $result")
+        }
+
+    private fun handle(value: Any?): Long =
+        when (value) {
+            is Number -> value.toLong()
+            is WitResource<*> -> value.handle()
+            else -> throw AssertionError("expected resource handle, got $value")
+        }
 
     private fun failingInput(message: String): RawSource = failingInput(IOException(message))
 

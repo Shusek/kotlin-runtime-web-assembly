@@ -1,0 +1,4 @@
+headers = wasmtime_pulley.h
+package = uk.shusek.krwa.runtime.wasmtimepulley
+language = C
+linkerOpts = -lc++ -framework CoreFoundation

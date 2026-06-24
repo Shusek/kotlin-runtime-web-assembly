@@ -7,13 +7,55 @@ class InterpreterLoopBenchmarkJvmTest {
     fun benchmarksInterpreterLoop() {
         if (!benchmarkEnabled()) return
 
-        val result =
-            InterpreterLoopBenchmarkSupport.run(
-                iterations = intProperty(IterationsProperty, DefaultIterations),
-                repetitions = intProperty(RepetitionsProperty, DefaultRepetitions),
-                warmupRepetitions = intProperty(WarmupRepetitionsProperty, DefaultWarmupRepetitions),
-            )
-        println(result.formatted("jvm"))
+        val iterations = intProperty(IterationsProperty, DefaultIterations)
+        val repetitions = intProperty(RepetitionsProperty, DefaultRepetitions)
+        val hostRepetitions = intProperty(HostRepetitionsProperty, repetitions)
+        val warmupRepetitions = intProperty(WarmupRepetitionsProperty, DefaultWarmupRepetitions)
+        for (backend in benchmarkBackends()) {
+            runCatching {
+                InterpreterLoopBenchmarkSupport.run(
+                    backend = backend,
+                    iterations = iterations,
+                    repetitions = repetitions,
+                    warmupRepetitions = warmupRepetitions,
+                )
+            }.onSuccess { result ->
+                println(result.formatted("jvm"))
+            }.onFailure { error ->
+                println("KRWA runtime benchmark skipped: platform=jvm, workload=loop, backend=$backend, reason=${error.message}")
+            }
+
+            runCatching {
+                InterpreterLoopBenchmarkSupport.runMemoryScan(
+                    backend = backend,
+                    iterations = iterations,
+                    repetitions = repetitions,
+                    warmupRepetitions = warmupRepetitions,
+                )
+            }.onSuccess { result ->
+                println(result.formatted("jvm"))
+            }.onFailure { error ->
+                println(
+                    "KRWA runtime benchmark skipped: platform=jvm, workload=memory-scan, " +
+                        "backend=$backend, reason=${error.message}",
+                )
+            }
+
+            runCatching {
+                InterpreterLoopBenchmarkSupport.runHostCallback(
+                    backend = backend,
+                    repetitions = hostRepetitions,
+                    warmupRepetitions = warmupRepetitions,
+                )
+            }.onSuccess { result ->
+                println(result.formatted("jvm"))
+            }.onFailure { error ->
+                println(
+                    "KRWA runtime benchmark skipped: platform=jvm, workload=host-callback, " +
+                        "backend=$backend, reason=${error.message}",
+                )
+            }
+        }
     }
 
     private fun benchmarkEnabled(): Boolean =
@@ -25,11 +67,24 @@ class InterpreterLoopBenchmarkJvmTest {
             ?: System.getenv(envName(name))?.toIntOrNull()
             ?: defaultValue
 
+    private fun benchmarkBackends(): List<ExecutionBackend> =
+        (System.getProperty(BackendsProperty) ?: System.getenv(BackendsEnv))
+            ?.split(',')
+            ?.mapNotNull { value ->
+                ExecutionBackend.entries.firstOrNull { backend ->
+                    backend.name.equals(value.trim(), ignoreCase = true)
+                }
+            }
+            ?.takeIf(List<ExecutionBackend>::isNotEmpty)
+            ?: listOf(ExecutionBackend.INTERPRETER)
+
     private fun envName(name: String): String =
         when (name) {
             IterationsProperty -> IterationsEnv
             RepetitionsProperty -> RepetitionsEnv
             WarmupRepetitionsProperty -> WarmupRepetitionsEnv
+            HostRepetitionsProperty -> HostRepetitionsEnv
+            BackendsProperty -> BackendsEnv
             else -> name.uppercase().replace('.', '_')
         }
 
@@ -40,8 +95,12 @@ class InterpreterLoopBenchmarkJvmTest {
         const val IterationsEnv = "KRWA_RUNTIME_BENCHMARK_ITERATIONS"
         const val RepetitionsProperty = "krwa.runtimeBenchmarkRepetitions"
         const val RepetitionsEnv = "KRWA_RUNTIME_BENCHMARK_REPETITIONS"
+        const val HostRepetitionsProperty = "krwa.runtimeBenchmarkHostRepetitions"
+        const val HostRepetitionsEnv = "KRWA_RUNTIME_BENCHMARK_HOST_REPETITIONS"
         const val WarmupRepetitionsProperty = "krwa.runtimeBenchmarkWarmupRepetitions"
         const val WarmupRepetitionsEnv = "KRWA_RUNTIME_BENCHMARK_WARMUP_REPETITIONS"
+        const val BackendsProperty = "krwa.runtimeBenchmarkBackends"
+        const val BackendsEnv = "KRWA_RUNTIME_BENCHMARK_BACKENDS"
         const val DefaultIterations = 500_000
         const val DefaultRepetitions = 5
         const val DefaultWarmupRepetitions = 2

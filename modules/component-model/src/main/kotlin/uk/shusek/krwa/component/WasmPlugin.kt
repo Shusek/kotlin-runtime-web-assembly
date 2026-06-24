@@ -5,6 +5,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import okio.Path
+import uk.shusek.krwa.runtime.ExecutionBackend
 import uk.shusek.krwa.runtime.ExecutionListener
 import uk.shusek.krwa.runtime.HostFunction
 import uk.shusek.krwa.runtime.ImportFunction
@@ -17,6 +18,7 @@ import uk.shusek.krwa.wasm.WasmParser
 import uk.shusek.krwa.wasm.types.ExternalType
 import uk.shusek.krwa.wasm.types.FunctionImport
 import uk.shusek.krwa.wasm.types.FunctionType
+import uk.shusek.krwa.wasm.types.MemoryLimits
 import uk.shusek.krwa.wasm.types.ValType
 import uk.shusek.krwa.wasi.WasiPreview1
 import uk.shusek.krwa.wasi.WasiOptions
@@ -67,7 +69,9 @@ private constructor(
         private var module: WasmModule? = null
         private var component: WasmPluginUnbundledComponent? = null
         private var executionListener: ExecutionListener? = null
+        private var executionBackend: ExecutionBackend? = null
         private var machineFactory: ((Instance) -> Machine)? = null
+        private var maxMemoryPages: Int? = null
         private val rawHostFunctions = ArrayList<ImportFunction>()
 
         fun withWorld(worldName: String?): Builder {
@@ -92,6 +96,21 @@ private constructor(
 
         fun withMachineFactory(machineFactory: ((Instance) -> Machine)?): Builder {
             this.machineFactory = machineFactory
+            return this
+        }
+
+        fun withExecutionBackend(backend: ExecutionBackend?): Builder {
+            executionBackend = backend
+            return this
+        }
+
+        fun withMaxMemoryPages(maxPages: Int?): Builder {
+            if (maxPages != null) {
+                require(maxPages in 1..MemoryLimits.MAX_PAGES) {
+                    "max memory pages must be between 1 and ${MemoryLimits.MAX_PAGES}"
+                }
+            }
+            maxMemoryPages = maxPages
             return this
         }
 
@@ -236,7 +255,16 @@ private constructor(
             }
             val instanceBuilder = Instance.builder(selectedModule).withImportValues(imports)
             executionListener?.let { instanceBuilder.withUnsafeExecutionListener(it) }
-            (machineFactory ?: compiledComponentMachineFactory(selectedModule))?.let {
+            executionBackend?.let { instanceBuilder.withExecutionBackend(it) }
+            maxMemoryPages?.let { maxPages ->
+                instanceBuilder.withMemoryLimits(selectedModule.cappedFirstMemoryLimits(maxPages))
+            }
+            val selectedMachineFactory =
+                machineFactory
+                    ?: compiledComponentMachineFactory(selectedModule).takeIf {
+                        executionBackend == null
+                    }
+            selectedMachineFactory?.let {
                 instanceBuilder.withMachineFactory(it)
             }
             val instance = instanceBuilder.build()
@@ -268,11 +296,15 @@ private constructor(
             val selectedWorldName = worldName
             if (selectedWorldName != null) {
                 for (world in witPackage.worlds()) {
-                    if (world.name() == selectedWorldName) {
+                    if (matchesWorldName(world, selectedWorldName)) {
                         return world
                     }
                 }
-                throw ComponentModelException("unknown WIT world $selectedWorldName")
+                selectSyntheticComponentRootWorld(witPackage.worlds())?.let { return it }
+                throw ComponentModelException(
+                    "unknown WIT world $selectedWorldName; available worlds: " +
+                        worldNames(witPackage.worlds())
+                )
             }
             val worlds = witPackage.worlds()
             if (worlds.size != 1) {
@@ -305,6 +337,39 @@ private constructor(
 
         private fun isWasiPackage(packageName: String?): Boolean =
             packageName != null && packageName.startsWith("wasi:")
+
+        private fun selectSyntheticComponentRootWorld(
+            worlds: List<WitPackage.WorldDeclaration>
+        ): WitPackage.WorldDeclaration? {
+            val applicationWorld = selectSingleApplicationWorld(worlds) ?: return null
+            return if (isSyntheticComponentRootWorld(applicationWorld)) applicationWorld else null
+        }
+
+        private fun isSyntheticComponentRootWorld(world: WitPackage.WorldDeclaration): Boolean =
+            WitNames.withoutVersion(world.qualifiedName()) == "root:component/root"
+
+        private fun matchesWorldName(
+            world: WitPackage.WorldDeclaration,
+            selectedWorldName: String,
+        ): Boolean {
+            val normalizedSelectedWorldName =
+                WitNames.withoutVersion(WitNames.stripIdentifierEscape(selectedWorldName))
+            val names =
+                arrayOf(
+                    world.name(),
+                    world.qualifiedName(),
+                    WitNames.withoutVersion(world.qualifiedName()),
+                    WitNames.lastSegment(world.name()),
+                    WitNames.lastSegment(world.qualifiedName()),
+                )
+            for (name in names) {
+                val normalizedName = WitNames.withoutVersion(WitNames.stripIdentifierEscape(name))
+                if (normalizedName == normalizedSelectedWorldName) {
+                    return true
+                }
+            }
+            return false
+        }
 
         private fun worldNames(worlds: List<WitPackage.WorldDeclaration>): List<String> {
             val result = ArrayList<String>()
@@ -2302,7 +2367,11 @@ private constructor(
                 rawResults = null
             }
 
-            override fun takeRawResults(): LongArray? = rawResults?.copyOf()
+            override fun takeRawResults(): LongArray? {
+                val result = rawResults?.copyOf()
+                rawResults = null
+                return result
+            }
         }
 
         private class ResourceIntrinsic
@@ -3108,4 +3177,12 @@ private constructor(
         fun builderFromComponent(componentPath: Path): Builder =
             builder(wasmPluginParseWit(componentPath)).withComponent(componentPath)
     }
+}
+
+private fun WasmModule.cappedFirstMemoryLimits(maxPages: Int): MemoryLimits {
+    val memory = memorySection()?.getMemory(0)
+        ?: return MemoryLimits(0, maxPages)
+    val declaredLimits = memory.limits()
+    val cappedMaximum = minOf(declaredLimits.maximumPages(), maxPages)
+    return MemoryLimits(declaredLimits.initialPages(), cappedMaximum, declaredLimits.shared())
 }

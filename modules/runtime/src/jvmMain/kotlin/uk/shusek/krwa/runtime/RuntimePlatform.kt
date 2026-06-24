@@ -15,12 +15,26 @@ internal actual object RuntimePlatform {
         imports: ImportValues,
         backend: ExecutionBackend,
         hostInstance: Instance,
+        memoryLimits: MemoryLimits?,
     ): PlatformInstanceExecution? =
         when (backend) {
             ExecutionBackend.AUTO,
             ExecutionBackend.INTERPRETER -> null
             ExecutionBackend.NATIVE ->
                 throw WasmEngineException("native WebAssembly execution is only available on wasmJs")
+            ExecutionBackend.PULLEY -> PulleyExecution.create(module, imports, hostInstance)
+        }
+
+    actual fun executionBackendAvailability(backend: ExecutionBackend): ExecutionBackendAvailability =
+        when (backend) {
+            ExecutionBackend.AUTO,
+            ExecutionBackend.INTERPRETER -> ExecutionBackendAvailability(available = true)
+            ExecutionBackend.NATIVE ->
+                ExecutionBackendAvailability(
+                    available = false,
+                    reason = "native WebAssembly execution is only available on wasmJs",
+                )
+            ExecutionBackend.PULLEY -> PulleyExecution.availability()
         }
 
     actual fun usesPeriodicInterruptionPolling(): Boolean = false

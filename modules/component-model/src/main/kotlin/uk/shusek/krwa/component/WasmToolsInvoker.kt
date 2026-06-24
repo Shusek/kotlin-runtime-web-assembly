@@ -10,6 +10,8 @@ import uk.shusek.krwa.log.SystemLogger
 import uk.shusek.krwa.runtime.ByteArrayMemory
 import uk.shusek.krwa.runtime.ImportValues
 import uk.shusek.krwa.runtime.Instance
+import uk.shusek.krwa.runtime.InterpreterMachine
+import uk.shusek.krwa.runtime.Machine
 import uk.shusek.krwa.tools.wasm.WasmToolsModule
 import uk.shusek.krwa.wasi.WasiExitException
 import uk.shusek.krwa.wasi.WasiOptions
@@ -54,7 +56,7 @@ object WasmToolsInvoker {
                 wasi ->
                 val imports = ImportValues.builder().addFunction(*wasi.toHostFunctions()).build()
                 Instance.builder(MODULE)
-                    .withMachineFactory { instance -> WasmToolsModule.create(instance) }
+                    .withMachineFactory(::createMachine)
                     .withMemoryFactory { limits -> ByteArrayMemory(limits) }
                     .withImportValues(imports)
                     .build()
@@ -76,6 +78,15 @@ object WasmToolsInvoker {
         directories[guestName] = hostPath
         return directories
     }
+
+    private fun createMachine(instance: Instance): Machine =
+        try {
+            WasmToolsModule.create(instance)
+        } catch (_: Exception) {
+            InterpreterMachine(instance)
+        } catch (_: LinkageError) {
+            InterpreterMachine(instance)
+        }
 
     class Result
     internal constructor(private val exitCode: Int, stdout: ByteArray, stderr: ByteArray) {

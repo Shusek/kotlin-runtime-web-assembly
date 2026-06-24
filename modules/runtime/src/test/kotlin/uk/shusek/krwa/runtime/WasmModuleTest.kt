@@ -49,6 +49,214 @@ class WasmModuleTest {
     }
 
     @Test
+    fun shouldReportPulleyBackendAvailabilityConsistently() {
+        assertTrue(ExecutionBackend.INTERPRETER.isAvailable())
+
+        val availability = ExecutionBackend.PULLEY.availability()
+        val instance = tryBuildPulley(loadModule("compiled/add.wat.wasm"))
+        if (instance == null) {
+            assertFalse(availability.available)
+            assertNotNull(availability.reason)
+        } else {
+            assertTrue(availability.available, availability.reason)
+            assertEquals(ExecutionBackend.PULLEY, instance.executionBackend())
+        }
+    }
+
+    @Test
+    fun shouldReportPulleyUnavailableOnAndroidRuntimeWithoutLinkingWasmtime() {
+        val propertyName = "java.runtime.name"
+        val previousRuntimeName = System.getProperty(propertyName)
+        System.setProperty(propertyName, "Android Runtime")
+        try {
+            val availability = ExecutionBackend.PULLEY.availability()
+            assertFalse(availability.available)
+            assertEquals(AndroidPulleyUnavailableReason, availability.reason)
+
+            val exception = assertThrows(WasmEngineException::class.java) {
+                Instance.builder(loadModule("compiled/add.wat.wasm"))
+                    .withExecutionBackend(ExecutionBackend.PULLEY)
+                    .build()
+            }
+            assertEquals(AndroidPulleyUnavailableReason, exception.message)
+        } finally {
+            if (previousRuntimeName == null) {
+                System.clearProperty(propertyName)
+            } else {
+                System.setProperty(propertyName, previousRuntimeName)
+            }
+        }
+    }
+
+    @Test
+    fun shouldUseInstalledPulleyProviderOnAndroidRuntime() {
+        val propertyName = "java.runtime.name"
+        val previousRuntimeName = System.getProperty(propertyName)
+        val provider = InterpreterBackedPulleyProvider()
+        val previousProvider = PulleyExecutionProviders.install(provider)
+        System.setProperty(propertyName, "Android Runtime")
+        try {
+            val availability = ExecutionBackend.PULLEY.availability()
+            assertTrue(availability.available, availability.reason)
+
+            val instance =
+                Instance.builder(loadModule("compiled/add.wat.wasm"))
+                    .withExecutionBackend(ExecutionBackend.PULLEY)
+                    .build()
+
+            assertEquals(ExecutionBackend.PULLEY, instance.executionBackend())
+            assertEquals(11L, instance.export("add").apply(5, 6)[0])
+            assertEquals(1, provider.createCalls.get())
+        } finally {
+            PulleyExecutionProviders.install(previousProvider)
+            if (previousRuntimeName == null) {
+                System.clearProperty(propertyName)
+            } else {
+                System.setProperty(propertyName, previousRuntimeName)
+            }
+        }
+    }
+
+    @Test
+    fun shouldRejectUnavailableInstalledPulleyProviderOnAndroidRuntime() {
+        val propertyName = "java.runtime.name"
+        val previousRuntimeName = System.getProperty(propertyName)
+        val provider = UnavailablePulleyProvider("native library missing")
+        val previousProvider = PulleyExecutionProviders.install(provider)
+        System.setProperty(propertyName, "Android Runtime")
+        try {
+            val availability = ExecutionBackend.PULLEY.availability()
+            assertFalse(availability.available)
+            assertEquals("native library missing", availability.reason)
+
+            val exception = assertThrows(WasmEngineException::class.java) {
+                Instance.builder(loadModule("compiled/add.wat.wasm"))
+                    .withExecutionBackend(ExecutionBackend.PULLEY)
+                    .build()
+            }
+            assertEquals("native library missing", exception.message)
+            assertEquals(0, provider.createCalls.get())
+        } finally {
+            PulleyExecutionProviders.install(previousProvider)
+            if (previousRuntimeName == null) {
+                System.clearProperty(propertyName)
+            } else {
+                System.setProperty(propertyName, previousRuntimeName)
+            }
+        }
+    }
+
+    @Test
+    fun shouldRejectInstalledPulleyProviderReturningWrongBackend() {
+        val propertyName = "java.runtime.name"
+        val previousRuntimeName = System.getProperty(propertyName)
+        val provider = WrongBackendPulleyProvider()
+        val previousProvider = PulleyExecutionProviders.install(provider)
+        System.setProperty(propertyName, "Android Runtime")
+        try {
+            val exception = assertThrows(WasmEngineException::class.java) {
+                Instance.builder(loadModule("compiled/add.wat.wasm"))
+                    .withExecutionBackend(ExecutionBackend.PULLEY)
+                    .build()
+            }
+            assertEquals(
+                "PulleyExecutionProvider returned INTERPRETER execution for PULLEY",
+                exception.message,
+            )
+            assertEquals(1, provider.createCalls.get())
+        } finally {
+            PulleyExecutionProviders.install(previousProvider)
+            if (previousRuntimeName == null) {
+                System.clearProperty(propertyName)
+            } else {
+                System.setProperty(propertyName, previousRuntimeName)
+            }
+        }
+    }
+
+    @Test
+    fun shouldRunPulleyBackendWhenLinkedOrFailFast() {
+        val instance =
+            tryBuildPulley(loadModule("compiled/add.wat.wasm"))
+                ?: return
+
+        assertEquals(ExecutionBackend.PULLEY, instance.executionBackend())
+        assertEquals(11L, instance.export("add").apply(5, 6)[0])
+    }
+
+    @Test
+    fun shouldBridgePulleyHostFunctionAndMemoryWhenLinked() {
+        val count = AtomicInteger()
+        val expected = "Hello, World!"
+
+        val func =
+            HostFunction(
+                "console",
+                "log",
+                FunctionType.of(listOf(ValType.I32, ValType.I32), emptyList()),
+                WasmFunctionHandle { instance, args ->
+                    val memory = instance.memory()
+                    val len = args[0].toInt()
+                    val offset = args[1].toInt()
+                    val message = memory.readString(offset, len)
+
+                    if (expected == message) {
+                        count.incrementAndGet()
+                    }
+
+                    null
+                },
+            )
+
+        val instance =
+            tryBuildPulley(
+                Parser.parse(exportedMemoryHostFunctionModule()),
+                ImportValues.builder().addFunction(func).build(),
+            ) ?: return
+
+        instance.export("logIt").apply()
+
+        assertEquals(ExecutionBackend.PULLEY, instance.executionBackend())
+        assertEquals(1, count.get())
+    }
+
+    @Test
+    fun shouldBridgePulleyHostFunctionAndUnexportedMemoryWhenLinked() {
+        val count = AtomicInteger()
+        val expected = "Hello, World!"
+
+        val func =
+            HostFunction(
+                "console",
+                "log",
+                FunctionType.of(listOf(ValType.I32, ValType.I32), emptyList()),
+                WasmFunctionHandle { instance, args ->
+                    val memory = instance.memory()
+                    val len = args[0].toInt()
+                    val offset = args[1].toInt()
+                    val message = memory.readString(offset, len)
+
+                    if (expected == message) {
+                        count.incrementAndGet()
+                    }
+
+                    null
+                },
+            )
+
+        val instance =
+            tryBuildPulley(
+                loadModule("compiled/host-function.wat.wasm"),
+                ImportValues.builder().addFunction(func).build(),
+            ) ?: return
+
+        instance.export("logIt").apply()
+
+        assertEquals(ExecutionBackend.PULLEY, instance.executionBackend())
+        assertEquals(10, count.get())
+    }
+
+    @Test
     fun shouldSupportBrTable() {
         val instance = Instance.builder(loadModule("compiled/br_table.wat.wasm")).build()
         val switchLike = instance.export("switch_like")
@@ -883,8 +1091,114 @@ class WasmModuleTest {
     }
 
     companion object {
+        private const val AndroidPulleyUnavailableReason =
+            "Wasmtime Pulley execution is not linked on this Android runtime"
+
         private fun loadModule(fileName: String): WasmModule =
             Parser.parse(CorpusResources.getResource(fileName))
+
+        private class InterpreterBackedPulleyProvider : PulleyExecutionProvider {
+            val createCalls = AtomicInteger()
+
+            override fun availability(): ExecutionBackendAvailability =
+                ExecutionBackendAvailability(available = true)
+
+            override fun create(
+                module: WasmModule,
+                imports: ImportValues,
+                hostInstance: Instance,
+            ): PlatformInstanceExecution {
+                createCalls.incrementAndGet()
+                val delegate =
+                    Instance.builder(module)
+                        .withImportValues(imports)
+                        .withExecutionBackend(ExecutionBackend.INTERPRETER)
+                        .build()
+                return object : PlatformInstanceExecution {
+                    override val backend: ExecutionBackend = ExecutionBackend.PULLEY
+
+                    override fun export(name: String): ExportFunction = delegate.export(name)
+
+                    override fun exportType(name: String): FunctionType = delegate.exportType(name)
+
+                    override fun memory(name: String): Memory = delegate.exports().memory(name)
+
+                    override fun memory(index: Int): Memory? =
+                        try {
+                            delegate.memory(index)
+                        } catch (_: InvalidException) {
+                            null
+                        }
+                }
+            }
+        }
+
+        private class UnavailablePulleyProvider(
+            private val reason: String,
+        ) : PulleyExecutionProvider {
+            val createCalls = AtomicInteger()
+
+            override fun availability(): ExecutionBackendAvailability =
+                ExecutionBackendAvailability(available = false, reason = reason)
+
+            override fun create(
+                module: WasmModule,
+                imports: ImportValues,
+                hostInstance: Instance,
+            ): PlatformInstanceExecution {
+                createCalls.incrementAndGet()
+                throw WasmEngineException("should not create unavailable Pulley execution")
+            }
+        }
+
+        private class WrongBackendPulleyProvider : PulleyExecutionProvider {
+            val createCalls = AtomicInteger()
+
+            override fun availability(): ExecutionBackendAvailability =
+                ExecutionBackendAvailability(available = true)
+
+            override fun create(
+                module: WasmModule,
+                imports: ImportValues,
+                hostInstance: Instance,
+            ): PlatformInstanceExecution {
+                createCalls.incrementAndGet()
+                return object : PlatformInstanceExecution {
+                    override val backend: ExecutionBackend = ExecutionBackend.INTERPRETER
+
+                    override fun export(name: String): ExportFunction =
+                        throw UnsupportedOperationException("unused")
+
+                    override fun exportType(name: String): FunctionType =
+                        throw UnsupportedOperationException("unused")
+
+                    override fun memory(name: String): Memory =
+                        throw UnsupportedOperationException("unused")
+
+                    override fun memory(index: Int): Memory? = null
+                }
+            }
+        }
+
+        private fun tryBuildPulley(
+            module: WasmModule,
+            imports: ImportValues = ImportValues.empty(),
+        ): Instance? =
+            try {
+                Instance.builder(module)
+                    .withImportValues(imports)
+                    .withExecutionBackend(ExecutionBackend.PULLEY)
+                    .build()
+            } catch (e: WasmEngineException) {
+                val message = e.message ?: ""
+                if (
+                    message.contains("Wasmtime Pulley execution is not linked") ||
+                        message.contains("needs JVM native access")
+                ) {
+                    return null
+                }
+                throw e
+            }
 
         private fun sharedTableCallerModule(): ByteArray =
             wasmModule(
@@ -957,6 +1271,81 @@ class WasmModuleTest {
                 section(0x03, b(0x01, 0x00)),
                 section(0x09, b(0x01, 0x00, 0x41, 0x07, 0x0b, 0x01, 0x00)),
                 section(0x0a, b(0x01, 0x05, 0x00, 0x41, 0xc3, 0x00, 0x0b)),
+            )
+
+        private fun exportedMemoryHostFunctionModule(): ByteArray =
+            wasmModule(
+                section(0x01, b(0x02, 0x60, 0x02, 0x7f, 0x7f, 0x00, 0x60, 0x00, 0x00)),
+                section(
+                    0x02,
+                    b(
+                        0x01,
+                        0x07,
+                        0x63,
+                        0x6f,
+                        0x6e,
+                        0x73,
+                        0x6f,
+                        0x6c,
+                        0x65,
+                        0x03,
+                        0x6c,
+                        0x6f,
+                        0x67,
+                        0x00,
+                        0x00,
+                    ),
+                ),
+                section(0x03, b(0x01, 0x01)),
+                section(0x05, b(0x01, 0x00, 0x01)),
+                section(
+                    0x07,
+                    b(
+                        0x02,
+                        0x06,
+                        0x6d,
+                        0x65,
+                        0x6d,
+                        0x6f,
+                        0x72,
+                        0x79,
+                        0x02,
+                        0x00,
+                        0x05,
+                        0x6c,
+                        0x6f,
+                        0x67,
+                        0x49,
+                        0x74,
+                        0x00,
+                        0x01,
+                    ),
+                ),
+                section(0x0a, b(0x01, 0x08, 0x00, 0x41, 0x0d, 0x41, 0x00, 0x10, 0x00, 0x0b)),
+                section(
+                    0x0b,
+                    b(
+                        0x01,
+                        0x00,
+                        0x41,
+                        0x00,
+                        0x0b,
+                        0x0d,
+                        0x48,
+                        0x65,
+                        0x6c,
+                        0x6c,
+                        0x6f,
+                        0x2c,
+                        0x20,
+                        0x57,
+                        0x6f,
+                        0x72,
+                        0x6c,
+                        0x64,
+                        0x21,
+                    ),
+                ),
             )
 
         private fun wasmModule(vararg sections: ByteArray): ByteArray =

@@ -1931,16 +1931,20 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
     private fun filesystemLinkAt(args: List<Any?>): Any? {
         requireArity("descriptor.link-at", args, 5)
         return filesystemResult {
+            val followSymlinks = flag(args[1], "symlink-follow")
             val oldPath =
                 resolvePath(
                     descriptors.get(handle(args, 0)),
                     string(args[2]),
-                    flag(args[1], "symlink-follow"),
+                    followSymlinks,
                 )
             val oldLinkPath =
-                if (flag(args[1], "symlink-follow")) {
+                if (followSymlinks) {
                     fileSystem.canonicalize(oldPath)
                 } else {
+                    if (descriptorType(oldPath) == "symbolic-link") {
+                        throw FsException("not-permitted")
+                    }
                     oldPath
                 }
             val newPath = resolvePath(mutableDirectoryDescriptor(args, 3), string(args[4]), false)
@@ -1964,7 +1968,8 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
             ) {
                 throw FsException("read-only")
             }
-            val path = resolvePath(base, string(args[2]), flag(args[1], "symlink-follow"))
+            val followSymlinks = flag(args[1], "symlink-follow")
+            val path = resolvePath(base, string(args[2]), followSymlinks)
             if (flag(openFlags, "create") && flag(openFlags, "exclusive") && fileSystem.exists(path)) {
                 throw FsException("exist")
             }
@@ -1975,6 +1980,9 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
                 throw FsException("no-entry")
             }
             val type = descriptorType(path)
+            if (type == "symbolic-link" && !followSymlinks) {
+                throw FsException("not-permitted")
+            }
             val directory = type == "directory"
             if (flag(openFlags, "directory") && !directory) {
                 throw FsException("not-directory")

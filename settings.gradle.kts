@@ -1,5 +1,12 @@
 pluginManagement {
     repositories {
+        google {
+            mavenContent {
+                includeGroupAndSubgroups("androidx")
+                includeGroupAndSubgroups("com.android")
+                includeGroupAndSubgroups("com.google")
+            }
+        }
         gradlePluginPortal()
         mavenCentral()
     }
@@ -8,6 +15,13 @@ pluginManagement {
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
+        google {
+            mavenContent {
+                includeGroupAndSubgroups("androidx")
+                includeGroupAndSubgroups("com.android")
+                includeGroupAndSubgroups("com.google")
+            }
+        }
         mavenCentral()
     }
 }
@@ -40,6 +54,7 @@ includeProject(":log", "modules/log")
 includeProject(":machine-tests", "testing/machine-tests")
 includeProject(":nightly-testsuite", "testing/nightly-testsuite")
 includeProject(":runtime", "modules/runtime")
+includeProject(":runtime-wasmtime-android", "modules/runtime-wasmtime-android")
 includeProject(":runtime-tests", "testing/runtime-tests")
 includeProject(":simd", "modules/simd")
 includeProject(":test-gen-lib", "tools/test-gen-lib")
