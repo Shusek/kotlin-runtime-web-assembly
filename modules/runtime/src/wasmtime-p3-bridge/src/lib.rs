@@ -18,7 +18,7 @@ use wasmtime::component::{Component, ComponentExportIndex, Linker, ResourceTable
 use wasmtime::{Config, Engine, Store, StoreLimits, StoreLimitsBuilder};
 use wasmtime_wasi::p3::bindings::Command as P3Command;
 use wasmtime_wasi::{
-    DirPerms, FilePerms, TrappableError, WasiCtx, WasiCtxBuilder, WasiCtxView, WasiView,
+    DirPerms, FilePerms, I32Exit, TrappableError, WasiCtx, WasiCtxBuilder, WasiCtxView, WasiView,
     p2::pipe::{MemoryInputPipe, MemoryOutputPipe},
 };
 use wasmtime_wasi_http::{DEFAULT_FORBIDDEN_HEADERS, WasiHttpCtx};
@@ -858,20 +858,55 @@ async fn run_wasi_command(
         .map_err(|error| format!("failed to instantiate Wasmtime command: {error}"))?;
     match P3Command::new(&mut *store, &instance) {
         Ok(command) => {
-            let result = store
-                .run_concurrent(async |store| command.wasi_cli_run().call_run(store).await)
-                .await
-                .map_err(|error| format!("failed to run Wasmtime Preview3 command: {error}"))?;
-            let result = result.map_err(|error| format!("Wasmtime command trapped: {error}"))?;
+            let result = match wasi_command_call_result(
+                store
+                    .run_concurrent(async |store| command.wasi_cli_run().call_run(store).await)
+                    .await,
+                "failed to run Wasmtime Preview3 command",
+            )? {
+                Some(result) => result,
+                None => return Ok(()),
+            };
+            let result = match wasi_command_call_result(result, "Wasmtime command trapped")? {
+                Some(result) => result,
+                None => return Ok(()),
+            };
             result.map_err(|()| "Wasmtime command returned failure".to_string())
         }
-        Err(_) => wasmtime_wasi::p2::bindings::Command::new(&mut *store, &instance)
-            .map_err(|error| format!("failed to bind Wasmtime WASI command export: {error}"))?
-            .wasi_cli_run()
-            .call_run(&mut *store)
-            .await
-            .map_err(|error| format!("failed to run Wasmtime Preview2 command: {error}"))?
-            .map_err(|()| "Wasmtime command returned failure".to_string()),
+        Err(_) => {
+            let result = match wasi_command_call_result(
+                wasmtime_wasi::p2::bindings::Command::new(&mut *store, &instance)
+                    .map_err(|error| {
+                        format!("failed to bind Wasmtime WASI command export: {error}")
+                    })?
+                    .wasi_cli_run()
+                    .call_run(&mut *store)
+                    .await,
+                "failed to run Wasmtime Preview2 command",
+            )? {
+                Some(result) => result,
+                None => return Ok(()),
+            };
+            result.map_err(|()| "Wasmtime command returned failure".to_string())
+        }
+    }
+}
+
+fn wasi_command_call_result<T>(
+    result: Result<T, wasmtime::Error>,
+    label: &str,
+) -> Result<Option<T>, String> {
+    match result {
+        Ok(value) => Ok(Some(value)),
+        Err(error) => {
+            if let Some(exit) = error.downcast_ref::<I32Exit>() {
+                if exit.0 == 0 {
+                    return Ok(None);
+                }
+                return Err(format!("Wasmtime command exited with status {}", exit.0));
+            }
+            Err(format!("{label}: {error}"))
+        }
     }
 }
 
