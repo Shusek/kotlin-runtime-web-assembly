@@ -46,6 +46,7 @@ extensions.configure<KotlinMultiplatformExtension> {
     sourceSets.named("wasmJsTest") {
         dependencies {
             implementation(kotlin("test"))
+            implementation(libs.kotlinxCoroutinesTest)
         }
     }
 }
