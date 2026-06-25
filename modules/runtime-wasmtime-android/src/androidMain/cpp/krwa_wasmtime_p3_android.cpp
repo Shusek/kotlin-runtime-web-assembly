@@ -76,6 +76,31 @@ using CommandRunUnavailableReason = const char * (*)(
     std::uint64_t,
     std::uint64_t);
 
+using CommandRunString = const char * (*)(
+    const std::uint8_t *,
+    std::size_t,
+    const char * const *,
+    const char * const *,
+    const std::uint8_t *,
+    std::size_t,
+    const char * const *,
+    std::size_t,
+    const char * const *,
+    const char * const *,
+    std::size_t,
+    const std::uint8_t *,
+    std::size_t,
+    const char * const *,
+    std::size_t,
+    const char * const *,
+    std::size_t,
+    std::uint8_t,
+    std::uint64_t,
+    std::uint64_t,
+    std::uint64_t,
+    const void *,
+    const char **);
+
 struct P3BridgeApi {
     void *library = nullptr;
     ExecutionCancellationCreate executionCancellationCreate = nullptr;
@@ -85,6 +110,7 @@ struct P3BridgeApi {
     ComponentInstantiateUnavailableReason instantiateUnavailableReason = nullptr;
     ComponentCallString callString = nullptr;
     CommandRunUnavailableReason commandRunUnavailableReason = nullptr;
+    CommandRunString commandRunString = nullptr;
 };
 
 template <typename T>
@@ -156,6 +182,10 @@ P3BridgeApi *loadApi(std::string *error) {
     api.commandRunUnavailableReason = symbol<CommandRunUnavailableReason>(
         api.library,
         "krwa_wasmtime_p3_precompiled_command_run_unavailable_reason",
+        &loadError);
+    api.commandRunString = symbol<CommandRunString>(
+        api.library,
+        "krwa_wasmtime_p3_precompiled_command_run_string",
         &loadError);
     if (!loadError.empty()) {
         *error = loadError;
@@ -604,4 +634,80 @@ Java_uk_shusek_krwa_runtime_wasmtime_android_AndroidWasmtimePreview3Native_nativ
         static_cast<std::uint64_t>(maxMemoryBytes),
         static_cast<std::uint64_t>(executionTimeoutMillis));
     return nullableString(env, error);
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_uk_shusek_krwa_runtime_wasmtime_android_AndroidWasmtimePreview3Native_nativeCommandRunString(
+    JNIEnv *env,
+    jclass,
+    jbyteArray componentBytes,
+    jobjectArray hostRoots,
+    jobjectArray guestRoots,
+    jbooleanArray writablePreopens,
+    jobjectArray arguments,
+    jobjectArray environmentKeys,
+    jobjectArray environmentValues,
+    jbyteArray stdinBytes,
+    jobjectArray allowedHosts,
+    jobjectArray blockedHosts,
+    jboolean allowPrivateNetwork,
+    jlong maxMemoryBytes,
+    jlong maxOutputBytes,
+    jlong executionTimeoutMillis,
+    jlong executionCancellationHandle) {
+    std::string loadError;
+    P3BridgeApi *api = loadApi(&loadError);
+    if (api == nullptr) {
+        throwEngine(env, loadError);
+        return nullptr;
+    }
+    P3CallArgs args = p3CallArgsFrom(
+        env,
+        componentBytes,
+        hostRoots,
+        guestRoots,
+        writablePreopens,
+        arguments,
+        environmentKeys,
+        environmentValues,
+        allowedHosts,
+        blockedHosts);
+    std::vector<std::uint8_t> stdin = bytesFrom(env, stdinBytes, "stdinBytes");
+    if (!validateP3CallArgs(env, args) || env->ExceptionCheck()) {
+        return nullptr;
+    }
+    const char *result = nullptr;
+    const char *error = api->commandRunString(
+        args.componentBytes.data(),
+        args.componentBytes.size(),
+        args.hostRoots.data(),
+        args.guestRoots.data(),
+        args.writablePreopens.empty() ? nullptr : args.writablePreopens.data(),
+        args.hostRoots.size(),
+        args.arguments.data(),
+        args.arguments.size(),
+        args.environmentKeys.data(),
+        args.environmentValues.data(),
+        args.environmentKeys.size(),
+        stdin.empty() ? nullptr : stdin.data(),
+        stdin.size(),
+        args.allowedHosts.data(),
+        args.allowedHosts.size(),
+        args.blockedHosts.data(),
+        args.blockedHosts.size(),
+        allowPrivateNetwork == JNI_TRUE ? 1 : 0,
+        static_cast<std::uint64_t>(maxMemoryBytes),
+        static_cast<std::uint64_t>(maxOutputBytes),
+        static_cast<std::uint64_t>(executionTimeoutMillis),
+        reinterpret_cast<const void *>(executionCancellationHandle),
+        &result);
+    if (error != nullptr) {
+        throwEngine(env, error);
+        return nullptr;
+    }
+    if (result == nullptr) {
+        throwEngine(env, "Wasmtime Preview3 command returned a null result");
+        return nullptr;
+    }
+    return env->NewStringUTF(result);
 }

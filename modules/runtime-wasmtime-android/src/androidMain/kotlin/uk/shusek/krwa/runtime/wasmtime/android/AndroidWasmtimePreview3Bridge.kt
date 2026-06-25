@@ -71,6 +71,32 @@ fun androidWasmtimePreview3CommandRunUnavailableReason(
     return AndroidWasmtimePreview3Native.commandRunUnavailableReason(config.toAndroidPreview3Call())
 }
 
+fun androidWasmtimePreview3CommandRunString(
+    config: WasmtimePreview3ComponentConfig,
+    stdin: String,
+): String = androidWasmtimePreview3CommandRunString(
+    config = config,
+    stdin = stdin,
+    maxOutputBytes = DefaultCommandOutputBytes,
+    cancellation = null,
+)
+
+fun androidWasmtimePreview3CommandRunString(
+    config: WasmtimePreview3ComponentConfig,
+    stdin: String,
+    maxOutputBytes: Long = DefaultCommandOutputBytes,
+    cancellation: AndroidWasmtimePreview3ExecutionCancellation?,
+): String {
+    val targetReason = androidWasmtimePreview3TargetUnavailableReason(config.target)
+    if (targetReason != null) throw WasmEngineException(targetReason)
+    return AndroidWasmtimePreview3Native.commandRunString(
+        call = config.toAndroidPreview3Call(),
+        stdin = stdin.encodeToByteArray(),
+        maxOutputBytes = maxOutputBytes,
+        cancellation = cancellation,
+    )
+}
+
 private fun androidWasmtimePreview3TargetUnavailableReason(target: String): String? =
     when (target) {
         WasmtimePulleyTarget -> null
@@ -206,6 +232,34 @@ private object AndroidWasmtimePreview3Native {
             )
         }
 
+    fun commandRunString(
+        call: AndroidPreview3Call,
+        stdin: ByteArray,
+        maxOutputBytes: Long,
+        cancellation: AndroidWasmtimePreview3ExecutionCancellation?,
+    ): String {
+        loadError?.let { error ->
+            throw WasmEngineException(androidPreview3LoadErrorMessage(error), error)
+        }
+        return nativeCommandRunString(
+            call.componentBytes,
+            call.hostRoots,
+            call.guestRoots,
+            call.writablePreopens,
+            call.arguments,
+            call.environmentKeys,
+            call.environmentValues,
+            stdin,
+            call.allowedHosts,
+            call.blockedHosts,
+            call.allowPrivateNetwork,
+            call.maxMemoryBytes,
+            maxOutputBytes,
+            call.executionTimeoutMillis,
+            cancellation?.handle ?: 0L,
+        )
+    }
+
     private fun nativeOrLoadError(call: () -> String?): String? {
         loadError?.let { error -> return androidPreview3LoadErrorMessage(error) }
         return try {
@@ -276,7 +330,28 @@ private object AndroidWasmtimePreview3Native {
         maxMemoryBytes: Long,
         executionTimeoutMillis: Long,
     ): String?
+
+    @JvmStatic
+    external fun nativeCommandRunString(
+        componentBytes: ByteArray,
+        hostRoots: Array<String>,
+        guestRoots: Array<String>,
+        writablePreopens: BooleanArray,
+        arguments: Array<String>,
+        environmentKeys: Array<String>,
+        environmentValues: Array<String>,
+        stdinBytes: ByteArray,
+        allowedHosts: Array<String>,
+        blockedHosts: Array<String>,
+        allowPrivateNetwork: Boolean,
+        maxMemoryBytes: Long,
+        maxOutputBytes: Long,
+        executionTimeoutMillis: Long,
+        executionCancellationHandle: Long,
+    ): String
 }
+
+private const val DefaultCommandOutputBytes = 16L * 1024L * 1024L
 
 private fun androidPreview3LoadErrorMessage(error: Throwable): String {
     val message = error.message?.takeIf(String::isNotBlank) ?: error::class.simpleName ?: "unknown error"

@@ -16,9 +16,10 @@ use std::time::{Duration, Instant};
 use wasmtime::component::types::ComponentItem;
 use wasmtime::component::{Component, ComponentExportIndex, Linker, ResourceTable};
 use wasmtime::{Config, Engine, Store, StoreLimits, StoreLimitsBuilder};
-use wasmtime_wasi::p3::bindings::Command;
+use wasmtime_wasi::p3::bindings::Command as P3Command;
 use wasmtime_wasi::{
     DirPerms, FilePerms, TrappableError, WasiCtx, WasiCtxBuilder, WasiCtxView, WasiView,
+    p2::pipe::{MemoryInputPipe, MemoryOutputPipe},
 };
 use wasmtime_wasi_http::{DEFAULT_FORBIDDEN_HEADERS, WasiHttpCtx};
 use wasmtime_wasi_http::p3::bindings::http::types::ErrorCode;
@@ -44,6 +45,12 @@ struct P3Preopen {
     host_root: PathBuf,
     guest_root: String,
     writable: bool,
+}
+
+struct P3CommandStdio {
+    stdin: Bytes,
+    stdout: MemoryOutputPipe,
+    stderr: MemoryOutputPipe,
 }
 
 #[derive(Clone, Default)]
@@ -547,6 +554,70 @@ pub extern "C" fn krwa_wasmtime_p3_precompiled_command_run_unavailable_reason(
     }
 }
 
+#[unsafe(no_mangle)]
+pub extern "C" fn krwa_wasmtime_p3_precompiled_command_run_string(
+    component_bytes: *const u8,
+    component_len: usize,
+    host_roots: *const *const c_char,
+    guest_roots: *const *const c_char,
+    writable_preopens: *const u8,
+    preopen_count: usize,
+    arguments: *const *const c_char,
+    argument_count: usize,
+    environment_keys: *const *const c_char,
+    environment_values: *const *const c_char,
+    environment_count: usize,
+    stdin_bytes: *const u8,
+    stdin_len: usize,
+    allowed_hosts: *const *const c_char,
+    allowed_host_count: usize,
+    blocked_hosts: *const *const c_char,
+    blocked_host_count: usize,
+    allow_private_network: u8,
+    max_memory_bytes: u64,
+    max_output_bytes: u64,
+    execution_timeout_millis: u64,
+    execution_cancellation: *const ExecutionCancellationHandle,
+    result_out: *mut *const c_char,
+) -> *const c_char {
+    match run_command_string(
+        component_bytes,
+        component_len,
+        host_roots,
+        guest_roots,
+        writable_preopens,
+        preopen_count,
+        arguments,
+        argument_count,
+        environment_keys,
+        environment_values,
+        environment_count,
+        stdin_bytes,
+        stdin_len,
+        allowed_hosts,
+        allowed_host_count,
+        blocked_hosts,
+        blocked_host_count,
+        allow_private_network,
+        max_memory_bytes,
+        max_output_bytes,
+        execution_timeout_millis,
+        execution_cancellation,
+    ) {
+        Ok(result) => {
+            if result_out.is_null() {
+                set_last_error("result_out is null".to_string())
+            } else {
+                unsafe {
+                    *result_out = set_last_result(result);
+                }
+                ptr::null()
+            }
+        }
+        Err(error) => set_last_error(error),
+    }
+}
+
 fn check_bridge(host_root: *const c_char, guest_root: *const c_char) -> Result<(), String> {
     let preopens = single_preopen_from_c(host_root, guest_root, true)?;
     let engine = p3_engine()?;
@@ -689,19 +760,119 @@ fn check_command_run(
         .enable_all()
         .build()
         .map_err(|error| format!("failed to create Wasmtime Preview3 command runtime: {error}"))?;
-    let result = runtime.block_on(with_execution_timeout(execution_timeout, async {
-        let command = Command::instantiate_async(&mut store, &component, &linker)
-            .await
-            .map_err(|error| format!("failed to instantiate Wasmtime Preview3 command: {error}"))?;
-        let result = store
-            .run_concurrent(async move |store| command.wasi_cli_run().call_run(store).await)
-            .await
-            .map_err(|error| format!("failed to run Wasmtime Preview3 command: {error}"))?;
-        let result =
-            result.map_err(|error| format!("Wasmtime Preview3 command trapped: {error}"))?;
-        result.map_err(|()| "Wasmtime Preview3 command returned failure".to_string())
-    }));
+    let result = runtime.block_on(with_execution_timeout(
+        execution_timeout,
+        run_wasi_command(&mut store, &component, &linker),
+    ));
     finalize_execution_result(result, watchdog, execution_timeout)
+}
+
+fn run_command_string(
+    component_bytes: *const u8,
+    component_len: usize,
+    host_roots: *const *const c_char,
+    guest_roots: *const *const c_char,
+    writable_preopens: *const u8,
+    preopen_count: usize,
+    arguments: *const *const c_char,
+    argument_count: usize,
+    environment_keys: *const *const c_char,
+    environment_values: *const *const c_char,
+    environment_count: usize,
+    stdin_bytes: *const u8,
+    stdin_len: usize,
+    allowed_hosts: *const *const c_char,
+    allowed_host_count: usize,
+    blocked_hosts: *const *const c_char,
+    blocked_host_count: usize,
+    allow_private_network: u8,
+    max_memory_bytes: u64,
+    max_output_bytes: u64,
+    execution_timeout_millis: u64,
+    execution_cancellation: *const ExecutionCancellationHandle,
+) -> Result<String, String> {
+    let preopens = preopens_from_c(host_roots, guest_roots, writable_preopens, preopen_count)?;
+    let arguments = string_list_from_c(arguments, argument_count, "arguments")?;
+    let environment = environment_from_c(environment_keys, environment_values, environment_count)?;
+    let stdin = bytes_from_c(stdin_bytes, stdin_len, "stdin_bytes")?;
+    let http_policy = http_policy_from_c(
+        allowed_hosts,
+        allowed_host_count,
+        blocked_hosts,
+        blocked_host_count,
+        allow_private_network,
+    )?;
+    validate_max_memory_bytes(max_memory_bytes)?;
+    let execution_timeout = validate_execution_timeout_millis(execution_timeout_millis);
+    let execution_cancellation = execution_cancellation_from_c(execution_cancellation);
+    let stdio = P3CommandStdio::new(stdin, max_output_bytes)?;
+    if component_bytes.is_null() {
+        return Err("component_bytes is null".to_string());
+    }
+    let bytes = unsafe { std::slice::from_raw_parts(component_bytes, component_len) };
+    let engine = p3_engine()?;
+    let mut linker = Linker::<KrwaP3State>::new(&engine);
+    add_p3_linker_imports(&mut linker)?;
+    let component = unsafe { Component::deserialize(&engine, bytes) }
+        .map_err(|error| format!("failed to deserialize Wasmtime component: {error}"))?;
+    let mut store = Store::new(
+        &engine,
+        p3_state_with_stdio(
+            &preopens,
+            &arguments,
+            &environment,
+            http_policy,
+            max_memory_bytes,
+            Some(&stdio),
+        )?,
+    );
+    store.limiter(|state| &mut state.limits);
+    let watchdog = arm_execution_deadline(
+        &engine,
+        &mut store,
+        execution_timeout,
+        execution_cancellation,
+    );
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .map_err(|error| format!("failed to create Wasmtime Preview3 command runtime: {error}"))?;
+    let result = runtime.block_on(with_execution_timeout(
+        execution_timeout,
+        run_wasi_command(&mut store, &component, &linker),
+    ));
+    match finalize_execution_result(result, watchdog, execution_timeout) {
+        Ok(()) => stdio.stdout_string(),
+        Err(error) => Err(stdio.command_error(error)),
+    }
+}
+
+async fn run_wasi_command(
+    store: &mut Store<KrwaP3State>,
+    component: &Component,
+    linker: &Linker<KrwaP3State>,
+) -> Result<(), String> {
+    let instance = linker
+        .instantiate_async(&mut *store, component)
+        .await
+        .map_err(|error| format!("failed to instantiate Wasmtime command: {error}"))?;
+    match P3Command::new(&mut *store, &instance) {
+        Ok(command) => {
+            let result = store
+                .run_concurrent(async |store| command.wasi_cli_run().call_run(store).await)
+                .await
+                .map_err(|error| format!("failed to run Wasmtime Preview3 command: {error}"))?;
+            let result = result.map_err(|error| format!("Wasmtime command trapped: {error}"))?;
+            result.map_err(|()| "Wasmtime command returned failure".to_string())
+        }
+        Err(_) => wasmtime_wasi::p2::bindings::Command::new(&mut *store, &instance)
+            .map_err(|error| format!("failed to bind Wasmtime WASI command export: {error}"))?
+            .wasi_cli_run()
+            .call_run(&mut *store)
+            .await
+            .map_err(|error| format!("failed to run Wasmtime Preview2 command: {error}"))?
+            .map_err(|()| "Wasmtime command returned failure".to_string()),
+    }
 }
 
 fn check_component_call0(
@@ -1136,6 +1307,11 @@ fn interface_export_matches(export_name: &str, local_name: &str) -> bool {
 }
 
 fn add_p3_linker_imports(linker: &mut Linker<KrwaP3State>) -> Result<(), String> {
+    // The Wasmtime P3 command binding can run components that still import WASI
+    // 0.2.x through the preview1 adapter. Link both namespaces, matching
+    // Wasmtime's own P3 command runner tests.
+    wasmtime_wasi::p2::add_to_linker_async(linker)
+        .map_err(|error| format!("failed to link Wasmtime WASI Preview2 imports: {error}"))?;
     wasmtime_wasi::p3::add_to_linker(linker)
         .map_err(|error| format!("failed to link Wasmtime WASI Preview3 imports: {error}"))?;
     wasmtime_wasi_http::p3::add_to_linker(linker)
@@ -1334,6 +1510,24 @@ fn p3_state(
     http_policy: HttpPolicy,
     max_memory_bytes: u64,
 ) -> Result<KrwaP3State, String> {
+    p3_state_with_stdio(
+        preopens,
+        arguments,
+        environment,
+        http_policy,
+        max_memory_bytes,
+        None,
+    )
+}
+
+fn p3_state_with_stdio(
+    preopens: &[P3Preopen],
+    arguments: &[String],
+    environment: &[(String, String)],
+    http_policy: HttpPolicy,
+    max_memory_bytes: u64,
+    stdio: Option<&P3CommandStdio>,
+) -> Result<KrwaP3State, String> {
     let max_memory_size = validate_max_memory_bytes(max_memory_bytes)?;
     if preopens.is_empty() {
         return Err("Wasmtime Preview3 preopen list must not be empty".to_string());
@@ -1342,6 +1536,11 @@ fn p3_state(
     let mut builder = WasiCtxBuilder::new();
     builder.args(arguments);
     builder.envs(environment);
+    if let Some(stdio) = stdio {
+        builder.stdin(MemoryInputPipe::new(stdio.stdin.clone()));
+        builder.stdout(stdio.stdout.clone());
+        builder.stderr(stdio.stderr.clone());
+    }
     for preopen in preopens {
         let host_root = validated_host_preopen_root(&preopen.host_root)?;
         validate_guest_preopen_root(&preopen.guest_root)?;
@@ -1377,6 +1576,38 @@ fn p3_state(
             .memory_size(max_memory_size)
             .build(),
     })
+}
+
+impl P3CommandStdio {
+    fn new(stdin: Vec<u8>, max_output_bytes: u64) -> Result<Self, String> {
+        let max_output_bytes = max_output_bytes
+            .try_into()
+            .map_err(|_| "Wasmtime Preview3 max output bytes exceeds host usize".to_string())?;
+        if max_output_bytes == 0 {
+            return Err("Wasmtime Preview3 max output bytes must be positive".to_string());
+        }
+        Ok(Self {
+            stdin: Bytes::from(stdin),
+            stdout: MemoryOutputPipe::new(max_output_bytes),
+            stderr: MemoryOutputPipe::new(max_output_bytes),
+        })
+    }
+
+    fn stdout_string(&self) -> Result<String, String> {
+        String::from_utf8(self.stdout.contents().to_vec())
+            .map_err(|error| format!("Wasmtime Preview3 command stdout was not UTF-8: {error}"))
+    }
+
+    fn command_error(&self, error: String) -> String {
+        let stderr = String::from_utf8_lossy(&self.stderr.contents())
+            .trim()
+            .to_string();
+        if stderr.is_empty() {
+            error
+        } else {
+            format!("{error}: stderr={stderr}")
+        }
+    }
 }
 
 fn single_preopen_from_c(
@@ -1440,6 +1671,16 @@ fn string_list_from_c(
         result.push(string_from_c(value, &format!("{label}[{index}]"))?.to_string());
     }
     Ok(result)
+}
+
+fn bytes_from_c(values: *const u8, count: usize, label: &str) -> Result<Vec<u8>, String> {
+    if count == 0 {
+        return Ok(Vec::new());
+    }
+    if values.is_null() {
+        return Err(format!("{label} is null"));
+    }
+    Ok(unsafe { std::slice::from_raw_parts(values, count) }.to_vec())
 }
 
 fn environment_from_c(
