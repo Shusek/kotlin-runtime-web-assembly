@@ -15,6 +15,11 @@ plugins {
 
 group = "uk.shusek.krwa"
 version = providers.gradleProperty("version").get()
+val hostOs = providers.gradleProperty("krwa.host.os")
+    .orElse(System.getProperty("os.name"))
+    .get()
+    .lowercase()
+val hostIsMacOs = "mac" in hostOs || "darwin" in hostOs
 
 plugins.withType<WasmNodeJsRootPlugin>().configureEach {
     extensions.configure<WasmNodeJsEnvSpec>(WasmNodeJsEnvSpec.EXTENSION_NAME) {
@@ -59,6 +64,13 @@ val jvmProjectPaths =
 
 allprojects {
     version = rootProject.version
+    if (!hostIsMacOs) {
+        tasks.configureEach {
+            if ("IosArm64Publication" in name || "IosSimulatorArm64Publication" in name) {
+                onlyIf("iOS publications require macOS target outputs") { false }
+            }
+        }
+    }
 }
 
 configure(jvmProjectPaths.map(::project)) {

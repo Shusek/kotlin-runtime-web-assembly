@@ -40,7 +40,10 @@ val wasmtimeP3BridgeIosLibDirectory = layout.buildDirectory.dir("wasmtime-p3-bri
 val wasmtimeP3BridgeReleaseLibrary = wasmtimeP3BridgeTargetDirectory.map { targetDirectory ->
     targetDirectory.file("release/${nativeDynamicLibraryName("krwa_wasmtime_p3_bridge")}")
 }
-val hostOs = System.getProperty("os.name").lowercase()
+val hostOs = providers.gradleProperty("krwa.host.os")
+    .orElse(System.getProperty("os.name"))
+    .get()
+    .lowercase()
 val hostIsMacOs = "mac" in hostOs || "darwin" in hostOs
 
 fun nativeDynamicLibraryName(baseName: String): String {
