@@ -40,12 +40,13 @@ val wasmtimeP3BridgeIosLibDirectory = layout.buildDirectory.dir("wasmtime-p3-bri
 val wasmtimeP3BridgeReleaseLibrary = wasmtimeP3BridgeTargetDirectory.map { targetDirectory ->
     targetDirectory.file("release/${nativeDynamicLibraryName("krwa_wasmtime_p3_bridge")}")
 }
+val hostOs = System.getProperty("os.name").lowercase()
+val hostIsMacOs = "mac" in hostOs || "darwin" in hostOs
 
 fun nativeDynamicLibraryName(baseName: String): String {
-    val os = System.getProperty("os.name").lowercase()
     return when {
-        "mac" in os || "darwin" in os -> "lib$baseName.dylib"
-        "windows" in os -> "$baseName.dll"
+        hostIsMacOs -> "lib$baseName.dylib"
+        "windows" in hostOs -> "$baseName.dll"
         else -> "lib$baseName.so"
     }
 }
@@ -227,6 +228,7 @@ val buildWasmtimePulleyIosLibs by tasks.registering {
     group = LifecycleBasePlugin.BUILD_GROUP
     description = "Builds pinned Wasmtime Pulley C API static libraries for iOS device and simulator."
     notCompatibleWithConfigurationCache("Builds a native dependency through external cargo/rustup/cmake commands.")
+    onlyIf("iOS native bridge libraries require macOS toolchains") { hostIsMacOs }
     dependsOn(prepareWasmtimePulleyIosSource)
     inputs.property("wasmtimePulleyVersion", wasmtimePulleyVersion)
     inputs.property("wasmtimePulleyGitRevision", wasmtimePulleyGitRevision)
@@ -292,6 +294,7 @@ val buildKrwaPulleyIosBridgeLibs by tasks.registering {
     group = LifecycleBasePlugin.BUILD_GROUP
     description = "Builds KRWA Pulley bridge static libraries for iOS device and simulator."
     notCompatibleWithConfigurationCache("Builds a native bridge through xcrun/clang/ar commands.")
+    onlyIf("iOS native bridge libraries require macOS toolchains") { hostIsMacOs }
     inputs.file(layout.projectDirectory.file("src/iosMain/cpp/krwa_pulley_ios.cpp"))
     outputs.files(
         wasmtimePulleyIosTargets.map { target ->
@@ -338,6 +341,7 @@ val buildWasmtimeP3BridgeIosLibs by tasks.registering {
     group = LifecycleBasePlugin.BUILD_GROUP
     description = "Builds the Rust Wasmtime Preview3 bridge static libraries for iOS device and simulator."
     notCompatibleWithConfigurationCache("Runs cargo against the pinned Wasmtime source checkout.")
+    onlyIf("iOS native bridge libraries require macOS toolchains") { hostIsMacOs }
     dependsOn(prepareWasmtimePulleyIosSource)
     inputs.property("wasmtimePulleyVersion", wasmtimePulleyVersion)
     inputs.property("wasmtimePulleyGitRevision", wasmtimePulleyGitRevision)
@@ -510,22 +514,24 @@ extensions.configure<KotlinMultiplatformExtension> {
                     "-lc++",
                 )
             }
-            tasks.named(compilations.getByName("main").cinterops["wasmtimePulley"].interopProcessingTaskName) {
-                dependsOn(buildKrwaPulleyIosBridgeLibs)
-                dependsOn(buildWasmtimeP3BridgeIosLibs)
-                dependsOn(buildWasmtimePulleyIosLibs)
-                inputs.file(krwaPulleyBridgeLib)
-                inputs.file(wasmtimeP3BridgeLib)
-                inputs.file(wasmtimePulleyLib)
-            }
-            binaries.configureEach {
-                linkTaskProvider.configure {
+            if (hostIsMacOs) {
+                tasks.named(compilations.getByName("main").cinterops["wasmtimePulley"].interopProcessingTaskName) {
                     dependsOn(buildKrwaPulleyIosBridgeLibs)
                     dependsOn(buildWasmtimeP3BridgeIosLibs)
                     dependsOn(buildWasmtimePulleyIosLibs)
                     inputs.file(krwaPulleyBridgeLib)
                     inputs.file(wasmtimeP3BridgeLib)
                     inputs.file(wasmtimePulleyLib)
+                }
+                binaries.configureEach {
+                    linkTaskProvider.configure {
+                        dependsOn(buildKrwaPulleyIosBridgeLibs)
+                        dependsOn(buildWasmtimeP3BridgeIosLibs)
+                        dependsOn(buildWasmtimePulleyIosLibs)
+                        inputs.file(krwaPulleyBridgeLib)
+                        inputs.file(wasmtimeP3BridgeLib)
+                        inputs.file(wasmtimePulleyLib)
+                    }
                 }
             }
         }
