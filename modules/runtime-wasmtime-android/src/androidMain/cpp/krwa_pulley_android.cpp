@@ -99,6 +99,7 @@ struct WasmtimeApi {
     void (*configWasmExceptionsSet)(wasm_config_t *, bool) = nullptr;
     void (*configWasmBulkMemorySet)(wasm_config_t *, bool) = nullptr;
     void (*configWasmMultiMemorySet)(wasm_config_t *, bool) = nullptr;
+    void (*configMaxWasmStackSet)(wasm_config_t *, std::size_t) = nullptr;
     void (*configMemoryMayMoveSet)(wasm_config_t *, bool) = nullptr;
     void (*configConcurrencySupportSet)(wasm_config_t *, bool) = nullptr;
     wasmtime_error_t *(*moduleNew)(wasm_engine_t *, const std::uint8_t *, std::size_t, wasmtime_module_t **) = nullptr;
@@ -240,6 +241,7 @@ WasmtimeApi *loadApi(std::string *error) {
         !require("wasmtime_config_wasm_exceptions_set", &api.configWasmExceptionsSet) ||
         !require("wasmtime_config_wasm_bulk_memory_set", &api.configWasmBulkMemorySet) ||
         !require("wasmtime_config_wasm_multi_memory_set", &api.configWasmMultiMemorySet) ||
+        !require("wasmtime_config_max_wasm_stack_set", &api.configMaxWasmStackSet) ||
         !require("wasmtime_config_memory_may_move_set", &api.configMemoryMayMoveSet) ||
         !require("wasmtime_config_concurrency_support_set", &api.configConcurrencySupportSet) ||
         !require("wasmtime_module_new", &api.moduleNew) ||
@@ -357,7 +359,8 @@ std::string configureWasmtime(
     WasmtimeApi *api,
     wasm_config_t *config,
     const std::string &target,
-    bool memoryMayMove
+    bool memoryMayMove,
+    std::int64_t maxWasmStackBytes
 ) {
     if (!target.empty() && target != "native" && target != "cranelift") {
         wasmtime_error_t *targetError = api->configTargetSet(config, target.c_str());
@@ -365,6 +368,10 @@ std::string configureWasmtime(
             return "wasmtime_config_target_set(" + target + ") failed: " + consumeError(api, targetError);
         }
     }
+    if (maxWasmStackBytes <= 0) {
+        return "Wasmtime max Wasm stack bytes must be positive";
+    }
+    api->configMaxWasmStackSet(config, static_cast<std::size_t>(maxWasmStackBytes));
     api->configWasmGcSet(config, true);
     api->configWasmFunctionReferencesSet(config, true);
     api->configWasmReferenceTypesSet(config, true);
@@ -387,7 +394,7 @@ std::string checkWasmtimeTarget(const std::string &target) {
     if (config == nullptr) {
         return "wasm_config_new returned null";
     }
-    std::string configError = configureWasmtime(api, config, target, false);
+    std::string configError = configureWasmtime(api, config, target, false, 512L * 1024L);
     if (!configError.empty()) {
         return configError;
     }
@@ -768,6 +775,11 @@ Java_uk_shusek_krwa_runtime_wasmtime_android_AndroidWasmtimePulleyNative_create(
     jboolean precompiledModule,
     jstring target,
     jlong maxMemoryBytes,
+    jlong maxWasmStackBytes,
+    jlong maxTableElements,
+    jlong maxInstances,
+    jlong maxTables,
+    jlong maxMemories,
     jlongArray callbackIds,
     jobjectArray paramOpcodes,
     jobjectArray returnOpcodes
@@ -781,6 +793,14 @@ Java_uk_shusek_krwa_runtime_wasmtime_android_AndroidWasmtimePulleyNative_create(
     }
     if (maxMemoryBytes <= 0) {
         throwEngine(env, "Wasmtime max memory bytes must be positive");
+        return 0;
+    }
+    if (maxWasmStackBytes <= 0) {
+        throwEngine(env, "Wasmtime max Wasm stack bytes must be positive");
+        return 0;
+    }
+    if (maxTableElements < -1 || maxInstances < -1 || maxTables < -1 || maxMemories < -1) {
+        throwEngine(env, "Wasmtime resource limits must be -1 for unlimited or non-negative");
         return 0;
     }
 
@@ -798,7 +818,7 @@ Java_uk_shusek_krwa_runtime_wasmtime_android_AndroidWasmtimePulleyNative_create(
         throwEngine(env, "wasm_config_new returned null");
         return 0;
     }
-    std::string configError = configureWasmtime(api, config, targetValue, precompiledModule);
+    std::string configError = configureWasmtime(api, config, targetValue, precompiledModule, maxWasmStackBytes);
     if (!configError.empty()) {
         throwEngine(env, configError);
         return 0;
@@ -838,7 +858,13 @@ Java_uk_shusek_krwa_runtime_wasmtime_android_AndroidWasmtimePulleyNative_create(
         throwEngine(env, "wasmtime_store_new returned null");
         return 0;
     }
-    api->storeLimiter(execution->store, maxMemoryBytes, -1L, 1L, 128L, 16L);
+    api->storeLimiter(
+        execution->store,
+        maxMemoryBytes,
+        maxTableElements,
+        maxInstances,
+        maxTables,
+        maxMemories);
     execution->context = api->storeContext(execution->store);
 
     std::vector<WasmtimeExtern> imports(static_cast<std::size_t>(importCount));

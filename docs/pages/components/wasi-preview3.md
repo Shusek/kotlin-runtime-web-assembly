@@ -28,6 +28,14 @@ val value = runtime.await(future)
 runtime.close()
 ```
 
+When running precompiled Preview 3 components through the Wasmtime Pulley
+bridge, `WasmtimePreview3ComponentConfig` carries the same resource limits as
+the raw Pulley backend: `maxMemoryBytes`, `maxWasmStackBytes`,
+`maxTableElements`, `maxInstances`, `maxTables`, and `maxMemories`. Count limits
+accept `WasmtimeUnlimitedResourceLimit` (`-1`) for unlimited. The separate
+`executionTimeoutMillis` value is a wall-clock bridge timeout and should not be
+treated as deterministic fuel or CPU metering.
+
 JVM and iOS provide Ktor-backed default socket runtimes. wasmJs provides
 Ktor-backed HTTP and suspend TCP connect/listen paths for Node-backed
 environments. Browser raw sockets, wasmJs UDP, and the default browser

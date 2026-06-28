@@ -9,8 +9,8 @@ use std::fs;
 use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::ptr;
-use std::sync::{Arc, Condvar, Mutex};
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Condvar, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 use wasmtime::component::types::ComponentItem;
@@ -21,11 +21,13 @@ use wasmtime_wasi::{
     DirPerms, FilePerms, I32Exit, TrappableError, WasiCtx, WasiCtxBuilder, WasiCtxView, WasiView,
     p2::pipe::{MemoryInputPipe, MemoryOutputPipe},
 };
-use wasmtime_wasi_http::{DEFAULT_FORBIDDEN_HEADERS, WasiHttpCtx};
 use wasmtime_wasi_http::p3::bindings::http::types::ErrorCode;
 use wasmtime_wasi_http::p3::{RequestOptions, WasiHttpCtxView, WasiHttpHooks, WasiHttpView};
+use wasmtime_wasi_http::{DEFAULT_FORBIDDEN_HEADERS, WasiHttpCtx};
 
 const DEFAULT_MAX_MEMORY_BYTES: u64 = 256 * 1024 * 1024;
+const DEFAULT_MAX_WASM_STACK_BYTES: u64 = 512 * 1024;
+const UNLIMITED_RESOURCE_LIMIT: i64 = -1;
 const DISABLED_EXECUTION_TIMEOUT_EPOCH_DEADLINE: u64 = u64::MAX / 2;
 
 thread_local! {
@@ -58,6 +60,41 @@ struct HttpPolicy {
     allowed_hosts: Vec<String>,
     blocked_hosts: Vec<String>,
     allow_private_network: bool,
+}
+
+#[derive(Clone, Copy)]
+struct P3Limits {
+    max_memory_bytes: u64,
+    max_wasm_stack_bytes: u64,
+    max_table_elements: i64,
+    max_instances: i64,
+    max_tables: i64,
+    max_memories: i64,
+}
+
+impl Default for P3Limits {
+    fn default() -> Self {
+        Self {
+            max_memory_bytes: DEFAULT_MAX_MEMORY_BYTES,
+            max_wasm_stack_bytes: DEFAULT_MAX_WASM_STACK_BYTES,
+            max_table_elements: UNLIMITED_RESOURCE_LIMIT,
+            max_instances: UNLIMITED_RESOURCE_LIMIT,
+            max_tables: UNLIMITED_RESOURCE_LIMIT,
+            max_memories: UNLIMITED_RESOURCE_LIMIT,
+        }
+    }
+}
+
+impl P3Limits {
+    fn validate(self) -> Result<(), String> {
+        validate_max_memory_bytes(self.max_memory_bytes)?;
+        validate_max_wasm_stack_bytes(self.max_wasm_stack_bytes)?;
+        validate_optional_resource_limit("max table elements", self.max_table_elements)?;
+        validate_optional_resource_limit("max instances", self.max_instances)?;
+        validate_optional_resource_limit("max tables", self.max_tables)?;
+        validate_optional_resource_limit("max memories", self.max_memories)?;
+        Ok(())
+    }
 }
 
 struct PolicyHttpHooks {
@@ -204,8 +241,8 @@ impl WasiHttpView for KrwaP3State {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn krwa_wasmtime_p3_execution_cancellation_create(
-) -> *mut ExecutionCancellationHandle {
+pub extern "C" fn krwa_wasmtime_p3_execution_cancellation_create()
+-> *mut ExecutionCancellationHandle {
     Box::into_raw(Box::new(ExecutionCancellationHandle {
         state: Arc::new(ExecutionControlState::new()),
     }))
@@ -275,6 +312,11 @@ pub extern "C" fn krwa_wasmtime_p3_precompiled_component_instantiate_unavailable
     blocked_host_count: usize,
     allow_private_network: u8,
     max_memory_bytes: u64,
+    max_wasm_stack_bytes: u64,
+    max_table_elements: i64,
+    max_instances: i64,
+    max_tables: i64,
+    max_memories: i64,
 ) -> *const c_char {
     match check_component_instantiation(
         component_bytes,
@@ -293,7 +335,14 @@ pub extern "C" fn krwa_wasmtime_p3_precompiled_component_instantiate_unavailable
         blocked_hosts,
         blocked_host_count,
         allow_private_network,
-        max_memory_bytes,
+        p3_limits_from_c(
+            max_memory_bytes,
+            max_wasm_stack_bytes,
+            max_table_elements,
+            max_instances,
+            max_tables,
+            max_memories,
+        ),
     ) {
         Ok(()) => ptr::null(),
         Err(error) => set_last_error(error),
@@ -320,6 +369,11 @@ pub extern "C" fn krwa_wasmtime_p3_precompiled_component_call0_unavailable_reaso
     blocked_host_count: usize,
     allow_private_network: u8,
     max_memory_bytes: u64,
+    max_wasm_stack_bytes: u64,
+    max_table_elements: i64,
+    max_instances: i64,
+    max_tables: i64,
+    max_memories: i64,
 ) -> *const c_char {
     match check_component_call0(
         component_bytes,
@@ -339,7 +393,14 @@ pub extern "C" fn krwa_wasmtime_p3_precompiled_component_call0_unavailable_reaso
         blocked_hosts,
         blocked_host_count,
         allow_private_network,
-        max_memory_bytes,
+        p3_limits_from_c(
+            max_memory_bytes,
+            max_wasm_stack_bytes,
+            max_table_elements,
+            max_instances,
+            max_tables,
+            max_memories,
+        ),
     ) {
         Ok(()) => ptr::null(),
         Err(error) => set_last_error(error),
@@ -368,6 +429,11 @@ pub extern "C" fn krwa_wasmtime_p3_precompiled_component_call_s32_unavailable_re
     blocked_host_count: usize,
     allow_private_network: u8,
     max_memory_bytes: u64,
+    max_wasm_stack_bytes: u64,
+    max_table_elements: i64,
+    max_instances: i64,
+    max_tables: i64,
+    max_memories: i64,
 ) -> *const c_char {
     match check_component_call_s32(
         component_bytes,
@@ -389,7 +455,14 @@ pub extern "C" fn krwa_wasmtime_p3_precompiled_component_call_s32_unavailable_re
         blocked_hosts,
         blocked_host_count,
         allow_private_network,
-        max_memory_bytes,
+        p3_limits_from_c(
+            max_memory_bytes,
+            max_wasm_stack_bytes,
+            max_table_elements,
+            max_instances,
+            max_tables,
+            max_memories,
+        ),
     ) {
         Ok(()) => ptr::null(),
         Err(error) => set_last_error(error),
@@ -418,6 +491,11 @@ pub extern "C" fn krwa_wasmtime_p3_precompiled_component_call_string_unavailable
     blocked_host_count: usize,
     allow_private_network: u8,
     max_memory_bytes: u64,
+    max_wasm_stack_bytes: u64,
+    max_table_elements: i64,
+    max_instances: i64,
+    max_tables: i64,
+    max_memories: i64,
 ) -> *const c_char {
     match check_component_call_string(
         component_bytes,
@@ -439,7 +517,14 @@ pub extern "C" fn krwa_wasmtime_p3_precompiled_component_call_string_unavailable
         blocked_hosts,
         blocked_host_count,
         allow_private_network,
-        max_memory_bytes,
+        p3_limits_from_c(
+            max_memory_bytes,
+            max_wasm_stack_bytes,
+            max_table_elements,
+            max_instances,
+            max_tables,
+            max_memories,
+        ),
     ) {
         Ok(()) => ptr::null(),
         Err(error) => set_last_error(error),
@@ -467,6 +552,11 @@ pub extern "C" fn krwa_wasmtime_p3_precompiled_component_call_string(
     blocked_host_count: usize,
     allow_private_network: u8,
     max_memory_bytes: u64,
+    max_wasm_stack_bytes: u64,
+    max_table_elements: i64,
+    max_instances: i64,
+    max_tables: i64,
+    max_memories: i64,
     execution_timeout_millis: u64,
     execution_cancellation: *const ExecutionCancellationHandle,
     result_out: *mut *const c_char,
@@ -490,7 +580,14 @@ pub extern "C" fn krwa_wasmtime_p3_precompiled_component_call_string(
         blocked_hosts,
         blocked_host_count,
         allow_private_network,
-        max_memory_bytes,
+        p3_limits_from_c(
+            max_memory_bytes,
+            max_wasm_stack_bytes,
+            max_table_elements,
+            max_instances,
+            max_tables,
+            max_memories,
+        ),
         execution_timeout_millis,
         execution_cancellation,
     ) {
@@ -527,6 +624,11 @@ pub extern "C" fn krwa_wasmtime_p3_precompiled_command_run_unavailable_reason(
     blocked_host_count: usize,
     allow_private_network: u8,
     max_memory_bytes: u64,
+    max_wasm_stack_bytes: u64,
+    max_table_elements: i64,
+    max_instances: i64,
+    max_tables: i64,
+    max_memories: i64,
     execution_timeout_millis: u64,
 ) -> *const c_char {
     match check_command_run(
@@ -546,7 +648,14 @@ pub extern "C" fn krwa_wasmtime_p3_precompiled_command_run_unavailable_reason(
         blocked_hosts,
         blocked_host_count,
         allow_private_network,
-        max_memory_bytes,
+        p3_limits_from_c(
+            max_memory_bytes,
+            max_wasm_stack_bytes,
+            max_table_elements,
+            max_instances,
+            max_tables,
+            max_memories,
+        ),
         execution_timeout_millis,
     ) {
         Ok(()) => ptr::null(),
@@ -575,6 +684,11 @@ pub extern "C" fn krwa_wasmtime_p3_precompiled_command_run_string(
     blocked_host_count: usize,
     allow_private_network: u8,
     max_memory_bytes: u64,
+    max_wasm_stack_bytes: u64,
+    max_table_elements: i64,
+    max_instances: i64,
+    max_tables: i64,
+    max_memories: i64,
     max_output_bytes: u64,
     execution_timeout_millis: u64,
     execution_cancellation: *const ExecutionCancellationHandle,
@@ -599,7 +713,14 @@ pub extern "C" fn krwa_wasmtime_p3_precompiled_command_run_string(
         blocked_hosts,
         blocked_host_count,
         allow_private_network,
-        max_memory_bytes,
+        p3_limits_from_c(
+            max_memory_bytes,
+            max_wasm_stack_bytes,
+            max_table_elements,
+            max_instances,
+            max_tables,
+            max_memories,
+        ),
         max_output_bytes,
         execution_timeout_millis,
         execution_cancellation,
@@ -620,21 +741,34 @@ pub extern "C" fn krwa_wasmtime_p3_precompiled_command_run_string(
 
 fn check_bridge(host_root: *const c_char, guest_root: *const c_char) -> Result<(), String> {
     let preopens = single_preopen_from_c(host_root, guest_root, true)?;
-    let engine = p3_engine()?;
+    let limits = P3Limits::default();
+    let engine = p3_engine(limits)?;
     let mut linker = Linker::<KrwaP3State>::new(&engine);
     add_p3_linker_imports(&mut linker)?;
     let mut store = Store::new(
         &engine,
-        p3_state(
-            &preopens,
-            &[],
-            &[],
-            HttpPolicy::default(),
-            DEFAULT_MAX_MEMORY_BYTES,
-        )?,
+        p3_state(&preopens, &[], &[], HttpPolicy::default(), limits)?,
     );
     store.limiter(|state| &mut state.limits);
     Ok(())
+}
+
+fn p3_limits_from_c(
+    max_memory_bytes: u64,
+    max_wasm_stack_bytes: u64,
+    max_table_elements: i64,
+    max_instances: i64,
+    max_tables: i64,
+    max_memories: i64,
+) -> P3Limits {
+    P3Limits {
+        max_memory_bytes,
+        max_wasm_stack_bytes,
+        max_table_elements,
+        max_instances,
+        max_tables,
+        max_memories,
+    }
 }
 
 fn check_component_instantiation(
@@ -654,7 +788,7 @@ fn check_component_instantiation(
     blocked_hosts: *const *const c_char,
     blocked_host_count: usize,
     allow_private_network: u8,
-    max_memory_bytes: u64,
+    limits: P3Limits,
 ) -> Result<(), String> {
     let preopens = preopens_from_c(host_roots, guest_roots, writable_preopens, preopen_count)?;
     let arguments = string_list_from_c(arguments, argument_count, "arguments")?;
@@ -666,25 +800,19 @@ fn check_component_instantiation(
         blocked_host_count,
         allow_private_network,
     )?;
-    validate_max_memory_bytes(max_memory_bytes)?;
+    limits.validate()?;
     if component_bytes.is_null() {
         return Err("component_bytes is null".to_string());
     }
     let bytes = unsafe { std::slice::from_raw_parts(component_bytes, component_len) };
-    let engine = p3_engine()?;
+    let engine = p3_engine(limits)?;
     let mut linker = Linker::<KrwaP3State>::new(&engine);
     add_p3_linker_imports(&mut linker)?;
     let component = unsafe { Component::deserialize(&engine, bytes) }
         .map_err(|error| format!("failed to deserialize Wasmtime component: {error}"))?;
     let mut store = Store::new(
         &engine,
-        p3_state(
-            &preopens,
-            &arguments,
-            &environment,
-            http_policy,
-            max_memory_bytes,
-        )?,
+        p3_state(&preopens, &arguments, &environment, http_policy, limits)?,
     );
     store.limiter(|state| &mut state.limits);
     let _ = arm_execution_deadline(&engine, &mut store, None, None);
@@ -720,7 +848,7 @@ fn check_command_run(
     blocked_hosts: *const *const c_char,
     blocked_host_count: usize,
     allow_private_network: u8,
-    max_memory_bytes: u64,
+    limits: P3Limits,
     execution_timeout_millis: u64,
 ) -> Result<(), String> {
     let preopens = preopens_from_c(host_roots, guest_roots, writable_preopens, preopen_count)?;
@@ -733,26 +861,20 @@ fn check_command_run(
         blocked_host_count,
         allow_private_network,
     )?;
-    validate_max_memory_bytes(max_memory_bytes)?;
+    limits.validate()?;
     let execution_timeout = validate_execution_timeout_millis(execution_timeout_millis);
     if component_bytes.is_null() {
         return Err("component_bytes is null".to_string());
     }
     let bytes = unsafe { std::slice::from_raw_parts(component_bytes, component_len) };
-    let engine = p3_engine()?;
+    let engine = p3_engine(limits)?;
     let mut linker = Linker::<KrwaP3State>::new(&engine);
     add_p3_linker_imports(&mut linker)?;
     let component = unsafe { Component::deserialize(&engine, bytes) }
         .map_err(|error| format!("failed to deserialize Wasmtime component: {error}"))?;
     let mut store = Store::new(
         &engine,
-        p3_state(
-            &preopens,
-            &arguments,
-            &environment,
-            http_policy,
-            max_memory_bytes,
-        )?,
+        p3_state(&preopens, &arguments, &environment, http_policy, limits)?,
     );
     store.limiter(|state| &mut state.limits);
     let watchdog = arm_execution_deadline(&engine, &mut store, execution_timeout, None);
@@ -786,7 +908,7 @@ fn run_command_string(
     blocked_hosts: *const *const c_char,
     blocked_host_count: usize,
     allow_private_network: u8,
-    max_memory_bytes: u64,
+    limits: P3Limits,
     max_output_bytes: u64,
     execution_timeout_millis: u64,
     execution_cancellation: *const ExecutionCancellationHandle,
@@ -802,7 +924,7 @@ fn run_command_string(
         blocked_host_count,
         allow_private_network,
     )?;
-    validate_max_memory_bytes(max_memory_bytes)?;
+    limits.validate()?;
     let execution_timeout = validate_execution_timeout_millis(execution_timeout_millis);
     let execution_cancellation = execution_cancellation_from_c(execution_cancellation);
     let stdio = P3CommandStdio::new(stdin, max_output_bytes)?;
@@ -810,7 +932,7 @@ fn run_command_string(
         return Err("component_bytes is null".to_string());
     }
     let bytes = unsafe { std::slice::from_raw_parts(component_bytes, component_len) };
-    let engine = p3_engine()?;
+    let engine = p3_engine(limits)?;
     let mut linker = Linker::<KrwaP3State>::new(&engine);
     add_p3_linker_imports(&mut linker)?;
     let component = unsafe { Component::deserialize(&engine, bytes) }
@@ -822,7 +944,7 @@ fn run_command_string(
             &arguments,
             &environment,
             http_policy,
-            max_memory_bytes,
+            limits,
             Some(&stdio),
         )?,
     );
@@ -928,7 +1050,7 @@ fn check_component_call0(
     blocked_hosts: *const *const c_char,
     blocked_host_count: usize,
     allow_private_network: u8,
-    max_memory_bytes: u64,
+    limits: P3Limits,
 ) -> Result<(), String> {
     let preopens = preopens_from_c(host_roots, guest_roots, writable_preopens, preopen_count)?;
     let arguments = string_list_from_c(arguments, argument_count, "arguments")?;
@@ -944,25 +1066,19 @@ fn check_component_call0(
     if export_name.trim().is_empty() {
         return Err("Wasmtime Preview3 component export name must not be blank".to_string());
     }
-    validate_max_memory_bytes(max_memory_bytes)?;
+    limits.validate()?;
     if component_bytes.is_null() {
         return Err("component_bytes is null".to_string());
     }
     let bytes = unsafe { std::slice::from_raw_parts(component_bytes, component_len) };
-    let engine = p3_engine()?;
+    let engine = p3_engine(limits)?;
     let mut linker = Linker::<KrwaP3State>::new(&engine);
     add_p3_linker_imports(&mut linker)?;
     let component = unsafe { Component::deserialize(&engine, bytes) }
         .map_err(|error| format!("failed to deserialize Wasmtime component: {error}"))?;
     let mut store = Store::new(
         &engine,
-        p3_state(
-            &preopens,
-            &arguments,
-            &environment,
-            http_policy,
-            max_memory_bytes,
-        )?,
+        p3_state(&preopens, &arguments, &environment, http_policy, limits)?,
     );
     store.limiter(|state| &mut state.limits);
     let _ = arm_execution_deadline(&engine, &mut store, None, None);
@@ -1021,7 +1137,7 @@ fn check_component_call_s32(
     blocked_hosts: *const *const c_char,
     blocked_host_count: usize,
     allow_private_network: u8,
-    max_memory_bytes: u64,
+    limits: P3Limits,
 ) -> Result<(), String> {
     let preopens = preopens_from_c(host_roots, guest_roots, writable_preopens, preopen_count)?;
     let arguments = string_list_from_c(arguments, argument_count, "arguments")?;
@@ -1037,25 +1153,19 @@ fn check_component_call_s32(
     if export_name.trim().is_empty() {
         return Err("Wasmtime Preview3 component export name must not be blank".to_string());
     }
-    validate_max_memory_bytes(max_memory_bytes)?;
+    limits.validate()?;
     if component_bytes.is_null() {
         return Err("component_bytes is null".to_string());
     }
     let bytes = unsafe { std::slice::from_raw_parts(component_bytes, component_len) };
-    let engine = p3_engine()?;
+    let engine = p3_engine(limits)?;
     let mut linker = Linker::<KrwaP3State>::new(&engine);
     add_p3_linker_imports(&mut linker)?;
     let component = unsafe { Component::deserialize(&engine, bytes) }
         .map_err(|error| format!("failed to deserialize Wasmtime component: {error}"))?;
     let mut store = Store::new(
         &engine,
-        p3_state(
-            &preopens,
-            &arguments,
-            &environment,
-            http_policy,
-            max_memory_bytes,
-        )?,
+        p3_state(&preopens, &arguments, &environment, http_policy, limits)?,
     );
     store.limiter(|state| &mut state.limits);
     let _ = arm_execution_deadline(&engine, &mut store, None, None);
@@ -1120,7 +1230,7 @@ fn check_component_call_string(
     blocked_hosts: *const *const c_char,
     blocked_host_count: usize,
     allow_private_network: u8,
-    max_memory_bytes: u64,
+    limits: P3Limits,
 ) -> Result<(), String> {
     let expected_result = string_from_c(expected_result, "expected_result")?.to_string();
     let value = call_component_string(
@@ -1142,7 +1252,7 @@ fn check_component_call_string(
         blocked_hosts,
         blocked_host_count,
         allow_private_network,
-        max_memory_bytes,
+        limits,
         0,
         ptr::null(),
     )?;
@@ -1175,7 +1285,7 @@ fn call_component_string(
     blocked_hosts: *const *const c_char,
     blocked_host_count: usize,
     allow_private_network: u8,
-    max_memory_bytes: u64,
+    limits: P3Limits,
     execution_timeout_millis: u64,
     execution_cancellation: *const ExecutionCancellationHandle,
 ) -> Result<String, String> {
@@ -1194,27 +1304,21 @@ fn call_component_string(
         return Err("Wasmtime Preview3 component export name must not be blank".to_string());
     }
     let argument = string_from_c(argument, "argument")?.to_string();
-    validate_max_memory_bytes(max_memory_bytes)?;
+    limits.validate()?;
     let execution_timeout = validate_execution_timeout_millis(execution_timeout_millis);
     let execution_cancellation = execution_cancellation_from_c(execution_cancellation);
     if component_bytes.is_null() {
         return Err("component_bytes is null".to_string());
     }
     let bytes = unsafe { std::slice::from_raw_parts(component_bytes, component_len) };
-    let engine = p3_engine()?;
+    let engine = p3_engine(limits)?;
     let mut linker = Linker::<KrwaP3State>::new(&engine);
     add_p3_linker_imports(&mut linker)?;
     let component = unsafe { Component::deserialize(&engine, bytes) }
         .map_err(|error| format!("failed to deserialize Wasmtime component: {error}"))?;
     let mut store = Store::new(
         &engine,
-        p3_state(
-            &preopens,
-            &arguments,
-            &environment,
-            http_policy,
-            max_memory_bytes,
-        )?,
+        p3_state(&preopens, &arguments, &environment, http_policy, limits)?,
     );
     store.limiter(|state| &mut state.limits);
     let watchdog = arm_execution_deadline(
@@ -1400,13 +1504,11 @@ fn arm_execution_deadline(
     cancellation: Option<Arc<ExecutionControlState>>,
 ) -> Option<ExecutionDeadlineWatchdog> {
     store.epoch_deadline_trap();
-    store.set_epoch_deadline(
-        if timeout.is_some() || cancellation.is_some() {
-            1
-        } else {
-            DISABLED_EXECUTION_TIMEOUT_EPOCH_DEADLINE
-        },
-    );
+    store.set_epoch_deadline(if timeout.is_some() || cancellation.is_some() {
+        1
+    } else {
+        DISABLED_EXECUTION_TIMEOUT_EPOCH_DEADLINE
+    });
 
     if timeout.is_none() && cancellation.is_none() {
         return None;
@@ -1515,11 +1617,13 @@ fn execution_timeout_message(timeout: Duration) -> String {
     )
 }
 
-fn p3_engine() -> Result<Engine, String> {
+fn p3_engine(limits: P3Limits) -> Result<Engine, String> {
+    let max_wasm_stack_size = validate_max_wasm_stack_bytes(limits.max_wasm_stack_bytes)?;
     let mut config = Config::new();
     config
         .target("pulley64")
         .map_err(|error| format!("failed to configure Wasmtime Pulley target: {error}"))?;
+    config.max_wasm_stack(max_wasm_stack_size);
     config.wasm_component_model(true);
     config.wasm_component_model_async(true);
     config.wasm_component_model_more_async_builtins(true);
@@ -1543,16 +1647,9 @@ fn p3_state(
     arguments: &[String],
     environment: &[(String, String)],
     http_policy: HttpPolicy,
-    max_memory_bytes: u64,
+    limits: P3Limits,
 ) -> Result<KrwaP3State, String> {
-    p3_state_with_stdio(
-        preopens,
-        arguments,
-        environment,
-        http_policy,
-        max_memory_bytes,
-        None,
-    )
+    p3_state_with_stdio(preopens, arguments, environment, http_policy, limits, None)
 }
 
 fn p3_state_with_stdio(
@@ -1560,10 +1657,10 @@ fn p3_state_with_stdio(
     arguments: &[String],
     environment: &[(String, String)],
     http_policy: HttpPolicy,
-    max_memory_bytes: u64,
+    limits: P3Limits,
     stdio: Option<&P3CommandStdio>,
 ) -> Result<KrwaP3State, String> {
-    let max_memory_size = validate_max_memory_bytes(max_memory_bytes)?;
+    let store_limits = wasmtime_store_limits(limits)?;
     if preopens.is_empty() {
         return Err("Wasmtime Preview3 preopen list must not be empty".to_string());
     }
@@ -1607,9 +1704,7 @@ fn p3_state_with_stdio(
         http_hooks: PolicyHttpHooks {
             policy: http_policy,
         },
-        limits: StoreLimitsBuilder::new()
-            .memory_size(max_memory_size)
-            .build(),
+        limits: store_limits,
     })
 }
 
@@ -1743,16 +1838,8 @@ fn http_policy_from_c(
     allow_private_network: u8,
 ) -> Result<HttpPolicy, String> {
     Ok(HttpPolicy {
-        allowed_hosts: host_patterns_from_c(
-            allowed_hosts,
-            allowed_host_count,
-            "allowed_hosts",
-        )?,
-        blocked_hosts: host_patterns_from_c(
-            blocked_hosts,
-            blocked_host_count,
-            "blocked_hosts",
-        )?,
+        allowed_hosts: host_patterns_from_c(allowed_hosts, allowed_host_count, "allowed_hosts")?,
+        blocked_hosts: host_patterns_from_c(blocked_hosts, blocked_host_count, "blocked_hosts")?,
         allow_private_network: allow_private_network != 0,
     })
 }
@@ -1770,7 +1857,9 @@ fn host_patterns_from_c(
             return Err(format!("{label}[{index}] is blank"));
         }
         if trimmed != value {
-            return Err(format!("{label}[{index}] must not contain surrounding whitespace"));
+            return Err(format!(
+                "{label}[{index}] must not contain surrounding whitespace"
+            ));
         }
         if value.contains("://") || value.contains('/') || value.contains('\\') {
             return Err(format!("{label}[{index}] must be a host pattern"));
@@ -1808,10 +1897,7 @@ fn is_local_network_host(host: &str) -> bool {
 }
 
 fn is_private_ipv6_host(host: &str) -> bool {
-    host == "::1"
-        || host.starts_with("fc")
-        || host.starts_with("fd")
-        || host.starts_with("fe80:")
+    host == "::1" || host.starts_with("fc") || host.starts_with("fd") || host.starts_with("fe80:")
 }
 
 fn ipv4_octets(host: &str) -> Option<[u8; 4]> {
@@ -1843,6 +1929,48 @@ fn validate_max_memory_bytes(max_memory_bytes: u64) -> Result<usize, String> {
     }
     usize::try_from(max_memory_bytes)
         .map_err(|_| "Wasmtime Preview3 max memory bytes exceeds host usize".to_string())
+}
+
+fn validate_max_wasm_stack_bytes(max_wasm_stack_bytes: u64) -> Result<usize, String> {
+    if max_wasm_stack_bytes == 0 {
+        return Err("Wasmtime Preview3 max Wasm stack bytes must be positive".to_string());
+    }
+    usize::try_from(max_wasm_stack_bytes)
+        .map_err(|_| "Wasmtime Preview3 max Wasm stack bytes exceeds host usize".to_string())
+}
+
+fn validate_optional_resource_limit(label: &str, value: i64) -> Result<Option<usize>, String> {
+    if value == UNLIMITED_RESOURCE_LIMIT {
+        return Ok(None);
+    }
+    if value < UNLIMITED_RESOURCE_LIMIT {
+        return Err(format!(
+            "Wasmtime Preview3 {label} must be {UNLIMITED_RESOURCE_LIMIT} for unlimited or non-negative"
+        ));
+    }
+    usize::try_from(value)
+        .map(Some)
+        .map_err(|_| format!("Wasmtime Preview3 {label} exceeds host usize"))
+}
+
+fn wasmtime_store_limits(limits: P3Limits) -> Result<StoreLimits, String> {
+    let mut builder =
+        StoreLimitsBuilder::new().memory_size(validate_max_memory_bytes(limits.max_memory_bytes)?);
+    if let Some(limit) =
+        validate_optional_resource_limit("max table elements", limits.max_table_elements)?
+    {
+        builder = builder.table_elements(limit);
+    }
+    if let Some(limit) = validate_optional_resource_limit("max instances", limits.max_instances)? {
+        builder = builder.instances(limit);
+    }
+    if let Some(limit) = validate_optional_resource_limit("max tables", limits.max_tables)? {
+        builder = builder.tables(limit);
+    }
+    if let Some(limit) = validate_optional_resource_limit("max memories", limits.max_memories)? {
+        builder = builder.memories(limit);
+    }
+    Ok(builder.build())
 }
 
 fn validate_execution_timeout_millis(timeout_millis: u64) -> Option<Duration> {
@@ -2195,7 +2323,7 @@ mod tests {
             &[],
             &[],
             HttpPolicy::default(),
-            DEFAULT_MAX_MEMORY_BYTES,
+            P3Limits::default(),
         );
 
         assert!(state.is_ok());
@@ -2226,7 +2354,7 @@ mod tests {
             &[],
             &[],
             HttpPolicy::default(),
-            DEFAULT_MAX_MEMORY_BYTES,
+            P3Limits::default(),
         ) {
             Ok(_) => panic!("duplicate guest preopen root should be rejected"),
             Err(error) => error,
@@ -2267,6 +2395,11 @@ mod tests {
             0,
             0,
             0,
+            DEFAULT_MAX_WASM_STACK_BYTES,
+            UNLIMITED_RESOURCE_LIMIT,
+            UNLIMITED_RESOURCE_LIMIT,
+            UNLIMITED_RESOURCE_LIMIT,
+            UNLIMITED_RESOURCE_LIMIT,
         );
 
         assert!(!error.is_null());
@@ -2297,12 +2430,16 @@ mod tests {
             ..HttpPolicy::default()
         };
 
-        assert!(policy
-            .validate_request(&http_request("https://example.test/catalog"))
-            .is_ok());
-        assert!(policy
-            .validate_request(&http_request("https://api.example.test/catalog"))
-            .is_ok());
+        assert!(
+            policy
+                .validate_request(&http_request("https://example.test/catalog"))
+                .is_ok()
+        );
+        assert!(
+            policy
+                .validate_request(&http_request("https://api.example.test/catalog"))
+                .is_ok()
+        );
     }
 
     #[test]

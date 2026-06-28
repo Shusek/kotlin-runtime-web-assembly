@@ -41,7 +41,12 @@ const char *krwa_wasmtime_p3_precompiled_component_instantiate_unavailable_reaso
     const char * const *blocked_hosts,
     size_t blocked_host_count,
     uint8_t allow_private_network,
-    uint64_t max_memory_bytes
+    uint64_t max_memory_bytes,
+    uint64_t max_wasm_stack_bytes,
+    int64_t max_table_elements,
+    int64_t max_instances,
+    int64_t max_tables,
+    int64_t max_memories
 );
 
 const char *krwa_wasmtime_p3_precompiled_component_call0_unavailable_reason(
@@ -62,7 +67,12 @@ const char *krwa_wasmtime_p3_precompiled_component_call0_unavailable_reason(
     const char * const *blocked_hosts,
     size_t blocked_host_count,
     uint8_t allow_private_network,
-    uint64_t max_memory_bytes
+    uint64_t max_memory_bytes,
+    uint64_t max_wasm_stack_bytes,
+    int64_t max_table_elements,
+    int64_t max_instances,
+    int64_t max_tables,
+    int64_t max_memories
 );
 
 const char *krwa_wasmtime_p3_precompiled_component_call_s32_unavailable_reason(
@@ -85,7 +95,12 @@ const char *krwa_wasmtime_p3_precompiled_component_call_s32_unavailable_reason(
     const char * const *blocked_hosts,
     size_t blocked_host_count,
     uint8_t allow_private_network,
-    uint64_t max_memory_bytes
+    uint64_t max_memory_bytes,
+    uint64_t max_wasm_stack_bytes,
+    int64_t max_table_elements,
+    int64_t max_instances,
+    int64_t max_tables,
+    int64_t max_memories
 );
 
 const char *krwa_wasmtime_p3_precompiled_component_call_string_unavailable_reason(
@@ -108,7 +123,12 @@ const char *krwa_wasmtime_p3_precompiled_component_call_string_unavailable_reaso
     const char * const *blocked_hosts,
     size_t blocked_host_count,
     uint8_t allow_private_network,
-    uint64_t max_memory_bytes
+    uint64_t max_memory_bytes,
+    uint64_t max_wasm_stack_bytes,
+    int64_t max_table_elements,
+    int64_t max_instances,
+    int64_t max_tables,
+    int64_t max_memories
 );
 
 const char *krwa_wasmtime_p3_precompiled_component_call_string(
@@ -131,6 +151,11 @@ const char *krwa_wasmtime_p3_precompiled_component_call_string(
     size_t blocked_host_count,
     uint8_t allow_private_network,
     uint64_t max_memory_bytes,
+    uint64_t max_wasm_stack_bytes,
+    int64_t max_table_elements,
+    int64_t max_instances,
+    int64_t max_tables,
+    int64_t max_memories,
     uint64_t execution_timeout_millis,
     const void *execution_cancellation,
     uintptr_t *result_out
@@ -154,6 +179,11 @@ const char *krwa_wasmtime_p3_precompiled_command_run_unavailable_reason(
     size_t blocked_host_count,
     uint8_t allow_private_network,
     uint64_t max_memory_bytes,
+    uint64_t max_wasm_stack_bytes,
+    int64_t max_table_elements,
+    int64_t max_instances,
+    int64_t max_tables,
+    int64_t max_memories,
     uint64_t execution_timeout_millis
 );
 
@@ -162,6 +192,11 @@ int64_t krwa_pulley_create(
     size_t module_size,
     int32_t precompiled_module,
     int64_t max_memory_bytes,
+    int64_t max_wasm_stack_bytes,
+    int64_t max_table_elements,
+    int64_t max_instances,
+    int64_t max_tables,
+    int64_t max_memories,
     const int64_t *callback_ids,
     size_t import_count,
     const int32_t *param_offsets,

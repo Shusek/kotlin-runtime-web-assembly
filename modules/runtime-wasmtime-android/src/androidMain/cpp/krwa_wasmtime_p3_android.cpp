@@ -30,7 +30,12 @@ using ComponentInstantiateUnavailableReason = const char * (*)(
     const char * const *,
     std::size_t,
     std::uint8_t,
-    std::uint64_t);
+    std::uint64_t,
+    std::uint64_t,
+    std::int64_t,
+    std::int64_t,
+    std::int64_t,
+    std::int64_t);
 
 using ComponentCallString = const char * (*)(
     const std::uint8_t *,
@@ -53,6 +58,11 @@ using ComponentCallString = const char * (*)(
     std::uint8_t,
     std::uint64_t,
     std::uint64_t,
+    std::int64_t,
+    std::int64_t,
+    std::int64_t,
+    std::int64_t,
+    std::uint64_t,
     const void *,
     const char **);
 
@@ -74,6 +84,11 @@ using CommandRunUnavailableReason = const char * (*)(
     std::size_t,
     std::uint8_t,
     std::uint64_t,
+    std::uint64_t,
+    std::int64_t,
+    std::int64_t,
+    std::int64_t,
+    std::int64_t,
     std::uint64_t);
 
 using CommandRunString = const char * (*)(
@@ -96,6 +111,11 @@ using CommandRunString = const char * (*)(
     std::size_t,
     std::uint8_t,
     std::uint64_t,
+    std::uint64_t,
+    std::int64_t,
+    std::int64_t,
+    std::int64_t,
+    std::int64_t,
     std::uint64_t,
     std::uint64_t,
     const void *,
@@ -388,7 +408,12 @@ Java_uk_shusek_krwa_runtime_wasmtime_android_AndroidWasmtimePreview3Native_nativ
     jobjectArray allowedHosts,
     jobjectArray blockedHosts,
     jboolean allowPrivateNetwork,
-    jlong maxMemoryBytes) {
+    jlong maxMemoryBytes,
+    jlong maxWasmStackBytes,
+    jlong maxTableElements,
+    jlong maxInstances,
+    jlong maxTables,
+    jlong maxMemories) {
     std::string loadError;
     P3BridgeApi *api = loadApi(&loadError);
     if (api == nullptr) {
@@ -425,7 +450,12 @@ Java_uk_shusek_krwa_runtime_wasmtime_android_AndroidWasmtimePreview3Native_nativ
         args.blockedHosts.data(),
         args.blockedHosts.size(),
         allowPrivateNetwork == JNI_TRUE ? 1 : 0,
-        static_cast<std::uint64_t>(maxMemoryBytes));
+        static_cast<std::uint64_t>(maxMemoryBytes),
+        static_cast<std::uint64_t>(maxWasmStackBytes),
+        static_cast<std::int64_t>(maxTableElements),
+        static_cast<std::int64_t>(maxInstances),
+        static_cast<std::int64_t>(maxTables),
+        static_cast<std::int64_t>(maxMemories));
     return nullableString(env, error);
 }
 
@@ -517,6 +547,11 @@ Java_uk_shusek_krwa_runtime_wasmtime_android_AndroidWasmtimePreview3Native_nativ
     jstring exportName,
     jstring argument,
     jlong maxMemoryBytes,
+    jlong maxWasmStackBytes,
+    jlong maxTableElements,
+    jlong maxInstances,
+    jlong maxTables,
+    jlong maxMemories,
     jlong executionTimeoutMillis,
     jlong executionCancellationHandle) {
     std::string loadError;
@@ -565,6 +600,11 @@ Java_uk_shusek_krwa_runtime_wasmtime_android_AndroidWasmtimePreview3Native_nativ
         args.blockedHosts.size(),
         allowPrivateNetwork == JNI_TRUE ? 1 : 0,
         static_cast<std::uint64_t>(maxMemoryBytes),
+        static_cast<std::uint64_t>(maxWasmStackBytes),
+        static_cast<std::int64_t>(maxTableElements),
+        static_cast<std::int64_t>(maxInstances),
+        static_cast<std::int64_t>(maxTables),
+        static_cast<std::int64_t>(maxMemories),
         static_cast<std::uint64_t>(executionTimeoutMillis),
         reinterpret_cast<const void *>(executionCancellationHandle),
         &result);
@@ -594,6 +634,11 @@ Java_uk_shusek_krwa_runtime_wasmtime_android_AndroidWasmtimePreview3Native_nativ
     jobjectArray blockedHosts,
     jboolean allowPrivateNetwork,
     jlong maxMemoryBytes,
+    jlong maxWasmStackBytes,
+    jlong maxTableElements,
+    jlong maxInstances,
+    jlong maxTables,
+    jlong maxMemories,
     jlong executionTimeoutMillis) {
     std::string loadError;
     P3BridgeApi *api = loadApi(&loadError);
@@ -632,6 +677,11 @@ Java_uk_shusek_krwa_runtime_wasmtime_android_AndroidWasmtimePreview3Native_nativ
         args.blockedHosts.size(),
         allowPrivateNetwork == JNI_TRUE ? 1 : 0,
         static_cast<std::uint64_t>(maxMemoryBytes),
+        static_cast<std::uint64_t>(maxWasmStackBytes),
+        static_cast<std::int64_t>(maxTableElements),
+        static_cast<std::int64_t>(maxInstances),
+        static_cast<std::int64_t>(maxTables),
+        static_cast<std::int64_t>(maxMemories),
         static_cast<std::uint64_t>(executionTimeoutMillis));
     return nullableString(env, error);
 }
@@ -652,6 +702,11 @@ Java_uk_shusek_krwa_runtime_wasmtime_android_AndroidWasmtimePreview3Native_nativ
     jobjectArray blockedHosts,
     jboolean allowPrivateNetwork,
     jlong maxMemoryBytes,
+    jlong maxWasmStackBytes,
+    jlong maxTableElements,
+    jlong maxInstances,
+    jlong maxTables,
+    jlong maxMemories,
     jlong maxOutputBytes,
     jlong executionTimeoutMillis,
     jlong executionCancellationHandle) {
@@ -697,6 +752,11 @@ Java_uk_shusek_krwa_runtime_wasmtime_android_AndroidWasmtimePreview3Native_nativ
         args.blockedHosts.size(),
         allowPrivateNetwork == JNI_TRUE ? 1 : 0,
         static_cast<std::uint64_t>(maxMemoryBytes),
+        static_cast<std::uint64_t>(maxWasmStackBytes),
+        static_cast<std::int64_t>(maxTableElements),
+        static_cast<std::int64_t>(maxInstances),
+        static_cast<std::int64_t>(maxTables),
+        static_cast<std::int64_t>(maxMemories),
         static_cast<std::uint64_t>(maxOutputBytes),
         static_cast<std::uint64_t>(executionTimeoutMillis),
         reinterpret_cast<const void *>(executionCancellationHandle),

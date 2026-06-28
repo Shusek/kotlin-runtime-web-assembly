@@ -117,6 +117,11 @@ private fun WasmtimePreview3ComponentConfig.toAndroidPreview3Call(): AndroidPrev
         blockedHosts = networkPolicy.blockedHosts.toTypedArray(),
         allowPrivateNetwork = networkPolicy.allowPrivateNetwork,
         maxMemoryBytes = maxMemoryBytes,
+        maxWasmStackBytes = maxWasmStackBytes,
+        maxTableElements = maxTableElements,
+        maxInstances = maxInstances,
+        maxTables = maxTables,
+        maxMemories = maxMemories,
         executionTimeoutMillis = executionTimeoutMillis,
     )
 }
@@ -133,6 +138,11 @@ private data class AndroidPreview3Call(
     val blockedHosts: Array<String>,
     val allowPrivateNetwork: Boolean,
     val maxMemoryBytes: Long,
+    val maxWasmStackBytes: Long,
+    val maxTableElements: Long,
+    val maxInstances: Long,
+    val maxTables: Long,
+    val maxMemories: Long,
     val executionTimeoutMillis: Long,
 )
 
@@ -155,6 +165,11 @@ private object AndroidWasmtimePreview3Native {
                 call.blockedHosts,
                 call.allowPrivateNetwork,
                 call.maxMemoryBytes,
+                call.maxWasmStackBytes,
+                call.maxTableElements,
+                call.maxInstances,
+                call.maxTables,
+                call.maxMemories,
             )
         }
 
@@ -181,6 +196,11 @@ private object AndroidWasmtimePreview3Native {
             exportName,
             argument,
             call.maxMemoryBytes,
+            call.maxWasmStackBytes,
+            call.maxTableElements,
+            call.maxInstances,
+            call.maxTables,
+            call.maxMemories,
             call.executionTimeoutMillis,
             cancellation?.handle ?: 0L,
         )
@@ -228,6 +248,11 @@ private object AndroidWasmtimePreview3Native {
                 call.blockedHosts,
                 call.allowPrivateNetwork,
                 call.maxMemoryBytes,
+                call.maxWasmStackBytes,
+                call.maxTableElements,
+                call.maxInstances,
+                call.maxTables,
+                call.maxMemories,
                 call.executionTimeoutMillis,
             )
         }
@@ -254,6 +279,11 @@ private object AndroidWasmtimePreview3Native {
             call.blockedHosts,
             call.allowPrivateNetwork,
             call.maxMemoryBytes,
+            call.maxWasmStackBytes,
+            call.maxTableElements,
+            call.maxInstances,
+            call.maxTables,
+            call.maxMemories,
             maxOutputBytes,
             call.executionTimeoutMillis,
             cancellation?.handle ?: 0L,
@@ -282,6 +312,11 @@ private object AndroidWasmtimePreview3Native {
         blockedHosts: Array<String>,
         allowPrivateNetwork: Boolean,
         maxMemoryBytes: Long,
+        maxWasmStackBytes: Long,
+        maxTableElements: Long,
+        maxInstances: Long,
+        maxTables: Long,
+        maxMemories: Long,
     ): String?
 
     @JvmStatic
@@ -299,6 +334,11 @@ private object AndroidWasmtimePreview3Native {
         exportName: String,
         argument: String,
         maxMemoryBytes: Long,
+        maxWasmStackBytes: Long,
+        maxTableElements: Long,
+        maxInstances: Long,
+        maxTables: Long,
+        maxMemories: Long,
         executionTimeoutMillis: Long,
         executionCancellationHandle: Long,
     ): String
@@ -328,6 +368,11 @@ private object AndroidWasmtimePreview3Native {
         blockedHosts: Array<String>,
         allowPrivateNetwork: Boolean,
         maxMemoryBytes: Long,
+        maxWasmStackBytes: Long,
+        maxTableElements: Long,
+        maxInstances: Long,
+        maxTables: Long,
+        maxMemories: Long,
         executionTimeoutMillis: Long,
     ): String?
 
@@ -345,6 +390,11 @@ private object AndroidWasmtimePreview3Native {
         blockedHosts: Array<String>,
         allowPrivateNetwork: Boolean,
         maxMemoryBytes: Long,
+        maxWasmStackBytes: Long,
+        maxTableElements: Long,
+        maxInstances: Long,
+        maxTables: Long,
+        maxMemories: Long,
         maxOutputBytes: Long,
         executionTimeoutMillis: Long,
         executionCancellationHandle: Long,

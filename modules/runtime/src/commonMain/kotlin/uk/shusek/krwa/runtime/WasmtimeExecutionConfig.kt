@@ -8,13 +8,33 @@ const val WasmtimePulleyTarget: String = "pulley64"
 
 const val DefaultWasmtimeMaxMemoryBytes: Long = 256L * 1024L * 1024L
 
+const val DefaultWasmtimeMaxWasmStackBytes: Long = 512L * 1024L
+
+const val WasmtimeUnlimitedResourceLimit: Long = -1L
+
+const val DefaultWasmtimeCoreMaxInstances: Long = 1L
+
+const val DefaultWasmtimeCoreMaxTables: Long = 128L
+
+const val DefaultWasmtimeCoreMaxMemories: Long = 16L
+
 data class WasmtimeExecutionConfig(
     val target: String = WasmtimePulleyTarget,
     val precompiledModuleBytes: ByteArray? = null,
     val maxMemoryBytes: Long = DefaultWasmtimeMaxMemoryBytes,
+    val maxWasmStackBytes: Long = DefaultWasmtimeMaxWasmStackBytes,
+    val maxTableElements: Long = WasmtimeUnlimitedResourceLimit,
+    val maxInstances: Long = DefaultWasmtimeCoreMaxInstances,
+    val maxTables: Long = DefaultWasmtimeCoreMaxTables,
+    val maxMemories: Long = DefaultWasmtimeCoreMaxMemories,
 ) {
     init {
         require(maxMemoryBytes > 0) { "Wasmtime max memory bytes must be positive" }
+        require(maxWasmStackBytes > 0) { "Wasmtime max Wasm stack bytes must be positive" }
+        validateWasmtimeResourceLimit("max table elements", maxTableElements)
+        validateWasmtimeResourceLimit("max instances", maxInstances)
+        validateWasmtimeResourceLimit("max tables", maxTables)
+        validateWasmtimeResourceLimit("max memories", maxMemories)
     }
 }
 
@@ -116,6 +136,11 @@ data class WasmtimePreview3ComponentConfig(
     val networkPolicy: WasmtimePreview3NetworkPolicy = WasmtimePreview3NetworkPolicy(),
     val maxMemoryBytes: Long = DefaultWasmtimeMaxMemoryBytes,
     val executionTimeoutMillis: Long = 0,
+    val maxWasmStackBytes: Long = DefaultWasmtimeMaxWasmStackBytes,
+    val maxTableElements: Long = WasmtimeUnlimitedResourceLimit,
+    val maxInstances: Long = WasmtimeUnlimitedResourceLimit,
+    val maxTables: Long = WasmtimeUnlimitedResourceLimit,
+    val maxMemories: Long = WasmtimeUnlimitedResourceLimit,
 ) {
     constructor(
         target: String = WasmtimePulleyTarget,
@@ -127,6 +152,11 @@ data class WasmtimePreview3ComponentConfig(
         networkPolicy: WasmtimePreview3NetworkPolicy = WasmtimePreview3NetworkPolicy(),
         maxMemoryBytes: Long = DefaultWasmtimeMaxMemoryBytes,
         executionTimeoutMillis: Long = 0,
+        maxWasmStackBytes: Long = DefaultWasmtimeMaxWasmStackBytes,
+        maxTableElements: Long = WasmtimeUnlimitedResourceLimit,
+        maxInstances: Long = WasmtimeUnlimitedResourceLimit,
+        maxTables: Long = WasmtimeUnlimitedResourceLimit,
+        maxMemories: Long = WasmtimeUnlimitedResourceLimit,
     ) : this(
         target = target,
         precompiledComponentBytes = precompiledComponentBytes,
@@ -141,6 +171,11 @@ data class WasmtimePreview3ComponentConfig(
         networkPolicy = networkPolicy,
         maxMemoryBytes = maxMemoryBytes,
         executionTimeoutMillis = executionTimeoutMillis,
+        maxWasmStackBytes = maxWasmStackBytes,
+        maxTableElements = maxTableElements,
+        maxInstances = maxInstances,
+        maxTables = maxTables,
+        maxMemories = maxMemories,
     )
 
     val hostPreopenRoot: String
@@ -159,6 +194,13 @@ data class WasmtimePreview3ComponentConfig(
         require(executionTimeoutMillis >= 0) {
             "Wasmtime Preview3 execution timeout millis must not be negative"
         }
+        require(maxWasmStackBytes > 0) {
+            "Wasmtime Preview3 max Wasm stack bytes must be positive"
+        }
+        validateWasmtimeResourceLimit("Preview3 max table elements", maxTableElements)
+        validateWasmtimeResourceLimit("Preview3 max instances", maxInstances)
+        validateWasmtimeResourceLimit("Preview3 max tables", maxTables)
+        validateWasmtimeResourceLimit("Preview3 max memories", maxMemories)
         require(preopens.isNotEmpty()) {
             "Wasmtime Preview3 preopen list must not be empty"
         }
@@ -198,6 +240,12 @@ private const val WindowsDriveAbsolutePathLength = 3
 private val WindowsDriveRootRegex = Regex("^[A-Za-z]:/?$")
 
 private fun String.normalizedGuestRoot(): String = trimEnd('/').ifEmpty { "/" }
+
+private fun validateWasmtimeResourceLimit(name: String, value: Long) {
+    require(value >= WasmtimeUnlimitedResourceLimit) {
+        "Wasmtime $name must be $WasmtimeUnlimitedResourceLimit for unlimited or non-negative"
+    }
+}
 
 fun configureWasmtimeExecution(module: WasmModule, config: WasmtimeExecutionConfig) {
     WasmtimeExecutionRegistry.register(module, config)

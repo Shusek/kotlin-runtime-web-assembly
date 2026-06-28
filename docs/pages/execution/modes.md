@@ -71,6 +71,26 @@ Use `ExecutionBackend.PULLEY.availability()` or `.isAvailable()` before exposing
 Pulley as a user-selectable mode. The availability check reports the same
 platform/linking requirements that explicit `PULLEY` execution would enforce.
 
+Wasmtime-backed Pulley execution can be configured per module before
+instantiation. `WasmtimeExecutionConfig` exposes Wasmtime store and engine
+limits for maximum linear memory bytes, maximum Wasm stack bytes, table
+elements, instances, tables, and memories. Optional count limits use
+`WasmtimeUnlimitedResourceLimit` (`-1`) for unlimited:
+
+```kotlin
+configureWasmtimeExecution(
+    module,
+    WasmtimeExecutionConfig(
+        maxMemoryBytes = 64L * 1024L * 1024L,
+        maxWasmStackBytes = 256L * 1024L,
+        maxTableElements = WasmtimeUnlimitedResourceLimit,
+        maxInstances = 1,
+        maxTables = 32,
+        maxMemories = 4,
+    ),
+)
+```
+
 Embedders that package a platform-specific Pulley binding can install a provider
 without changing call sites that already select `ExecutionBackend.PULLEY`. This
 is the intended integration point for Android JNI and iOS cinterop bindings:

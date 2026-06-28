@@ -102,6 +102,7 @@ void wasmtime_config_wasm_reference_types_set(wasm_config_t *, bool);
 void wasmtime_config_wasm_exceptions_set(wasm_config_t *, bool);
 void wasmtime_config_wasm_bulk_memory_set(wasm_config_t *, bool);
 void wasmtime_config_wasm_multi_memory_set(wasm_config_t *, bool);
+void wasmtime_config_max_wasm_stack_set(wasm_config_t *, std::size_t);
 void wasmtime_config_memory_may_move_set(wasm_config_t *, bool);
 void wasmtime_config_concurrency_support_set(wasm_config_t *, bool);
 wasmtime_error_t *wasmtime_module_new(wasm_engine_t *, const std::uint8_t *, std::size_t, wasmtime_module_t **);
@@ -273,11 +274,15 @@ wasm_trap_t *trapFromMessage(const std::string &message) {
     return wasmtime_trap_new(message.c_str(), message.size());
 }
 
-std::string configurePulley(wasm_config_t *config) {
+std::string configurePulley(wasm_config_t *config, std::int64_t maxWasmStackBytes) {
     wasmtime_error_t *targetError = wasmtime_config_target_set(config, "pulley64");
     if (targetError != nullptr) {
         return "wasmtime_config_target_set(pulley64) failed: " + consumeError(targetError);
     }
+    if (maxWasmStackBytes <= 0) {
+        return "Wasmtime max Wasm stack bytes must be positive";
+    }
+    wasmtime_config_max_wasm_stack_set(config, static_cast<std::size_t>(maxWasmStackBytes));
     wasmtime_config_wasm_gc_set(config, true);
     wasmtime_config_wasm_function_references_set(config, true);
     wasmtime_config_wasm_reference_types_set(config, true);
@@ -473,7 +478,7 @@ extern "C" const char *krwa_pulley_unavailable_reason(void) {
         return setError("wasm_config_new returned null");
     }
     std::unique_ptr<wasm_config_t, decltype(&wasm_config_delete)> configGuard(config, wasm_config_delete);
-    std::string configError = configurePulley(config);
+    std::string configError = configurePulley(config, 512L * 1024L);
     if (!configError.empty()) {
         return setError(configError);
     }
@@ -519,6 +524,11 @@ extern "C" std::int64_t krwa_pulley_create(
     std::size_t moduleSize,
     std::int32_t precompiledModule,
     std::int64_t maxMemoryBytes,
+    std::int64_t maxWasmStackBytes,
+    std::int64_t maxTableElements,
+    std::int64_t maxInstances,
+    std::int64_t maxTables,
+    std::int64_t maxMemories,
     const std::int64_t *callbackIds,
     std::size_t importCount,
     const std::int32_t *paramOffsets,
@@ -536,6 +546,14 @@ extern "C" std::int64_t krwa_pulley_create(
         setError("Wasmtime max memory bytes must be positive");
         return 0;
     }
+    if (maxWasmStackBytes <= 0) {
+        setError("Wasmtime max Wasm stack bytes must be positive");
+        return 0;
+    }
+    if (maxTableElements < -1 || maxInstances < -1 || maxTables < -1 || maxMemories < -1) {
+        setError("Wasmtime resource limits must be -1 for unlimited or non-negative");
+        return 0;
+    }
 
     std::unique_ptr<NativeExecution> execution = std::make_unique<NativeExecution>();
 
@@ -545,7 +563,7 @@ extern "C" std::int64_t krwa_pulley_create(
         return 0;
     }
     std::unique_ptr<wasm_config_t, decltype(&wasm_config_delete)> configGuard(config, wasm_config_delete);
-    std::string configError = configurePulley(config);
+    std::string configError = configurePulley(config, maxWasmStackBytes);
     if (!configError.empty()) {
         setError(configError);
         return 0;
@@ -573,7 +591,13 @@ extern "C" std::int64_t krwa_pulley_create(
         setError("wasmtime_store_new returned null");
         return 0;
     }
-    wasmtime_store_limiter(execution->store, maxMemoryBytes, -1L, 1L, 128L, 16L);
+    wasmtime_store_limiter(
+        execution->store,
+        maxMemoryBytes,
+        maxTableElements,
+        maxInstances,
+        maxTables,
+        maxMemories);
     execution->context = wasmtime_store_context(execution->store);
 
     std::vector<WasmtimeExtern> imports(importCount);

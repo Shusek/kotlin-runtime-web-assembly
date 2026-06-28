@@ -66,6 +66,11 @@ actual fun wasmtimePreview3ComponentUnavailableReason(config: WasmtimePreview3Co
             call.blockedHosts.count,
             call.allowPrivateNetwork,
             call.maxMemoryBytes,
+            call.maxWasmStackBytes,
+            call.maxTableElements,
+            call.maxInstances,
+            call.maxTables,
+            call.maxMemories,
         )?.toKString()
     }
 }
@@ -95,6 +100,11 @@ actual fun wasmtimePreview3ComponentCall0UnavailableReason(
             call.blockedHosts.count,
             call.allowPrivateNetwork,
             call.maxMemoryBytes,
+            call.maxWasmStackBytes,
+            call.maxTableElements,
+            call.maxInstances,
+            call.maxTables,
+            call.maxMemories,
         )?.toKString()
     }
 }
@@ -128,6 +138,11 @@ actual fun wasmtimePreview3ComponentCallS32UnavailableReason(
             call.blockedHosts.count,
             call.allowPrivateNetwork,
             call.maxMemoryBytes,
+            call.maxWasmStackBytes,
+            call.maxTableElements,
+            call.maxInstances,
+            call.maxTables,
+            call.maxMemories,
         )?.toKString()
     }
 }
@@ -161,6 +176,11 @@ actual fun wasmtimePreview3ComponentCallStringUnavailableReason(
             call.blockedHosts.count,
             call.allowPrivateNetwork,
             call.maxMemoryBytes,
+            call.maxWasmStackBytes,
+            call.maxTableElements,
+            call.maxInstances,
+            call.maxTables,
+            call.maxMemories,
         )?.toKString()
     }
 }
@@ -229,6 +249,11 @@ fun wasmtimePreview3ComponentCallString(
             call.blockedHosts.count,
             call.allowPrivateNetwork,
             call.maxMemoryBytes,
+            call.maxWasmStackBytes,
+            call.maxTableElements,
+            call.maxInstances,
+            call.maxTables,
+            call.maxMemories,
             call.executionTimeoutMillis,
             cancellation?.handle,
             resultOut.ptr,
@@ -262,6 +287,11 @@ actual fun wasmtimePreview3CommandRunUnavailableReason(config: WasmtimePreview3C
             call.blockedHosts.count,
             call.allowPrivateNetwork,
             call.maxMemoryBytes,
+            call.maxWasmStackBytes,
+            call.maxTableElements,
+            call.maxInstances,
+            call.maxTables,
+            call.maxMemories,
             call.executionTimeoutMillis,
         )?.toKString()
     }
@@ -297,6 +327,11 @@ private inline fun <T> WasmtimePreview3ComponentConfig.withIosPreview3Call(
                 blockedHosts = blockedHosts,
                 allowPrivateNetwork = if (networkPolicy.allowPrivateNetwork) 1u else 0u,
                 maxMemoryBytes = maxMemoryBytes.toULong(),
+                maxWasmStackBytes = maxWasmStackBytes.toULong(),
+                maxTableElements = maxTableElements,
+                maxInstances = maxInstances,
+                maxTables = maxTables,
+                maxMemories = maxMemories,
                 executionTimeoutMillis = executionTimeoutMillis.toULong(),
             ),
         )
@@ -318,6 +353,11 @@ private data class IosPreview3Call(
     val blockedHosts: IosCStringArray,
     val allowPrivateNetwork: UByte,
     val maxMemoryBytes: ULong,
+    val maxWasmStackBytes: ULong,
+    val maxTableElements: Long,
+    val maxInstances: Long,
+    val maxTables: Long,
+    val maxMemories: Long,
     val executionTimeoutMillis: ULong,
 )
 

@@ -7,6 +7,38 @@ import kotlin.test.assertFailsWith
 
 class WasmtimeExecutionConfigTest {
     @Test
+    fun wasmtimeExecutionConfigCarriesResourceLimits() {
+        val config = WasmtimeExecutionConfig(
+            maxMemoryBytes = 32L * 1024L * 1024L,
+            maxWasmStackBytes = 128L * 1024L,
+            maxTableElements = 256L,
+            maxInstances = 2L,
+            maxTables = 4L,
+            maxMemories = 8L,
+        )
+
+        assertEquals(32L * 1024L * 1024L, config.maxMemoryBytes)
+        assertEquals(128L * 1024L, config.maxWasmStackBytes)
+        assertEquals(256L, config.maxTableElements)
+        assertEquals(2L, config.maxInstances)
+        assertEquals(4L, config.maxTables)
+        assertEquals(8L, config.maxMemories)
+    }
+
+    @Test
+    fun wasmtimeExecutionConfigRejectsInvalidResourceLimits() {
+        val stackError = assertFailsWith<IllegalArgumentException> {
+            WasmtimeExecutionConfig(maxWasmStackBytes = 0)
+        }
+        val tableError = assertFailsWith<IllegalArgumentException> {
+            WasmtimeExecutionConfig(maxTableElements = -2)
+        }
+
+        assertContains(stackError.message.orEmpty(), "max Wasm stack bytes must be positive")
+        assertContains(tableError.message.orEmpty(), "max table elements must be")
+    }
+
+    @Test
     fun preview3ComponentConfigRejectsEmptyComponentBytes() {
         val error = assertFailsWith<IllegalArgumentException> {
             preview3ComponentConfig(precompiledComponentBytes = byteArrayOf())
@@ -178,6 +210,36 @@ class WasmtimeExecutionConfigTest {
     }
 
     @Test
+    fun preview3ComponentConfigCarriesResourceLimits() {
+        val config = preview3ComponentConfig(
+            maxWasmStackBytes = 256L * 1024L,
+            maxTableElements = 512L,
+            maxInstances = 16L,
+            maxTables = 32L,
+            maxMemories = 64L,
+        )
+
+        assertEquals(256L * 1024L, config.maxWasmStackBytes)
+        assertEquals(512L, config.maxTableElements)
+        assertEquals(16L, config.maxInstances)
+        assertEquals(32L, config.maxTables)
+        assertEquals(64L, config.maxMemories)
+    }
+
+    @Test
+    fun preview3ComponentConfigRejectsInvalidResourceLimits() {
+        val stackError = assertFailsWith<IllegalArgumentException> {
+            preview3ComponentConfig(maxWasmStackBytes = 0)
+        }
+        val memoryCountError = assertFailsWith<IllegalArgumentException> {
+            preview3ComponentConfig(maxMemories = -2)
+        }
+
+        assertContains(stackError.message.orEmpty(), "max Wasm stack bytes must be positive")
+        assertContains(memoryCountError.message.orEmpty(), "Preview3 max memories must be")
+    }
+
+    @Test
     fun preview3ComponentConfigRejectsNegativeExecutionTimeout() {
         val error = assertFailsWith<IllegalArgumentException> {
             preview3ComponentConfig(executionTimeoutMillis = -1)
@@ -215,6 +277,11 @@ class WasmtimeExecutionConfigTest {
         networkPolicy: WasmtimePreview3NetworkPolicy = WasmtimePreview3NetworkPolicy(),
         maxMemoryBytes: Long = DefaultWasmtimeMaxMemoryBytes,
         executionTimeoutMillis: Long = 0,
+        maxWasmStackBytes: Long = DefaultWasmtimeMaxWasmStackBytes,
+        maxTableElements: Long = WasmtimeUnlimitedResourceLimit,
+        maxInstances: Long = WasmtimeUnlimitedResourceLimit,
+        maxTables: Long = WasmtimeUnlimitedResourceLimit,
+        maxMemories: Long = WasmtimeUnlimitedResourceLimit,
     ): WasmtimePreview3ComponentConfig = WasmtimePreview3ComponentConfig(
         precompiledComponentBytes = precompiledComponentBytes,
         hostPreopenRoot = hostPreopenRoot,
@@ -224,5 +291,10 @@ class WasmtimeExecutionConfigTest {
         networkPolicy = networkPolicy,
         maxMemoryBytes = maxMemoryBytes,
         executionTimeoutMillis = executionTimeoutMillis,
+        maxWasmStackBytes = maxWasmStackBytes,
+        maxTableElements = maxTableElements,
+        maxInstances = maxInstances,
+        maxTables = maxTables,
+        maxMemories = maxMemories,
     )
 }

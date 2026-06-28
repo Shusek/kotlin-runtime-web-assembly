@@ -58,6 +58,11 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
     private static final String SYNTHETIC_MEMORY_EXPORT_PREFIX = "__krwa_memory_";
     private static final String DEFAULT_WASMTIME_TARGET = "pulley64";
     private static final long DEFAULT_MAX_MEMORY_BYTES = 256L * 1024L * 1024L;
+    private static final long DEFAULT_MAX_WASM_STACK_BYTES = 512L * 1024L;
+    private static final long UNLIMITED_RESOURCE_LIMIT = -1L;
+    private static final long DEFAULT_MAX_INSTANCES = 1L;
+    private static final long DEFAULT_MAX_TABLES = 128L;
+    private static final long DEFAULT_MAX_MEMORIES = 16L;
     private static final String[] COMPONENT_WASI_SYMBOLS = {
             "wasi_config_new",
             "wasi_config_delete",
@@ -172,16 +177,27 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
             String[] blockedHosts,
             boolean allowPrivateNetwork,
             String targetName,
-            long maxMemoryBytes
+            long maxMemoryBytes,
+            long maxWasmStackBytes,
+            long maxTableElements,
+            long maxInstances,
+            long maxTables,
+            long maxMemories
     ) {
         String normalizedTarget = normalizedTarget(targetName);
         if (!DEFAULT_WASMTIME_TARGET.equals(normalizedTarget)) {
             return "Wasmtime Preview3 component bridge supports only " + DEFAULT_WASMTIME_TARGET +
                     "; requested " + normalizedTarget;
         }
-        if (maxMemoryBytes <= 0) {
-            return "Wasmtime Preview3 max memory bytes must be positive";
-        }
+        String limitError = preview3LimitError(
+                maxMemoryBytes,
+                maxWasmStackBytes,
+                maxTableElements,
+                maxInstances,
+                maxTables,
+                maxMemories
+        );
+        if (limitError != null) return limitError;
         if (
                 hostPreopenRoots.length == 0 ||
                 hostPreopenRoots.length != guestPreopenRoots.length ||
@@ -232,7 +248,12 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
                     blockedHostValues,
                     (long) blockedHosts.length,
                     (byte) (allowPrivateNetwork ? 1 : 0),
-                    maxMemoryBytes
+                    maxMemoryBytes,
+                    maxWasmStackBytes,
+                    maxTableElements,
+                    maxInstances,
+                    maxTables,
+                    maxMemories
             );
             if (error.equals(MemorySegment.NULL)) {
                 return null;
@@ -263,7 +284,12 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
             boolean allowPrivateNetwork,
             String targetName,
             String exportName,
-            long maxMemoryBytes
+            long maxMemoryBytes,
+            long maxWasmStackBytes,
+            long maxTableElements,
+            long maxInstances,
+            long maxTables,
+            long maxMemories
     ) {
         String normalizedTarget = normalizedTarget(targetName);
         if (!DEFAULT_WASMTIME_TARGET.equals(normalizedTarget)) {
@@ -273,9 +299,15 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
         if (exportName == null || exportName.isBlank()) {
             return "Wasmtime Preview3 component export name must not be blank";
         }
-        if (maxMemoryBytes <= 0) {
-            return "Wasmtime Preview3 max memory bytes must be positive";
-        }
+        String limitError = preview3LimitError(
+                maxMemoryBytes,
+                maxWasmStackBytes,
+                maxTableElements,
+                maxInstances,
+                maxTables,
+                maxMemories
+        );
+        if (limitError != null) return limitError;
         if (
                 hostPreopenRoots.length == 0 ||
                 hostPreopenRoots.length != guestPreopenRoots.length ||
@@ -327,7 +359,12 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
                     blockedHostValues,
                     (long) blockedHosts.length,
                     (byte) (allowPrivateNetwork ? 1 : 0),
-                    maxMemoryBytes
+                    maxMemoryBytes,
+                    maxWasmStackBytes,
+                    maxTableElements,
+                    maxInstances,
+                    maxTables,
+                    maxMemories
             );
             if (error.equals(MemorySegment.NULL)) {
                 return null;
@@ -360,7 +397,12 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
             String exportName,
             int argument,
             int expectedResult,
-            long maxMemoryBytes
+            long maxMemoryBytes,
+            long maxWasmStackBytes,
+            long maxTableElements,
+            long maxInstances,
+            long maxTables,
+            long maxMemories
     ) {
         String normalizedTarget = normalizedTarget(targetName);
         if (!DEFAULT_WASMTIME_TARGET.equals(normalizedTarget)) {
@@ -370,9 +412,15 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
         if (exportName == null || exportName.isBlank()) {
             return "Wasmtime Preview3 component export name must not be blank";
         }
-        if (maxMemoryBytes <= 0) {
-            return "Wasmtime Preview3 max memory bytes must be positive";
-        }
+        String limitError = preview3LimitError(
+                maxMemoryBytes,
+                maxWasmStackBytes,
+                maxTableElements,
+                maxInstances,
+                maxTables,
+                maxMemories
+        );
+        if (limitError != null) return limitError;
         if (
                 hostPreopenRoots.length == 0 ||
                 hostPreopenRoots.length != guestPreopenRoots.length ||
@@ -426,7 +474,12 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
                     blockedHostValues,
                     (long) blockedHosts.length,
                     (byte) (allowPrivateNetwork ? 1 : 0),
-                    maxMemoryBytes
+                    maxMemoryBytes,
+                    maxWasmStackBytes,
+                    maxTableElements,
+                    maxInstances,
+                    maxTables,
+                    maxMemories
             );
             if (error.equals(MemorySegment.NULL)) {
                 return null;
@@ -459,7 +512,12 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
             String exportName,
             String argument,
             String expectedResult,
-            long maxMemoryBytes
+            long maxMemoryBytes,
+            long maxWasmStackBytes,
+            long maxTableElements,
+            long maxInstances,
+            long maxTables,
+            long maxMemories
     ) {
         String normalizedTarget = normalizedTarget(targetName);
         if (!DEFAULT_WASMTIME_TARGET.equals(normalizedTarget)) {
@@ -472,9 +530,15 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
         if (argument == null || expectedResult == null) {
             return "Wasmtime Preview3 component string probe requires non-null argument and expected result";
         }
-        if (maxMemoryBytes <= 0) {
-            return "Wasmtime Preview3 max memory bytes must be positive";
-        }
+        String limitError = preview3LimitError(
+                maxMemoryBytes,
+                maxWasmStackBytes,
+                maxTableElements,
+                maxInstances,
+                maxTables,
+                maxMemories
+        );
+        if (limitError != null) return limitError;
         if (
                 hostPreopenRoots.length == 0 ||
                 hostPreopenRoots.length != guestPreopenRoots.length ||
@@ -528,7 +592,12 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
                     blockedHostValues,
                     (long) blockedHosts.length,
                     (byte) (allowPrivateNetwork ? 1 : 0),
-                    maxMemoryBytes
+                    maxMemoryBytes,
+                    maxWasmStackBytes,
+                    maxTableElements,
+                    maxInstances,
+                    maxTables,
+                    maxMemories
             );
             if (error.equals(MemorySegment.NULL)) {
                 return null;
@@ -648,6 +717,11 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
             String exportName,
             String argument,
             long maxMemoryBytes,
+            long maxWasmStackBytes,
+            long maxTableElements,
+            long maxInstances,
+            long maxTables,
+            long maxMemories,
             long executionTimeoutMillis
     ) {
         return preview3ComponentCallString(
@@ -665,6 +739,11 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
                 exportName,
                 argument,
                 maxMemoryBytes,
+                maxWasmStackBytes,
+                maxTableElements,
+                maxInstances,
+                maxTables,
+                maxMemories,
                 executionTimeoutMillis,
                 0L
         );
@@ -685,6 +764,11 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
             String exportName,
             String argument,
             long maxMemoryBytes,
+            long maxWasmStackBytes,
+            long maxTableElements,
+            long maxInstances,
+            long maxTables,
+            long maxMemories,
             long executionTimeoutMillis,
             long executionCancellationHandle
     ) {
@@ -701,9 +785,14 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
         if (argument == null) {
             throw new WasmEngineException("Wasmtime Preview3 component string call requires non-null argument");
         }
-        if (maxMemoryBytes <= 0) {
-            throw new WasmEngineException("Wasmtime Preview3 max memory bytes must be positive");
-        }
+        throwIfPreview3LimitError(
+                maxMemoryBytes,
+                maxWasmStackBytes,
+                maxTableElements,
+                maxInstances,
+                maxTables,
+                maxMemories
+        );
         if (executionTimeoutMillis < 0) {
             throw new WasmEngineException("Wasmtime Preview3 execution timeout millis must not be negative");
         }
@@ -768,6 +857,11 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
                     (long) blockedHosts.length,
                     (byte) (allowPrivateNetwork ? 1 : 0),
                     maxMemoryBytes,
+                    maxWasmStackBytes,
+                    maxTableElements,
+                    maxInstances,
+                    maxTables,
+                    maxMemories,
                     executionTimeoutMillis,
                     cancellationHandle,
                     resultOut
@@ -806,6 +900,11 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
             boolean allowPrivateNetwork,
             String targetName,
             long maxMemoryBytes,
+            long maxWasmStackBytes,
+            long maxTableElements,
+            long maxInstances,
+            long maxTables,
+            long maxMemories,
             long executionTimeoutMillis
     ) {
         String normalizedTarget = normalizedTarget(targetName);
@@ -813,9 +912,15 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
             return "Wasmtime Preview3 component bridge supports only " + DEFAULT_WASMTIME_TARGET +
                     "; requested " + normalizedTarget;
         }
-        if (maxMemoryBytes <= 0) {
-            return "Wasmtime Preview3 max memory bytes must be positive";
-        }
+        String limitError = preview3LimitError(
+                maxMemoryBytes,
+                maxWasmStackBytes,
+                maxTableElements,
+                maxInstances,
+                maxTables,
+                maxMemories
+        );
+        if (limitError != null) return limitError;
         if (executionTimeoutMillis < 0) {
             return "Wasmtime Preview3 execution timeout millis must not be negative";
         }
@@ -870,6 +975,11 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
                     (long) blockedHosts.length,
                     (byte) (allowPrivateNetwork ? 1 : 0),
                     maxMemoryBytes,
+                    maxWasmStackBytes,
+                    maxTableElements,
+                    maxInstances,
+                    maxTables,
+                    maxMemories,
                     executionTimeoutMillis
             );
             if (error.equals(MemorySegment.NULL)) {
@@ -907,7 +1017,19 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
             String targetName,
             byte[] precompiledModuleBytes
     ) {
-        return create(module, imports, hostInstance, targetName, precompiledModuleBytes, DEFAULT_MAX_MEMORY_BYTES);
+        return create(
+                module,
+                imports,
+                hostInstance,
+                targetName,
+                precompiledModuleBytes,
+                DEFAULT_MAX_MEMORY_BYTES,
+                DEFAULT_MAX_WASM_STACK_BYTES,
+                UNLIMITED_RESOURCE_LIMIT,
+                DEFAULT_MAX_INSTANCES,
+                DEFAULT_MAX_TABLES,
+                DEFAULT_MAX_MEMORIES
+        );
     }
 
     public static PlatformInstanceExecution create(
@@ -916,11 +1038,23 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
             Instance hostInstance,
             String targetName,
             byte[] precompiledModuleBytes,
-            long maxMemoryBytes
+            long maxMemoryBytes,
+            long maxWasmStackBytes,
+            long maxTableElements,
+            long maxInstances,
+            long maxTables,
+            long maxMemories
     ) {
         if (maxMemoryBytes <= 0) {
             throw new WasmEngineException("Wasmtime max memory bytes must be positive");
         }
+        if (maxWasmStackBytes <= 0) {
+            throw new WasmEngineException("Wasmtime max Wasm stack bytes must be positive");
+        }
+        validateResourceLimit("max table elements", maxTableElements);
+        validateResourceLimit("max instances", maxInstances);
+        validateResourceLimit("max tables", maxTables);
+        validateResourceLimit("max memories", maxMemories);
         String target = normalizedTarget(targetName);
         byte[] bytes = module.originalBytes();
         if (bytes == null) {
@@ -932,7 +1066,7 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
             WasmtimeApi api = WasmtimeApi.load(arena);
             trapNewHandle = api.trapNew;
 
-            ConfigResult config = createConfig(api, arena, target);
+            ConfigResult config = createConfig(api, arena, target, maxWasmStackBytes);
             if (config.error != null) {
                 throw new WasmEngineException(config.error);
             }
@@ -953,7 +1087,14 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
 
             MemorySegment store = (MemorySegment) api.storeNew.invokeExact(engine, MemorySegment.NULL, MemorySegment.NULL);
             requireNotNull(store, "wasmtime_store_new");
-            api.storeLimiter.invokeExact(store, maxMemoryBytes, -1L, 1L, 128L, 16L);
+            api.storeLimiter.invokeExact(
+                    store,
+                    maxMemoryBytes,
+                    maxTableElements,
+                    maxInstances,
+                    maxTables,
+                    maxMemories
+            );
             MemorySegment context = (MemorySegment) api.storeContext.invokeExact(store);
 
             MemorySegment importExterns = buildImports(api, arena, context, module, imports, hostInstance);
@@ -1017,15 +1158,66 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
         );
     }
 
-    private static ConfigResult createConfig(Arena arena, String targetName) throws Throwable {
-        WasmtimeApi api = WasmtimeApi.load(arena);
-        return createConfig(api, arena, targetName);
+    private static String preview3LimitError(
+            long maxMemoryBytes,
+            long maxWasmStackBytes,
+            long maxTableElements,
+            long maxInstances,
+            long maxTables,
+            long maxMemories
+    ) {
+        if (maxMemoryBytes <= 0) {
+            return "Wasmtime Preview3 max memory bytes must be positive";
+        }
+        if (maxWasmStackBytes <= 0) {
+            return "Wasmtime Preview3 max Wasm stack bytes must be positive";
+        }
+        if (maxTableElements < UNLIMITED_RESOURCE_LIMIT ||
+                maxInstances < UNLIMITED_RESOURCE_LIMIT ||
+                maxTables < UNLIMITED_RESOURCE_LIMIT ||
+                maxMemories < UNLIMITED_RESOURCE_LIMIT) {
+            return "Wasmtime Preview3 resource limits must be " + UNLIMITED_RESOURCE_LIMIT +
+                    " for unlimited or non-negative";
+        }
+        return null;
     }
 
-    private static ConfigResult createConfig(WasmtimeApi api, Arena arena, String targetName) throws Throwable {
+    private static void throwIfPreview3LimitError(
+            long maxMemoryBytes,
+            long maxWasmStackBytes,
+            long maxTableElements,
+            long maxInstances,
+            long maxTables,
+            long maxMemories
+    ) {
+        String error = preview3LimitError(
+                maxMemoryBytes,
+                maxWasmStackBytes,
+                maxTableElements,
+                maxInstances,
+                maxTables,
+                maxMemories
+        );
+        if (error != null) {
+            throw new WasmEngineException(error);
+        }
+    }
+
+    private static ConfigResult createConfig(Arena arena, String targetName) throws Throwable {
+        WasmtimeApi api = WasmtimeApi.load(arena);
+        return createConfig(api, arena, targetName, DEFAULT_MAX_WASM_STACK_BYTES);
+    }
+
+    private static ConfigResult createConfig(
+            WasmtimeApi api,
+            Arena arena,
+            String targetName,
+            long maxWasmStackBytes
+    ) throws Throwable {
         MemorySegment config = (MemorySegment) api.wasmConfigNew.invokeExact();
         requireNotNull(config, "wasm_config_new");
         String error = configureTarget(api, arena, config, targetName);
+        api.configMaxWasmStackSet.invokeExact(config, maxWasmStackBytes);
         api.configWasmGcSet.invokeExact(config, (byte) 1);
         api.configWasmFunctionReferencesSet.invokeExact(config, (byte) 1);
         api.configWasmReferenceTypesSet.invokeExact(config, (byte) 1);
@@ -1035,6 +1227,15 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
         api.configMemoryMayMoveSet.invokeExact(config, (byte) 1);
         api.configConcurrencySupportSet.invokeExact(config, (byte) 0);
         return new ConfigResult(config, error);
+    }
+
+    private static void validateResourceLimit(String name, long value) {
+        if (value < UNLIMITED_RESOURCE_LIMIT) {
+            throw new WasmEngineException(
+                    "Wasmtime " + name + " must be " + UNLIMITED_RESOURCE_LIMIT +
+                            " for unlimited or non-negative"
+            );
+        }
     }
 
     private static String configureTarget(
@@ -2269,6 +2470,11 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
                             ValueLayout.ADDRESS,
                             ValueLayout.JAVA_LONG,
                             C_BOOL,
+                            ValueLayout.JAVA_LONG,
+                            ValueLayout.JAVA_LONG,
+                            ValueLayout.JAVA_LONG,
+                            ValueLayout.JAVA_LONG,
+                            ValueLayout.JAVA_LONG,
                             ValueLayout.JAVA_LONG
                     )
             );
@@ -2295,6 +2501,11 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
                             ValueLayout.ADDRESS,
                             ValueLayout.JAVA_LONG,
                             C_BOOL,
+                            ValueLayout.JAVA_LONG,
+                            ValueLayout.JAVA_LONG,
+                            ValueLayout.JAVA_LONG,
+                            ValueLayout.JAVA_LONG,
+                            ValueLayout.JAVA_LONG,
                             ValueLayout.JAVA_LONG
                     )
             );
@@ -2323,6 +2534,11 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
                             ValueLayout.ADDRESS,
                             ValueLayout.JAVA_LONG,
                             C_BOOL,
+                            ValueLayout.JAVA_LONG,
+                            ValueLayout.JAVA_LONG,
+                            ValueLayout.JAVA_LONG,
+                            ValueLayout.JAVA_LONG,
+                            ValueLayout.JAVA_LONG,
                             ValueLayout.JAVA_LONG
                     )
             );
@@ -2351,6 +2567,11 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
                             ValueLayout.ADDRESS,
                             ValueLayout.JAVA_LONG,
                             C_BOOL,
+                            ValueLayout.JAVA_LONG,
+                            ValueLayout.JAVA_LONG,
+                            ValueLayout.JAVA_LONG,
+                            ValueLayout.JAVA_LONG,
+                            ValueLayout.JAVA_LONG,
                             ValueLayout.JAVA_LONG
                     )
             );
@@ -2380,6 +2601,11 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
                             C_BOOL,
                             ValueLayout.JAVA_LONG,
                             ValueLayout.JAVA_LONG,
+                            ValueLayout.JAVA_LONG,
+                            ValueLayout.JAVA_LONG,
+                            ValueLayout.JAVA_LONG,
+                            ValueLayout.JAVA_LONG,
+                            ValueLayout.JAVA_LONG,
                             ValueLayout.ADDRESS,
                             ValueLayout.ADDRESS
                     )
@@ -2406,6 +2632,11 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
                             ValueLayout.ADDRESS,
                             ValueLayout.JAVA_LONG,
                             C_BOOL,
+                            ValueLayout.JAVA_LONG,
+                            ValueLayout.JAVA_LONG,
+                            ValueLayout.JAVA_LONG,
+                            ValueLayout.JAVA_LONG,
+                            ValueLayout.JAVA_LONG,
                             ValueLayout.JAVA_LONG,
                             ValueLayout.JAVA_LONG
                     )
@@ -2459,6 +2690,7 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
         private final MethodHandle configWasmExceptionsSet;
         private final MethodHandle configWasmBulkMemorySet;
         private final MethodHandle configWasmMultiMemorySet;
+        private final MethodHandle configMaxWasmStackSet;
         private final MethodHandle configMemoryMayMoveSet;
         private final MethodHandle configConcurrencySupportSet;
         private final MethodHandle moduleNew;
@@ -2495,6 +2727,7 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
             configWasmExceptionsSet = downcall(linker, lookup, "wasmtime_config_wasm_exceptions_set", FunctionDescriptor.ofVoid(ValueLayout.ADDRESS, C_BOOL));
             configWasmBulkMemorySet = downcall(linker, lookup, "wasmtime_config_wasm_bulk_memory_set", FunctionDescriptor.ofVoid(ValueLayout.ADDRESS, C_BOOL));
             configWasmMultiMemorySet = downcall(linker, lookup, "wasmtime_config_wasm_multi_memory_set", FunctionDescriptor.ofVoid(ValueLayout.ADDRESS, C_BOOL));
+            configMaxWasmStackSet = downcall(linker, lookup, "wasmtime_config_max_wasm_stack_set", FunctionDescriptor.ofVoid(ValueLayout.ADDRESS, ValueLayout.JAVA_LONG));
             configMemoryMayMoveSet = downcall(linker, lookup, "wasmtime_config_memory_may_move_set", FunctionDescriptor.ofVoid(ValueLayout.ADDRESS, C_BOOL));
             configConcurrencySupportSet = downcall(linker, lookup, "wasmtime_config_concurrency_support_set", FunctionDescriptor.ofVoid(ValueLayout.ADDRESS, C_BOOL));
             moduleNew = downcall(linker, lookup, "wasmtime_module_new", FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.JAVA_LONG, ValueLayout.ADDRESS));
