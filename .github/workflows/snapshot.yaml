@@ -15,13 +15,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  publish:
-    name: Publish Snapshot And Docs
+  publish-site:
+    name: Build Pages And Non-iOS Snapshots
     runs-on: ubuntu-latest
     if: github.repository == 'Shusek/kotlin-runtime-web-assembly'
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
       - name: Checkout
@@ -62,6 +59,93 @@ jobs:
 
       - name: Publish snapshot artifacts
         run: ./gradlew --no-daemon -Pkrwa.githubPagesMavenRepository="$PWD/build/pages/maven" publishAllPublicationsToGithubPagesRepository -x test
+
+      - name: Upload Pages workspace
+        uses: actions/upload-artifact@v7
+        with:
+          name: snapshot-pages
+          path: build/pages
+          retention-days: 1
+          if-no-files-found: error
+
+  publish-ios:
+    name: Publish iOS Snapshot Artifacts
+    runs-on: macos-latest
+    if: github.repository == 'Shusek/kotlin-runtime-web-assembly'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 25
+          cache: gradle
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Verify native toolchain
+        run: |
+          cargo --version
+          rustup --version
+          cmake --version
+          xcrun --sdk iphoneos --find clang++
+          xcrun --sdk iphonesimulator --find clang++
+
+      - name: Publish iOS snapshot artifacts
+        run: |
+          ./gradlew --no-daemon -Pkrwa.githubPagesMavenRepository="$PWD/build/ios-maven" \
+            :annotations:annotations:publishIosArm64PublicationToGithubPagesRepository \
+            :annotations:annotations:publishIosSimulatorArm64PublicationToGithubPagesRepository \
+            :wasm:publishIosArm64PublicationToGithubPagesRepository \
+            :wasm:publishIosSimulatorArm64PublicationToGithubPagesRepository \
+            :wasi:publishIosArm64PublicationToGithubPagesRepository \
+            :wasi:publishIosSimulatorArm64PublicationToGithubPagesRepository \
+            :wasi-preview3:publishIosArm64PublicationToGithubPagesRepository \
+            :wasi-preview3:publishIosSimulatorArm64PublicationToGithubPagesRepository \
+            :component-model:publishIosArm64PublicationToGithubPagesRepository \
+            :component-model:publishIosSimulatorArm64PublicationToGithubPagesRepository \
+            :runtime:publishIosArm64PublicationToGithubPagesRepository \
+            :runtime:publishIosSimulatorArm64PublicationToGithubPagesRepository \
+            -x test
+
+      - name: Upload iOS Maven artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: snapshot-ios-maven
+          path: build/ios-maven
+          retention-days: 1
+          if-no-files-found: error
+
+  deploy:
+    name: Deploy Snapshot And Docs
+    runs-on: ubuntu-latest
+    needs: [publish-site, publish-ios]
+    if: github.repository == 'Shusek/kotlin-runtime-web-assembly'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Download Pages workspace
+        uses: actions/download-artifact@v7
+        with:
+          name: snapshot-pages
+          path: build/pages
+
+      - name: Download iOS Maven artifacts
+        uses: actions/download-artifact@v7
+        with:
+          name: snapshot-ios-maven
+          path: build/ios-maven
+
+      - name: Merge iOS Maven artifacts
+        run: |
+          rsync -a build/ios-maven/ build/pages/maven/
+          touch build/pages/.nojekyll
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v5
