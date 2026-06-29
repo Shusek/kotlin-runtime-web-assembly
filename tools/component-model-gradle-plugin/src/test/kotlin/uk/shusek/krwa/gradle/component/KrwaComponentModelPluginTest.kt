@@ -21,8 +21,10 @@ class KrwaComponentModelPluginTest {
     fun configureNestedGradleHeap() {
         tempDir.resolve("gradle.properties").writeText(
             """
-            org.gradle.jvmargs=-Xmx2g -Dfile.encoding=UTF-8
+            org.gradle.jvmargs=-Xmx1536m -Dfile.encoding=UTF-8
+            org.gradle.workers.max=1
             org.gradle.daemon=false
+            kotlin.daemon.jvmargs=-Xmx1536m -Dfile.encoding=UTF-8
             """.trimIndent(),
         )
     }
