@@ -4,9 +4,6 @@ import java.io.IOException
 import java.io.UncheckedIOException
 import okio.FileSystem
 import okio.Path
-import uk.shusek.krwa.runtime.Instance
-import uk.shusek.krwa.runtime.Machine
-import uk.shusek.krwa.wasm.WasmModule
 
 internal actual fun wasmPluginReadPathBytes(path: Path): ByteArray {
     try {
@@ -43,10 +40,6 @@ internal actual fun wasmPluginHostHandler(
     functionName: String,
 ): HostHandler? =
     WitReflection.hostHandler(hostObjects, interfaceName, functionName)
-
-internal actual fun wasmPluginCompiledMachineFactory(
-    module: WasmModule,
-): ((Instance) -> Machine)? = null
 
 internal actual fun wasmPluginPlatformUnsupported(feature: String): Nothing {
     throw ComponentModelException("$feature is not available on this platform")

@@ -3,8 +3,6 @@
 The repository includes tools for local experiments and build integration:
 
 - `tools/cli`: command-line entrypoint for running local workloads.
-- `tools/compiler`: legacy JVM compiler sources kept for compatibility work.
-- `tools/build-time-compiler`: legacy ahead-of-time JVM class generation.
 - `tools/wabt`: WABT-backed helpers.
 - `tools/wasm-tools`: `wasm-tools` integration running through the runtime.
 

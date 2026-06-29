@@ -50,14 +50,9 @@ private constructor(
     elements: Array<Element>,
     tagTypes: Array<TagType>?,
     exports: Map<String, Export>,
-    machineFactory: (Instance) -> Machine,
-    tableFactory: TableFactory?,
-    private val globalFactory: GlobalFactory?,
     initialize: Boolean,
     start: Boolean,
-    private val listener: ExecutionListener?,
 ) {
-    private val machine: Machine = machineFactory(this)
     private val functions: Array<FunctionBody> = functions.copyOf()
     private val globalInitializers: Array<Global> = globalInitializers.copyOf()
     private val globals: Array<GlobalInstance?> = arrayOfNulls(globalInitializers.size)
@@ -89,8 +84,7 @@ private constructor(
             val rawValue = computeConstantValue(this, tableDefinitions[i].initialize())[0]
             val initValue = OpcodeOps.boxForTable(rawValue, this)
             tables[i] =
-                tableFactory?.create(tableDefinitions[i], initValue)
-                    ?: TableInstance(tableDefinitions[i], initValue)
+                TableInstance(tableDefinitions[i], initValue)
         }
 
         if (initialize) {
@@ -105,18 +99,12 @@ private constructor(
             val global = globalInitializers[i]
             val values = computeConstantValue(this, global.initInstructions())
             globals[i] =
-                globalFactory?.create(
+                GlobalInstance(
                     values[0],
                     if (values.size > 1) values[1] else 0,
                     global.valueType(),
                     global.mutabilityType(),
                 )
-                    ?: GlobalInstance(
-                        values[0],
-                        if (values.size > 1) values[1] else 0,
-                        global.valueType(),
-                        global.mutabilityType(),
-                    )
             globals[i]!!.instance = this
         }
 
@@ -163,14 +151,6 @@ private constructor(
             throw InvalidException("unknown memory")
         }
 
-        module.startSection()?.let { startSection ->
-            try {
-                machine.call(startSection.startIndex().toInt(), LongArray(0))
-            } catch (e: TrapException) {
-                throw UninstantiableException(e.message ?: "", e)
-            }
-        }
-
         val startFunction = exports[START_FUNCTION_NAME]
         if (startFunction != null && start) {
             try {
@@ -206,14 +186,8 @@ private constructor(
 
         fun function(name: String): ExportFunction {
             instance.platformExecution?.let { return it.export(name) }
-            val export = getExport(ExternalType.FUNCTION, name)
-            return ExportFunction { args ->
-                try {
-                    instance.machine.call(export.index(), args)
-                } finally {
-                    instance.gcSafePoint()
-                }
-            }
+            getExport(ExternalType.FUNCTION, name)
+            throw WasmEngineException("platform WebAssembly execution is not available")
         }
 
         fun global(name: String): GlobalInstance {
@@ -432,20 +406,13 @@ private constructor(
         return ValType.heapTypeSubtype(actual, target, module.typeSection())
     }
 
-    // Preserve the Java API behavior: modules without memory expose null, and generated machines
-    // pass that null through for no-memory modules.
+    // Preserve the Java API behavior: modules without memory expose null.
     @Suppress("UNCHECKED_CAST") private fun <T> jvmNull(): T = null as T
 
     /** Epoch-based GC safe point. Call when the wasm stack is guaranteed empty. */
     fun gcSafePoint() {
         gcRefs.safePoint()
     }
-
-    fun gcSafePoint(stack: MStack, callStack: ArrayDeque<StackFrame>) {
-        gcRefs.safePoint(stack, callStack)
-    }
-
-    fun getMachine(): Machine = machine
 
     fun isTailCallPending(): Boolean = tailCallPending != null
 
@@ -461,76 +428,22 @@ private constructor(
         tailCallPending = null
     }
 
-    fun onExecution(instruction: Instruction, stack: MStack) {
-        listener?.onExecution(instruction, stack)
-    }
-
-    internal fun executionListener(): ExecutionListener? = listener
-
     class Builder
     private constructor(
         private val module: WasmModule,
         private val defaultMemoryFactory: (MemoryLimits) -> Memory,
-        private val defaultMachineFactory: (Instance) -> Machine,
     ) {
-        private var initialize = true
-        private var start = true
         private var memoryLimits: MemoryLimits? = null
-        private var memoryFactory: ((MemoryLimits) -> Memory)? = null
-        private var tableFactory: TableFactory? = null
-        private var globalFactory: GlobalFactory? = null
-        private var listener: ExecutionListener? = null
         private var importValues: ImportValues? = null
-        private var machineFactory: ((Instance) -> Machine)? = null
         private var executionBackend: ExecutionBackend = ExecutionBackend.AUTO
-
-        fun withInitialize(init: Boolean): Builder {
-            initialize = init
-            return this
-        }
-
-        fun withStart(start: Boolean): Builder {
-            this.start = start
-            return this
-        }
 
         fun withMemoryLimits(limits: MemoryLimits): Builder {
             memoryLimits = limits
             return this
         }
 
-        fun withMemoryFactory(memoryFactory: (MemoryLimits) -> Memory): Builder {
-            this.memoryFactory = memoryFactory
-            return this
-        }
-
-        fun withTableFactory(tableFactory: TableFactory): Builder {
-            this.tableFactory = tableFactory
-            return this
-        }
-
-        fun withGlobalFactory(globalFactory: GlobalFactory): Builder {
-            this.globalFactory = globalFactory
-            return this
-        }
-
-        /*
-         * This method is experimental and might be dropped without notice in future releases.
-         */
-        @Deprecated("Platform execution cannot honor instruction listeners.")
-        fun withUnsafeExecutionListener(listener: ExecutionListener): Builder {
-            this.listener = listener
-            return this
-        }
-
         fun withImportValues(importValues: ImportValues): Builder {
             this.importValues = importValues
-            return this
-        }
-
-        @Deprecated("Platform execution cannot honor custom Kotlin machine factories.")
-        fun withMachineFactory(machineFactory: (Instance) -> Machine): Builder {
-            this.machineFactory = machineFactory
             return this
         }
 
@@ -952,16 +865,11 @@ private constructor(
         }
 
         fun build(): Instance {
-            if (!canUsePlatformExecution()) {
-                throw WasmEngineException(
-                    "${executionBackend.name.lowercase()} WebAssembly execution cannot honor custom builder options"
-                )
-            }
-            val hostInstance = buildHostInstance(initializeInstance = false, startInstance = false)
+            val hostInstance = buildHostInstance(initializeInstance = true, startInstance = false)
             val platformExecution =
                 RuntimePlatform.createPlatformExecution(
                     module,
-                    importValues ?: ImportValues.empty(),
+                    hostInstance.imports(),
                     executionBackend,
                     hostInstance,
                     memoryLimits,
@@ -979,19 +887,6 @@ private constructor(
             hostInstance.gcSafePoint()
             return hostInstance
         }
-
-        private fun canUsePlatformExecution(): Boolean =
-            initialize &&
-                start &&
-                (memoryLimits == null || executionBackend.supportsPlatformMemoryLimits()) &&
-                memoryFactory == null &&
-                tableFactory == null &&
-                globalFactory == null &&
-                listener == null &&
-                machineFactory == null
-
-        private fun ExecutionBackend.supportsPlatformMemoryLimits(): Boolean =
-            this == ExecutionBackend.NATIVE
 
         private fun buildHostInstance(
             initializeInstance: Boolean,
@@ -1035,12 +930,11 @@ private constructor(
 
             var memories = emptyArray<Memory>()
             module.memorySection()?.let { memSection ->
-                val memoryFactory = memoryFactory ?: defaultMemoryFactory
                 memories =
                     Array(memSection.memoryCount()) { i ->
                         val limits = memSection.getMemory(i).limits()
                         val effectiveLimits = if (i == 0) memoryLimits ?: limits else limits
-                        memoryFactory(effectiveLimits)
+                        defaultMemoryFactory(effectiveLimits)
                     }
             }
 
@@ -1084,8 +978,6 @@ private constructor(
                 }
             }
 
-            val machineFactory = machineFactory ?: defaultMachineFactory
-
             return Instance(
                 module,
                 globalInitializers,
@@ -1099,12 +991,8 @@ private constructor(
                 elements,
                 module.tagSection()?.types(),
                 exports,
-                machineFactory,
-                tableFactory,
-                globalFactory,
                 initializeInstance,
                 startInstance,
-                listener,
             )
         }
 
@@ -1113,14 +1001,12 @@ private constructor(
                 Builder(
                     module,
                     RuntimePlatform.defaultMemoryFactory(),
-                    RuntimePlatform.defaultMachineFactory(),
                 )
 
             internal fun create(
                 module: WasmModule,
                 defaultMemoryFactory: (MemoryLimits) -> Memory,
-                defaultMachineFactory: (Instance) -> Machine,
-            ): Builder = Builder(module, defaultMemoryFactory, defaultMachineFactory)
+            ): Builder = Builder(module, defaultMemoryFactory)
         }
     }
 

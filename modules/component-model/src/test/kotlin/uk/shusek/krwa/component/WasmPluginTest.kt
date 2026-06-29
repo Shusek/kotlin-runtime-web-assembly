@@ -76,51 +76,41 @@ class WasmPluginTest {
     }
 
     @Test
-    fun usesCompiledMachineForJvmPluginModules() {
-        val previous = System.getProperty("krwa.component.compiler")
-        try {
-            System.setProperty("krwa.component.compiler", "true")
-            val witPackage =
-                WitPackage.parse(
-                    """
-                    package example:compiled-machine;
+    fun usesPlatformExecutionForJvmPluginModules() {
+        val witPackage =
+            WitPackage.parse(
+                """
+                package example:platform-execution;
 
-                    world plugin {
-                      export api;
-                    }
+                world plugin {
+                  export api;
+                }
 
-                    interface api {
-                      value: func() -> u32;
-                    }
-                    """
-                        .trimIndent()
-                )
+                interface api {
+                  value: func() -> u32;
+                }
+                """
+                    .trimIndent()
+            )
 
-            val plugin =
-                WasmPlugin.builder(witPackage)
-                    .withModule(
-                        Wat2Wasm.parse(
-                            """
-                            (module
-                              (memory (export "memory") 1)
-                              (func (export "api.value") (result i32)
-                                (i32.const 42))
-                            )
-                            """
-                                .trimIndent()
+        val plugin =
+            WasmPlugin.builder(witPackage)
+                .withModule(
+                    Wat2Wasm.parse(
+                        """
+                        (module
+                          (memory (export "memory") 1)
+                          (func (export "api.value") (result i32)
+                            (i32.const 42))
                         )
+                        """
+                            .trimIndent()
                     )
-                    .build()
+                )
+                .build()
 
-            assertEquals(42L, plugin.call("api.value"))
-            assertEquals(ExecutionBackend.PULLEY, plugin.instance().executionBackend())
-        } finally {
-            if (previous == null) {
-                System.clearProperty("krwa.component.compiler")
-            } else {
-                System.setProperty("krwa.component.compiler", previous)
-            }
-        }
+        assertEquals(42L, plugin.call("api.value"))
+        assertEquals(ExecutionBackend.PULLEY, plugin.instance().executionBackend())
     }
 
     @Test
@@ -129,213 +119,132 @@ class WasmPluginTest {
             return
         }
 
-        val previous = System.getProperty("krwa.component.compiler")
-        try {
-            System.setProperty("krwa.component.compiler", "true")
-            val witPackage =
-                WitPackage.parse(
-                    """
-                    package example:pulley-backend;
+        val witPackage =
+            WitPackage.parse(
+                """
+                package example:pulley-backend;
 
-                    world plugin {
-                      export api;
-                    }
-
-                    interface api {
-                      value: func() -> u32;
-                    }
-                    """
-                        .trimIndent()
-                )
-
-            val plugin =
-                WasmPlugin.builder(witPackage)
-                    .withExecutionBackend(ExecutionBackend.PULLEY)
-                    .withModule(
-                        Wat2Wasm.parse(
-                            """
-                            (module
-                              (memory 1)
-                              (func (export "api.value") (result i32)
-                                (i32.const 42))
-                            )
-                            """
-                                .trimIndent()
-                        )
-                    )
-                    .build()
-
-            assertEquals(42L, plugin.call("api.value"))
-            assertEquals(ExecutionBackend.PULLEY, plugin.instance().executionBackend())
-        } finally {
-            if (previous == null) {
-                System.clearProperty("krwa.component.compiler")
-            } else {
-                System.setProperty("krwa.component.compiler", previous)
-            }
-        }
-    }
-
-    @Test
-    fun usesCompiledMachineForJvmPluginModulesWithPreview1Imports() {
-        val previous = System.getProperty("krwa.component.compiler")
-        try {
-            System.setProperty("krwa.component.compiler", "true")
-            val witPackage =
-                WitPackage.parse(
-                    """
-                    package example:compiled-preview1-machine;
-
-                    world plugin {
-                      export api;
-                    }
-
-                    interface api {
-                      value: func() -> u32;
-                    }
-                    """
-                        .trimIndent()
-                )
-
-            val plugin =
-                WasmPlugin.builder(witPackage)
-                    .withModule(
-                        Wat2Wasm.parse(
-                            """
-                            (module
-                              (import "wasi_snapshot_preview1" "fd_write"
-                                (func ${'$'}fd_write (param i32 i32 i32 i32) (result i32)))
-                              (memory (export "memory") 1)
-                              (func (export "api.value") (result i32)
-                                (i32.const 42))
-                            )
-                            """
-                                .trimIndent()
-                        )
-                    )
-                    .withWasiPreview1(WasiPreview1.builder().build())
-                    .build()
-
-            assertEquals(42L, plugin.call("api.value"))
-            assertEquals(ExecutionBackend.PULLEY, plugin.instance().executionBackend())
-        } finally {
-            if (previous == null) {
-                System.clearProperty("krwa.component.compiler")
-            } else {
-                System.setProperty("krwa.component.compiler", previous)
-            }
-        }
-    }
-
-    @Test
-    fun usesCompiledMachineForPreview3PluginModulesWithPreview1BridgeImports() {
-        val previous = System.getProperty("krwa.component.compiler")
-        try {
-            System.setProperty("krwa.component.compiler", "true")
-            val witPackage =
-                WitPackage.parse(
-                    """
-                    package example:compiled-preview3-bridge-machine;
-
-                    world plugin {
-                      export api;
-                    }
-
-                    interface api {
-                      value: func() -> u32;
-                    }
-                    """
-                        .trimIndent()
-                )
-
-            val plugin =
-                WasmPlugin.builder(witPackage)
-                    .withModule(
-                        Wat2Wasm.parse(
-                            """
-                            (module
-                              (import "wasi_snapshot_preview1" "random_get"
-                                (func ${'$'}random_get (param i32 i32) (result i32)))
-                              (memory (export "memory") 1)
-                              (func (export "api.value") (result i32)
-                                (if
-                                  (i32.ne
-                                    (call ${'$'}random_get (i32.const 16) (i32.const 4))
-                                    (i32.const 0))
-                                  (then (return (i32.const 0))))
-                                (i32.const 77))
-                            )
-                            """
-                                .trimIndent()
-                        )
-                    )
-                    .withWasiPreview3(
-                        WasiPreview3.builder()
-                            .withSecureRandom(kotlin.random.Random(1234L))
-                            .build()
-                    )
-                    .build()
-
-            assertEquals(77L, plugin.call("api.value"))
-            assertEquals(ExecutionBackend.PULLEY, plugin.instance().executionBackend())
-        } finally {
-            if (previous == null) {
-                System.clearProperty("krwa.component.compiler")
-            } else {
-                System.setProperty("krwa.component.compiler", previous)
-            }
-        }
-    }
-
-    @Test
-    @Suppress("DEPRECATION")
-    fun builderRejectsUnsafeExecutionListenerForPlatformExecution() {
-        val previous = System.getProperty("krwa.component.compiler")
-        try {
-            System.setProperty("krwa.component.compiler", "false")
-            val witPackage =
-                WitPackage.parse(
-                    """
-                    package example:plugin-execution-listener;
-
-                    world plugin {
-                      export api;
-                    }
-
-                    interface api {
-                      value: func() -> u32;
-                    }
-                    """
-                        .trimIndent()
-                )
-            val exception =
-                assertThrows(WasmEngineException::class.java) {
-                    WasmPlugin.builder(witPackage)
-                        .withModule(
-                            Wat2Wasm.parse(
-                                """
-                                (module
-                                  (memory (export "memory") 1)
-                                  (func (export "api.value") (result i32)
-                                    (i32.const 40)
-                                    (i32.const 2)
-                                    (i32.add))
-                                )
-                                """
-                                    .trimIndent()
-                            )
-                        )
-                        .withUnsafeExecutionListener { _, _ -> }
-                        .build()
+                world plugin {
+                  export api;
                 }
-            assertTrue(exception.message!!.contains("cannot honor custom builder options"))
-        } finally {
-            if (previous == null) {
-                System.clearProperty("krwa.component.compiler")
-            } else {
-                System.setProperty("krwa.component.compiler", previous)
-            }
-        }
+
+                interface api {
+                  value: func() -> u32;
+                }
+                """
+                    .trimIndent()
+            )
+
+        val plugin =
+            WasmPlugin.builder(witPackage)
+                .withExecutionBackend(ExecutionBackend.PULLEY)
+                .withModule(
+                    Wat2Wasm.parse(
+                        """
+                        (module
+                          (memory 1)
+                          (func (export "api.value") (result i32)
+                            (i32.const 42))
+                        )
+                        """
+                            .trimIndent()
+                    )
+                )
+                .build()
+
+        assertEquals(42L, plugin.call("api.value"))
+        assertEquals(ExecutionBackend.PULLEY, plugin.instance().executionBackend())
+    }
+
+    @Test
+    fun usesPlatformExecutionForJvmPluginModulesWithPreview1Imports() {
+        val witPackage =
+            WitPackage.parse(
+                """
+                package example:platform-preview1;
+
+                world plugin {
+                  export api;
+                }
+
+                interface api {
+                  value: func() -> u32;
+                }
+                """
+                    .trimIndent()
+            )
+
+        val plugin =
+            WasmPlugin.builder(witPackage)
+                .withModule(
+                    Wat2Wasm.parse(
+                        """
+                        (module
+                          (import "wasi_snapshot_preview1" "fd_write"
+                            (func ${'$'}fd_write (param i32 i32 i32 i32) (result i32)))
+                          (memory (export "memory") 1)
+                          (func (export "api.value") (result i32)
+                            (i32.const 42))
+                        )
+                        """
+                            .trimIndent()
+                    )
+                )
+                .withWasiPreview1(WasiPreview1.builder().build())
+                .build()
+
+        assertEquals(42L, plugin.call("api.value"))
+        assertEquals(ExecutionBackend.PULLEY, plugin.instance().executionBackend())
+    }
+
+    @Test
+    fun usesPlatformExecutionForPreview3PluginModulesWithPreview1BridgeImports() {
+        val witPackage =
+            WitPackage.parse(
+                """
+                package example:platform-preview3-bridge;
+
+                world plugin {
+                  export api;
+                }
+
+                interface api {
+                  value: func() -> u32;
+                }
+                """
+                    .trimIndent()
+            )
+
+        val plugin =
+            WasmPlugin.builder(witPackage)
+                .withModule(
+                    Wat2Wasm.parse(
+                        """
+                        (module
+                          (import "wasi_snapshot_preview1" "random_get"
+                            (func ${'$'}random_get (param i32 i32) (result i32)))
+                          (memory (export "memory") 1)
+                          (func (export "api.value") (result i32)
+                            (if
+                              (i32.ne
+                                (call ${'$'}random_get (i32.const 16) (i32.const 4))
+                                (i32.const 0))
+                              (then (return (i32.const 0))))
+                            (i32.const 77))
+                        )
+                        """
+                            .trimIndent()
+                    )
+                )
+                .withWasiPreview3(
+                    WasiPreview3.builder()
+                        .withSecureRandom(kotlin.random.Random(1234L))
+                        .build()
+                )
+                .build()
+
+        assertEquals(77L, plugin.call("api.value"))
+        assertEquals(ExecutionBackend.PULLEY, plugin.instance().executionBackend())
     }
 
     private fun ByteArray.containsBytes(needle: ByteArray): Boolean {
@@ -1140,122 +1049,6 @@ class WasmPluginTest {
     }
 
     @Test
-    fun runsCanonicalThreadNewIndirectThroughYieldThenResume() {
-        val witPackage =
-            WitPackage.parse(
-                """
-                package example:thread-yield-resume;
-
-                world plugin {
-                  export api;
-                }
-
-                interface api {
-                  run: func() -> u32;
-                }
-                """
-                    .trimIndent()
-            )
-        val plugin =
-            WasmPlugin.builder(witPackage)
-                .withModule(
-                    Wat2Wasm.parse(
-                        """
-                        (module
-                          (import "plugin" "thread.index"
-                            (func ${'$'}thread_index (result i32)))
-                          (import "plugin" "thread.new-indirect"
-                            (func ${'$'}thread_new_indirect (param i32 i32) (result i32)))
-                          (import "plugin" "thread.yield-then-resume"
-                            (func ${'$'}thread_yield_then_resume (param i32) (result i32)))
-                          (memory (export "memory") 1)
-                          (table 1 funcref)
-                          (elem (i32.const 0) ${'$'}worker)
-                          (func ${'$'}worker (param ${'$'}value i32)
-                            (i32.store
-                              (i32.const 32)
-                              (i32.add
-                                (local.get ${'$'}value)
-                                (call ${'$'}thread_index))))
-                          (func ${'$'}run (result i32)
-                            (local ${'$'}thread i32)
-                            (local.set ${'$'}thread
-                              (call ${'$'}thread_new_indirect
-                                (i32.const 0)
-                                (i32.const 40)))
-                            (if
-                              (i32.ne
-                                (call ${'$'}thread_yield_then_resume (local.get ${'$'}thread))
-                                (i32.const 0))
-                              (then (return (i32.const 90))))
-                            (i32.load (i32.const 32)))
-                          (export "api.run" (func ${'$'}run))
-                        )
-                        """
-                            .trimIndent()
-                    )
-                )
-                .build()
-
-        assertEquals(41L, plugin.call("api.run"))
-    }
-
-    @Test
-    fun enforcesConfiguredCanonicalThreadLimit() {
-        val witPackage =
-            WitPackage.parse(
-                """
-                package example:thread-limit;
-
-                world plugin {
-                  export api;
-                }
-
-                interface api {
-                  run: func() -> u32;
-                }
-                """
-                    .trimIndent()
-            )
-        val plugin =
-            WasmPlugin.builder(witPackage)
-                .withResourceBudget(parallelism = 1)
-                .withModule(
-                    Wat2Wasm.parse(
-                        """
-                        (module
-                          (import "plugin" "thread.new-indirect"
-                            (func ${'$'}thread_new_indirect (param i32 i32) (result i32)))
-                          (memory (export "memory") 1)
-                          (table 1 funcref)
-                          (elem (i32.const 0) ${'$'}worker)
-                          (func ${'$'}worker (param ${'$'}value i32))
-                          (func ${'$'}run (result i32)
-                            (drop
-                              (call ${'$'}thread_new_indirect
-                                (i32.const 0)
-                                (i32.const 40)))
-                            (drop
-                              (call ${'$'}thread_new_indirect
-                                (i32.const 0)
-                                (i32.const 41)))
-                            (i32.const 42))
-                          (export "api.run" (func ${'$'}run))
-                        )
-                        """
-                            .trimIndent()
-                    )
-                )
-                .build()
-
-        val error =
-            assertThrows(ComponentModelException::class.java) {
-                plugin.call("api.run")
-            }
-        assertTrue(error.message.orEmpty().contains("canonical thread limit exceeded"))
-    }
-
-    @Test
     fun enforcesConfiguredWaitableLimitForWaitableSets() {
         val witPackage =
             WitPackage.parse(
@@ -1299,95 +1092,6 @@ class WasmPluginTest {
                 plugin.call("api.run")
             }
         assertTrue(error.message.orEmpty().contains("waitable limit exceeded"))
-    }
-
-    @Test
-    fun resumesCanonicalThreadAfterSuspend() {
-        val witPackage =
-            WitPackage.parse(
-                """
-                package example:thread-suspend-resume;
-
-                world plugin {
-                  export api;
-                }
-
-                interface api {
-                  run: func() -> u32;
-                }
-                """
-                    .trimIndent()
-            )
-        val plugin =
-            WasmPlugin.builder(witPackage)
-                .withModule(
-                    Wat2Wasm.parse(
-                        """
-                        (module
-                          (import "plugin" "thread.new-indirect"
-                            (func ${'$'}thread_new_indirect (param i32 i32) (result i32)))
-                          (import "plugin" "thread.yield-then-resume"
-                            (func ${'$'}thread_yield_then_resume (param i32) (result i32)))
-                          (import "plugin" "thread.suspend"
-                            (func ${'$'}thread_suspend (result i32)))
-                          (memory (export "memory") 1)
-                          (table 1 funcref)
-                          (elem (i32.const 0) ${'$'}worker)
-                          (func ${'$'}worker (param ${'$'}value i32)
-                            (i32.store (i32.const 32) (local.get ${'$'}value))
-                            (if
-                              (i32.ne
-                                (call ${'$'}thread_suspend)
-                                (i32.const 0))
-                              (then
-                                (i32.store (i32.const 40) (i32.const 90))
-                                (return)))
-                            (i32.store
-                              (i32.const 36)
-                              (i32.add
-                                (local.get ${'$'}value)
-                                (i32.const 1))))
-                          (func ${'$'}run (result i32)
-                            (local ${'$'}thread i32)
-                            (local.set ${'$'}thread
-                              (call ${'$'}thread_new_indirect
-                                (i32.const 0)
-                                (i32.const 41)))
-                            (if
-                              (i32.ne
-                                (call ${'$'}thread_yield_then_resume (local.get ${'$'}thread))
-                                (i32.const 0))
-                              (then (return (i32.const 91))))
-                            (if
-                              (i32.ne
-                                (i32.load (i32.const 32))
-                                (i32.const 41))
-                              (then (return (i32.const 92))))
-                            (if
-                              (i32.ne
-                                (i32.load (i32.const 36))
-                                (i32.const 0))
-                              (then (return (i32.const 93))))
-                            (if
-                              (i32.ne
-                                (call ${'$'}thread_yield_then_resume (local.get ${'$'}thread))
-                                (i32.const 0))
-                              (then (return (i32.const 94))))
-                            (if
-                              (i32.ne
-                                (i32.load (i32.const 36))
-                                (i32.const 42))
-                              (then (return (i32.const 95))))
-                            (i32.const 42))
-                          (export "api.run" (func ${'$'}run))
-                        )
-                        """
-                            .trimIndent()
-                    )
-                )
-                .build()
-
-        assertEquals(42L, plugin.call("api.run"))
     }
 
     @Test

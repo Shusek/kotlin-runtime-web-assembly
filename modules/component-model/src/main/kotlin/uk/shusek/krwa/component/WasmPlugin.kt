@@ -1,17 +1,11 @@
 package uk.shusek.krwa.component
 
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import okio.Path
 import uk.shusek.krwa.runtime.ExecutionBackend
-import uk.shusek.krwa.runtime.ExecutionListener
 import uk.shusek.krwa.runtime.HostFunction
 import uk.shusek.krwa.runtime.ImportFunction
 import uk.shusek.krwa.runtime.ImportValues
 import uk.shusek.krwa.runtime.Instance
-import uk.shusek.krwa.runtime.Machine
 import uk.shusek.krwa.runtime.Memory
 import uk.shusek.krwa.runtime.WasmtimeExecutionConfig
 import uk.shusek.krwa.runtime.configureWasmtimeExecution
@@ -64,7 +58,6 @@ private constructor(
         private val asyncContexts = LinkedHashMap<Int, Int>()
         private val asyncTaskReturns = LinkedHashMap<String, AsyncTaskReturnSlot>()
         private val asyncLowerTasks = CanonicalAsyncLowerTasks()
-        private val threadScheduler = CanonicalThreadScheduler()
         private var canonicalFutureIntrinsics: CanonicalFutureIntrinsics? = null
         private var canonicalStreamIntrinsics: CanonicalStreamIntrinsics? = null
         private var preview1HostConfigured: Boolean = false
@@ -72,9 +65,7 @@ private constructor(
         private var worldName: String? = null
         private var module: WasmModule? = null
         private var component: WasmPluginUnbundledComponent? = null
-        private var executionListener: ExecutionListener? = null
         private var executionBackend: ExecutionBackend? = null
-        private var machineFactory: ((Instance) -> Machine)? = null
         private var maxMemoryPages: Int? = null
         private val rawHostFunctions = ArrayList<ImportFunction>()
 
@@ -96,12 +87,6 @@ private constructor(
 
         fun withModule(wasmPath: Path): Builder {
             return withModule(wasmPluginReadPathBytes(wasmPath))
-        }
-
-        @Deprecated("Platform execution cannot honor custom Kotlin machine factories.")
-        fun withMachineFactory(machineFactory: ((Instance) -> Machine)?): Builder {
-            this.machineFactory = machineFactory
-            return this
         }
 
         fun withExecutionBackend(backend: ExecutionBackend?): Builder {
@@ -166,27 +151,11 @@ private constructor(
             return this
         }
 
-        fun withCoroutineScope(scope: CoroutineScope): Builder {
-            threadScheduler.withCoroutineScope(scope)
-            return this
-        }
-
-        fun withCoroutineDispatcher(dispatcher: CoroutineDispatcher): Builder {
-            threadScheduler.withCoroutineDispatcher(dispatcher)
-            return this
-        }
-
-        @OptIn(ExperimentalCoroutinesApi::class)
         fun withResourceBudget(
             parallelism: Int,
             maxWaitables: Int = 2_048,
-            dispatcher: CoroutineDispatcher = Dispatchers.Default,
         ): Builder {
             val checkedParallelism = requireWasiPreview3Limit("parallelism", parallelism)
-            threadScheduler.withCoroutineDispatcher(
-                requireNotNull(dispatcher) { "dispatcher" }.limitedParallelism(checkedParallelism)
-            )
-            threadScheduler.withMaxCanonicalThreads(checkedParallelism)
             asyncLowerTasks.withMaxInFlightHostTasks(checkedParallelism)
             asyncLowerTasks.withMaxWaitables(maxWaitables)
             return this
@@ -223,8 +192,6 @@ private constructor(
         }
 
         fun withWasiPreview3(wasi: WasiPreview3): Builder {
-            threadScheduler.withCoroutineScope(wasi.hostCoroutineScope())
-            threadScheduler.withMaxCanonicalThreads(wasi.maxCanonicalThreads())
             asyncLowerTasks.withMaxWaitables(wasi.maxWaitables())
             asyncLowerTasks.withMaxInFlightHostTasks(wasi.maxInFlightHostTasks())
             wasi.install(this)
@@ -232,16 +199,6 @@ private constructor(
             return this
         }
 
-        /*
-         * This method is experimental and might be dropped without notice in future releases.
-         */
-        @Deprecated("Platform execution cannot honor instruction listeners.")
-        fun withUnsafeExecutionListener(listener: ExecutionListener): Builder {
-            executionListener = listener
-            return this
-        }
-
-        @Suppress("DEPRECATION")
         fun build(): WasmPlugin {
             val world = selectWorld()
             val selectedComponent = component
@@ -261,7 +218,6 @@ private constructor(
                 )
             }
             val instanceBuilder = Instance.builder(selectedModule).withImportValues(imports)
-            executionListener?.let { instanceBuilder.withUnsafeExecutionListener(it) }
             executionBackend?.let { instanceBuilder.withExecutionBackend(it) }
             maxMemoryPages?.let { maxPages ->
                 if (executionBackend == ExecutionBackend.NATIVE) {
@@ -273,9 +229,6 @@ private constructor(
                         currentConfig.copy(maxMemoryBytes = maxPages.toLong() * Memory.PAGE_SIZE.toLong()),
                     )
                 }
-            }
-            machineFactory?.let {
-                instanceBuilder.withMachineFactory(it)
             }
             val instance = instanceBuilder.build()
             runGuestInitializers(selectedModule, instance)
@@ -699,7 +652,6 @@ private constructor(
                         threadIntrinsic.hostFunction(
                             imported.module(),
                             imported.name(),
-                            threadScheduler,
                         )
                     )
                     existing.add(key)
@@ -2725,10 +2677,9 @@ private constructor(
             fun hostFunction(
                 moduleName: String,
                 symbolName: String,
-                scheduler: CanonicalThreadScheduler,
             ): HostFunction =
-                HostFunction(moduleName, symbolName, functionType()) { instance, args ->
-                    apply(instance, scheduler, args)
+                HostFunction(moduleName, symbolName, functionType()) { _, args ->
+                    apply(args)
                 }
 
             private fun functionType(): FunctionType =
@@ -2748,52 +2699,28 @@ private constructor(
                 }
 
             private fun apply(
-                instance: Instance,
-                scheduler: CanonicalThreadScheduler,
                 args: LongArray,
             ): LongArray =
                 when (kind) {
                     Kind.INDEX -> {
                         requireArity(args, 0)
-                        longArrayOf(scheduler.threadIndex())
-                    }
-                    Kind.NEW_INDIRECT -> {
-                        requireArity(args, 2)
-                        longArrayOf(scheduler.newIndirect(instance, toU32(args[0]), args[1]))
-                    }
-                    Kind.SPAWN_INDIRECT -> {
-                        requireArity(args, 2)
-                        longArrayOf(scheduler.spawnIndirect(instance, toU32(args[0]), args[1]))
-                    }
-                    Kind.RESUME_LATER -> {
-                        requireArity(args, 1)
-                        scheduler.resumeLater(toU32(args[0]))
-                        LongArray(0)
-                    }
-                    Kind.SUSPEND -> {
-                        requireArity(args, 0)
-                        longArrayOf(scheduler.suspendCurrent())
+                        longArrayOf(ROOT_THREAD_INDEX)
                     }
                     Kind.YIELD -> {
                         requireArity(args, 0)
-                        longArrayOf(scheduler.yield())
+                        longArrayOf(NOT_CANCELLED)
                     }
-                    Kind.SUSPEND_THEN_RESUME -> {
-                        requireArity(args, 1)
-                        longArrayOf(scheduler.suspendThenResume(toU32(args[0])))
-                    }
-                    Kind.YIELD_THEN_RESUME -> {
-                        requireArity(args, 1)
-                        longArrayOf(scheduler.yieldThenResume(toU32(args[0])))
-                    }
-                    Kind.SUSPEND_THEN_PROMOTE -> {
-                        requireArity(args, 1)
-                        longArrayOf(scheduler.suspendThenPromote(toU32(args[0])))
-                    }
-                    Kind.YIELD_THEN_PROMOTE -> {
-                        requireArity(args, 1)
-                        longArrayOf(scheduler.yieldThenPromote(toU32(args[0])))
-                    }
+                    Kind.NEW_INDIRECT,
+                    Kind.SPAWN_INDIRECT,
+                    Kind.RESUME_LATER,
+                    Kind.SUSPEND,
+                    Kind.SUSPEND_THEN_RESUME,
+                    Kind.YIELD_THEN_RESUME,
+                    Kind.SUSPEND_THEN_PROMOTE,
+                    Kind.YIELD_THEN_PROMOTE ->
+                        throw ComponentModelException(
+                            "canonical thread intrinsics require resumable execution, which is not supported by platform execution"
+                        )
                 }
 
             private fun requireArity(args: LongArray, expected: Int) {
@@ -2818,6 +2745,9 @@ private constructor(
             }
 
             companion object {
+                private const val ROOT_THREAD_INDEX: Long = 0L
+                private const val NOT_CANCELLED: Long = 0L
+
                 fun parse(symbolName: String): ThreadIntrinsic? =
                     when (symbolName) {
                         "[thread-index]", "thread.index" ->

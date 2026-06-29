@@ -4,7 +4,6 @@ import java.io.ByteArrayOutputStream
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.EnumMap
 import java.util.concurrent.TimeUnit
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -19,7 +18,6 @@ import uk.shusek.krwa.wasi.WasiOptions
 import uk.shusek.krwa.wasi.WasiPreview1
 import uk.shusek.krwa.wasm.Parser
 import uk.shusek.krwa.wasm.types.FunctionType
-import uk.shusek.krwa.wasm.types.OpCode
 import uk.shusek.krwa.wasm.types.ValType
 
 class KotlinWasmJsonSequenceTest {
@@ -37,7 +35,6 @@ class KotlinWasmJsonSequenceTest {
         val payload = generatedCatalogJsonPayload(targetBytes)
         val wasm = compileJsonSequenceGuest(tempDir)
         val host = JsonStreamHost(payload.bytes)
-        val opcodeProfiler = OpcodeProfiler()
         val instance = newJsonSequenceInstanceBuilder(wasm, host).build()
 
         val decodeWarmups = Integer.getInteger(BenchmarkWarmupsProperty, 0).coerceAtLeast(0)
@@ -48,14 +45,12 @@ class KotlinWasmJsonSequenceTest {
 
         val decodeHostNanos = LongArray(decodeRepetitions)
         val decodeGuestNanos = LongArray(decodeRepetitions)
-        opcodeProfiler.start("decode")
         repeat(decodeRepetitions) { repetition ->
             val decodeStarted = System.nanoTime()
             assertGuestSourceDecodeResult(instance, host, payload, targetBytes)
             decodeHostNanos[repetition] = System.nanoTime() - decodeStarted
             decodeGuestNanos[repetition] = host.reportedElapsedNanos
         }
-        val decodeProfile = opcodeProfiler.stop()
 
         val decodeElapsedNanos = decodeHostNanos.min()
         val decodeGuestElapsedNanos = decodeGuestNanos.min()
@@ -67,8 +62,7 @@ class KotlinWasmJsonSequenceTest {
                 formatSamples("decodeHostMsSamples", decodeHostNanos) +
                 formatSamples("decodeGuestMsSamples", decodeGuestNanos) +
                 formatAverage("decodeHostMsAvg", decodeHostNanos) +
-                formatAverage("decodeGuestMsAvg", decodeGuestNanos) +
-                decodeProfile.formatted()
+                formatAverage("decodeGuestMsAvg", decodeGuestNanos)
         )
     }
 
@@ -84,16 +78,13 @@ class KotlinWasmJsonSequenceTest {
         val payload = generatedCatalogJsonPayload(targetBytes)
         val wasm = compileJsonSequenceGuest(tempDir)
         val host = JsonStreamHost(payload.bytes)
-        val opcodeProfiler = OpcodeProfiler()
         val instance = newJsonSequenceInstanceBuilder(wasm, host).build()
 
-        opcodeProfiler.start("drain")
         val drainStarted = System.nanoTime()
         val drainedBytes = instance.export("run_drain_source").apply()[0]
         val drainElapsedNanos = System.nanoTime() - drainStarted
         val drainGuestElapsedNanos = host.reportedElapsedNanos
         val drainReads = host.readCalls
-        val drainProfile = opcodeProfiler.stop()
 
         assertEquals(payload.bytes.size.toLong(), drainedBytes)
         assertEquals(payload.bytes.size.toLong(), host.reportedPrimaryValue)
@@ -108,7 +99,6 @@ class KotlinWasmJsonSequenceTest {
         val decodeHostNanos = LongArray(decodeRepetitions)
         val decodeGuestNanos = LongArray(decodeRepetitions)
         val decodeReadCounts = IntArray(decodeRepetitions)
-        opcodeProfiler.start("decode")
         repeat(decodeRepetitions) { repetition ->
             val decodeStarted = System.nanoTime()
             assertDecodeResult(instance, host, payload)
@@ -116,7 +106,6 @@ class KotlinWasmJsonSequenceTest {
             decodeGuestNanos[repetition] = host.reportedElapsedNanos
             decodeReadCounts[repetition] = host.readCalls
         }
-        val decodeProfile = opcodeProfiler.stop()
 
         val decodeElapsedNanos = decodeHostNanos.min()
         val decodeGuestElapsedNanos = decodeGuestNanos.min()
@@ -132,9 +121,7 @@ class KotlinWasmJsonSequenceTest {
                 formatSamples("decodeHostMsSamples", decodeHostNanos) +
                 formatSamples("decodeGuestMsSamples", decodeGuestNanos) +
                 formatAverage("decodeHostMsAvg", decodeHostNanos) +
-                formatAverage("decodeGuestMsAvg", decodeGuestNanos) +
-                drainProfile.formatted() +
-                decodeProfile.formatted()
+                formatAverage("decodeGuestMsAvg", decodeGuestNanos)
         )
     }
 
@@ -379,7 +366,6 @@ private const val BenchmarkHostStreamEnabledProperty = "krwa.jsonSequenceHostStr
 private const val BenchmarkPayloadBytesProperty = "krwa.jsonSequenceBytes"
 private const val BenchmarkWarmupsProperty = "krwa.jsonSequenceBenchmarkWarmups"
 private const val BenchmarkRepetitionsProperty = "krwa.jsonSequenceBenchmarkRepetitions"
-private const val ProfileOpcodesProperty = "krwa.jsonSequenceProfileOpcodes"
 private const val DefaultBenchmarkPayloadBytes = 2 * 1024 * 1024
 
 private fun formatSamples(label: String, nanos: LongArray): String {
@@ -391,45 +377,3 @@ private fun formatAverage(label: String, nanos: LongArray): String {
     if (nanos.size <= 1) return ""
     return ", $label=${nanos.average().toLong() / 1_000_000}"
 }
-
-private class OpcodeProfiler {
-    private var phase: String? = null
-    private var counts = EnumMap<OpCode, Long>(OpCode::class.java)
-
-    fun start(phase: String) {
-        this.phase = phase
-        counts = EnumMap(OpCode::class.java)
-    }
-
-    fun stop(): OpcodeProfile {
-        val currentPhase = phase ?: return OpcodeProfile("", emptyList(), 0)
-        phase = null
-        val result = counts.entries
-            .map { OpcodeCount(it.key, it.value) }
-            .sortedByDescending { it.count }
-        return OpcodeProfile(currentPhase, result, result.sumOf { it.count })
-    }
-
-    fun onExecution(instruction: uk.shusek.krwa.wasm.types.Instruction, stack: uk.shusek.krwa.runtime.MStack) {
-        if (phase == null) return
-        val opcode = instruction.opcode()
-        counts[opcode] = (counts[opcode] ?: 0) + 1
-    }
-}
-
-private data class OpcodeProfile(
-    val phase: String,
-    val counts: List<OpcodeCount>,
-    val total: Long,
-) {
-    fun formatted(): String {
-        if (phase.isEmpty() || total == 0L) return ""
-        val top = counts.take(12).joinToString(", ") { "${it.opcode}=${it.count}" }
-        return ", ${phase}Instructions=$total, ${phase}TopOpcodes=[$top]"
-    }
-}
-
-private data class OpcodeCount(
-    val opcode: OpCode,
-    val count: Long,
-)

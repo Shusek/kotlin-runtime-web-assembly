@@ -19,9 +19,6 @@ nav = [
     ]},
     {"Execution" = [
         "execution/modes.md",
-        "execution/runtime-compiler.md",
-        "execution/build-time-compiler.md",
-        "execution/compiler-cache.md",
         "execution/cpu-limits.md",
     ]},
     {"WASI And Components" = [

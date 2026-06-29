@@ -1,9 +1,6 @@
 package uk.shusek.krwa.component
 
 import okio.Path
-import uk.shusek.krwa.runtime.Instance
-import uk.shusek.krwa.runtime.Machine
-import uk.shusek.krwa.wasm.WasmModule
 
 internal class WasmPluginUnbundledComponent(
     private val witBytes: ByteArray,
@@ -39,9 +36,5 @@ internal expect fun wasmPluginHostHandler(
     interfaceName: String,
     functionName: String,
 ): HostHandler?
-
-internal expect fun wasmPluginCompiledMachineFactory(
-    module: WasmModule,
-): ((Instance) -> Machine)?
 
 internal expect fun wasmPluginPlatformUnsupported(feature: String): Nothing

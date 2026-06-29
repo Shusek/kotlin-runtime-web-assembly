@@ -6,6 +6,4 @@ import uk.shusek.krwa.wasm.WasmParser
 object IosRuntimeSmoke {
     fun builderFor(bytes: ByteArray): Instance.Builder =
         Instance.builder(WasmParser.parse(bytes))
-            .withInitialize(false)
-            .withStart(false)
 }

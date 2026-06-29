@@ -7,7 +7,6 @@ apply(plugin = "org.jetbrains.kotlin.kapt")
 
 dependencies {
     add("implementation", libs.jmhCore)
-    add("implementation", krwa("compiler"))
     add("implementation", krwa("runtime"))
     add("implementation", krwa("wabt"))
     add("implementation", krwa("wasm"))

@@ -1,9 +1,6 @@
 package uk.shusek.krwa.component
 
 import okio.Path
-import uk.shusek.krwa.runtime.Instance
-import uk.shusek.krwa.runtime.Machine
-import uk.shusek.krwa.wasm.WasmModule
 
 internal actual fun wasmPluginReadPathBytes(path: Path): ByteArray =
     wasmPluginPlatformUnsupported("WasmPlugin path loading")
@@ -33,10 +30,6 @@ internal actual fun wasmPluginHostHandler(
     interfaceName: String,
     functionName: String,
 ): HostHandler? = null
-
-internal actual fun wasmPluginCompiledMachineFactory(
-    module: WasmModule,
-): ((Instance) -> Machine)? = null
 
 internal actual fun wasmPluginPlatformUnsupported(feature: String): Nothing {
     throw ComponentModelException("$feature is not available on iOS")

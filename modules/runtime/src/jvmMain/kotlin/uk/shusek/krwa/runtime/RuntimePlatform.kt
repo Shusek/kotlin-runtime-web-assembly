@@ -7,8 +7,6 @@ import uk.shusek.krwa.wasm.types.MemoryLimits
 internal actual object RuntimePlatform {
     actual fun defaultMemoryFactory(): (MemoryLimits) -> Memory = { limits -> ByteBufferMemory(limits) }
 
-    actual fun defaultMachineFactory(): (Instance) -> Machine = RuntimeDefaults.defaultMachineFactory()
-
     actual fun createPlatformExecution(
         module: WasmModule,
         imports: ImportValues,

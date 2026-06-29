@@ -4,10 +4,8 @@ KRWA requires a platform execution engine. JVM, Android, and iOS use the
 Wasmtime backend when it is linked; wasmJs uses the host browser or Node
 WebAssembly engine.
 
-The old JVM bytecode compiler paths are legacy surfaces and are not selected by
-`Instance.builder(module).build()`. Current JVM, Android, and iOS execution
-requires Wasmtime; current wasmJs execution requires the host WebAssembly
-engine.
+JVM, Android, and iOS execution requires Wasmtime; wasmJs execution requires
+the host WebAssembly engine.
 
 On `wasmJs`, `Instance.builder(module)` uses `ExecutionBackend.AUTO` by default
 and instantiates parsed modules with the native browser or Node WebAssembly

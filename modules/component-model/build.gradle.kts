@@ -35,7 +35,6 @@ val commonComponentModelSources =
         "CanonicalAsyncLowerTasks.kt",
         "CanonicalFutureIntrinsics.kt",
         "CanonicalStreamIntrinsics.kt",
-        "CanonicalThreadScheduler.kt",
         "ContextualHostHandler.kt",
         "HostHandler.kt",
         "RandomAdapters.kt",
@@ -215,7 +214,6 @@ tasks.withType<Test>().configureEach {
         "krwa.jsonSequenceBytes",
         "krwa.jsonSequenceBenchmarkWarmups",
         "krwa.jsonSequenceBenchmarkRepetitions",
-        "krwa.jsonSequenceProfileOpcodes",
     ).forEach { property ->
         providers.systemProperty(property).orNull?.let { value ->
             systemProperty(property, value)

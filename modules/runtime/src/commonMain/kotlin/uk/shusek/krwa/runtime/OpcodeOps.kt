@@ -16,7 +16,7 @@ import kotlin.math.sqrt
 import kotlin.math.withSign
 
 /**
- * Common opcode helper logic shared by interpreter and JVM compiler facade.
+ * Common opcode helper logic shared by constant evaluation and host import glue.
  *
  * Note about parameter ordering: because of the JVM's calling convention, the parameters to a
  * method are ordered such that the last value pushed is the last argument to the method, i.e.,

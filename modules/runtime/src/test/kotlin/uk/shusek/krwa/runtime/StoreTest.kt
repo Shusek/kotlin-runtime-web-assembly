@@ -122,7 +122,6 @@ class StoreTest {
         store.instantiate(name1) { imports ->
             Instance.builder(loadModule("compiled/exports.wat.wasm"))
                 .withImportValues(imports)
-                .withStart(false)
                 .build()
         }
 

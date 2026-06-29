@@ -1635,6 +1635,7 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
                 arena
         );
 
+        int functionImportIndex = 0;
         for (int i = 0; i < count; i++) {
             Import importValue = module.importSection().getImport(i);
             if (importValue.importType() != ExternalType.FUNCTION) {
@@ -1642,8 +1643,13 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
             }
             FunctionImport functionImport = (FunctionImport) importValue;
             FunctionType expectedType = module.typeSection().getType(functionImport.typeIndex());
-            ImportFunction hostFunction = findFunction(imports, importValue.module(), importValue.name());
-            if (hostFunction == null) {
+            ImportFunction hostFunction =
+                    functionImportIndex < imports.functionCount()
+                            ? imports.function(functionImportIndex++)
+                            : null;
+            if (hostFunction == null ||
+                    !hostFunction.module().equals(importValue.module()) ||
+                    !hostFunction.name().equals(importValue.name())) {
                 throw new UnlinkableException(
                         "unknown native import, could not find import named " +
                                 importValue.module() + "." + importValue.name()
@@ -1758,15 +1764,6 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
         } catch (Throwable ignored) {
             return MemorySegment.NULL;
         }
-    }
-
-    private static ImportFunction findFunction(ImportValues imports, String module, String name) {
-        for (ImportFunction function : imports.functions()) {
-            if (function.module().equals(module) && function.name().equals(name)) {
-                return function;
-            }
-        }
-        return null;
     }
 
     private static Map<String, FunctionExport> exportedFunctions(WasmModule module) {

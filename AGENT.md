@@ -2,8 +2,8 @@
 
 Kotlin Runtime Web Assembly (KRWA) is a Kotlin-first WebAssembly runtime and
 toolchain. The core `wasm` and `runtime` artifacts are Kotlin Multiplatform
-modules for JVM, iOS ARM, and web/wasm browser builds; compiler, tooling, test
-generation, and some integration layers remain JVM-specific.
+modules for JVM, iOS ARM, and web/wasm browser builds; tooling, test generation,
+and some integration layers remain JVM-specific.
 
 ## Prerequisites
 
@@ -36,17 +36,14 @@ dependencies:
 ```
 wasm-corpus (compiled Wasm fixtures and source corpus)
 wasm (parser, writer, validation-facing types)
-  <- runtime (interpreter, Instance, Store, Memory)
+  <- runtime (platform execution, Instance, Store, Memory)
        <- wasi (WASI Preview 1)
        <- component-model (WIT and canonical ABI support)
             <- wasi-preview3 (Kotlin-first WASI 0.3 facade)
-  <- compiler (JVM bytecode compiler)
-  <- simd (SIMD-capable machine)
 ```
 
 Other modules include `annotations`, `annotations:processor`,
-`build-time-compiler`, `codegen`, `dircache`, `wasm-tools`, `wabt`,
-`test-gen-lib`, and `wasi-test-gen`.
+`codegen`, `wasm-tools`, `wabt`, `test-gen-lib`, and `wasi-test-gen`.
 
 ## Building and testing a single module
 
@@ -63,8 +60,8 @@ only when an external consumer needs artifact coordinates:
 # Browser wasm compile and node-backed wasm tests
 ./gradlew --no-daemon :wasm:compileKotlinWasmJs :runtime:wasmJsNodeTest
 
-# Compiler tests
-./gradlew --no-daemon :compiler-tests:test
+# WASI tests
+./gradlew --no-daemon :wasi-tests:test
 ```
 
 The supported native/mobile/web target matrix is intentionally narrow:
@@ -73,7 +70,7 @@ The supported native/mobile/web target matrix is intentionally narrow:
 `wasmWasi` targets to the core artifacts unless the platform decision changes.
 The root build also registers `wasmJs { nodejs() }` for test execution only.
 
-## Spec tests (runtime-tests)
+## Spec tests
 
 The WebAssembly spec testsuite lives in `build/external-testsuites/wasm/`. WASI
 tests live in `build/external-testsuites/wasi/`. CI checks out fixed upstream
@@ -93,12 +90,6 @@ when an upstream test targets unsupported behavior.
 ### Running spec tests
 
 ```bash
-# Interpreter spec tests
-./gradlew --no-daemon :runtime-tests:test
-
-# Compiler spec tests
-./gradlew --no-daemon :compiler-tests:test
-
 # WASI tests
 ./gradlew --no-daemon :wasi-tests:test
 ```
@@ -106,16 +97,13 @@ when an upstream test targets unsupported behavior.
 ### Running a single test class
 
 ```bash
-./gradlew --no-daemon :runtime-tests:test --tests '*SpecV1GcStructTest'
+./gradlew --no-daemon :wasi-tests:test --tests '*FdWriteTest'
 ```
 
 ## Test modules
 
 | Module | What it tests |
 |---|---|
-| `runtime-tests` | Interpreter against the WebAssembly spec testsuite |
-| `compiler-tests` | JVM bytecode compiler against the spec testsuite |
-| `machine-tests` | Shared tests for both interpreter and compiler |
 | `wasi-tests` | WASI preview1 against the WASI testsuite |
 
 ## Code style
@@ -135,16 +123,11 @@ when an upstream test targets unsupported behavior.
 
 ### `runtime` module
 - `Instance` - module instantiation, imports, exports, and runtime state
-- `InterpreterMachine` - opcode interpreter and execution loop
 - `Store` - cross-module linking
 - `ImportFunction` - imported function representation with type validation
 - `ConstantEvaluators` - constant expression evaluation
 - `WasmStruct`, `WasmArray`, `WasmI31Ref` - GC object types
 - `internal/GcRefStore` - auto-keyed store for Wasm GC references
-
-### `compiler` module
-- `MachineFactoryCompiler` - entry point for the JVM bytecode compiler
-- `internal/Compiler` - translates Wasm opcodes to JVM bytecode
 
 ### `wasi` module
 - `WasiPreview1` - WASI Preview 1 host function implementations
@@ -154,8 +137,7 @@ when an upstream test targets unsupported behavior.
 ## Performance considerations
 
 - Types should NOT add computation at runtime. Subtyping checks and type lookups should be pre-computed or cached where feasible.
-- The hot path in the interpreter (`InterpreterMachine`) must remain fast — avoid per-opcode type section lookups when they can be resolved at validation time.
-- The validator enriches instruction operands with type hints (e.g., source heap type for `ref.test`/`ref.cast`/`br_on_cast`) so the interpreter can dispatch without guessing.
+- The validator enriches instruction operands with type hints (e.g., source heap type for `ref.test`/`ref.cast`/`br_on_cast`) so runtime helper paths do not need to guess.
 
 ## Specification references
 

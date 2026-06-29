@@ -22,6 +22,7 @@ import org.junit.jupiter.api.io.TempDir
 import uk.shusek.krwa.corpus.CorpusResources
 import uk.shusek.krwa.runtime.ByteArrayMemory
 import uk.shusek.krwa.runtime.HostFunction
+import uk.shusek.krwa.runtime.ImportMemory
 import uk.shusek.krwa.runtime.ImportValues
 import uk.shusek.krwa.runtime.Instance
 import uk.shusek.krwa.runtime.Store
@@ -33,6 +34,7 @@ import uk.shusek.krwa.wasi.WasiOptions
 import uk.shusek.krwa.wasi.WasiPreview1
 import uk.shusek.krwa.wasi.WasiRights
 import uk.shusek.krwa.wasm.Parser
+import uk.shusek.krwa.wasm.UnlinkableException
 import uk.shusek.krwa.wasm.WasmModule
 import uk.shusek.krwa.wasm.types.FunctionType
 import uk.shusek.krwa.wasm.types.MemoryLimits
@@ -332,7 +334,7 @@ class WasiPreview1Test {
     }
 
     @Test
-    fun shouldUseDynamicallyLinkedJavyModules() {
+    fun shouldRejectDynamicallyLinkedJavyModulesWithImportedMemory() {
         val stdin = ByteArrayInputStream("".toByteArray(UTF_8))
         val stdout = ByteArrayOutputStream()
         val stderr = ByteArrayOutputStream()
@@ -350,12 +352,23 @@ class WasiPreview1Test {
 
         val store = Store()
         store.register("javy_quickjs_provider_v1", quickjs)
+        store.addMemory(
+            ImportMemory(
+                "javy_quickjs_provider_v1",
+                "memory",
+                ByteArrayMemory(MemoryLimits(1)),
+            )
+        )
 
-        Instance.builder(loadModule("compiled/hello-world.js.javy-dynamic.wasm"))
-            .withImportValues(store.toImportValues())
-            .build()
+        val exception =
+            assertThrows(UnlinkableException::class.java) {
+                Instance.builder(loadModule("compiled/hello-world.js.javy-dynamic.wasm"))
+                    .withImportValues(store.toImportValues())
+                    .build()
+            }
 
-        assertEquals("Hello world dynamic Javy!\n", String(stderr.toByteArray(), UTF_8))
+        assertTrue(exception.message!!.contains("function imports only"))
+        assertEquals("", String(stderr.toByteArray(), UTF_8))
     }
 
     @Test
@@ -437,7 +450,7 @@ class WasiPreview1Test {
                 .build()
 
         val module = loadModule("compiled/calculator.swift.wasm")
-        val instance = Instance.builder(module).withImportValues(imports).withStart(false).build()
+        val instance = Instance.builder(module).withImportValues(imports).build()
 
         val result = instance.exports().function("run").apply(2L, 3L)[0].toInt()
 

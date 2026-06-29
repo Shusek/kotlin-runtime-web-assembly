@@ -55,8 +55,6 @@ page covers parsing, instantiation, exports, and memory.
   limits.
 - [CPU limits](execution/cpu-limits.md): timeouts, Wasmtime resource limits,
   and host-side accounting.
-- [Compiler cache](execution/compiler-cache.md): legacy JVM bytecode cache
-  handling.
 - [Tools](guides/tools.md): WAT parsing, validation, and local integration
   helpers.
 - [Logging](guides/logging.md): the lightweight logger facade and JVM backend.

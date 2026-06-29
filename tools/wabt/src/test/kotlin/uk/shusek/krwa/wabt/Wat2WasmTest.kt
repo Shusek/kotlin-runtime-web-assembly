@@ -34,7 +34,6 @@ class Wat2WasmTest {
                         )
                     )
                 )
-                .withInitialize(true)
                 .build()
 
         val addFunction = moduleInstance.export("add")

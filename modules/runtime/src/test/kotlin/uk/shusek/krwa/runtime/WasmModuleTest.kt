@@ -19,6 +19,7 @@ import uk.shusek.krwa.corpus.CorpusResources
 import uk.shusek.krwa.wasm.InvalidException
 import uk.shusek.krwa.wasm.Parser
 import uk.shusek.krwa.wasm.UninstantiableException
+import uk.shusek.krwa.wasm.UnlinkableException
 import uk.shusek.krwa.wasm.WasmEngineException
 import uk.shusek.krwa.wasm.WasmModule
 import uk.shusek.krwa.wasm.types.CatchOpCode
@@ -366,9 +367,7 @@ class WasmModuleTest {
     @Test
     fun shouldTrapOnUnreachable() {
         val instanceBuilder = Instance.builder(loadModule("compiled/trap.wat.wasm"))
-        val uninstantiable =
-            assertThrows(UninstantiableException::class.java) { instanceBuilder.build() }
-        assertInstanceOf(TrapException::class.java, uninstantiable.cause)
+        assertThrows(TrapException::class.java) { instanceBuilder.build() }
     }
 
     @Test
@@ -397,24 +396,19 @@ class WasmModuleTest {
 
     @Test
     fun shouldSupportMemoryLimitsOverride() {
-        val instance =
-            Instance.builder(loadModule("compiled/count_vowels.rs.wasm"))
-                .withMemoryLimits(MemoryLimits(17, 17))
-                .build()
-        assertThrows(TrapException::class.java) {
-            instance.export("alloc").apply(Memory.PAGE_SIZE.toLong())
-        }
-    }
-
-    @Test
-    fun shouldRejectMemoryFactoryOverrideWhenPlatformExecutionIsRequired() {
-        val exception =
-            assertThrows(WasmEngineException::class.java) {
-                Instance.builder(loadModule("compiled/count_vowels.rs.wasm"))
-                    .withMemoryFactory { limits -> ByteBufferMemory(limits) }
-                    .build()
+        val module = loadModule("compiled/count_vowels.rs.wasm")
+        configureWasmtimeExecution(
+            module,
+            WasmtimeExecutionConfig(maxMemoryBytes = 17L * Memory.PAGE_SIZE),
+        )
+        try {
+            val instance = Instance.builder(module).build()
+            assertThrows(TrapException::class.java) {
+                instance.export("alloc").apply(Memory.PAGE_SIZE.toLong())
             }
-        assertTrue(exception.message!!.contains("cannot honor custom builder options"))
+        } finally {
+            clearWasmtimeExecution(module)
+        }
     }
 
     @Test
@@ -446,13 +440,7 @@ class WasmModuleTest {
 
     @Test
     fun shouldBuildWithRuntimeDefaults() {
-        val instance =
-            Instance.Builder.create(
-                    loadModule("compiled/memory.wat.wasm"),
-                    RuntimeDefaults.defaultMemoryFactory(),
-                    RuntimeDefaults.defaultMachineFactory(),
-                )
-                .build()
+        val instance = Instance.builder(loadModule("compiled/memory.wat.wasm")).build()
 
         assertEquals(ExecutionBackend.PULLEY, instance.executionBackend())
         assertEquals(42L, instance.export("run32").apply(42)[0])
@@ -533,14 +521,14 @@ class WasmModuleTest {
 
         val hostImports =
             ImportValues.builder().addFunction(cbrtFunc, logFunc).addMemory(memory).build()
-        val instance =
-            Instance.builder(loadModule("compiled/mixed-imports.wat.wasm"))
-                .withImportValues(hostImports)
-                .build()
-
-        val run = instance.export("main")
-        run.apply()
-        assertEquals("1: 164", logResult.get())
+        val exception =
+            assertThrows(UnlinkableException::class.java) {
+                Instance.builder(loadModule("compiled/mixed-imports.wat.wasm"))
+                    .withImportValues(hostImports)
+                    .build()
+            }
+        assertTrue(exception.message!!.contains("function imports only"))
+        assertEquals(null, logResult.get())
     }
 
     @Test
@@ -565,30 +553,6 @@ class WasmModuleTest {
 
         val main = instance.export("main")
         assertEquals(4L, main.apply()[0])
-    }
-
-    @Test
-    @Suppress("DEPRECATION")
-    fun shouldRejectUnsafeExecutionListenerWhenPlatformExecutionIsRequired() {
-        val exception =
-            assertThrows(WasmEngineException::class.java) {
-                Instance.builder(loadModule("compiled/iterfact.wat.wasm"))
-                    .withUnsafeExecutionListener { _, _ -> }
-                    .build()
-            }
-        assertTrue(exception.message!!.contains("cannot honor custom builder options"))
-    }
-
-    @Test
-    @Suppress("DEPRECATION")
-    fun shouldRejectCustomMachineFactoryWhenPlatformExecutionIsRequired() {
-        val exception =
-            assertThrows(WasmEngineException::class.java) {
-                Instance.builder(loadModule("compiled/fac.wat.wasm"))
-                    .withMachineFactory { Machine { _, _ -> LongArray(0) } }
-                    .build()
-            }
-        assertTrue(exception.message!!.contains("cannot honor custom builder options"))
     }
 
     @Test
@@ -648,8 +612,8 @@ class WasmModuleTest {
                 .withImportValues(imports)
                 .build()
 
-        instance.exports().function("log").apply()
-        instance.exports().function("log-alias").apply()
+        instance.exports().function("log").apply(0)
+        instance.exports().function("log-alias").apply(0)
         assertTrue(logged1.get())
         assertFalse(logged2.get())
         assertEquals(2, instance.imports().functionCount())
@@ -735,17 +699,13 @@ class WasmModuleTest {
                 .addTag(tagI32)
                 .build()
 
-        val instance =
-            Instance.builder(loadModule("compiled/alias-imports3.wat.wasm"))
-                .withImportValues(imports)
-                .build()
-
-        assertEquals(123L, instance.imports().global(0).instance().value)
-        assertEquals(124L, instance.imports().global(1).instance().value)
-        assertEquals(ValType.FuncRef, instance.imports().table(0).table().elementType())
-        assertEquals(ValType.ExternRef, instance.imports().table(1).table().elementType())
-        assertEquals(0, instance.imports().tag(0).tag().tagType().typeIdx())
-        assertEquals(1, instance.imports().tag(1).tag().tagType().typeIdx())
+        val exception =
+            assertThrows(UnlinkableException::class.java) {
+                Instance.builder(loadModule("compiled/alias-imports3.wat.wasm"))
+                    .withImportValues(imports)
+                    .build()
+            }
+        assertTrue(exception.message!!.contains("function imports only"))
     }
 
     @Test
@@ -926,34 +886,10 @@ class WasmModuleTest {
 
         // {params: []uint64{1000_000_000, 0}, expResults: []uint64{0, 1000_000_000}},
         // original test: too slow takes > 1 minute
-        val result = function.apply(1000_000)
+        val result = function.apply(1000_000, 0)
 
         assertEquals(0, result[0])
         assertEquals(1000_000, result[1])
-    }
-
-    @Test
-    fun shouldRejectGlobalFactoryOverrideWhenPlatformExecutionIsRequired() {
-        val exception =
-            assertThrows(WasmEngineException::class.java) {
-                Instance.builder(loadModule("compiled/globals.wat.wasm"))
-                    .withGlobalFactory { value, highValue, type, mutability ->
-                        GlobalInstance(value, highValue, type, mutability)
-                    }
-                    .build()
-            }
-        assertTrue(exception.message!!.contains("cannot honor custom builder options"))
-    }
-
-    @Test
-    fun shouldRejectTableFactoryOverrideWhenPlatformExecutionIsRequired() {
-        val exception =
-            assertThrows(WasmEngineException::class.java) {
-                Instance.builder(loadModule("compiled/exports.wat.wasm"))
-                    .withTableFactory { table, initValue -> TableInstance(table, initValue) }
-                    .build()
-            }
-        assertTrue(exception.message!!.contains("cannot honor custom builder options"))
     }
 
     @Test
@@ -976,19 +912,17 @@ class WasmModuleTest {
                 )
                 .build()
 
-        Instance.builder(Parser.parse(importedTableInitializerModule()))
-            .withImportValues(imports)
-            .build()
-
-        val result = tableOwner.exports().function("call-7").apply()
-        assertEquals(67L, result[0])
+        val exception =
+            assertThrows(UnlinkableException::class.java) {
+                Instance.builder(Parser.parse(importedTableInitializerModule()))
+                    .withImportValues(imports)
+                    .build()
+            }
+        assertTrue(exception.message!!.contains("function imports only"))
     }
 
     @Test
     fun testExternrefHandling() {
-        val testObject = Any()
-        val sideTable = HashMap<Long, Any>()
-
         val imports =
             ImportValues.builder()
                 .addFunction(
@@ -996,10 +930,7 @@ class WasmModuleTest {
                         "env",
                         "get_host_object",
                         FunctionType.of(emptyList(), listOf(ValType.ExternRef)),
-                        WasmFunctionHandle { _, _ ->
-                            sideTable[123L] = testObject
-                            longArrayOf(123L)
-                        },
+                        WasmFunctionHandle { _, _ -> longArrayOf(123L) },
                     )
                 )
                 .addFunction(
@@ -1007,39 +938,17 @@ class WasmModuleTest {
                         "env",
                         "is_null",
                         FunctionType.of(listOf(ValType.ExternRef), listOf(ValType.I32)),
-                        WasmFunctionHandle { _, args ->
-                            val key = args[0]
-                            if (sideTable[key] == null) {
-                                longArrayOf(1)
-                            } else {
-                                longArrayOf(0)
-                            }
-                        },
+                        WasmFunctionHandle { _, args -> longArrayOf(if (args[0] == 0L) 1 else 0) },
                     )
                 )
                 .build()
-        val instance =
-            Instance.builder(loadModule("compiled/externref-example.wat.wasm"))
-                .withImportValues(imports)
-                .build()
-
-        val roundTrip = instance.exports().function("process_externref").apply(123L)[0]
-        assertEquals(123L, roundTrip)
-
-        // object has not been created yet
-        val isNull1 = instance.exports().function("is_null").apply(123L)[0]
-        assertEquals(1L, isNull1)
-
-        // now we create the test object
-        val ref = instance.exports().function("get_host_object").apply()[0]
-        assertEquals(123L, ref)
-
-        val isNull2 = instance.exports().function("is_null").apply(123L)[0]
-        assertEquals(0L, isNull2)
-
-        // verify against a reference that doesn't exist
-        val isNull3 = instance.exports().function("is_null").apply(1L)[0]
-        assertEquals(1L, isNull3)
+        val exception =
+            assertThrows(WasmEngineException::class.java) {
+                Instance.builder(loadModule("compiled/externref-example.wat.wasm"))
+                    .withImportValues(imports)
+                    .build()
+            }
+        assertTrue(exception.message!!.contains("numeric host boundary values only"))
     }
 
     @Test
@@ -1056,8 +965,7 @@ class WasmModuleTest {
                 .withImportValues(ImportValues.builder().addFunction(func).build())
                 .build()
         val logIt = instance.export("logIt")
-        val exception = assertThrows(WasmEngineException::class.java) { logIt.apply() }
-        assertEquals("call stack exhausted", exception.message)
+        assertThrows(StackOverflowError::class.java) { logIt.apply() }
     }
 
     companion object {

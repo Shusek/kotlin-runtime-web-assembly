@@ -50,7 +50,6 @@ class WasmToolsTest {
                         )
                     )
                 )
-                .withInitialize(true)
                 .build()
 
         val addFunction = moduleInstance.export("add")

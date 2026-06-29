@@ -35,23 +35,12 @@ val instance = Instance.builder(module)
     .build()
 ```
 
-`withMemoryLimits(...)` overrides the first memory defined by the module during
-instantiation. Imported memories are supplied by the host, so the host must
-apply any limits before passing them to the guest. If a module uses multiple
-memories, validate the module shape or use a custom `withMemoryFactory(...)`
-policy that rejects limits your host is not prepared to provide.
+`withMemoryLimits(...)` overrides the first memory defined by the module when
+the platform backend supports host-provided memory limits. Imported memories are
+supplied by the host, so the host must apply any limits before passing them to
+the guest. If a module uses multiple memories, validate the module shape before
+instantiation and reject layouts your host is not prepared to provide.
 
-The JVM default memory implementation is `ByteBufferMemory`. `ByteArrayMemory`
-is also available on the JVM and can be useful for specific workloads:
-
-```kotlin
-import uk.shusek.krwa.runtime.ByteArrayMemory
-
-val instance = Instance.builder(module)
-    .withMemoryFactory { limits -> ByteArrayMemory(limits) }
-    .build()
-```
-
-Select a custom JVM memory factory only after benchmarking the host and guest
-you care about. Portable targets use the common `PortableMemory`
-implementation.
+Runtime memory objects are owned by the active platform engine. On JVM, Android,
+and iOS this means the linked Wasmtime backend; on `wasmJs` this means the
+browser or Node WebAssembly engine.

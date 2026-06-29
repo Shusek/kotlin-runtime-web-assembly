@@ -74,8 +74,6 @@ class Cli : Runnable {
             }
         val instance =
             Instance.builder(module)
-                .withInitialize(true)
-                .withStart(false)
                 .withImportValues(imports)
                 .build()
 

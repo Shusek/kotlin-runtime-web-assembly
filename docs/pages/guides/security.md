@@ -9,8 +9,7 @@ with host process privileges. Treat every import as part of the security model.
 - validate pointers, lengths, handles, enum values, and resource identifiers,
 - enforce CPU or wall-clock limits outside the core runtime,
 - set memory limits appropriate for the workload,
-- keep filesystem preopens narrow and capability-based,
-- protect runtime compiler cache directories.
+- keep filesystem preopens narrow and capability-based.
 
 Network, filesystem, clock, and random capabilities should be configured
 explicitly. Avoid "default everything" host setups for plugins from outside the
@@ -27,8 +26,7 @@ For untrusted modules:
 - run execution on a worker that can be cancelled or interrupted,
 - use [CPU limits](../execution/cpu-limits.md) instead of relying on guest
   cooperation,
-- cap memory with `MemoryLimits` and bounded host allocation protocols,
-- keep compiler cache directories private to the host application.
+- cap memory with `MemoryLimits` and bounded host allocation protocols.
 
 ## Host Function Checklist
 

@@ -3,13 +3,10 @@ package uk.shusek.krwa.gradle
 import java.io.File
 import org.gradle.api.Project
 import org.gradle.api.artifacts.VersionCatalogsExtension
-import org.gradle.api.file.ConfigurableFileCollection
-import org.gradle.api.file.RegularFile
 import org.gradle.api.plugins.BasePluginExtension
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
-import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Copy
 import org.gradle.api.tasks.JavaExec
 import org.gradle.api.tasks.SourceSetContainer
@@ -34,24 +31,14 @@ val krwaModuleByArtifact =
     mapOf(
         "annotations" to ":annotations:annotations",
         "annotations-processor" to ":annotations:processor",
-        "build-time-compiler" to ":build-time-compiler",
-        "build-time-compiler-cli-experimental" to ":build-time-compiler-cli",
         "cli-experimental" to ":cli",
         "codegen" to ":codegen",
-        "compiler" to ":compiler",
-        "compiler-tests" to ":compiler-tests",
         "component-model-gradle-plugin" to ":component-model-gradle-plugin",
         "component-model" to ":component-model",
-        "dircache-experimental" to ":dircache",
-        "fuzz" to ":fuzz",
         "jmh" to ":jmh",
         "log" to ":log",
-        "machine-tests" to ":machine-tests",
-        "nightly-testsuite" to ":nightly-testsuite",
         "runtime" to ":runtime",
         "runtime-wasmtime-android" to ":runtime-wasmtime-android",
-        "runtime-tests" to ":runtime-tests",
-        "simd" to ":simd",
         "test-gen-lib" to ":test-gen-lib",
         "wabt" to ":wabt",
         "wasi" to ":wasi",
@@ -520,137 +507,3 @@ fun Project.registerWasiSpecTests() {
         dependsOn(generateTask)
     }
 }
-
-fun Project.registerKrwaCompile(
-    taskName: String,
-    generatedType: String,
-    wasmFile: Provider<RegularFile>,
-    sourceSetName: String = "main",
-    moduleInterface: String? = null,
-    interpretedFunctions: List<Int> = emptyList(),
-    interpreterFallback: String? = null,
-    dependsOnTasks: List<Any> = emptyList(),
-    skipWhenWasmMissing: Boolean = false,
-) {
-    val generatedSourceDir = layout.buildDirectory.dir("generated/sources/krwaCompiler/$taskName")
-    val generatedClassDir = layout.buildDirectory.dir("generated/classes/krwaCompiler/$taskName")
-    val generatedResourceDir = layout.buildDirectory.dir("generated/resources/krwaCompiler/$taskName")
-    val compilerRuntimeClasspath =
-        rootProject.project(":build-time-compiler-cli").mainSourceSet().runtimeClasspath
-
-    val cleanMissingInputTask =
-        if (skipWhenWasmMissing) {
-            tasks.register("${taskName}CleanMissingInput") {
-                onlyIf {
-                    !wasmFile.get().asFile.isFile
-                }
-                doLast {
-                    project.delete(
-                        generatedSourceDir.get().asFile,
-                        generatedClassDir.get().asFile,
-                        generatedResourceDir.get().asFile,
-                    )
-                }
-            }
-        } else {
-            null
-        }
-
-    val generateTask =
-        tasks.register<JavaExec>(taskName) {
-            dependsOn(":build-time-compiler-cli:classes")
-            dependsOn(dependsOnTasks)
-            cleanMissingInputTask?.let { dependsOn(it) }
-            inputs.file(wasmFile).optional(skipWhenWasmMissing)
-            outputs.dir(generatedSourceDir)
-            outputs.dir(generatedClassDir)
-            outputs.dir(generatedResourceDir)
-            onlyIf {
-                !skipWhenWasmMissing || wasmFile.get().asFile.isFile
-            }
-            classpath = compilerRuntimeClasspath
-            mainClass.set("uk.shusek.krwa.experimental.compiler.cli.Cli")
-            doFirst {
-                project.delete(
-                    generatedSourceDir.get().asFile,
-                    generatedClassDir.get().asFile,
-                    generatedResourceDir.get().asFile,
-                )
-                val cliArgs =
-                    mutableListOf(
-                        wasmFile.get().asFile.absolutePath,
-                        "--prefix",
-                        generatedType,
-                        "--source-dir",
-                        generatedSourceDir.get().asFile.absolutePath,
-                        "--class-dir",
-                        generatedClassDir.get().asFile.absolutePath,
-                        "--wasm-dir",
-                        generatedResourceDir.get().asFile.absolutePath,
-                    )
-                if (interpretedFunctions.isNotEmpty()) {
-                    cliArgs.add("--interpreted-functions")
-                    cliArgs.add(interpretedFunctions.joinToString(","))
-                }
-                if (interpreterFallback != null) {
-                    cliArgs.add("--interpreter-fallback")
-                    cliArgs.add(interpreterFallback)
-                }
-                if (moduleInterface != null) {
-                    cliArgs.add("--module-interface")
-                    cliArgs.add(moduleInterface)
-                }
-                setArgs(cliArgs)
-            }
-        }
-
-    val sourceSet = extensions.getByType<SourceSetContainer>().named(sourceSetName).get()
-    addKotlinSource(sourceSetName, files(generatedSourceDir).builtBy(generateTask))
-    (sourceSet.output.classesDirs as ConfigurableFileCollection)
-        .from(files(generatedClassDir).builtBy(generateTask))
-    sourceSet.output.dir(mapOf("builtBy" to generateTask), generatedClassDir)
-    sourceSet.output.dir(mapOf("builtBy" to generateTask), generatedResourceDir)
-    if (sourceSetName == "main") {
-        tasks.matching { it.name == "sourcesJar" }.configureEach {
-            dependsOn(generateTask)
-        }
-    }
-
-    tasks.named<JavaCompile>(sourceSet.compileJavaTaskName) {
-        dependsOn(generateTask)
-        classpath += files(generatedClassDir)
-        val moduleInfo = layout.projectDirectory.file("src/main/java/module-info.java").asFile
-        if (sourceSetName == "main" && moduleInfo.isFile) {
-            @Suppress("UNCHECKED_CAST")
-            val patchModuleDirs =
-                project.extensions.extraProperties["mainPatchModuleDirs"]
-                    as ConfigurableFileCollection
-            patchModuleDirs.from(generatedClassDir)
-        }
-    }
-    tasks.named<KotlinJvmCompile>(if (sourceSetName == "main") "compileKotlin" else "compileTestKotlin") {
-        dependsOn(generateTask)
-        libraries.from(files(generatedClassDir))
-    }
-}
-
-fun Project.registerKrwaCompile(
-    taskName: String,
-    generatedType: String,
-    wasmFile: RegularFile,
-    sourceSetName: String = "main",
-    moduleInterface: String? = null,
-    interpretedFunctions: List<Int> = emptyList(),
-    dependsOnTasks: List<Any> = emptyList(),
-    skipWhenWasmMissing: Boolean = false,
-) =
-    registerKrwaCompile(
-        taskName = taskName,
-        generatedType = generatedType,
-        wasmFile = providers.provider { wasmFile },
-        sourceSetName = sourceSetName,
-        moduleInterface = moduleInterface,
-        interpretedFunctions = interpretedFunctions,
-        dependsOnTasks = dependsOnTasks,
-        skipWhenWasmMissing = skipWhenWasmMissing,
-    )

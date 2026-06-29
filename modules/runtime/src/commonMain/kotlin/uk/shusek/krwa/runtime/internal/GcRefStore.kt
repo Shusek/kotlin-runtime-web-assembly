@@ -1,8 +1,6 @@
 package uk.shusek.krwa.runtime.internal
 
 import uk.shusek.krwa.runtime.Instance
-import uk.shusek.krwa.runtime.MStack
-import uk.shusek.krwa.runtime.StackFrame
 import uk.shusek.krwa.runtime.WasmArray
 import uk.shusek.krwa.runtime.WasmGcRef
 import uk.shusek.krwa.runtime.WasmStruct
@@ -49,37 +47,17 @@ open class GcRefStore(private val instance: Instance) {
         // remove live refs and make resumed code crash on struct/array access.
     }
 
-    fun safePoint(stack: MStack, callStack: ArrayDeque<StackFrame>) {
-        if (!sweepRequested) {
-            return
-        }
-        sweep(stack, callStack)
-        allocsSinceLastSweep = 0
-        sweepRequested = false
-    }
-
-    private fun sweep(stack: MStack, callStack: ArrayDeque<StackFrame>) {
+    private fun sweep() {
         val reachable = mutableSetOf<Int>()
 
-        // 1. Scan operand stack and locals.
-        val stackValues = stack.array()
-        for (i in 0 until stack.size()) {
-            markIfGcRef(stackValues[i], reachable)
-        }
-        for (frame in callStack) {
-            for (i in 0 until frame.localSlotCount()) {
-                markIfGcRef(frame.localSlot(i), reachable)
-            }
-        }
-
-        // 2. Scan globals.
+        // 1. Scan globals.
         val globalCount = instance.globalCount()
         for (i in 0 until globalCount) {
             val global = instance.global(i)
             markIfGcRef(global.valueLow, reachable)
         }
 
-        // 3. Scan tables.
+        // 2. Scan tables.
         val tableCount = instance.tableCount()
         for (i in 0 until tableCount) {
             val table = instance.table(i)
@@ -88,7 +66,7 @@ open class GcRefStore(private val instance: Instance) {
             }
         }
 
-        // 4. Remove unreachable entries.
+        // 3. Remove unreachable entries.
         for (index in refs.indices) {
             if (!reachable.contains(ID_OFFSET + index)) {
                 refs[index] = null
