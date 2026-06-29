@@ -50,8 +50,8 @@ jobs:
             "https://github.com/bytecodealliance/wasmtime/releases/download/v${version}/wasmtime-v${version}-x86_64-linux-c-api.tar.xz"
           mkdir -p "$root"
           tar -xJf "$archive" -C "$root"
-          library="$(find "$root" -type f -name 'libwasmtime.so' | head -n 1)"
-          test -n "$library"
+          library="$root/wasmtime-v${version}-x86_64-linux-c-api/lib/libwasmtime.so"
+          test -f "$library"
           echo "KRWA_WASMTIME_LIBRARY=$library" >> "$GITHUB_ENV"
 
       - name: Verify Component Model Gradle plugin
