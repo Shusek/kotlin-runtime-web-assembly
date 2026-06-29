@@ -8,6 +8,7 @@ import org.gradle.testkit.runner.GradleRunner
 import org.gradle.testkit.runner.TaskOutcome
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import uk.shusek.krwa.tools.wasm.Wat2Wasm
@@ -15,6 +16,16 @@ import uk.shusek.krwa.tools.wasm.Wat2Wasm
 class KrwaComponentModelPluginTest {
     @TempDir
     lateinit var tempDir: java.nio.file.Path
+
+    @BeforeEach
+    fun configureNestedGradleHeap() {
+        tempDir.resolve("gradle.properties").writeText(
+            """
+            org.gradle.jvmargs=-Xmx2g -Dfile.encoding=UTF-8
+            org.gradle.daemon=false
+            """.trimIndent(),
+        )
+    }
 
     @Test
     fun `lists KRWA tasks under KRWA task group`() {
