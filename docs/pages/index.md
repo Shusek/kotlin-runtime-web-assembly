@@ -1,11 +1,12 @@
 # Kotlin Runtime Web Assembly
 
-Kotlin Runtime Web Assembly is a Kotlin-first WebAssembly runtime for running
-plugins without JNI, native runtimes, or JSON-only plugin boundaries.
+Kotlin Runtime Web Assembly is a Kotlin-first WebAssembly runtime and component
+toolchain for running plugins without JSON-only plugin boundaries.
 
 The main artifacts are Kotlin Multiplatform libraries. Portable modules target
-JVM, iOS ARM, and Kotlin/Wasm browser builds. JVM artifacts are compiled for
-Java 25.
+JVM, Android, iOS ARM, and Kotlin/Wasm browser builds. JVM, Android, and iOS
+execution require a linked Wasmtime backend; wasmJs uses the host browser or
+Node WebAssembly engine. JVM artifacts are compiled for Java 25.
 
 ## Project Status
 

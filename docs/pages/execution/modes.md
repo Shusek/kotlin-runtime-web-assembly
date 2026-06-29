@@ -85,26 +85,26 @@ not return a `PlatformInstanceExecution` with `ExecutionBackend.PULLEY`, so a
 broken Android or iOS native binding fails at the backend boundary instead of
 silently falling through to another engine.
 
-Host imports are supplied with `NativeWasmImports`. Exported native memories,
-globals, tables, and exception tags are available as `NativeWasmMemory`,
-`NativeWasmGlobal`, `NativeWasmTable`, and `NativeWasmTag`; `NativeWasmMemory`
-implements the runtime `Memory` API for read/write access from Kotlin/Wasm code,
-including native shared-memory atomics when the browser or Node environment
-enables them. `NativeWasmTag` uses the host `WebAssembly.Tag` API for exception
-handling modules; host callbacks can throw an imported tag with
-`NativeWasmTag.throwException(instance, ...)` and let native Wasm `catch` blocks
-handle it. Reference values use the raw `Long` call surface: store JavaScript values with
-`NativeWasmInstance.storeReference`
-before passing them as `externref`, `anyref`, or `funcref`, and call
-`referenceValue` to recover a returned reference handle. Function reference
-tables and globals are mapped to the JS API's `anyfunc` descriptor.
-Existing `ImportFunction` values can be reused with
-`NativeWasmImports.fromImportValues`, including imports backed by exports from
-another `Instance`; shared memories, globals, tables, and tags should be
+On wasmJs, host imports are supplied with `NativeWasmImports`. Exported native
+memories, globals, tables, and exception tags are available as
+`NativeWasmMemory`, `NativeWasmGlobal`, `NativeWasmTable`, and `NativeWasmTag`;
+`NativeWasmMemory` implements the runtime `Memory` API for read/write access
+from Kotlin/Wasm code, including native shared-memory atomics when the browser or
+Node environment enables them. `NativeWasmTag` uses the host `WebAssembly.Tag`
+API for exception handling modules; host callbacks can throw an imported tag
+with `NativeWasmTag.throwException(instance, ...)` and let native Wasm `catch`
+blocks handle it. Reference values use the raw `Long` call surface: store
+JavaScript values with `NativeWasmInstance.storeReference` before passing them as
+`externref`, `anyref`, or `funcref`, and call `referenceValue` to recover a
+returned reference handle. Function reference tables and globals are mapped to
+the JS API's `anyfunc` descriptor. Existing `ImportFunction` values can be reused
+with `NativeWasmImports.fromImportValues`, including imports backed by exports
+from another `Instance`; shared memories, globals, tables, and tags should be
 provided with the native wrapper types because they are owned by the host
 WebAssembly engine.
 
-Use `NativeWasmFeatures` before selecting this path in browser code:
+Use `NativeWasmFeatures` before relying on host-dependent browser or Node
+features:
 
 ```kotlin
 if (
@@ -112,9 +112,7 @@ if (
         NativeWasmFeatures.supportsValueType(ValType.I64) &&
         (!needsThreads || NativeWasmFeatures.supportsSharedMemory())
 ) {
-    Instance.builder(module)
-        .withExecutionBackend(ExecutionBackend.NATIVE)
-        .build()
+    val instance = Instance.builder(module).build()
 }
 ```
 
@@ -131,8 +129,9 @@ module, but JS-exported or imported functions should not expose `v128`.
   on `wasmJs`.
 - Use explicit `ExecutionBackend.PULLEY` only when an embedder wants to require
   the Wasmtime provider boundary and fail if it is not linked.
-- Use explicit `ExecutionBackend.NATIVE` only on `wasmJs` when browser or Node
-  engine execution is mandatory.
+- Do not expose a backend selector on `wasmJs`; `AUTO` already means the browser
+  or Node WebAssembly engine. Use `WasmJsExecution` only for wasmJs-specific
+  native wrappers.
 
 For untrusted modules, pair platform execution with explicit
 [CPU limits](cpu-limits.md), memory limits, and narrow host capabilities.

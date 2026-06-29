@@ -28,13 +28,11 @@ contracts.
   coroutine-readable readiness on Ktor-backed socket runtimes. Stream handoff covers stdio,
   filesystem, HTTP body/trailer handoff, TCP receive/send/listen canonical
   stream intrinsics, and typed host-side streams.
-- Preview 3 canonical thread intrinsics are wired for coroutine scheduling:
-  `thread.index`, `thread.new-indirect`, `thread.spawn-indirect`,
-  `thread.resume-later`, `thread.yield`, `thread.suspend`, and the
-  yield/suspend resume-or-promote variants can drive table function targets.
-  Continuation capture is not part of the required platform execution path, so
-  guests that depend on stackful `thread.suspend` need an explicit Wasmtime
-  bridge implementation.
+- Preview 3 canonical thread intrinsics are intentionally minimal on the
+  required platform execution path. `thread.index` and `thread.yield` are
+  available for stackless hosts; stackful thread creation, suspend, resume, and
+  continuation-capture intrinsics are rejected because KRWA no longer ships an
+  alternate execution engine or coroutine stack scheduler.
 
 WASI 0.2 is Component Model based: plugin boundaries should be described with WIT and lifted/lowered through the canonical ABI instead of ad-hoc JSON payloads. Kotlin Runtime Web Assembly now provides:
 
@@ -74,10 +72,9 @@ WASI 0.2 is Component Model based: plugin boundaries should be described with WI
   wait bridge. Blocked canonical future and stream read/write calls are
   recorded as waitables too, so waitable sets can deliver `future-read`,
   `future-write`, `stream-read`, and `stream-write` progress events.
-  The runtime also recognizes canonical thread imports and schedules stackless
-  table-function threads through Kotlin coroutines. JVM Ktor/CIO, iOS Ktor
-  network, wasmJs Ktor HTTP, and wasmJs Node-backed TCP connect/listen remain
-  suspend-driven. Preview 3 `wasi:http/client.send` uses that
+  Canonical thread imports are limited to stackless platform execution. JVM
+  Ktor/CIO, iOS Ktor network, wasmJs Ktor HTTP, and wasmJs Node-backed TCP
+  connect/listen remain suspend-driven. Preview 3 `wasi:http/client.send` uses that
   suspendable path and completes the returned response future from a coroutine
   for clients such as `KtorWasiHttpClient`; Preview 3 `tcp-socket.connect`
   does the same with `KtorSocketRuntime`, returning a pending future/subtask

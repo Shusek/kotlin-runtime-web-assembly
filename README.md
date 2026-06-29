@@ -1,9 +1,11 @@
 # Kotlin Runtime Web Assembly
 
-Kotlin Runtime Web Assembly is a Kotlin-first WebAssembly runtime for running
-plugins without JNI, native runtimes, or JSON-only plugin boundaries. The main
-Kotlin Multiplatform artifacts target JVM, iOS ARM, and Kotlin/Wasm browser
-builds. JVM variants are compiled for Java 25.
+Kotlin Runtime Web Assembly is a Kotlin-first WebAssembly runtime and component
+toolchain for running plugins without JSON-only plugin boundaries. The main
+Kotlin Multiplatform artifacts target JVM, Android, iOS ARM, and Kotlin/Wasm
+browser builds. JVM, Android, and iOS execution require a linked Wasmtime
+backend; wasmJs execution uses the host browser or Node WebAssembly engine. JVM
+variants are compiled for Java 25.
 
 ## Project Status
 
@@ -129,15 +131,15 @@ tags with `NativeWasmTag.throwException`. Reference values such as `externref`,
 `NativeWasmInstance.storeReference` and `referenceValue` to bridge those handles
 to real JavaScript values. Function reference tables and globals use the
 host-compatible `anyfunc` descriptor under the hood. `NativeWasmFeatures`
-reports host support for the native engine, shared memories, exception tags,
-value types, and table element types before an application selects that fast
-path. `NativeWasmImports.fromImportValues` can reuse existing `ImportFunction`
+reports host support for shared memories, exception tags, value types, and table
+element types before an application relies on those host features.
+`NativeWasmImports.fromImportValues` can reuse existing `ImportFunction`
 handles, including functions exported by another `Instance`, while
 memory/global/table/tag imports still need the native wrapper types when they
-must be shared with the browser engine. Browser filesystem access,
-raw TCP/UDP sockets, and blocking delay must be supplied by the application when
-a WASI workload needs those capabilities. Node-backed wasmJs environments also
-have suspend TCP connect and listen paths; wasmJs UDP remains unavailable.
+must be shared with the browser engine. Browser filesystem access, raw TCP/UDP
+sockets, and blocking delay must be supplied by the application when a WASI
+workload needs those capabilities. Node-backed wasmJs environments also have
+suspend TCP connect and listen paths; wasmJs UDP remains unavailable.
 
 ## Resource Budgets
 

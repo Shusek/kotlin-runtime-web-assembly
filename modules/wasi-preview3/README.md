@@ -103,11 +103,9 @@ handles; the facade is the Kotlin-friendly layer for first-party users. When a
 canonical future or stream read/write blocks, KRWA tracks that operation as a
 P3 waitable so `waitable-set.poll` and `waitable-set.wait` can observe progress
 through the corresponding future/stream event. Canonical thread imports are
-also available for coroutine-scheduled work (`thread.index`, `thread.new-indirect`,
-`thread.spawn-indirect`, `thread.resume-later`, `thread.yield`, `thread.suspend`,
-and resume/promote variants). Continuation capture is not part of the required
-platform execution path, so guests that depend on stackful `thread.suspend` need
-an explicit Wasmtime bridge implementation.
+minimal on the required platform execution path: `thread.index` and
+`thread.yield` are available for stackless hosts, while stackful thread creation,
+suspend, resume, and continuation-capture intrinsics are rejected.
 JVM and iOS provide Ktor-backed default socket runtimes. wasmJs provides
 Ktor-backed HTTP and suspend TCP connect/listen paths for Node-backed
 environments; browser raw sockets, wasmJs UDP, and the default browser

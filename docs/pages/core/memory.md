@@ -26,20 +26,22 @@ WebAssembly memory is measured in 64 KiB pages. `MemoryLimits` stores the
 initial and maximum page counts, with the WebAssembly maximum capped at 65536
 pages.
 
-```kotlin
-import uk.shusek.krwa.runtime.Instance
-import uk.shusek.krwa.wasm.types.MemoryLimits
+For JVM, Android, and iOS, set Wasmtime store limits before instantiation:
 
-val instance = Instance.builder(module)
-    .withMemoryLimits(MemoryLimits(initial = 1, maximum = 256))
-    .build()
+```kotlin
+configureWasmtimeExecution(
+    module,
+    WasmtimeExecutionConfig(maxMemoryBytes = 64L * 1024L * 1024L),
+)
 ```
 
-`withMemoryLimits(...)` overrides the first memory defined by the module when
-the platform backend supports host-provided memory limits. Imported memories are
-supplied by the host, so the host must apply any limits before passing them to
-the guest. If a module uses multiple memories, validate the module shape before
-instantiation and reject layouts your host is not prepared to provide.
+`withMemoryLimits(...)` is still available for targets that can apply a
+host-provided cap to a module's first defined memory, such as the wasmJs native
+path, and for host-created/imported memory objects. It is not a replacement for
+Wasmtime store limits. Imported memories are supplied by the host, so the host
+must apply any limits before passing them to the guest. If a module uses multiple
+memories, validate the module shape before instantiation and reject layouts your
+host is not prepared to provide.
 
 Runtime memory objects are owned by the active platform engine. On JVM, Android,
 and iOS this means the linked Wasmtime backend; on `wasmJs` this means the

@@ -18,15 +18,17 @@ application trust boundary.
 ## What Wasm Does Not Provide
 
 The sandbox does not automatically limit CPU time, host memory allocations,
-compiler work, filesystem access granted through WASI, or side effects inside
-host functions. Those policies belong to the embedding application.
+Wasmtime compilation/instantiation work, filesystem access granted through WASI,
+or side effects inside host functions. Those policies belong to the embedding
+application.
 
 For untrusted modules:
 
 - run execution on a worker that can be cancelled or interrupted,
 - use [CPU limits](../execution/cpu-limits.md) instead of relying on guest
   cooperation,
-- cap memory with `MemoryLimits` and bounded host allocation protocols.
+- cap memory with `WasmtimeExecutionConfig`, target-specific engine limits, and
+  bounded host allocation protocols.
 
 ## Host Function Checklist
 

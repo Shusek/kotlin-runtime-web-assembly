@@ -60,6 +60,20 @@ The iOS target set is ARM-only: `iosArm64` for devices and `iosSimulatorArm64`
 for Apple Silicon simulators. The web target is Kotlin/Wasm browser
 (`wasmJs { browser() }`), not classic Kotlin/JS.
 
+## Runtime Engines
+
+KRWA no longer ships a Kotlin fallback execution engine. JVM, Android, and iOS
+execution require a Wasmtime-backed platform engine. On desktop JVM, the built-in
+FFM bridge loads the Wasmtime C API from `krwa.wasmtime.library`,
+`KRWA_WASMTIME_LIBRARY`, or common system library locations and requires JVM
+native access. Android and iOS embedders should link and install their platform
+Wasmtime provider before instantiating modules.
+
+The wasmJs target does not need a backend selector: `Instance.builder(module)`
+uses the browser or Node `WebAssembly` engine through `ExecutionBackend.AUTO`.
+Use the wasmJs-only `WasmJsExecution` facade only when host code needs native
+wrapper objects for globals, tables, tags, or shared imports.
+
 ## Local Checkout
 
 For local changes that are not committed yet, keep this repository checked out

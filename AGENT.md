@@ -10,6 +10,8 @@ and some integration layers remain JVM-specific.
 - Java 25 for the normal Gradle build and CI configuration
 - Gradle via `./gradlew`
 - Node.js and npm for Kotlin/Wasm browser artifacts and wasm node-based tests
+- Wasmtime linked for JVM/Android/iOS execution tests; wasmJs uses the host
+  browser or Node WebAssembly engine
 
 ## Key build commands
 
@@ -61,7 +63,7 @@ only when an external consumer needs artifact coordinates:
 ./gradlew --no-daemon :wasm:compileKotlinWasmJs :runtime:wasmJsNodeTest
 
 # WASI tests
-./gradlew --no-daemon :wasi-tests:test
+./gradlew --no-daemon :wasi:jvmTest
 ```
 
 The supported native/mobile/web target matrix is intentionally narrow:
@@ -70,41 +72,24 @@ The supported native/mobile/web target matrix is intentionally narrow:
 `wasmWasi` targets to the core artifacts unless the platform decision changes.
 The root build also registers `wasmJs { nodejs() }` for test execution only.
 
-## Spec tests
+## Focused integration tests
 
-The WebAssembly spec testsuite lives in `build/external-testsuites/wasm/`. WASI
-tests live in `build/external-testsuites/wasi/`. CI checks out fixed upstream
-refs before running the Gradle tests. Local runs need those directories present
-when exercising generated spec tests.
-
-### Adding a new spec test
-
-1. Update the relevant generated-test configuration under
-   `testing/*/src/test-gen`.
-2. Run the affected Gradle test task.
-3. Check generated approval output when the change updates expected behavior.
-
-Individual spec cases can be excluded in the same generated-test configuration
-when an upstream test targets unsupported behavior.
-
-### Running spec tests
-
-```bash
-# WASI tests
-./gradlew --no-daemon :wasi-tests:test
-```
+The old generated spec-test modules have been removed. Use the focused platform
+suites for the surface you changed.
 
 ### Running a single test class
 
 ```bash
-./gradlew --no-daemon :wasi-tests:test --tests '*FdWriteTest'
+./gradlew --no-daemon :wasi:jvmTest --tests '*WasiPreview1Test'
 ```
 
 ## Test modules
 
 | Module | What it tests |
 |---|---|
-| `wasi-tests` | WASI preview1 against the WASI testsuite |
+| `runtime:jvmTest` | Core platform execution, imports, exports, memory, traps |
+| `wasi:jvmTest` | WASI Preview 1 host behavior |
+| `component-model:jvmTest` | WIT, canonical ABI, WASI Preview 2/3, plugin loading |
 
 ## Code style
 
