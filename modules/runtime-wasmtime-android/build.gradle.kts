@@ -35,10 +35,24 @@ val krwaWasmtimeP3BridgeAndroidJniLib =
     layout.projectDirectory.file("src/androidMain/jniLibs/arm64-v8a/libkrwa_wasmtime_p3_bridge.so")
 val krwaWasmtimeP3AndroidJniLib =
     layout.projectDirectory.file("src/androidMain/jniLibs/arm64-v8a/libkrwa_wasmtime_p3_android.so")
+val androidJniLibs =
+    listOf(
+        wasmtimePulleyAndroidJniLib,
+        krwaPulleyAndroidJniLib,
+        krwaWasmtimeP3BridgeAndroidJniLib,
+        krwaWasmtimeP3AndroidJniLib,
+    )
 val wasmtimeP3BridgeDirectory = project(":runtime").layout.projectDirectory.dir("src/wasmtime-p3-bridge")
 val wasmtimeP3BridgeAndroidTargetDirectory = layout.buildDirectory.dir("wasmtime-p3-bridge-android/target")
 val androidNdkVersion = libs.versions.android.ndk.get()
 val androidMinSdk = libs.versions.android.minSdk.get().toInt()
+val android16KbPageSize = 16 * 1024
+val android16KbElfLinkerFlags =
+    listOf(
+        "-Wl,-z,max-page-size=$android16KbPageSize",
+        "-Wl,-z,common-page-size=$android16KbPageSize",
+    )
+val android16KbElfRustFlags = android16KbElfLinkerFlags.joinToString(" ") { flag -> "-C link-arg=$flag" }
 
 fun androidSdkDirectory(): File {
     val sdkPath = System.getenv("ANDROID_HOME")?.takeIf(String::isNotBlank)
@@ -153,6 +167,33 @@ fun sha256(file: File): String {
     return digest.digest().joinToString("") { byte -> "%02x".format(byte) }
 }
 
+fun androidLlvmObjdumpExecutable(): File {
+    val executableName = if (System.getProperty("os.name").lowercase().contains("windows")) {
+        "llvm-objdump.exe"
+    } else {
+        "llvm-objdump"
+    }
+    return androidNdkDirectory()
+        .resolve("toolchains/llvm/prebuilt/${androidNdkHostTag()}/bin")
+        .resolve(executableName)
+}
+
+fun elfLoadSegmentAlignments(file: File, llvmObjdump: File): List<Int> {
+    val process =
+        ProcessBuilder(llvmObjdump.absolutePath, "-p", file.absolutePath)
+            .redirectErrorStream(true)
+            .start()
+    val output = process.inputStream.bufferedReader().use { reader -> reader.readText() }
+    val exitCode = process.waitFor()
+    check(exitCode == 0) {
+        "Failed to inspect ${file.invariantSeparatorsPath} with ${llvmObjdump.invariantSeparatorsPath}: $output"
+    }
+    return Regex("""LOAD.* align 2\*\*(\d+)""")
+        .findAll(output)
+        .map { match -> 1 shl match.groupValues[1].toInt() }
+        .toList()
+}
+
 val downloadWasmtimePulleyAndroidJniLib by tasks.registering {
     description = "Downloads the Wasmtime Pulley Android C API shared library for arm64-v8a."
     inputs.property("wasmtimePulleyVersion", wasmtimePulleyVersion)
@@ -241,6 +282,7 @@ val buildKrwaPulleyAndroidJniLib by tasks.registering {
                 "-Wall",
                 "-Wextra",
                 "-static-libstdc++",
+                *android16KbElfLinkerFlags.toTypedArray(),
                 source.absolutePath,
                 "-o",
                 output.absolutePath,
@@ -262,6 +304,7 @@ val buildKrwaWasmtimeP3BridgeAndroidJniLib by tasks.registering {
     dependsOn(project(":runtime").tasks.named("prepareWasmtimePulleyIosSource"))
     inputs.property("androidNdkVersion", androidNdkVersion)
     inputs.property("androidMinSdk", androidMinSdk)
+    inputs.property("android16KbElfRustFlags", android16KbElfRustFlags)
     inputs.files(
         fileTree(wasmtimeP3BridgeDirectory) {
             include("Cargo.toml", "Cargo.lock", "src/**/*.rs")
@@ -297,6 +340,7 @@ val buildKrwaWasmtimeP3BridgeAndroidJniLib by tasks.registering {
                     "AR_aarch64_linux_android" to ar.absolutePath,
                     "CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER" to clang.absolutePath,
                     "CARGO_TARGET_AARCH64_LINUX_ANDROID_AR" to ar.absolutePath,
+                    "CARGO_TARGET_AARCH64_LINUX_ANDROID_RUSTFLAGS" to android16KbElfRustFlags,
                 )
         rustup?.let { rustupBinary ->
             runProcess(
@@ -362,6 +406,7 @@ val buildKrwaWasmtimeP3AndroidJniLib by tasks.registering {
                 "-Wall",
                 "-Wextra",
                 "-static-libstdc++",
+                *android16KbElfLinkerFlags.toTypedArray(),
                 source.absolutePath,
                 "-o",
                 output.absolutePath,
@@ -385,6 +430,53 @@ tasks.matching { task ->
     dependsOn(buildKrwaPulleyAndroidJniLib)
     dependsOn(buildKrwaWasmtimeP3BridgeAndroidJniLib)
     dependsOn(buildKrwaWasmtimeP3AndroidJniLib)
+}
+
+val verifyAndroidJniLib16KbAlignment by tasks.registering {
+    description = "Verifies Android JNI libraries use at least 16 KB ELF LOAD segment alignment."
+    dependsOn(downloadWasmtimePulleyAndroidJniLib)
+    dependsOn(buildKrwaPulleyAndroidJniLib)
+    dependsOn(buildKrwaWasmtimeP3BridgeAndroidJniLib)
+    dependsOn(buildKrwaWasmtimeP3AndroidJniLib)
+    inputs.property("androidNdkVersion", androidNdkVersion)
+    inputs.property("androidMinLoadSegmentAlignment", android16KbPageSize)
+    inputs.files(androidJniLibs)
+
+    doLast {
+        val llvmObjdump = androidLlvmObjdumpExecutable()
+        check(llvmObjdump.isFile) {
+            "Expected Android NDK llvm-objdump at ${llvmObjdump.invariantSeparatorsPath}."
+        }
+
+        val failures =
+            androidJniLibs.flatMap { jniLib ->
+                val file = jniLib.asFile
+                check(file.isFile) {
+                    "Expected Android JNI library at ${file.invariantSeparatorsPath}."
+                }
+                val alignments = elfLoadSegmentAlignments(file, llvmObjdump)
+                check(alignments.isNotEmpty()) {
+                    "No ELF LOAD segments found in ${file.invariantSeparatorsPath}."
+                }
+                alignments
+                    .filter { alignment -> alignment < android16KbPageSize }
+                    .map { alignment ->
+                        "${file.name}: LOAD align $alignment bytes; expected at least $android16KbPageSize"
+                    }
+            }
+
+        check(failures.isEmpty()) {
+            "Android JNI libraries must support 16 KB page sizes:\n" + failures.joinToString("\n")
+        }
+    }
+}
+
+tasks.named("check") {
+    dependsOn(verifyAndroidJniLib16KbAlignment)
+}
+
+tasks.matching { task -> task.name == "bundleAndroidMainAar" }.configureEach {
+    dependsOn(verifyAndroidJniLib16KbAlignment)
 }
 
 kotlin {
