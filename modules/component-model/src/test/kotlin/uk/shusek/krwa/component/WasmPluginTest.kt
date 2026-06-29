@@ -26,13 +26,13 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import uk.shusek.krwa.runtime.ExecutionBackend
-import uk.shusek.krwa.runtime.InterpreterMachine
 import uk.shusek.krwa.runtime.Instance
 import uk.shusek.krwa.runtime.isAvailable
 import uk.shusek.krwa.tools.wasm.Wat2Wasm
 import uk.shusek.krwa.wasi.WasiPreview1
 import uk.shusek.krwa.wasi.WasiOptions
 import uk.shusek.krwa.wasm.Parser
+import uk.shusek.krwa.wasm.WasmEngineException
 
 class WasmPluginTest {
     @TempDir lateinit var tempDir: Path
@@ -113,7 +113,7 @@ class WasmPluginTest {
                     .build()
 
             assertEquals(42L, plugin.call("api.value"))
-            assertFalse(plugin.instance().getMachine() is InterpreterMachine)
+            assertEquals(ExecutionBackend.PULLEY, plugin.instance().executionBackend())
         } finally {
             if (previous == null) {
                 System.clearProperty("krwa.component.compiler")
@@ -217,7 +217,7 @@ class WasmPluginTest {
                     .build()
 
             assertEquals(42L, plugin.call("api.value"))
-            assertFalse(plugin.instance().getMachine() is InterpreterMachine)
+            assertEquals(ExecutionBackend.PULLEY, plugin.instance().executionBackend())
         } finally {
             if (previous == null) {
                 System.clearProperty("krwa.component.compiler")
@@ -277,7 +277,7 @@ class WasmPluginTest {
                     .build()
 
             assertEquals(77L, plugin.call("api.value"))
-            assertFalse(plugin.instance().getMachine() is InterpreterMachine)
+            assertEquals(ExecutionBackend.PULLEY, plugin.instance().executionBackend())
         } finally {
             if (previous == null) {
                 System.clearProperty("krwa.component.compiler")
@@ -288,7 +288,8 @@ class WasmPluginTest {
     }
 
     @Test
-    fun builderCanAttachUnsafeExecutionListenerToPluginInstance() {
+    @Suppress("DEPRECATION")
+    fun builderRejectsUnsafeExecutionListenerForPlatformExecution() {
         val previous = System.getProperty("krwa.component.compiler")
         try {
             System.setProperty("krwa.component.compiler", "false")
@@ -307,29 +308,27 @@ class WasmPluginTest {
                     """
                         .trimIndent()
                 )
-            var instructions = 0
-
-            val plugin =
-                WasmPlugin.builder(witPackage)
-                    .withModule(
-                        Wat2Wasm.parse(
-                            """
-                            (module
-                              (memory (export "memory") 1)
-                              (func (export "api.value") (result i32)
-                                (i32.const 40)
-                                (i32.const 2)
-                                (i32.add))
+            val exception =
+                assertThrows(WasmEngineException::class.java) {
+                    WasmPlugin.builder(witPackage)
+                        .withModule(
+                            Wat2Wasm.parse(
+                                """
+                                (module
+                                  (memory (export "memory") 1)
+                                  (func (export "api.value") (result i32)
+                                    (i32.const 40)
+                                    (i32.const 2)
+                                    (i32.add))
+                                )
+                                """
+                                    .trimIndent()
                             )
-                            """
-                                .trimIndent()
                         )
-                    )
-                    .withUnsafeExecutionListener { _, _ -> instructions += 1 }
-                    .build()
-
-            assertEquals(42L, plugin.call("api.value"))
-            assertTrue(instructions > 0)
+                        .withUnsafeExecutionListener { _, _ -> }
+                        .build()
+                }
+            assertTrue(exception.message!!.contains("cannot honor custom builder options"))
         } finally {
             if (previous == null) {
                 System.clearProperty("krwa.component.compiler")

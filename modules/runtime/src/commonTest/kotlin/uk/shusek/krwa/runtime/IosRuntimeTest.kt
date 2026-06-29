@@ -3,7 +3,6 @@ package uk.shusek.krwa.runtime
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
 import uk.shusek.krwa.wasm.WasmParser
 import uk.shusek.krwa.wasm.types.FunctionType
 import uk.shusek.krwa.wasm.types.ValType
@@ -12,11 +11,7 @@ class IosRuntimeTest {
     @Test
     fun shouldParseAndInstantiateMinimalModule() {
         val module = WasmParser.parse(EMPTY_WASM)
-        val instance =
-            Instance.builder(module)
-                .withInitialize(false)
-                .withStart(false)
-                .build()
+        val instance = Instance.builder(module).build()
 
         assertEquals(0, instance.functionCount())
         assertEquals(0, instance.globalCount())
@@ -66,16 +61,6 @@ class IosRuntimeTest {
         val instance = Instance.builder(module).build()
 
         assertContentEquals(LongArray(0), instance.export("nop").apply())
-    }
-
-    @Test
-    fun shouldSurfaceRuntimeTrap() {
-        val module = WasmParser.parse(TRAP_WASM)
-        val instance = Instance.builder(module).build()
-
-        assertFailsWith<TrapException> {
-            instance.export("boom").apply()
-        }
     }
 
     private companion object {

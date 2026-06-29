@@ -2,12 +2,8 @@ package uk.shusek.krwa.component
 
 import java.io.IOException
 import java.io.UncheckedIOException
-import java.util.concurrent.ConcurrentHashMap
 import okio.FileSystem
 import okio.Path
-import uk.shusek.krwa.compiler.Cache
-import uk.shusek.krwa.compiler.InterpreterFallback
-import uk.shusek.krwa.compiler.MachineFactoryCompiler
 import uk.shusek.krwa.runtime.Instance
 import uk.shusek.krwa.runtime.Machine
 import uk.shusek.krwa.wasm.WasmModule
@@ -50,23 +46,7 @@ internal actual fun wasmPluginHostHandler(
 
 internal actual fun wasmPluginCompiledMachineFactory(
     module: WasmModule,
-): ((Instance) -> Machine)? {
-    if (!componentCompilerEnabled()) {
-        return null
-    }
-    return try {
-        MachineFactoryCompiler.builder(module)
-            .withCache(ComponentMachineCache)
-            .withInterpreterFallback(InterpreterFallback.SILENT)
-            .compile()
-    } catch (e: Exception) {
-        traceCompilerFallback(e)
-        null
-    } catch (e: LinkageError) {
-        traceCompilerFallback(e)
-        null
-    }
-}
+): ((Instance) -> Machine)? = null
 
 internal actual fun wasmPluginPlatformUnsupported(feature: String): Nothing {
     throw ComponentModelException("$feature is not available on this platform")
@@ -74,44 +54,3 @@ internal actual fun wasmPluginPlatformUnsupported(feature: String): Nothing {
 
 private fun WasmComponentTools.UnbundledComponent.toWasmPluginComponent(): WasmPluginUnbundledComponent =
     WasmPluginUnbundledComponent(component(), modules())
-
-private fun componentCompilerEnabled(): Boolean {
-    val configured = System.getProperty(COMPONENT_COMPILER_PROPERTY)
-    if (configured != null) {
-        return configured.toBoolean()
-    }
-    return !androidRuntime()
-}
-
-private fun androidRuntime(): Boolean {
-    val runtimeName = System.getProperty("java.runtime.name", "")
-    val vmName = System.getProperty("java.vm.name", "")
-    return runtimeName.contains("Android", ignoreCase = true) ||
-        vmName.contains("Dalvik", ignoreCase = true)
-}
-
-private fun traceCompilerFallback(error: Throwable) {
-    if (!java.lang.Boolean.getBoolean(COMPONENT_COMPILER_TRACE_PROPERTY)) {
-        return
-    }
-    System.err.println(
-        "KRWA component compiler failed; falling back to interpreter: " +
-            error.javaClass.name +
-            ": " +
-            error.message
-    )
-    error.printStackTrace(System.err)
-}
-
-private const val COMPONENT_COMPILER_PROPERTY = "krwa.component.compiler"
-private const val COMPONENT_COMPILER_TRACE_PROPERTY = "krwa.component.compiler.trace"
-
-private object ComponentMachineCache : Cache {
-    private val entries = ConcurrentHashMap<String, ByteArray>()
-
-    override fun get(key: String): ByteArray? = entries[key]?.clone()
-
-    override fun putIfAbsent(key: String, data: ByteArray) {
-        entries.putIfAbsent(key, data.clone())
-    }
-}

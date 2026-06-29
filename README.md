@@ -69,8 +69,8 @@ fun instantiate(bytes: ByteArray): Instance =
     Instance.builder(WasmParser.parse(bytes)).build()
 ```
 
-Add `wasi`, `component-model`, `wasi-preview3`, or JVM-only `simd` when the
-host needs those surfaces. The [installation guide](docs/pages/getting-started/installation.md)
+Add `wasi`, `component-model`, or `wasi-preview3` when the host needs those
+surfaces. The [installation guide](docs/pages/getting-started/installation.md)
 has the full module list and target-specific notes.
 
 The JVM-only `Parser` facade still provides `InputStream`, `File`, and `Path`
@@ -91,8 +91,11 @@ Use `wasi-preview3` when you want the Kotlin-first WASI 0.3 facade:
 ```kotlin
 val runtime = KotlinWasiPreview3.builder()
     .withNetworking()
-    .withStreamBufferCapacity(64 * 1024)
-    .withMaxPendingFutures(4_096)
+    .withResourceBudget(
+        parallelism = 1,
+        streamBufferCapacity = 64 * 1024,
+        maxPendingFutures = 4_096,
+    )
     .build()
 
 val future = runtime.completed("ready")
@@ -105,14 +108,14 @@ boundary, while adding coroutine adapters, typed stream helpers, Kotlin clock
 and random configuration, and a capability-based file API over preopened
 directories. See [modules/wasi-preview3/README.md](modules/wasi-preview3/README.md).
 
-Browser wasm builds can parse modules, instantiate the interpreter, or use
-`WasmJsExecution.instantiate` to prefer the browser or Node WebAssembly engine
-and fall back to the interpreter when native execution is unavailable or the
-provided imports require interpreter-owned objects. Its common facade exposes
-function exports, exported memories, globals, tables, and exception tags across
-the selected backend. Tables expose shared metadata such as size, element type,
-and limits; use the concrete backend object for raw table entries. Advanced
-callers can use `NativeWasmInstance` directly. Native runtime traps during
+Browser wasm builds can parse modules and instantiate through the common
+`Instance` API. On wasmJs, the default `ExecutionBackend.AUTO` uses the browser
+or Node WebAssembly engine directly and does not fall back to a Kotlin execution
+engine. `WasmJsExecution.instantiate` is the wasmJs-only native facade for
+exported globals, tables, and exception tags where callers need native wrapper
+objects. Tables expose shared metadata such as size, element type, and limits;
+use the concrete backend object for raw table entries. Advanced callers can use
+`NativeWasmInstance` directly. Native runtime traps during
 instantiation are not masked by `AUTO`; they are reported as
 `NativeWasmRuntimeException`. Native execution accepts modules parsed from
 complete bytes, uses `NativeWasmImports` for host functions, memories, globals,
@@ -129,7 +132,7 @@ host-compatible `anyfunc` descriptor under the hood. `NativeWasmFeatures`
 reports host support for the native engine, shared memories, exception tags,
 value types, and table element types before an application selects that fast
 path. `NativeWasmImports.fromImportValues` can reuse existing `ImportFunction`
-handles, including functions exported by an interpreter `Instance`, while
+handles, including functions exported by another `Instance`, while
 memory/global/table/tag imports still need the native wrapper types when they
 must be shared with the browser engine. Browser filesystem access,
 raw TCP/UDP sockets, and blocking delay must be supplied by the application when
@@ -173,11 +176,10 @@ and through a WASIp3-configured host bridge. The WASI path exercises host HTTP,
 sandboxed filesystem reports, capability-safe file semantics, controlled malformed
 JSON handling, WIT generation, Component Model packaging, WASIp3 runtime services,
 Ktor `HttpClient` wiring through WASIp3, and WASIp2 host wiring. The wasmJs
-showcase runs a web-targeted subset through
-`Instance.builder(...).withExecutionBackend(ExecutionBackend.AUTO)`, proving the
-same common API can select the host browser or Node WebAssembly engine on
-wasmJs while falling back to the interpreter on JVM and iOS. The iOS simulator
-showcase demonstrates the same portable parser/interpreter API surface for instance
+showcase runs a web-targeted subset through the same `Instance.builder(...)`
+API, proving the common default can select the host browser or Node WebAssembly
+engine on wasmJs while using Wasmtime on JVM and iOS. The iOS simulator
+showcase demonstrates the same portable parser/runtime API surface for instance
 construction, function exports, structured control flow, host imports,
 `Store`-based cross-module imports, traps, linear memory, WIT parsing, WASIp3
 metadata/contracts, and WASIp3 preopened storage from Kotlin/Native. See

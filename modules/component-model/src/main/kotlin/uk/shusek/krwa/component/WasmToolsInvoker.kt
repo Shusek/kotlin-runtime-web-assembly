@@ -7,12 +7,9 @@ import kotlinx.io.readByteArray
 import okio.Path
 import uk.shusek.krwa.log.Logger
 import uk.shusek.krwa.log.SystemLogger
-import uk.shusek.krwa.runtime.ByteArrayMemory
 import uk.shusek.krwa.runtime.ImportValues
 import uk.shusek.krwa.runtime.Instance
-import uk.shusek.krwa.runtime.InterpreterMachine
-import uk.shusek.krwa.runtime.Machine
-import uk.shusek.krwa.tools.wasm.WasmToolsModule
+import uk.shusek.krwa.tools.wasm.WasmToolsRuntime
 import uk.shusek.krwa.wasi.WasiExitException
 import uk.shusek.krwa.wasi.WasiOptions
 import uk.shusek.krwa.wasi.WasiPreview1
@@ -33,7 +30,7 @@ object WasmToolsInvoker {
                 java.lang.Boolean.getBoolean("krwa.component.wasmtools.trace")
         }
 
-    private val MODULE: WasmModule = WasmToolsModule.load()
+    private val MODULE: WasmModule = WasmToolsRuntime.module
 
     @JvmStatic
     fun run(args: List<String>, directories: Map<String, Path>): Result {
@@ -56,8 +53,6 @@ object WasmToolsInvoker {
                 wasi ->
                 val imports = ImportValues.builder().addFunction(*wasi.toHostFunctions()).build()
                 Instance.builder(MODULE)
-                    .withMachineFactory(::createMachine)
-                    .withMemoryFactory { limits -> ByteArrayMemory(limits) }
                     .withImportValues(imports)
                     .build()
             }
@@ -78,15 +73,6 @@ object WasmToolsInvoker {
         directories[guestName] = hostPath
         return directories
     }
-
-    private fun createMachine(instance: Instance): Machine =
-        try {
-            WasmToolsModule.create(instance)
-        } catch (_: Exception) {
-            InterpreterMachine(instance)
-        } catch (_: LinkageError) {
-            InterpreterMachine(instance)
-        }
 
     class Result
     internal constructor(private val exitCode: Int, stdout: ByteArray, stderr: ByteArray) {

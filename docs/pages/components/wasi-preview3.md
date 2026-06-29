@@ -28,9 +28,9 @@ val value = runtime.await(future)
 runtime.close()
 ```
 
-When running precompiled Preview 3 components through the Wasmtime Pulley
+When running precompiled Preview 3 components through the Wasmtime
 bridge, `WasmtimePreview3ComponentConfig` carries the same resource limits as
-the raw Pulley backend: `maxMemoryBytes`, `maxWasmStackBytes`,
+the raw Wasmtime backend: `maxMemoryBytes`, `maxWasmStackBytes`,
 `maxTableElements`, `maxInstances`, `maxTables`, and `maxMemories`. Count limits
 accept `WasmtimeUnlimitedResourceLimit` (`-1`) for unlimited. The separate
 `executionTimeoutMillis` value is a wall-clock bridge timeout and should not be

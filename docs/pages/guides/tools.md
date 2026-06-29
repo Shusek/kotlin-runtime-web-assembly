@@ -3,8 +3,8 @@
 The repository includes tools for local experiments and build integration:
 
 - `tools/cli`: command-line entrypoint for running local workloads.
-- `tools/compiler`: JVM runtime compiler support.
-- `tools/build-time-compiler`: ahead-of-time JVM class generation.
+- `tools/compiler`: legacy JVM compiler sources kept for compatibility work.
+- `tools/build-time-compiler`: legacy ahead-of-time JVM class generation.
 - `tools/wabt`: WABT-backed helpers.
 - `tools/wasm-tools`: `wasm-tools` integration running through the runtime.
 
@@ -50,10 +50,10 @@ Validate.builder()
 val module = WasmParser.parse(Wat2Wasm.parse(wat))
 ```
 
-For SIMD modules, validate with `WasmFeature.SIMD` before running them with the
-JVM-only SIMD interpreter machine. The normal parser entrypoints validate core
-module structure by default, but external validation is useful when you want a
-specific feature profile.
+For SIMD modules, validate with `WasmFeature.SIMD` before handing them to the
+platform runtime. The normal parser entrypoints validate core module structure
+by default, but external validation is useful when you want a specific feature
+profile.
 
 The `wabt` artifact also exposes WABT-backed WAT parsing helpers:
 

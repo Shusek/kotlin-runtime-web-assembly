@@ -35,6 +35,18 @@ val extractedWasmTools =
         into(layout.buildDirectory.dir("wasm-tools"))
     }
 
+kotlin {
+    sourceSets {
+        named("main") {
+            resources.srcDir(layout.buildDirectory.dir("wasm-tools"))
+        }
+    }
+}
+
+tasks.named("processResources") {
+    dependsOn(extractedWasmTools)
+}
+
 dependencies {
     add("implementation", libs.zerofs)
     add("implementation", krwa("log"))
@@ -42,11 +54,3 @@ dependencies {
     add("implementation", krwa("wasi"))
     add("implementation", krwa("wasm"))
 }
-
-registerKrwaCompile(
-    taskName = "generateWasmToolsModule",
-    generatedType = "uk.shusek.krwa.tools.wasm.WasmToolsModule",
-    wasmFile = layout.buildDirectory.file("wasm-tools/wasm-tools.wasm"),
-    interpreterFallback = "SILENT",
-    dependsOnTasks = listOf(extractedWasmTools),
-)

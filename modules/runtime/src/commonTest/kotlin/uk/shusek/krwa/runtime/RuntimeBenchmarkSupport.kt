@@ -6,13 +6,13 @@ import uk.shusek.krwa.wasm.WasmParser
 import uk.shusek.krwa.wasm.types.FunctionType
 import uk.shusek.krwa.wasm.types.ValType
 
-internal object InterpreterLoopBenchmarkSupport {
+internal object RuntimeBenchmarkSupport {
     fun run(
         backend: ExecutionBackend,
         iterations: Int,
         repetitions: Int,
         warmupRepetitions: Int,
-    ): InterpreterLoopBenchmarkResult {
+    ): RuntimeBenchmarkResult {
         val module = WasmParser.parse(LOOP_WASM)
         val instance =
             Instance.builder(module)
@@ -33,7 +33,7 @@ internal object InterpreterLoopBenchmarkSupport {
             checksum += result.toLong()
         }
         val elapsedNs = mark.elapsedNow().inWholeNanoseconds
-        return InterpreterLoopBenchmarkResult(
+        return RuntimeBenchmarkResult(
             iterations = iterations,
             repetitions = repetitions,
             elapsedNs = elapsedNs,
@@ -47,7 +47,7 @@ internal object InterpreterLoopBenchmarkSupport {
         backend: ExecutionBackend,
         repetitions: Int,
         warmupRepetitions: Int,
-    ): InterpreterLoopBenchmarkResult {
+    ): RuntimeBenchmarkResult {
         val hostCalls = repetitions * HostCallsPerExportCall
         var checksum = 0L
         val imports =
@@ -80,7 +80,7 @@ internal object InterpreterLoopBenchmarkSupport {
             logIt.apply()
         }
         val elapsedNs = mark.elapsedNow().inWholeNanoseconds
-        return InterpreterLoopBenchmarkResult(
+        return RuntimeBenchmarkResult(
             iterations = HostCallsPerExportCall,
             repetitions = repetitions,
             elapsedNs = elapsedNs,
@@ -95,7 +95,7 @@ internal object InterpreterLoopBenchmarkSupport {
         iterations: Int,
         repetitions: Int,
         warmupRepetitions: Int,
-    ): InterpreterLoopBenchmarkResult {
+    ): RuntimeBenchmarkResult {
         val module = WasmParser.parse(MEMORY_SCAN_WASM)
         val instance =
             Instance.builder(module)
@@ -116,7 +116,7 @@ internal object InterpreterLoopBenchmarkSupport {
             checksum += result.toLong()
         }
         val elapsedNs = mark.elapsedNow().inWholeNanoseconds
-        return InterpreterLoopBenchmarkResult(
+        return RuntimeBenchmarkResult(
             iterations = iterations,
             repetitions = repetitions,
             elapsedNs = elapsedNs,
@@ -215,7 +215,7 @@ internal object InterpreterLoopBenchmarkSupport {
         )
 }
 
-internal data class InterpreterLoopBenchmarkResult(
+internal data class RuntimeBenchmarkResult(
     val iterations: Int,
     val repetitions: Int,
     val elapsedNs: Long,

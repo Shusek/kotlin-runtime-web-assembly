@@ -17,6 +17,7 @@ import uk.shusek.krwa.runtime.PulleyExecutionProviders
 import uk.shusek.krwa.runtime.TrapException
 import uk.shusek.krwa.runtime.WasmFunctionHandle
 import uk.shusek.krwa.runtime.WasmtimeExecutionConfig
+import uk.shusek.krwa.runtime.WasmtimeNativeTarget
 import uk.shusek.krwa.runtime.WasmtimePulleyTarget
 import uk.shusek.krwa.runtime.wasmtimeExecutionConfigFor
 import uk.shusek.krwa.wasm.InvalidException
@@ -33,7 +34,7 @@ fun installAndroidWasmtimePulleyExecutionProviderIfAvailable() {
 
 private object AndroidPulleyExecutionProvider : PulleyExecutionProvider {
     override fun availability(): ExecutionBackendAvailability =
-        androidWasmtimeTargetUnavailableReason(WasmtimePulleyTarget)?.let { reason ->
+        androidWasmtimeTargetUnavailableReason(WasmtimeNativeTarget)?.let { reason ->
             ExecutionBackendAvailability(available = false, reason = reason)
         } ?: ExecutionBackendAvailability(available = true)
 
@@ -95,7 +96,7 @@ private fun androidWasmtimePropertyConfig(): WasmtimeExecutionConfig = WasmtimeE
     target = System.getProperty(AndroidWasmtimeTargetProperty)
         ?.trim()
         ?.takeIf(String::isNotEmpty)
-        ?: WasmtimePulleyTarget,
+        ?: WasmtimeNativeTarget,
 )
 
 private class AndroidWasmtimePulleyExecution(

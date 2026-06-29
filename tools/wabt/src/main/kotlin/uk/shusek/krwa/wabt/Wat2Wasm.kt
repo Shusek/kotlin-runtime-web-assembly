@@ -22,7 +22,7 @@ import uk.shusek.krwa.wasi.WasiPreview1
 class Wat2Wasm private constructor() {
     companion object {
         private val LOGGER: Logger = SystemLogger()
-        private val RUNTIME = WabtRuntime("uk.shusek.krwa.wabt.Wat2WasmModule")
+        private val RUNTIME = WabtRuntime("wat2wasm")
 
         @JvmStatic fun parse(input: InputStream): ByteArray = parse(input, "temp.wast")
 
@@ -81,9 +81,6 @@ class Wat2Wasm private constructor() {
                                                     .addFunction(*wasi.toHostFunctions())
                                                     .build()
                                             Instance.builder(RUNTIME.module)
-                                                .withMachineFactory { instance ->
-                                                    RUNTIME.create(instance)
-                                                }
                                                 .withImportValues(imports)
                                                 .build()
                                         }

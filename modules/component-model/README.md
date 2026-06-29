@@ -32,9 +32,9 @@ contracts.
   `thread.index`, `thread.new-indirect`, `thread.spawn-indirect`,
   `thread.resume-later`, `thread.yield`, `thread.suspend`, and the
   yield/suspend resume-or-promote variants can drive table function targets.
-  Interpreter machines capture a resumable Wasm continuation for
-  `thread.suspend`; modules that import it stay on the interpreter path because
-  the compiled machine cannot capture an active core Wasm stack.
+  Continuation capture is not part of the required platform execution path, so
+  guests that depend on stackful `thread.suspend` need an explicit Wasmtime
+  bridge implementation.
 
 WASI 0.2 is Component Model based: plugin boundaries should be described with WIT and lifted/lowered through the canonical ABI instead of ad-hoc JSON payloads. Kotlin Runtime Web Assembly now provides:
 

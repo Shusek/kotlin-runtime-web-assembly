@@ -66,17 +66,14 @@ class NativeWasmTest {
         val module = WasmParser.parse(ADD_WASM)
         val execution = WasmJsExecution.instantiate(module)
 
-        assertEquals(WasmJsBackend.NATIVE, execution.backend)
+        assertEquals(42, execution.native().export("add").apply(19, 23)[0].toInt())
         assertEquals(42, execution.export("add").apply(19, 23)[0].toInt())
         assertEquals(FunctionType.of(listOf(ValType.I32, ValType.I32), listOf(ValType.I32)), execution.exportType("add"))
     }
 
     @Test
-    fun instanceBuilderCanSelectNativeBackendOnWasmJs() {
-        val instance =
-            Instance.builder(WasmParser.parse(ADD_WASM))
-                .withExecutionBackend(ExecutionBackend.AUTO)
-                .build()
+    fun instanceBuilderUsesNativeBackendByDefaultOnWasmJs() {
+        val instance = Instance.builder(WasmParser.parse(ADD_WASM)).build()
 
         assertEquals(ExecutionBackend.NATIVE, instance.executionBackend())
         assertEquals(42, instance.export("add").apply(19, 23)[0].toInt())
@@ -87,31 +84,10 @@ class NativeWasmTest {
     }
 
     @Test
-    fun canForceInterpreterBackendOnWasmJs() {
-        val module = WasmParser.parse(ADD_WASM)
-        val execution = WasmJsExecution.instantiate(module, WasmJsExecutionMode.INTERPRETER)
-
-        assertEquals(WasmJsBackend.INTERPRETER, execution.backend)
-        assertEquals(42, execution.export("add").apply(19, 23)[0].toInt())
-    }
-
-    @Test
-    fun instanceBuilderCanForceInterpreterBackendOnWasmJs() {
-        val instance =
-            Instance.builder(WasmParser.parse(ADD_WASM))
-                .withExecutionBackend(ExecutionBackend.INTERPRETER)
-                .build()
-
-        assertEquals(ExecutionBackend.INTERPRETER, instance.executionBackend())
-        assertEquals(42, instance.export("add").apply(19, 23)[0].toInt())
-    }
-
-    @Test
-    fun exposesExportedMemoryThroughSelectedBackend() {
+    fun exposesExportedMemoryThroughNativeBackend() {
         val execution = WasmJsExecution.instantiate(WasmParser.parse(EXPORTED_MEMORY_WASM))
         val memory = execution.memory("memory")
 
-        assertEquals(WasmJsBackend.NATIVE, execution.backend)
         memory.writeI32(4, 0x1122_3344)
         assertEquals(0x1122_3344, memory.readInt(4))
     }
@@ -133,11 +109,10 @@ class NativeWasmTest {
     }
 
     @Test
-    fun exposesExportedGlobalThroughSelectedNativeBackend() {
+    fun exposesExportedGlobalThroughNativeBackend() {
         val execution = WasmJsExecution.instantiate(WasmParser.parse(MUTABLE_GLOBAL_WASM))
         val global = execution.global("g")
 
-        assertEquals(WasmJsBackend.NATIVE, execution.backend)
         assertEquals(ValType.I32, global.type())
         assertEquals(MutabilityType.Var, global.mutability())
         assertEquals(1, global.value().toInt())
@@ -145,57 +120,22 @@ class NativeWasmTest {
         global.setValue(9)
 
         assertEquals(9, global.value().toInt())
-        assertTrue(global.nativeOrNull() != null)
+        assertEquals(9, global.native().value().toInt())
     }
 
     @Test
-    fun exposesExportedGlobalThroughSelectedInterpreterBackend() {
-        val execution =
-            WasmJsExecution.instantiate(
-                WasmParser.parse(MUTABLE_GLOBAL_WASM),
-                WasmJsExecutionMode.INTERPRETER,
-            )
-        val global = execution.global("g")
-
-        assertEquals(WasmJsBackend.INTERPRETER, execution.backend)
-        assertEquals(1, global.value().toInt())
-
-        global.setValue(11)
-
-        assertEquals(11, global.value().toInt())
-        assertTrue(global.interpreterOrNull() != null)
-    }
-
-    @Test
-    fun exposesExportedTableThroughSelectedNativeBackend() {
+    fun exposesExportedTableThroughNativeBackend() {
         val execution = WasmJsExecution.instantiate(WasmParser.parse(CALL_INDIRECT_EXPORT_WASM))
         val table = execution.table("shared-table")
 
-        assertEquals(WasmJsBackend.NATIVE, execution.backend)
         assertEquals(5, table.size())
         assertEquals(ValType.FuncRef, table.elementType())
         assertEquals(5, table.limits().min().toInt())
-        assertTrue(table.nativeOrNull() != null)
+        assertEquals(5, table.native().size())
     }
 
     @Test
-    fun exposesExportedTableThroughSelectedInterpreterBackend() {
-        val execution =
-            WasmJsExecution.instantiate(
-                WasmParser.parse(CALL_INDIRECT_EXPORT_WASM),
-                WasmJsExecutionMode.INTERPRETER,
-            )
-        val table = execution.table("shared-table")
-
-        assertEquals(WasmJsBackend.INTERPRETER, execution.backend)
-        assertEquals(5, table.size())
-        assertEquals(ValType.FuncRef, table.elementType())
-        assertEquals(5, table.limits().min().toInt())
-        assertTrue(table.interpreterOrNull() != null)
-    }
-
-    @Test
-    fun exposesExportedTagThroughSelectedNativeBackend() {
+    fun exposesExportedTagThroughNativeBackend() {
         if (!NativeWasmFeatures.supportsExceptionTags()) {
             return
         }
@@ -203,27 +143,12 @@ class NativeWasmTest {
         val execution = WasmJsExecution.instantiate(WasmParser.parse(EXCEPTIONS_WASM))
         val tag = execution.tag("e0")
 
-        assertEquals(WasmJsBackend.NATIVE, execution.backend)
         assertEquals(FunctionType.empty(), tag.type())
-        assertTrue(tag.nativeOrNull() != null)
+        assertEquals(FunctionType.empty(), tag.native().type())
     }
 
     @Test
-    fun exposesExportedTagThroughSelectedInterpreterBackend() {
-        val execution =
-            WasmJsExecution.instantiate(
-                WasmParser.parse(EXCEPTIONS_WASM),
-                WasmJsExecutionMode.INTERPRETER,
-            )
-        val tag = execution.tag("e0")
-
-        assertEquals(WasmJsBackend.INTERPRETER, execution.backend)
-        assertEquals(FunctionType.empty(), tag.type())
-        assertTrue(tag.interpreterOrNull() != null)
-    }
-
-    @Test
-    fun autoModeDoesNotFallbackAfterNativeRuntimeTrap() {
+    fun wasmJsExecutionDoesNotFallbackAfterNativeRuntimeTrap() {
         val failure =
             assertFailsWith<Throwable> {
                 WasmJsExecution.instantiate(WasmParser.parse(START_TRAP_WASM))
@@ -233,17 +158,18 @@ class NativeWasmTest {
     }
 
     @Test
-    fun fallsBackToInterpreterWhenCommonImportsNeedInterpreterObjects() {
+    fun nativeExecutionRejectsNonNativeImports() {
         val module = WasmParser.parse(IMPORTED_GLOBAL_WASM)
         val imports =
             ImportValues.builder()
                 .addGlobal(ImportGlobal("env", "g", GlobalInstance(Value.i32(77))))
                 .build()
-        val execution = WasmJsExecution.instantiate(module, imports)
+        val failure =
+            assertFailsWith<IllegalArgumentException> {
+                WasmJsExecution.instantiate(module, imports)
+            }
 
-        assertEquals(WasmJsBackend.INTERPRETER, execution.backend)
-        assertTrue(execution.nativeFailure is IllegalArgumentException)
-        assertEquals(77, execution.export("get").apply()[0].toInt())
+        assertTrue(failure.message!!.contains("NativeWasmGlobal"))
     }
 
     @Test
@@ -311,11 +237,11 @@ class NativeWasmTest {
     }
 
     @Test
-    fun importsInterpreterExportThroughNativeImportValuesAdapter() {
-        val interpreted = Instance.builder(WasmParser.parse(ADD_WASM)).build()
+    fun importsInstanceExportThroughNativeImportValuesAdapter() {
+        val source = Instance.builder(WasmParser.parse(ADD_WASM)).build()
         val importValues =
             ImportValues.builder()
-                .addFunction(ImportFunction.exportAsImport("env", "add", interpreted, "add"))
+                .addFunction(ImportFunction.exportAsImport("env", "add", source, "add"))
                 .build()
         val native = NativeWasmInstance.instantiate(
             WasmParser.parse(IMPORTED_ADD_WASM),

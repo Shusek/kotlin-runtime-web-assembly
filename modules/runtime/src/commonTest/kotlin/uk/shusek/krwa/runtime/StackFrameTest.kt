@@ -167,8 +167,6 @@ class StackFrameTest {
     private fun stackFrame(): StackFrame =
         StackFrame(
             Instance.builder(WasmParser.parse(EMPTY_WASM))
-                .withInitialize(false)
-                .withStart(false)
                 .build(),
             0,
             longArrayOf(),

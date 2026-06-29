@@ -9,8 +9,6 @@ class WasmFunctionHandleTest {
     fun shouldReturnLongArrayFromSamHandle() {
         val instance =
             Instance.builder(WasmParser.parse(EMPTY_WASM))
-                .withInitialize(false)
-                .withStart(false)
                 .build()
         val handle = WasmFunctionHandle { _, args -> longArrayOf(args[0] * 2) }
 

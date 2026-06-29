@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <limits>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -104,6 +105,7 @@ struct WasmtimeApi {
     void (*configConcurrencySupportSet)(wasm_config_t *, bool) = nullptr;
     wasmtime_error_t *(*moduleNew)(wasm_engine_t *, const std::uint8_t *, std::size_t, wasmtime_module_t **) = nullptr;
     wasmtime_error_t *(*moduleDeserialize)(wasm_engine_t *, const std::uint8_t *, std::size_t, wasmtime_module_t **) = nullptr;
+    wasmtime_error_t *(*moduleSerialize)(wasmtime_module_t *, WasmByteVec *) = nullptr;
     void (*moduleDelete)(wasmtime_module_t *) = nullptr;
     wasmtime_store_t *(*storeNew)(wasm_engine_t *, void *, void (*)(void *)) = nullptr;
     wasmtime_context_t *(*storeContext)(wasmtime_store_t *) = nullptr;
@@ -246,6 +248,7 @@ WasmtimeApi *loadApi(std::string *error) {
         !require("wasmtime_config_concurrency_support_set", &api.configConcurrencySupportSet) ||
         !require("wasmtime_module_new", &api.moduleNew) ||
         !require("wasmtime_module_deserialize", &api.moduleDeserialize) ||
+        !require("wasmtime_module_serialize", &api.moduleSerialize) ||
         !require("wasmtime_module_delete", &api.moduleDelete) ||
         !require("wasmtime_store_new", &api.storeNew) ||
         !require("wasmtime_store_context", &api.storeContext) ||
@@ -395,6 +398,29 @@ std::string checkWasmtimeTarget(const std::string &target) {
         return "wasm_config_new returned null";
     }
     std::string configError = configureWasmtime(api, config, target, false, 512L * 1024L);
+    if (!configError.empty()) {
+        return configError;
+    }
+    wasm_engine_t *engine = api->wasmEngineNewWithConfig(config);
+    if (engine == nullptr) {
+        return "wasm_engine_new_with_config returned null";
+    }
+    api->wasmEngineDelete(engine);
+    return {};
+}
+
+std::string checkWasmtimeModuleCompiler(const std::string &target, std::int64_t maxWasmStackBytes) {
+    std::string error;
+    WasmtimeApi *api = loadApi(&error);
+    if (api == nullptr) {
+        return error;
+    }
+
+    wasm_config_t *config = api->wasmConfigNew();
+    if (config == nullptr) {
+        return "wasm_config_new returned null";
+    }
+    std::string configError = configureWasmtime(api, config, target, true, maxWasmStackBytes);
     if (!configError.empty()) {
         return configError;
     }
@@ -765,6 +791,101 @@ Java_uk_shusek_krwa_runtime_wasmtime_android_AndroidWasmtimePulleyNative_nativeC
     jclass
 ) {
     return nullableString(env, checkWasmtimeComponentWasi());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_uk_shusek_krwa_runtime_wasmtime_android_AndroidWasmtimeModuleCompilerNative_nativeCompilerUnavailableReason(
+    JNIEnv *env,
+    jclass,
+    jstring target,
+    jlong maxWasmStackBytes
+) {
+    return nullableString(env, checkWasmtimeModuleCompiler(stringFrom(env, target), maxWasmStackBytes));
+}
+
+extern "C" JNIEXPORT jbyteArray JNICALL
+Java_uk_shusek_krwa_runtime_wasmtime_android_AndroidWasmtimeModuleCompilerNative_nativeCompileModuleToCwasm(
+    JNIEnv *env,
+    jclass,
+    jbyteArray moduleBytes,
+    jstring target,
+    jlong maxWasmStackBytes
+) {
+    if (moduleBytes == nullptr) {
+        throwEngine(env, "module bytes must not be null");
+        return nullptr;
+    }
+
+    std::string targetValue = stringFrom(env, target);
+    std::string loadError;
+    WasmtimeApi *api = loadApi(&loadError);
+    if (api == nullptr) {
+        throwEngine(env, loadError);
+        return nullptr;
+    }
+
+    wasm_config_t *config = api->wasmConfigNew();
+    if (config == nullptr) {
+        throwEngine(env, "wasm_config_new returned null");
+        return nullptr;
+    }
+    std::string configError = configureWasmtime(api, config, targetValue, true, maxWasmStackBytes);
+    if (!configError.empty()) {
+        throwEngine(env, configError);
+        return nullptr;
+    }
+    wasm_engine_t *engine = api->wasmEngineNewWithConfig(config);
+    if (engine == nullptr) {
+        throwEngine(env, "wasm_engine_new_with_config returned null");
+        return nullptr;
+    }
+
+    wasmtime_module_t *module = nullptr;
+    jsize moduleSize = env->GetArrayLength(moduleBytes);
+    jbyte *moduleData = env->GetByteArrayElements(moduleBytes, nullptr);
+    if (moduleData == nullptr) {
+        api->wasmEngineDelete(engine);
+        return nullptr;
+    }
+    wasmtime_error_t *moduleError =
+        api->moduleNew(
+            engine,
+            reinterpret_cast<const std::uint8_t *>(moduleData),
+            static_cast<std::size_t>(moduleSize),
+            &module
+        );
+    env->ReleaseByteArrayElements(moduleBytes, moduleData, JNI_ABORT);
+    if (moduleError != nullptr) {
+        api->wasmEngineDelete(engine);
+        throwEngine(env, "compile module for target " + targetValue + ": " + consumeError(api, moduleError));
+        return nullptr;
+    }
+
+    WasmByteVec serialized{};
+    wasmtime_error_t *serializeError = api->moduleSerialize(module, &serialized);
+    api->moduleDelete(module);
+    api->wasmEngineDelete(engine);
+    if (serializeError != nullptr) {
+        throwEngine(env, "serialize module for target " + targetValue + ": " + consumeError(api, serializeError));
+        return nullptr;
+    }
+    if (serialized.size > static_cast<std::size_t>(std::numeric_limits<jsize>::max())) {
+        api->byteVecDelete(&serialized);
+        throwEngine(env, "serialized module is too large for a JVM byte array");
+        return nullptr;
+    }
+
+    jbyteArray result = env->NewByteArray(static_cast<jsize>(serialized.size));
+    if (result != nullptr && serialized.size > 0) {
+        env->SetByteArrayRegion(
+            result,
+            0,
+            static_cast<jsize>(serialized.size),
+            reinterpret_cast<const jbyte *>(serialized.data)
+        );
+    }
+    api->byteVecDelete(&serialized);
+    return result;
 }
 
 extern "C" JNIEXPORT jlong JNICALL

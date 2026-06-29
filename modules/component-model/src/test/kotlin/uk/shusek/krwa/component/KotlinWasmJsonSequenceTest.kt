@@ -38,11 +38,7 @@ class KotlinWasmJsonSequenceTest {
         val wasm = compileJsonSequenceGuest(tempDir)
         val host = JsonStreamHost(payload.bytes)
         val opcodeProfiler = OpcodeProfiler()
-        val instanceBuilder = newJsonSequenceInstanceBuilder(wasm, host)
-        if (java.lang.Boolean.getBoolean(ProfileOpcodesProperty)) {
-            instanceBuilder.withUnsafeExecutionListener(opcodeProfiler::onExecution)
-        }
-        val instance = instanceBuilder.build()
+        val instance = newJsonSequenceInstanceBuilder(wasm, host).build()
 
         val decodeWarmups = Integer.getInteger(BenchmarkWarmupsProperty, 0).coerceAtLeast(0)
         val decodeRepetitions = Integer.getInteger(BenchmarkRepetitionsProperty, 1).coerceAtLeast(1)
@@ -89,11 +85,7 @@ class KotlinWasmJsonSequenceTest {
         val wasm = compileJsonSequenceGuest(tempDir)
         val host = JsonStreamHost(payload.bytes)
         val opcodeProfiler = OpcodeProfiler()
-        val instanceBuilder = newJsonSequenceInstanceBuilder(wasm, host)
-        if (java.lang.Boolean.getBoolean(ProfileOpcodesProperty)) {
-            instanceBuilder.withUnsafeExecutionListener(opcodeProfiler::onExecution)
-        }
-        val instance = instanceBuilder.build()
+        val instance = newJsonSequenceInstanceBuilder(wasm, host).build()
 
         opcodeProfiler.start("drain")
         val drainStarted = System.nanoTime()

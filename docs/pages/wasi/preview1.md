@@ -34,7 +34,7 @@ On the JVM, `WasiOptions.Builder.inheritSystem()` connects stdin, stdout, and
 stderr to the current process. Use explicit sinks and sources for tests,
 services, and plugin hosts so guest output and input remain scoped.
 
-Browser builds can parse modules, instantiate the interpreter, and use
-host-provided imports. Browser filesystem access, raw sockets, and blocking
-delay must be supplied by the application when a workload needs those
-capabilities.
+Browser builds can parse modules, instantiate through the host WebAssembly
+engine, and use host-provided imports. Browser filesystem access, raw sockets,
+and blocking delay must be supplied by the application when a workload needs
+those capabilities.

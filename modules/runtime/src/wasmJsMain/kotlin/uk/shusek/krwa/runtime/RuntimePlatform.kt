@@ -18,40 +18,26 @@ internal actual object RuntimePlatform {
         hostInstance: Instance,
         memoryLimits: MemoryLimits?,
     ): PlatformInstanceExecution? {
-        if (backend == ExecutionBackend.INTERPRETER) {
-            return null
-        }
         if (backend == ExecutionBackend.PULLEY) {
             return PulleyExecution.create(module, imports, hostInstance)
         }
         if (!NativeWasmFeatures.available()) {
-            if (backend == ExecutionBackend.NATIVE) {
-                throw WasmEngineException("native WebAssembly execution is not available in this wasmJs host")
-            }
-            return null
+            throw WasmEngineException("native WebAssembly execution is not available in this wasmJs host")
         }
 
-        return try {
-            NativePlatformInstanceExecution(
+        return NativePlatformInstanceExecution(
+            module,
+            NativeWasmInstance.instantiate(
                 module,
-                NativeWasmInstance.instantiate(
-                    module,
-                    NativeWasmImports.fromImportValues(imports, hostInstance),
-                    memoryLimits,
-                ),
-            )
-        } catch (failure: Throwable) {
-            if (backend == ExecutionBackend.NATIVE || failure is NativeWasmRuntimeException) {
-                throw failure
-            }
-            null
-        }
+                NativeWasmImports.fromImportValues(imports, hostInstance),
+                memoryLimits,
+            ),
+        )
     }
 
     actual fun executionBackendAvailability(backend: ExecutionBackend): ExecutionBackendAvailability =
         when (backend) {
             ExecutionBackend.AUTO,
-            ExecutionBackend.INTERPRETER -> ExecutionBackendAvailability(available = true)
             ExecutionBackend.NATIVE ->
                 if (NativeWasmFeatures.available()) {
                     ExecutionBackendAvailability(available = true)

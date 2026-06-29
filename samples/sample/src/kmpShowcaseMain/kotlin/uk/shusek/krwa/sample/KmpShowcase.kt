@@ -30,7 +30,7 @@ internal fun runKmpShowcase(): List<ShowcaseCapability> {
     val portable = PortableRuntimeShowcase(capabilities)
 
     try {
-        portable.interpreterRuntime()
+        portable.platformRuntime()
         portable.builderSelectedRuntime()
         portable.componentModelContracts()
         portable.kotlinEcosystemIntegrations()

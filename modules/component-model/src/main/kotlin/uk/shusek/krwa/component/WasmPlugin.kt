@@ -12,6 +12,10 @@ import uk.shusek.krwa.runtime.ImportFunction
 import uk.shusek.krwa.runtime.ImportValues
 import uk.shusek.krwa.runtime.Instance
 import uk.shusek.krwa.runtime.Machine
+import uk.shusek.krwa.runtime.Memory
+import uk.shusek.krwa.runtime.WasmtimeExecutionConfig
+import uk.shusek.krwa.runtime.configureWasmtimeExecution
+import uk.shusek.krwa.runtime.wasmtimeExecutionConfigFor
 import uk.shusek.krwa.wasm.InvalidException
 import uk.shusek.krwa.wasm.WasmModule
 import uk.shusek.krwa.wasm.WasmParser
@@ -94,6 +98,7 @@ private constructor(
             return withModule(wasmPluginReadPathBytes(wasmPath))
         }
 
+        @Deprecated("Platform execution cannot honor custom Kotlin machine factories.")
         fun withMachineFactory(machineFactory: ((Instance) -> Machine)?): Builder {
             this.machineFactory = machineFactory
             return this
@@ -230,11 +235,13 @@ private constructor(
         /*
          * This method is experimental and might be dropped without notice in future releases.
          */
+        @Deprecated("Platform execution cannot honor instruction listeners.")
         fun withUnsafeExecutionListener(listener: ExecutionListener): Builder {
             executionListener = listener
             return this
         }
 
+        @Suppress("DEPRECATION")
         fun build(): WasmPlugin {
             val world = selectWorld()
             val selectedComponent = component
@@ -257,39 +264,23 @@ private constructor(
             executionListener?.let { instanceBuilder.withUnsafeExecutionListener(it) }
             executionBackend?.let { instanceBuilder.withExecutionBackend(it) }
             maxMemoryPages?.let { maxPages ->
-                instanceBuilder.withMemoryLimits(selectedModule.cappedFirstMemoryLimits(maxPages))
+                if (executionBackend == ExecutionBackend.NATIVE) {
+                    instanceBuilder.withMemoryLimits(selectedModule.cappedFirstMemoryLimits(maxPages))
+                } else {
+                    val currentConfig = wasmtimeExecutionConfigFor(selectedModule) ?: WasmtimeExecutionConfig()
+                    configureWasmtimeExecution(
+                        selectedModule,
+                        currentConfig.copy(maxMemoryBytes = maxPages.toLong() * Memory.PAGE_SIZE.toLong()),
+                    )
+                }
             }
-            val selectedMachineFactory =
-                machineFactory
-                    ?: compiledComponentMachineFactory(selectedModule).takeIf {
-                        executionBackend == null
-                    }
-            selectedMachineFactory?.let {
+            machineFactory?.let {
                 instanceBuilder.withMachineFactory(it)
             }
             val instance = instanceBuilder.build()
             runGuestInitializers(selectedModule, instance)
             val exports = bindExports(world, instance)
             return WasmPlugin(witPackage, world, instance, exports)
-        }
-
-        private fun compiledComponentMachineFactory(module: WasmModule): ((Instance) -> Machine)? {
-            if (hasThreadSuspendImport(module)) {
-                return null
-            }
-            return wasmPluginCompiledMachineFactory(module)
-        }
-
-        private fun hasThreadSuspendImport(module: WasmModule): Boolean {
-            for (imported in module.importSection().imports()) {
-                if (
-                    imported.importType() == ExternalType.FUNCTION &&
-                        (imported.name() == "thread.suspend" || imported.name() == "[thread-suspend]")
-                ) {
-                    return true
-                }
-            }
-            return false
         }
 
         private fun selectWorld(): WitPackage.WorldDeclaration {

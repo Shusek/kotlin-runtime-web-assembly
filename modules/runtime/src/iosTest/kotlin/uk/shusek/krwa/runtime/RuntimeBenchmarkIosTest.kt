@@ -6,14 +6,14 @@ import kotlinx.cinterop.toKString
 import platform.Foundation.NSProcessInfo
 import platform.posix.getenv
 
-class InterpreterLoopBenchmarkIosTest {
+class RuntimeBenchmarkIosTest {
     @Test
-    fun benchmarksInterpreterLoop() {
+    fun benchmarksRuntimeExecution() {
         if (argument(EnabledArgument) != "true" && env(EnabledEnv) != "true") return
 
         val result =
-            InterpreterLoopBenchmarkSupport.run(
-                backend = ExecutionBackend.INTERPRETER,
+            RuntimeBenchmarkSupport.run(
+                backend = ExecutionBackend.PULLEY,
                 iterations = intOption(IterationsArgument, IterationsEnv, DefaultIterations),
                 repetitions = intOption(RepetitionsArgument, RepetitionsEnv, DefaultRepetitions),
                 warmupRepetitions =

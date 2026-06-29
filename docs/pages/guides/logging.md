@@ -36,6 +36,6 @@ class HostLogger : Logger {
 }
 ```
 
-Keep logging off hot interpreter paths unless you are debugging a specific
-problem. Instruction-level observation belongs to the unsafe execution listener,
-not general-purpose logging.
+Keep logging off hot guest-call paths unless you are debugging a specific
+problem. Instruction-level observation is not part of the platform execution
+surface.

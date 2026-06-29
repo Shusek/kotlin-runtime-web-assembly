@@ -18,12 +18,8 @@ import uk.shusek.krwa.wasm.types.ValType
 internal class PortableRuntimeShowcase(
     private val capabilities: ShowcaseCapabilities,
 ) {
-    fun interpreterRuntime() {
-        val empty =
-            Instance.builder(WasmParser.parse(ShowcaseWasmFixtures.EMPTY_WASM))
-                .withInitialize(false)
-                .withStart(false)
-                .build()
+    fun platformRuntime() {
+        val empty = Instance.builder(WasmParser.parse(ShowcaseWasmFixtures.EMPTY_WASM)).build()
 
         requireShowcaseValue(0, empty.functionCount(), "empty module function count")
         requireShowcaseValue(0, empty.globalCount(), "empty module global count")
@@ -55,7 +51,7 @@ internal class PortableRuntimeShowcase(
         capabilities.demonstrate(
             "Portable Runtime",
             "Execute non-trivial control flow",
-            "The interpreter runs branching code paths, loops, and return values consistently across hosts.",
+            "The platform backend runs branching code paths, loops, and return values consistently across hosts.",
         )
 
         val memory =
@@ -160,7 +156,6 @@ internal class PortableRuntimeShowcase(
     fun builderSelectedRuntime() {
         val add =
             Instance.builder(WasmParser.parse(ShowcaseWasmFixtures.ADD_WASM))
-                .withExecutionBackend(ExecutionBackend.AUTO)
                 .build()
 
         requireShowcaseValue(42, add.export("add").apply(19, 23)[0].toInt(), "builder add")
@@ -183,7 +178,6 @@ internal class PortableRuntimeShowcase(
                 .build()
         val hostImport =
             Instance.builder(WasmParser.parse(ShowcaseWasmFixtures.NATIVE_INC_IMPORT_WASM))
-                .withExecutionBackend(ExecutionBackend.AUTO)
                 .withImportValues(imports)
                 .build()
 
@@ -191,7 +185,6 @@ internal class PortableRuntimeShowcase(
 
         val memory =
             Instance.builder(WasmParser.parse(ShowcaseWasmFixtures.EXPORTED_MEMORY_WASM))
-                .withExecutionBackend(ExecutionBackend.AUTO)
                 .build()
 
         memory.memory().writeI32(8, 0x1122_3344)
@@ -200,17 +193,15 @@ internal class PortableRuntimeShowcase(
         val backendDescription =
             when (add.executionBackend()) {
                 ExecutionBackend.NATIVE ->
-                    "AUTO selected the native browser/Node WebAssembly engine while keeping Instance.builder(...) common."
-                ExecutionBackend.INTERPRETER ->
-                    "AUTO selected the interpreter on this host while keeping Instance.builder(...) common."
+                    "The default runtime selected the native browser/Node WebAssembly engine while keeping Instance.builder(...) common."
                 ExecutionBackend.PULLEY ->
-                    "Wasmtime Pulley was selected while keeping Instance.builder(...) common."
+                    "Wasmtime was selected while keeping Instance.builder(...) common."
                 ExecutionBackend.AUTO ->
                     error("AUTO is a requested backend, not a concrete runtime backend")
             }
         capabilities.demonstrate(
             "Platform Backend",
-            "Select the best execution engine from common code",
+            "Use the default platform execution engine from common code",
             backendDescription,
         )
     }
@@ -314,7 +305,7 @@ internal class PortableRuntimeShowcase(
                 .withArguments("kmp-showcase", "--storage")
                 .withEnvironment("KRWA_SAMPLE", "kmp")
                 .withPreopenedDirectory("/", storageRoot)
-                .withStreamBufferCapacity(1024)
+                .withResourceBudget(parallelism = 1, streamBufferCapacity = 1024)
                 .build()
         val fs = runtime.fileSystem("/")
 

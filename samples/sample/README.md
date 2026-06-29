@@ -15,14 +15,14 @@ Run:
 The JVM showcase exercises the full Kotlin/WASI and Component Model path.
 The wasmJs showcase exercises both the shared KMP runtime path and the
 browser/Node native-engine path. The iOS showcase runs on `iosSimulatorArm64`
-and demonstrates the portable interpreter-facing runtime and Component Model
+and demonstrates the portable runtime and Component Model
 contract APIs.
 
 The portable KMP slice lives in `src/kmpShowcaseMain` and is shared by the JVM,
 wasmJs, and iOS targets. Its `runKmpShowcase` runner orchestrates
-parser/interpreter execution, exported functions, structured control flow, host
+parser/runtime execution, exported functions, structured control flow, host
 imports, linear memory, `Store`-based cross-module imports, trap propagation,
-`Instance.builder(...).withExecutionBackend(ExecutionBackend.AUTO)`, WIT
+default `Instance.builder(...)` platform execution, WIT
 parsing, WASIp3 metadata/contracts, Ktor `HttpClient` wiring through the
 WASIp3 HTTP client builder, and WASIp3 preopened storage. Platform source sets
 only provide entry points and storage roots plus the wasmJs suspend-only HTTP
@@ -31,11 +31,11 @@ guest is kept separate because it is the WebAssembly workload being hosted by
 the JVM showcase, not a host runtime target.
 
 The wasmJs target runs under Node-backed Kotlin/Wasm JS. The shared KMP runtime
-pass uses `Instance.builder(...).withExecutionBackend(ExecutionBackend.AUTO)`,
-which selects the native browser/Node WebAssembly engine for supported modules
-and uses the interpreter on JVM and iOS. It demonstrates function exports, host
-imports, and exported memory access through the browser/Node `WebAssembly`
-engine, plus the memory-backed `wasi-preview3` facade filesystem.
+pass uses the default `Instance.builder(...)` platform execution, which selects
+the native browser/Node WebAssembly engine on wasmJs and uses Wasmtime on JVM
+and iOS. It demonstrates function exports, host imports, and exported memory
+access through the browser/Node `WebAssembly` engine, plus the memory-backed
+`wasi-preview3` facade filesystem.
 
 The iOS target runs a Kotlin/Native showcase binary on the simulator and
 demonstrates the same shared KMP runtime surface as JVM and wasmJs: Wasm parsing, instance

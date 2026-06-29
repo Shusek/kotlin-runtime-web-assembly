@@ -7,7 +7,6 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -50,8 +49,6 @@ class WasmModuleTest {
 
     @Test
     fun shouldReportPulleyBackendAvailabilityConsistently() {
-        assertTrue(ExecutionBackend.INTERPRETER.isAvailable())
-
         val availability = ExecutionBackend.PULLEY.availability()
         val instance = tryBuildPulley(loadModule("compiled/add.wat.wasm"))
         if (instance == null) {
@@ -92,7 +89,7 @@ class WasmModuleTest {
     fun shouldUseInstalledPulleyProviderOnAndroidRuntime() {
         val propertyName = "java.runtime.name"
         val previousRuntimeName = System.getProperty(propertyName)
-        val provider = InterpreterBackedPulleyProvider()
+        val provider = MockPulleyProvider()
         val previousProvider = PulleyExecutionProviders.install(provider)
         System.setProperty(propertyName, "Android Runtime")
         try {
@@ -160,7 +157,7 @@ class WasmModuleTest {
                     .build()
             }
             assertEquals(
-                "PulleyExecutionProvider returned INTERPRETER execution for PULLEY",
+                "PulleyExecutionProvider returned NATIVE execution for PULLEY",
                 exception.message,
             )
             assertEquals(1, provider.createCalls.get())
@@ -410,16 +407,14 @@ class WasmModuleTest {
     }
 
     @Test
-    fun shouldSupportMemoryFactoryOverride() {
-        val memoryCreated = AtomicBoolean()
-        memoryCreated.set(false)
-        Instance.builder(loadModule("compiled/count_vowels.rs.wasm"))
-            .withMemoryFactory { limits ->
-                memoryCreated.set(true)
-                ByteBufferMemory(limits)
+    fun shouldRejectMemoryFactoryOverrideWhenPlatformExecutionIsRequired() {
+        val exception =
+            assertThrows(WasmEngineException::class.java) {
+                Instance.builder(loadModule("compiled/count_vowels.rs.wasm"))
+                    .withMemoryFactory { limits -> ByteBufferMemory(limits) }
+                    .build()
             }
-            .build()
-        assertEquals(true, memoryCreated.get())
+        assertTrue(exception.message!!.contains("cannot honor custom builder options"))
     }
 
     @Test
@@ -450,7 +445,7 @@ class WasmModuleTest {
     }
 
     @Test
-    fun shouldBuildWithPortableRuntimeDefaults() {
+    fun shouldBuildWithRuntimeDefaults() {
         val instance =
             Instance.Builder.create(
                     loadModule("compiled/memory.wat.wasm"),
@@ -459,7 +454,7 @@ class WasmModuleTest {
                 )
                 .build()
 
-        assertInstanceOf(PortableMemory::class.java, instance.memory())
+        assertEquals(ExecutionBackend.PULLEY, instance.executionBackend())
         assertEquals(42L, instance.export("run32").apply(42)[0])
     }
 
@@ -573,38 +568,27 @@ class WasmModuleTest {
     }
 
     @Test
-    fun shouldCountNumberOfInstructions() {
-        val count = AtomicLong(0)
-        val instance =
-            Instance.builder(loadModule("compiled/iterfact.wat.wasm"))
-                .withUnsafeExecutionListener { _, _ -> count.getAndIncrement() }
-                .build()
-        val iterFact = instance.export("iterFact")
-
-        iterFact.apply(100L)
-
-        // current result is: 1109
-        assertTrue(count.get() > 0)
-        assertTrue(count.get() < 2000)
+    @Suppress("DEPRECATION")
+    fun shouldRejectUnsafeExecutionListenerWhenPlatformExecutionIsRequired() {
+        val exception =
+            assertThrows(WasmEngineException::class.java) {
+                Instance.builder(loadModule("compiled/iterfact.wat.wasm"))
+                    .withUnsafeExecutionListener { _, _ -> }
+                    .build()
+            }
+        assertTrue(exception.message!!.contains("cannot honor custom builder options"))
     }
 
     @Test
-    fun shouldConsumeStackLoopOperations() {
-        val finalStackSize = AtomicLong(0)
-        val instance =
-            Instance.builder(loadModule("compiled/fac.wat.wasm"))
-                .withUnsafeExecutionListener { _, stack ->
-                    finalStackSize.set(stack.size().toLong())
-                }
-                .build()
-        val facSsa = instance.export("fac-ssa")
-
-        val number = 100
-        val result = facSsa.apply(number.toLong())
-        assertEquals(factorial(number), result[0])
-
-        // IIUC: 3 values returning from last CALL + 1 result
-        assertTrue(finalStackSize.get() == 4L)
+    @Suppress("DEPRECATION")
+    fun shouldRejectCustomMachineFactoryWhenPlatformExecutionIsRequired() {
+        val exception =
+            assertThrows(WasmEngineException::class.java) {
+                Instance.builder(loadModule("compiled/fac.wat.wasm"))
+                    .withMachineFactory { Machine { _, _ -> LongArray(0) } }
+                    .build()
+            }
+        assertTrue(exception.message!!.contains("cannot honor custom builder options"))
     }
 
     @Test
@@ -949,41 +933,27 @@ class WasmModuleTest {
     }
 
     @Test
-    fun shouldSupportGlobalFactoryOverride() {
-        // External context: a map of global index -> initial value
-        val context = HashMap<Int, Long>()
-        context[0] = 100L // override the wasm-declared initial value (10) with 100
-
-        val created = AtomicInteger()
-        val instance =
-            Instance.builder(loadModule("compiled/globals.wat.wasm"))
-                .withGlobalFactory { value, highValue, type, mutability ->
-                    val idx = created.getAndIncrement()
-                    val initValue = context.getOrDefault(idx, value)
-                    GlobalInstance(initValue, highValue, type, mutability)
-                }
-                .build()
-
-        // The module's doit(x) returns x + global.
-        // With the default global=10, doit(32) would return 42.
-        // Our factory set global=100, so doit(32) returns 132.
-        val doit = instance.export("doit")
-        assertEquals(132L, doit.apply(32)[0])
-        assertEquals(1, created.get())
+    fun shouldRejectGlobalFactoryOverrideWhenPlatformExecutionIsRequired() {
+        val exception =
+            assertThrows(WasmEngineException::class.java) {
+                Instance.builder(loadModule("compiled/globals.wat.wasm"))
+                    .withGlobalFactory { value, highValue, type, mutability ->
+                        GlobalInstance(value, highValue, type, mutability)
+                    }
+                    .build()
+            }
+        assertTrue(exception.message!!.contains("cannot honor custom builder options"))
     }
 
     @Test
-    fun shouldSupportTableFactoryOverride() {
-        val tableCreated = AtomicBoolean()
-        val instance =
-            Instance.builder(loadModule("compiled/exports.wat.wasm"))
-                .withTableFactory { table, initValue ->
-                    tableCreated.set(true)
-                    TableInstance(table, initValue)
-                }
-                .build()
-        assertTrue(tableCreated.get())
-        assertNotNull(instance.exports().table("tab"))
+    fun shouldRejectTableFactoryOverrideWhenPlatformExecutionIsRequired() {
+        val exception =
+            assertThrows(WasmEngineException::class.java) {
+                Instance.builder(loadModule("compiled/exports.wat.wasm"))
+                    .withTableFactory { table, initValue -> TableInstance(table, initValue) }
+                    .build()
+            }
+        assertTrue(exception.message!!.contains("cannot honor custom builder options"))
     }
 
     @Test
@@ -1097,7 +1067,7 @@ class WasmModuleTest {
         private fun loadModule(fileName: String): WasmModule =
             Parser.parse(CorpusResources.getResource(fileName))
 
-        private class InterpreterBackedPulleyProvider : PulleyExecutionProvider {
+        private class MockPulleyProvider : PulleyExecutionProvider {
             val createCalls = AtomicInteger()
 
             override fun availability(): ExecutionBackendAvailability =
@@ -1109,26 +1079,23 @@ class WasmModuleTest {
                 hostInstance: Instance,
             ): PlatformInstanceExecution {
                 createCalls.incrementAndGet()
-                val delegate =
-                    Instance.builder(module)
-                        .withImportValues(imports)
-                        .withExecutionBackend(ExecutionBackend.INTERPRETER)
-                        .build()
                 return object : PlatformInstanceExecution {
                     override val backend: ExecutionBackend = ExecutionBackend.PULLEY
 
-                    override fun export(name: String): ExportFunction = delegate.export(name)
+                    override fun export(name: String): ExportFunction {
+                        assertEquals("add", name)
+                        return ExportFunction { args -> longArrayOf(args[0] + args[1]) }
+                    }
 
-                    override fun exportType(name: String): FunctionType = delegate.exportType(name)
+                    override fun exportType(name: String): FunctionType {
+                        assertEquals("add", name)
+                        return FunctionType.of(listOf(ValType.I32, ValType.I32), listOf(ValType.I32))
+                    }
 
-                    override fun memory(name: String): Memory = delegate.exports().memory(name)
+                    override fun memory(name: String): Memory =
+                        throw InvalidException("Unknown export with name $name")
 
-                    override fun memory(index: Int): Memory? =
-                        try {
-                            delegate.memory(index)
-                        } catch (_: InvalidException) {
-                            null
-                        }
+                    override fun memory(index: Int): Memory? = null
                 }
             }
         }
@@ -1164,7 +1131,7 @@ class WasmModuleTest {
             ): PlatformInstanceExecution {
                 createCalls.incrementAndGet()
                 return object : PlatformInstanceExecution {
-                    override val backend: ExecutionBackend = ExecutionBackend.INTERPRETER
+                    override val backend: ExecutionBackend = ExecutionBackend.NATIVE
 
                     override fun export(name: String): ExportFunction =
                         throw UnsupportedOperationException("unused")

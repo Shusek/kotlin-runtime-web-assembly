@@ -107,7 +107,7 @@ internal actual object PulleyExecution {
 
     private const val AndroidUnavailableReason =
         "Wasmtime Pulley execution is not linked on this Android runtime"
-    private const val DefaultWasmtimeTarget = "pulley64"
+    private const val DefaultWasmtimeTarget = WasmtimeNativeTarget
     private const val WasmtimePulleyExecutionClassName =
         "uk.shusek.krwa.runtime.WasmtimePulleyExecution"
 }

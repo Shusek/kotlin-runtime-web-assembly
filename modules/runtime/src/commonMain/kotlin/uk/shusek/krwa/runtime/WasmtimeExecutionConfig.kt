@@ -19,7 +19,7 @@ const val DefaultWasmtimeCoreMaxTables: Long = 128L
 const val DefaultWasmtimeCoreMaxMemories: Long = 16L
 
 data class WasmtimeExecutionConfig(
-    val target: String = WasmtimePulleyTarget,
+    val target: String = WasmtimeNativeTarget,
     val precompiledModuleBytes: ByteArray? = null,
     val maxMemoryBytes: Long = DefaultWasmtimeMaxMemoryBytes,
     val maxWasmStackBytes: Long = DefaultWasmtimeMaxWasmStackBytes,
@@ -128,7 +128,7 @@ private fun String.hostPathSegments(): List<String> = replace('\\', '/').pathSeg
 private fun String.pathSegments(): List<String> = split('/').filter(String::isNotBlank)
 
 data class WasmtimePreview3ComponentConfig(
-    val target: String = WasmtimePulleyTarget,
+    val target: String = WasmtimeNativeTarget,
     val precompiledComponentBytes: ByteArray,
     val preopens: List<WasmtimePreview3Preopen>,
     val arguments: List<String> = emptyList(),
@@ -143,7 +143,7 @@ data class WasmtimePreview3ComponentConfig(
     val maxMemories: Long = WasmtimeUnlimitedResourceLimit,
 ) {
     constructor(
-        target: String = WasmtimePulleyTarget,
+        target: String = WasmtimeNativeTarget,
         precompiledComponentBytes: ByteArray,
         hostPreopenRoot: String,
         guestPreopenRoot: String = "/",

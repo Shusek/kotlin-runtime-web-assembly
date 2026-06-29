@@ -7,8 +7,7 @@ import uk.shusek.krwa.wasm.types.MemoryLimits
 internal actual object RuntimePlatform {
     actual fun defaultMemoryFactory(): (MemoryLimits) -> Memory = { limits -> ByteBufferMemory(limits) }
 
-    actual fun defaultMachineFactory(): (Instance) -> Machine =
-        RuntimeDefaults.defaultMachineFactory { Thread.currentThread().isInterrupted }
+    actual fun defaultMachineFactory(): (Instance) -> Machine = RuntimeDefaults.defaultMachineFactory()
 
     actual fun createPlatformExecution(
         module: WasmModule,
@@ -19,22 +18,20 @@ internal actual object RuntimePlatform {
     ): PlatformInstanceExecution? =
         when (backend) {
             ExecutionBackend.AUTO,
-            ExecutionBackend.INTERPRETER -> null
+            ExecutionBackend.PULLEY -> PulleyExecution.create(module, imports, hostInstance)
             ExecutionBackend.NATIVE ->
                 throw WasmEngineException("native WebAssembly execution is only available on wasmJs")
-            ExecutionBackend.PULLEY -> PulleyExecution.create(module, imports, hostInstance)
         }
 
     actual fun executionBackendAvailability(backend: ExecutionBackend): ExecutionBackendAvailability =
         when (backend) {
             ExecutionBackend.AUTO,
-            ExecutionBackend.INTERPRETER -> ExecutionBackendAvailability(available = true)
+            ExecutionBackend.PULLEY -> PulleyExecution.availability()
             ExecutionBackend.NATIVE ->
                 ExecutionBackendAvailability(
                     available = false,
                     reason = "native WebAssembly execution is only available on wasmJs",
                 )
-            ExecutionBackend.PULLEY -> PulleyExecution.availability()
         }
 
     actual fun usesPeriodicInterruptionPolling(): Boolean = false

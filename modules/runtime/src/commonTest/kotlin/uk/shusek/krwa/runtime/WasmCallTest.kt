@@ -4,10 +4,9 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import uk.shusek.krwa.wasm.WasmParser
 import uk.shusek.krwa.wasm.types.FunctionType
-import uk.shusek.krwa.wasm.types.OpCode
 import uk.shusek.krwa.wasm.types.ValType
 
-class InterpreterCallTest {
+class WasmCallTest {
     @Test
     fun wasmCallPreservesArgumentOrderWhenBuildingCalleeFrame() {
         val module = WasmParser.parse(CALL_ARGUMENT_ORDER_WASM)
@@ -16,23 +15,6 @@ class InterpreterCallTest {
         val result = instance.export("run").apply(3, 4, 5)
 
         assertEquals(345, result[0].toInt())
-    }
-
-    @Test
-    fun executionListenerReceivesInitialLocalGetInCalledFunction() {
-        val seenOpcodes = ArrayList<OpCode>()
-        val module = WasmParser.parse(CALL_ARGUMENT_ORDER_WASM)
-        val instance =
-            Instance.builder(module)
-                .withUnsafeExecutionListener { instruction, _ ->
-                    seenOpcodes.add(instruction.opcode())
-                }
-                .build()
-
-        val result = instance.export("run").apply(3, 4, 5)
-
-        assertEquals(345, result[0].toInt())
-        assertEquals(6, seenOpcodes.count { it == OpCode.LOCAL_GET })
     }
 
     @Test
@@ -86,23 +68,6 @@ class InterpreterCallTest {
     }
 
     @Test
-    fun executionListenerStillReceivesNopInstructions() {
-        val seenOpcodes = ArrayList<OpCode>()
-        val module = WasmParser.parse(NOP_WASM)
-        val instance =
-            Instance.builder(module)
-                .withUnsafeExecutionListener { instruction, _ ->
-                    seenOpcodes.add(instruction.opcode())
-                }
-                .build()
-
-        val result = instance.export("run").apply()
-
-        assertEquals(42, result[0].toInt())
-        assertEquals(true, seenOpcodes.contains(OpCode.NOP))
-    }
-
-    @Test
     fun localGetSetCopyPreservesValue() {
         val module = WasmParser.parse(LOCAL_COPY_WASM)
         val instance = Instance.builder(module).build()
@@ -110,24 +75,6 @@ class InterpreterCallTest {
         val result = instance.export("run").apply(37)
 
         assertEquals(37, result[0].toInt())
-    }
-
-    @Test
-    fun executionListenerReceivesLocalCopyInstructions() {
-        val seenOpcodes = ArrayList<OpCode>()
-        val module = WasmParser.parse(LOCAL_COPY_WASM)
-        val instance =
-            Instance.builder(module)
-                .withUnsafeExecutionListener { instruction, _ ->
-                    seenOpcodes.add(instruction.opcode())
-                }
-                .build()
-
-        val result = instance.export("run").apply(37)
-
-        assertEquals(37, result[0].toInt())
-        assertEquals(true, seenOpcodes.contains(OpCode.LOCAL_GET))
-        assertEquals(true, seenOpcodes.contains(OpCode.LOCAL_SET))
     }
 
     @Test
@@ -169,26 +116,6 @@ class InterpreterCallTest {
     }
 
     @Test
-    fun executionListenerReceivesCountdownLoopInstructions() {
-        val seenOpcodes = ArrayList<OpCode>()
-        val module = WasmParser.parse(COUNTDOWN_LOOP_WASM)
-        val instance =
-            Instance.builder(module)
-                .withUnsafeExecutionListener { instruction, _ ->
-                    seenOpcodes.add(instruction.opcode())
-                }
-                .build()
-
-        val result = instance.export("run").apply(2)
-
-        assertEquals(3, result[0].toInt())
-        assertEquals(true, seenOpcodes.contains(OpCode.I32_CONST))
-        assertEquals(true, seenOpcodes.contains(OpCode.I32_SUB))
-        assertEquals(true, seenOpcodes.contains(OpCode.LOCAL_TEE))
-        assertEquals(true, seenOpcodes.contains(OpCode.BR_IF))
-    }
-
-    @Test
     fun refIsNullIfProducesBranchResult() {
         val module = WasmParser.parse(REF_IS_NULL_IF_WASM)
         val instance = Instance.builder(module).build()
@@ -199,47 +126,12 @@ class InterpreterCallTest {
     }
 
     @Test
-    fun executionListenerReceivesRefIsNullIfInstructions() {
-        val seenOpcodes = ArrayList<OpCode>()
-        val module = WasmParser.parse(REF_IS_NULL_IF_WASM)
-        val instance =
-            Instance.builder(module)
-                .withUnsafeExecutionListener { instruction, _ ->
-                    seenOpcodes.add(instruction.opcode())
-                }
-                .build()
-
-        val result = instance.export("run").apply()
-
-        assertEquals(1, result[0].toInt())
-        assertEquals(true, seenOpcodes.contains(OpCode.REF_IS_NULL))
-        assertEquals(true, seenOpcodes.contains(OpCode.IF))
-    }
-
-    @Test
     fun fastSmallFunctionCallsPreserveResults() {
         val module = WasmParser.parse(FAST_SMALL_CALLS_WASM)
         val instance = Instance.builder(module).build()
 
         assertEquals(42L, instance.export("run").apply(42)[0])
         assertEquals(-1L, instance.export("run").apply(-1)[0])
-    }
-
-    @Test
-    fun executionListenerDisablesFastSmallFunctionCalls() {
-        val seenOpcodes = ArrayList<OpCode>()
-        val module = WasmParser.parse(FAST_SMALL_CALLS_WASM)
-        val instance =
-            Instance.builder(module)
-                .withUnsafeExecutionListener { instruction, _ ->
-                    seenOpcodes.add(instruction.opcode())
-                }
-                .build()
-
-        assertEquals(42L, instance.export("run").apply(42)[0])
-        assertEquals(2, seenOpcodes.count { it == OpCode.CALL })
-        assertEquals(3, seenOpcodes.count { it == OpCode.LOCAL_GET })
-        assertEquals(true, seenOpcodes.contains(OpCode.I64_EXTEND_I32_S))
     }
 
     private companion object {

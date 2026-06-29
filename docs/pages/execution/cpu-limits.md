@@ -3,16 +3,15 @@
 The runtime does not own a global CPU quota. Hosts should enforce time budgets
 around execution and treat cancellation as part of the embedding policy.
 
-On the JVM, the default interpreter, the SIMD interpreter machine, and compiled
-machines poll `Thread.currentThread().isInterrupted`. Interrupting the worker
-thread terminates guest execution with `WasmInterruptedException`.
+Wasmtime execution is a native call boundary. `Future.get(timeout, unit)` limits
+how long the host waits, but it does not prove that the Wasm engine stopped at
+that exact instant. Keep untrusted execution on a dedicated worker or process so
+timeouts, cancellation, and process isolation are controlled by the embedder.
 
 ```kotlin
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
-import uk.shusek.krwa.runtime.WasmInterruptedException
-
 val executor = Executors.newSingleThreadExecutor()
 val future = executor.submit<LongArray> {
     instance.export("run").apply()
@@ -23,18 +22,30 @@ try {
     println(result.contentToString())
 } catch (_: TimeoutException) {
     future.cancel(true) // sets Thread.interrupt() on the worker thread
-    throw WasmInterruptedException("execution timed out")
+    throw IllegalStateException("Wasm execution timed out")
 } finally {
     executor.shutdownNow()
 }
 ```
 
-`Future.get(timeout, unit)` only limits how long the host waits. The call to
-`cancel(true)` is what asks the JVM worker thread to stop.
+For untrusted code, keep all blocking host functions under the same timeout
+policy. A timeout cannot preempt arbitrary host code that ignores cancellation.
 
-For untrusted code, run guest execution on a worker that can be interrupted,
-and keep all blocking host functions under the same timeout policy. A timeout
-cannot preempt arbitrary host code that ignores interruption.
+Use `WasmtimeExecutionConfig` for limits the Wasmtime store can enforce during
+instantiation and execution:
+
+```kotlin
+configureWasmtimeExecution(
+    module,
+    WasmtimeExecutionConfig(
+        maxMemoryBytes = 64L * 1024L * 1024L,
+        maxWasmStackBytes = 256L * 1024L,
+        maxInstances = 1,
+        maxTables = 32,
+        maxMemories = 4,
+    ),
+)
+```
 
 ## Coroutines and WASI Preview 3
 
@@ -72,31 +83,6 @@ Coroutines and dispatchers do not provide portable per-coroutine CPU usage.
 They are scheduling and cancellation primitives; they cannot tell the host
 that one coroutine used two CPU-seconds while another used six. If exact CPU
 metering matters, keep the metered work isolated from unrelated host work.
-
-## Instruction Listener
-
-`Instance.Builder.withUnsafeExecutionListener(...)` can observe interpreter
-instructions and may be useful for profiling, debugging, or experimental
-instruction counters:
-
-```kotlin
-var instructions = 0L
-val maxInstructions = 1_000_000L
-
-val limited = Instance.builder(module)
-    .withUnsafeExecutionListener { _, _ ->
-        instructions += 1
-        if (instructions > maxInstructions) {
-            throw WasmInterruptedException("instruction limit exceeded")
-        }
-    }
-    .build()
-```
-
-This listener runs on the interpreter hot path for every instruction. Keep it
-very small, expect a large performance cost, and do not treat it as a stable
-public quota API. Runtime-compiled machines do not execute interpreter listener
-callbacks.
 
 On non-JVM targets there is no host `Thread.interrupt()` equivalent. Use
 target-specific cancellation around the host call boundary, and prefer small,

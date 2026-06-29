@@ -189,7 +189,7 @@ private constructor(
     fun exportType(name: String): FunctionType =
         platformExecution?.exportType(name) ?: type(functionType(exports[name]!!.index()))
 
-    fun executionBackend(): ExecutionBackend = platformExecution?.backend ?: ExecutionBackend.INTERPRETER
+    fun executionBackend(): ExecutionBackend = platformExecution?.backend ?: ExecutionBackend.AUTO
 
     class Exports private constructor(private val instance: Instance) {
         private fun getExport(type: ExternalType, name: String): Export {
@@ -482,7 +482,7 @@ private constructor(
         private var listener: ExecutionListener? = null
         private var importValues: ImportValues? = null
         private var machineFactory: ((Instance) -> Machine)? = null
-        private var executionBackend: ExecutionBackend = ExecutionBackend.INTERPRETER
+        private var executionBackend: ExecutionBackend = ExecutionBackend.AUTO
 
         fun withInitialize(init: Boolean): Builder {
             initialize = init
@@ -517,6 +517,7 @@ private constructor(
         /*
          * This method is experimental and might be dropped without notice in future releases.
          */
+        @Deprecated("Platform execution cannot honor instruction listeners.")
         fun withUnsafeExecutionListener(listener: ExecutionListener): Builder {
             this.listener = listener
             return this
@@ -527,6 +528,7 @@ private constructor(
             return this
         }
 
+        @Deprecated("Platform execution cannot honor custom Kotlin machine factories.")
         fun withMachineFactory(machineFactory: (Instance) -> Machine): Builder {
             this.machineFactory = machineFactory
             return this
@@ -950,31 +952,32 @@ private constructor(
         }
 
         fun build(): Instance {
-            if (executionBackend != ExecutionBackend.INTERPRETER) {
-                if (!canUsePlatformExecution()) {
-                    if (executionBackend.requiresPlatformExecution()) {
-                        throw WasmEngineException(
-                            "${executionBackend.name.lowercase()} WebAssembly execution cannot honor custom interpreter builder options"
-                        )
-                    }
-                } else {
-                    val hostInstance = buildInterpreter(initializeInstance = false, startInstance = false)
-                    val platformExecution =
-                        RuntimePlatform.createPlatformExecution(
-                            module,
-                            importValues ?: ImportValues.empty(),
-                            executionBackend,
-                            hostInstance,
-                            memoryLimits,
-                        )
-                    if (platformExecution != null) {
-                        hostInstance.platformExecution = platformExecution
-                        return hostInstance
-                    }
+            if (!canUsePlatformExecution()) {
+                throw WasmEngineException(
+                    "${executionBackend.name.lowercase()} WebAssembly execution cannot honor custom builder options"
+                )
+            }
+            val hostInstance = buildHostInstance(initializeInstance = false, startInstance = false)
+            val platformExecution =
+                RuntimePlatform.createPlatformExecution(
+                    module,
+                    importValues ?: ImportValues.empty(),
+                    executionBackend,
+                    hostInstance,
+                    memoryLimits,
+                )
+                    ?: throw WasmEngineException("${executionBackend.name.lowercase()} WebAssembly execution is not available")
+            hostInstance.platformExecution = platformExecution
+            val startFunction = hostInstance.exports[START_FUNCTION_NAME]
+            if (startFunction != null) {
+                try {
+                    hostInstance.export(START_FUNCTION_NAME).apply()
+                } catch (_: ExecutionCompletedException) {
+                    // return
                 }
             }
-
-            return buildInterpreter(initializeInstance = initialize, startInstance = start)
+            hostInstance.gcSafePoint()
+            return hostInstance
         }
 
         private fun canUsePlatformExecution(): Boolean =
@@ -987,13 +990,10 @@ private constructor(
                 listener == null &&
                 machineFactory == null
 
-        private fun ExecutionBackend.requiresPlatformExecution(): Boolean =
-            this == ExecutionBackend.NATIVE || this == ExecutionBackend.PULLEY
-
         private fun ExecutionBackend.supportsPlatformMemoryLimits(): Boolean =
             this == ExecutionBackend.NATIVE
 
-        private fun buildInterpreter(
+        private fun buildHostInstance(
             initializeInstance: Boolean,
             startInstance: Boolean,
         ): Instance {

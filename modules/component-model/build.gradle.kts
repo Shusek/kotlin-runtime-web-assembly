@@ -159,7 +159,6 @@ extensions.configure<KotlinMultiplatformExtension> {
             implementation(libs.ktorClientCio)
             implementation(libs.ktorNetwork)
             implementation(libs.kotlinxCoroutinesCore)
-            implementation(krwa("compiler"))
             implementation(krwa("log"))
             implementation(krwa("runtime"))
             implementation(krwa("wasi"))
@@ -208,6 +207,7 @@ extensions.configure<KotlinMultiplatformExtension> {
 
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
+    maxHeapSize = "2g"
     systemProperty("java.util.logging.config.file", "src/test/resources/logging.properties")
     listOf(
         "krwa.jsonSequenceBenchmark",

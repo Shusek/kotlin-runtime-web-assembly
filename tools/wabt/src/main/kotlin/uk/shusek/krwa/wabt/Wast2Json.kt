@@ -64,7 +64,6 @@ private constructor(
 
                                 Instance.builder(RUNTIME.module)
                                     .withImportValues(imports)
-                                    .withMachineFactory { instance -> RUNTIME.create(instance) }
                                     .build()
                             }
 
@@ -109,7 +108,7 @@ private constructor(
             object : SystemLogger() {
                 override fun isLoggable(level: Logger.Level): Boolean = false
             }
-        private val RUNTIME = WabtRuntime("uk.shusek.krwa.wabt.Wast2JsonModule")
+        private val RUNTIME = WabtRuntime("wast2json")
 
         @JvmStatic fun builder(): Builder = Builder.create()
     }

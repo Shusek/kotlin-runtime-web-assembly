@@ -105,10 +105,9 @@ P3 waitable so `waitable-set.poll` and `waitable-set.wait` can observe progress
 through the corresponding future/stream event. Canonical thread imports are
 also available for coroutine-scheduled work (`thread.index`, `thread.new-indirect`,
 `thread.spawn-indirect`, `thread.resume-later`, `thread.yield`, `thread.suspend`,
-and resume/promote variants). On interpreter machines, `thread.suspend`
-captures a resumable Wasm continuation; modules that import it stay on the
-interpreter path because the compiled machine cannot capture an active core
-Wasm stack.
+and resume/promote variants). Continuation capture is not part of the required
+platform execution path, so guests that depend on stackful `thread.suspend` need
+an explicit Wasmtime bridge implementation.
 JVM and iOS provide Ktor-backed default socket runtimes. wasmJs provides
 Ktor-backed HTTP and suspend TCP connect/listen paths for Node-backed
 environments; browser raw sockets, wasmJs UDP, and the default browser

@@ -6,13 +6,10 @@ enum class ExecutionBackend {
     /** Let the runtime choose its normal backend for the current platform. */
     AUTO,
 
-    /** Execute with KRWA's portable Kotlin interpreter. */
-    INTERPRETER,
-
     /** Execute with the host platform's native WebAssembly engine where available. */
     NATIVE,
 
-    /** Execute with Wasmtime Pulley where a platform binding is linked. */
+    /** Execute with the Wasmtime-backed platform engine where a binding is linked. */
     PULLEY,
 }
 

@@ -1,16 +1,25 @@
 package uk.shusek.krwa.tools.wasm
 
-import uk.shusek.krwa.runtime.Instance
-import uk.shusek.krwa.runtime.Machine
+import uk.shusek.krwa.runtime.WasmtimeExecutionConfig
+import uk.shusek.krwa.runtime.configureWasmtimeExecution
+import uk.shusek.krwa.wasm.Parser
 import uk.shusek.krwa.wasm.WasmModule
 
-internal object WasmToolsRuntime {
-    private val moduleClass: Class<*> by lazy {
-        Class.forName("uk.shusek.krwa.tools.wasm.WasmToolsModule")
+object WasmToolsRuntime {
+    val module: WasmModule by lazy {
+        loadRawModule()
+            .also { module ->
+                configureWasmtimeExecution(
+                    module,
+                    WasmtimeExecutionConfig(maxWasmStackBytes = 8L * 1024L * 1024L),
+                )
+            }
     }
 
-    val module: WasmModule by lazy { moduleClass.getMethod("load").invoke(null) as WasmModule }
-
-    fun create(instance: Instance): Machine =
-        moduleClass.getMethod("create", Instance::class.java).invoke(null, instance) as Machine
+    private fun loadRawModule(): WasmModule {
+        val input =
+            WasmToolsRuntime::class.java.getResourceAsStream("/wasm-tools.wasm")
+                ?: throw IllegalStateException("Missing wasm-tools.wasm resource")
+        return input.use { Parser.parse(it) }
+    }
 }

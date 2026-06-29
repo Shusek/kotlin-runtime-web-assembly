@@ -32,47 +32,6 @@ dependencies {
 `runtime` already depends on `wasm`; add `wasm` directly only when you need the
 parser/model APIs without the runtime.
 
-## Optional JVM SIMD
-
-Use `simd` only when a JVM host needs to execute WebAssembly SIMD `v128`
-instructions. It provides `SimdInterpreterMachine`, an interpreter machine
-factory backed by the JDK incubating Vector API:
-
-```kotlin
-dependencies {
-    implementation("uk.shusek.krwa:simd")
-}
-```
-
-```kotlin
-import uk.shusek.krwa.runtime.Instance
-import uk.shusek.krwa.simd.SimdInterpreterMachine
-
-val instance = Instance.builder(module)
-    .withMachineFactory(::SimdInterpreterMachine)
-    .build()
-```
-
-This artifact is JVM-only and requires Java 25. It is not available for iOS or
-Kotlin/Wasm browser builds. Because it uses `jdk.incubator.vector`, JVM
-applications and tests should add that module at run time:
-
-```kotlin
-tasks.withType<Test>().configureEach {
-    jvmArgs("--add-modules=jdk.incubator.vector")
-}
-
-tasks.withType<JavaExec>().configureEach {
-    jvmArgs("--add-modules=jdk.incubator.vector")
-}
-```
-
-Keep parser validation enabled for SIMD modules. `Parser.parse(...)` and
-`WasmParser.parse(...)` validate by default; do not use
-`.withValidation(false)` with `SimdInterpreterMachine` unless you have already
-validated the module elsewhere and accept engine-specific behavior for invalid
-input.
-
 ## Kotlin Multiplatform
 
 In Kotlin Multiplatform builds, put portable dependencies in
@@ -100,9 +59,6 @@ The portable artifacts publish JVM, iOS ARM, and Kotlin/Wasm browser variants.
 The iOS target set is ARM-only: `iosArm64` for devices and `iosSimulatorArm64`
 for Apple Silicon simulators. The web target is Kotlin/Wasm browser
 (`wasmJs { browser() }`), not classic Kotlin/JS.
-
-In Kotlin Multiplatform projects, keep `simd` in `jvmMain` dependencies rather
-than `commonMain`.
 
 ## Local Checkout
 

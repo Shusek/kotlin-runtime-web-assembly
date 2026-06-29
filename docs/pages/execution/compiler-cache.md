@@ -1,6 +1,11 @@
 # Compiler Cache
 
-Runtime compilation can reuse generated JVM bytecode through the `Cache`
+The compiler cache belongs to the legacy JVM bytecode compiler path. Normal
+runtime execution now uses Wasmtime on JVM, Android, and iOS when linked, so new
+hosts should not add this cache for ordinary `Instance.builder(module).build()`
+execution.
+
+Legacy runtime compilation can reuse generated JVM bytecode through the `Cache`
 interface. The `dircache-experimental` artifact provides `DirectoryCache`, a
 disk-backed implementation:
 
@@ -39,6 +44,6 @@ trusted build or runtime artifacts:
 signing, or cross-version integrity policy. Put it on storage owned by the host
 application, and prefer restrictive permissions such as owner-only access.
 
-For dynamic plugin systems, decide whether compiled output is worth the
-operational complexity. The interpreter avoids a persistent executable cache and
-is easier to reason about for untrusted modules.
+For dynamic plugin systems, prefer the Wasmtime-backed runtime path unless there
+is a specific legacy compiler requirement. Generated JVM output is executable
+host-side state and should be treated as trusted application code.

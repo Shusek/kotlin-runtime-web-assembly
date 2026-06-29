@@ -1,231 +1,83 @@
 package uk.shusek.krwa.runtime
 
 import uk.shusek.krwa.wasm.WasmModule
-import uk.shusek.krwa.wasm.WasmEngineException
 import uk.shusek.krwa.wasm.types.FunctionType
 import uk.shusek.krwa.wasm.types.MutabilityType
 import uk.shusek.krwa.wasm.types.TableLimits
 import uk.shusek.krwa.wasm.types.ValType
 
-enum class WasmJsExecutionMode {
-    AUTO,
-    NATIVE,
-    INTERPRETER,
-}
-
-enum class WasmJsBackend {
-    NATIVE,
-    INTERPRETER,
-}
-
 class WasmJsExecution
 private constructor(
-    val backend: WasmJsBackend,
-    private val nativeInstance: NativeWasmInstance?,
-    private val interpreterInstance: Instance?,
-    val nativeFailure: Throwable?,
+    private val nativeInstance: NativeWasmInstance,
 ) {
     fun export(name: String): ExportFunction =
-        nativeInstance?.let { native -> ExportFunction { args -> native.export(name).apply(*args) } }
-            ?: interpreterInstance!!.export(name)
+        ExportFunction { args -> nativeInstance.export(name).apply(*args) }
 
-    fun exportType(name: String): FunctionType =
-        nativeInstance?.exportType(name) ?: interpreterInstance!!.exportType(name)
+    fun exportType(name: String): FunctionType = nativeInstance.exportType(name)
 
-    fun memory(name: String): Memory =
-        nativeInstance?.memory(name) ?: interpreterInstance!!.exports().memory(name)
+    fun memory(name: String): Memory = nativeInstance.memory(name)
 
-    fun global(name: String): WasmJsGlobal =
-        nativeInstance?.let { WasmJsGlobal.native(it.global(name)) }
-            ?: WasmJsGlobal.interpreter(interpreterInstance!!.exports().global(name))
+    fun global(name: String): WasmJsGlobal = WasmJsGlobal(nativeInstance.global(name))
 
-    fun table(name: String): WasmJsTable =
-        nativeInstance?.let { WasmJsTable.native(it.table(name)) }
-            ?: WasmJsTable.interpreter(interpreterInstance!!.exports().table(name))
+    fun table(name: String): WasmJsTable = WasmJsTable(nativeInstance.table(name))
 
-    fun tag(name: String): WasmJsTag =
-        nativeInstance?.let { WasmJsTag.native(it.tag(name)) }
-            ?: WasmJsTag.interpreter(interpreterInstance!!.exports().tag(name))
+    fun tag(name: String): WasmJsTag = WasmJsTag(nativeInstance.tag(name))
 
-    fun nativeOrNull(): NativeWasmInstance? = nativeInstance
-
-    fun interpreterOrNull(): Instance? = interpreterInstance
+    fun native(): NativeWasmInstance = nativeInstance
 
     companion object {
-        fun instantiate(
-            module: WasmModule,
-            mode: WasmJsExecutionMode = WasmJsExecutionMode.AUTO,
-        ): WasmJsExecution =
-            instantiate(
-                module = module,
-                mode = mode,
-                nativeImportsFactory = { NativeWasmImports.empty() },
-                interpreterImports = ImportValues.empty(),
-            )
+        fun instantiate(module: WasmModule): WasmJsExecution =
+            instantiate(module, NativeWasmImports.empty())
 
-        fun instantiate(
-            module: WasmModule,
-            imports: ImportValues,
-            mode: WasmJsExecutionMode = WasmJsExecutionMode.AUTO,
-        ): WasmJsExecution =
-            instantiate(
-                module = module,
-                mode = mode,
-                nativeImportsFactory = { NativeWasmImports.fromImportValues(imports) },
-                interpreterImports = imports,
-            )
+        fun instantiate(module: WasmModule, imports: ImportValues): WasmJsExecution =
+            instantiate(module, NativeWasmImports.fromImportValues(imports))
 
+        fun instantiate(module: WasmModule, nativeImports: NativeWasmImports): WasmJsExecution =
+            WasmJsExecution(NativeWasmInstance.instantiate(module, nativeImports))
+
+        @Deprecated(
+            "wasmJs execution is native-only. Provide NativeWasmImports directly; extra ImportValues are ignored.",
+        )
         fun instantiate(
             module: WasmModule,
             nativeImports: NativeWasmImports,
-            mode: WasmJsExecutionMode = WasmJsExecutionMode.AUTO,
-        ): WasmJsExecution =
-            instantiate(
-                module = module,
-                mode = mode,
-                nativeImportsFactory = { nativeImports },
-                interpreterImports = ImportValues.empty(),
-            )
-
-        fun instantiate(
-            module: WasmModule,
-            nativeImports: NativeWasmImports,
-            interpreterImports: ImportValues,
-            mode: WasmJsExecutionMode = WasmJsExecutionMode.AUTO,
-        ): WasmJsExecution =
-            instantiate(
-                module = module,
-                mode = mode,
-                nativeImportsFactory = { nativeImports },
-                interpreterImports = interpreterImports,
-            )
-
-        private fun instantiate(
-            module: WasmModule,
-            mode: WasmJsExecutionMode,
-            nativeImportsFactory: () -> NativeWasmImports,
-            interpreterImports: ImportValues,
-        ): WasmJsExecution =
-            when (mode) {
-                WasmJsExecutionMode.NATIVE ->
-                    native(module, nativeImportsFactory(), nativeFailure = null)
-                WasmJsExecutionMode.INTERPRETER ->
-                    interpreter(module, interpreterImports, nativeFailure = null)
-                WasmJsExecutionMode.AUTO ->
-                    if (!NativeWasmFeatures.available()) {
-                        interpreter(module, interpreterImports, nativeFailure = null)
-                    } else {
-                        try {
-                            native(module, nativeImportsFactory(), nativeFailure = null)
-                        } catch (failure: Throwable) {
-                            if (failure is NativeWasmRuntimeException) {
-                                throw failure
-                            }
-                            interpreter(module, interpreterImports, nativeFailure = failure)
-                        }
-                    }
-            }
-
-        private fun native(
-            module: WasmModule,
-            imports: NativeWasmImports,
-            nativeFailure: Throwable?,
-        ): WasmJsExecution =
-            WasmJsExecution(
-                WasmJsBackend.NATIVE,
-                NativeWasmInstance.instantiate(module, imports),
-                null,
-                nativeFailure,
-            )
-
-        private fun interpreter(
-            module: WasmModule,
-            imports: ImportValues,
-            nativeFailure: Throwable?,
-        ): WasmJsExecution =
-            WasmJsExecution(
-                WasmJsBackend.INTERPRETER,
-                null,
-                Instance.builder(module).withImportValues(imports).build(),
-                nativeFailure,
-            )
+            extraImports: ImportValues,
+        ): WasmJsExecution = instantiate(module, nativeImports)
     }
 }
 
-class WasmJsGlobal
-private constructor(
-    private val nativeGlobal: NativeWasmGlobal?,
-    private val interpreterGlobal: GlobalInstance?,
+class WasmJsGlobal internal constructor(
+    private val nativeGlobal: NativeWasmGlobal,
 ) {
-    fun type(): ValType = nativeGlobal?.type() ?: interpreterGlobal!!.type
+    fun type(): ValType = nativeGlobal.type()
 
-    fun mutability(): MutabilityType =
-        nativeGlobal?.mutability() ?: interpreterGlobal!!.mutabilityType
+    fun mutability(): MutabilityType = nativeGlobal.mutability()
 
-    fun value(): Long = nativeGlobal?.value() ?: interpreterGlobal!!.value
+    fun value(): Long = nativeGlobal.value()
 
     fun setValue(value: Long) {
-        nativeGlobal?.let {
-            it.setValue(value)
-            return
-        }
-        val global = interpreterGlobal!!
-        if (global.mutabilityType != MutabilityType.Var) {
-            throw WasmEngineException("cannot set immutable WebAssembly global")
-        }
-        global.value = value
+        nativeGlobal.setValue(value)
     }
 
-    fun nativeOrNull(): NativeWasmGlobal? = nativeGlobal
-
-    fun interpreterOrNull(): GlobalInstance? = interpreterGlobal
-
-    internal companion object {
-        fun native(global: NativeWasmGlobal): WasmJsGlobal = WasmJsGlobal(global, null)
-
-        fun interpreter(global: GlobalInstance): WasmJsGlobal = WasmJsGlobal(null, global)
-    }
+    fun native(): NativeWasmGlobal = nativeGlobal
 }
 
-class WasmJsTable
-private constructor(
-    private val nativeTable: NativeWasmTable?,
-    private val interpreterTable: TableInstance?,
+class WasmJsTable internal constructor(
+    private val nativeTable: NativeWasmTable,
 ) {
-    fun size(): Int = nativeTable?.size() ?: interpreterTable!!.size()
+    fun size(): Int = nativeTable.size()
 
-    fun elementType(): ValType = nativeTable?.elementType() ?: interpreterTable!!.elementType()
+    fun elementType(): ValType = nativeTable.elementType()
 
-    fun limits(): TableLimits = nativeTable?.limits() ?: interpreterTable!!.limits()
+    fun limits(): TableLimits = nativeTable.limits()
 
-    fun nativeOrNull(): NativeWasmTable? = nativeTable
-
-    fun interpreterOrNull(): TableInstance? = interpreterTable
-
-    internal companion object {
-        fun native(table: NativeWasmTable): WasmJsTable = WasmJsTable(table, null)
-
-        fun interpreter(table: TableInstance): WasmJsTable = WasmJsTable(null, table)
-    }
+    fun native(): NativeWasmTable = nativeTable
 }
 
-class WasmJsTag
-private constructor(
-    private val nativeTag: NativeWasmTag?,
-    private val interpreterTag: TagInstance?,
+class WasmJsTag internal constructor(
+    private val nativeTag: NativeWasmTag,
 ) {
-    fun type(): FunctionType =
-        nativeTag?.type()
-            ?: interpreterTag!!.type()
-            ?: throw WasmEngineException("WebAssembly tag type is not initialized")
+    fun type(): FunctionType = nativeTag.type()
 
-    fun nativeOrNull(): NativeWasmTag? = nativeTag
-
-    fun interpreterOrNull(): TagInstance? = interpreterTag
-
-    internal companion object {
-        fun native(tag: NativeWasmTag): WasmJsTag = WasmJsTag(tag, null)
-
-        fun interpreter(tag: TagInstance): WasmJsTag = WasmJsTag(null, tag)
-    }
+    fun native(): NativeWasmTag = nativeTag
 }

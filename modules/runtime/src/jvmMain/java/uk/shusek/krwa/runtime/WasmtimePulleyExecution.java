@@ -56,9 +56,10 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
     private static final int WASM_MAGIC_AND_VERSION_SIZE = 8;
     private static final int WASM_EXPORT_SECTION_ID = 7;
     private static final String SYNTHETIC_MEMORY_EXPORT_PREFIX = "__krwa_memory_";
-    private static final String DEFAULT_WASMTIME_TARGET = "pulley64";
+    private static final String DEFAULT_WASMTIME_TARGET = "native";
     private static final long DEFAULT_MAX_MEMORY_BYTES = 256L * 1024L * 1024L;
     private static final long DEFAULT_MAX_WASM_STACK_BYTES = 512L * 1024L;
+    private static final long DEFAULT_ASYNC_STACK_HEADROOM_BYTES = 512L * 1024L;
     private static final long UNLIMITED_RESOURCE_LIMIT = -1L;
     private static final long DEFAULT_MAX_INSTANCES = 1L;
     private static final long DEFAULT_MAX_TABLES = 128L;
@@ -78,6 +79,7 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
 
     private static final AtomicLong NEXT_HOST_CALLBACK_ID = new AtomicLong();
     private static final Map<Long, HostCallback> HOST_CALLBACKS = new ConcurrentHashMap<>();
+    private static final Map<Long, Throwable> HOST_CALLBACK_FAILURES = new ConcurrentHashMap<>();
     private static volatile MethodHandle trapNewHandle;
 
     private final Arena arena;
@@ -88,6 +90,7 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
     private final MemorySegment context;
     private final MemorySegment instance;
     private final Map<String, FunctionExport> functionsByName;
+    private final List<Long> callbackIds;
     private final Map<String, Memory> memoriesByName = new HashMap<>();
     private final List<Memory> memoriesByIndex = new ArrayList<>();
 
@@ -99,7 +102,8 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
             MemorySegment store,
             MemorySegment context,
             MemorySegment instance,
-            Map<String, FunctionExport> functionsByName
+            Map<String, FunctionExport> functionsByName,
+            List<Long> callbackIds
     ) {
         this.arena = arena;
         this.api = api;
@@ -109,6 +113,7 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
         this.context = context;
         this.instance = instance;
         this.functionsByName = functionsByName;
+        this.callbackIds = callbackIds;
     }
 
     public static String unavailableReason() {
@@ -1097,7 +1102,8 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
             );
             MemorySegment context = (MemorySegment) api.storeContext.invokeExact(store);
 
-            MemorySegment importExterns = buildImports(api, arena, context, module, imports, hostInstance);
+            List<Long> callbackIds = new ArrayList<>();
+            MemorySegment importExterns = buildImports(api, arena, context, module, imports, hostInstance, callbackIds);
             MemorySegment instance = arena.allocate(16);
             MemorySegment trapOut = arena.allocate(ValueLayout.ADDRESS);
             long importCount = module.importSection().importCount();
@@ -1116,7 +1122,8 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
                     store,
                     context,
                     instance,
-                    exportedFunctions(module)
+                    exportedFunctions(module),
+                    callbackIds
             );
             execution.bindExportedFunctions();
             execution.bindExportedMemories(module, pulleyModuleBytes.syntheticMemoryExports);
@@ -1217,6 +1224,7 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
         MemorySegment config = (MemorySegment) api.wasmConfigNew.invokeExact();
         requireNotNull(config, "wasm_config_new");
         String error = configureTarget(api, arena, config, targetName);
+        api.configAsyncStackSizeSet.invokeExact(config, asyncStackSizeBytes(maxWasmStackBytes));
         api.configMaxWasmStackSet.invokeExact(config, maxWasmStackBytes);
         api.configWasmGcSet.invokeExact(config, (byte) 1);
         api.configWasmFunctionReferencesSet.invokeExact(config, (byte) 1);
@@ -1335,18 +1343,40 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
             );
         }
         try (Arena callArena = Arena.ofConfined()) {
-            int slotCount = Math.max(type.params().size(), type.returns().size());
-            MemorySegment raw = callArena.allocate(Math.max(1, slotCount) * WASMTIME_VAL_RAW_SIZE);
+            int valueSlotCount = Math.max(type.params().size(), type.returns().size());
+            int rawSlotCount = Math.max(1, valueSlotCount);
+            MemorySegment raw = callArena.allocate(rawSlotCount * WASMTIME_VAL_RAW_SIZE);
             writeRawValues(raw, type.params(), args);
             MemorySegment trapOut = callArena.allocate(ValueLayout.ADDRESS);
-            requireNoErrorOrTrap(
-                    api,
-                    (MemorySegment) api.funcCallUnchecked.invokeExact(context, export.func, raw, (long) slotCount, trapOut),
-                    trapOut,
-                    "call Pulley export " + export.name
-            );
+            clearHostCallbackFailures();
+            try {
+                requireNoErrorOrTrap(
+                        api,
+                        (MemorySegment) api.funcCallUnchecked.invokeExact(context, export.func, raw, (long) rawSlotCount, trapOut),
+                        trapOut,
+                        "call Pulley export " + export.name
+                );
+            } catch (TrapException e) {
+                Throwable hostFailure = takeHostCallbackFailure();
+                if (hostFailure != null) {
+                    throw hostFailure(hostFailure);
+                }
+                throw e;
+            } catch (WasmEngineException e) {
+                Throwable hostFailure = takeHostCallbackFailure();
+                if (hostFailure != null) {
+                    throw hostFailure(hostFailure);
+                }
+                throw e;
+            } finally {
+                clearHostCallbackFailures();
+            }
             return readRawValues(raw, type.returns());
         } catch (WasmEngineException e) {
+            throw e;
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Error e) {
             throw e;
         } catch (Throwable e) {
             throw new WasmEngineException("Wasmtime Pulley export call failed", e);
@@ -1574,7 +1604,8 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
             MemorySegment context,
             WasmModule module,
             ImportValues imports,
-            Instance hostInstance
+            Instance hostInstance,
+            List<Long> callbackIds
     ) throws Throwable {
         int count = module.importSection().importCount();
         if (count == 0) {
@@ -1634,6 +1665,7 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
             MemorySegment type = createFunctionType(api, arena, expectedType);
             long callbackId = NEXT_HOST_CALLBACK_ID.incrementAndGet();
             HOST_CALLBACKS.put(callbackId, new HostCallback(hostFunction, expectedType, hostInstance));
+            callbackIds.add(callbackId);
             MemorySegment env = arena.allocate(C_LONG);
             env.set(C_LONG, 0, callbackId);
             MemorySegment func = arena.allocate(WASMTIME_FUNC_SIZE);
@@ -1652,8 +1684,9 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
             MemorySegment argsAndResults,
             long numArgsAndResults
     ) {
+        long callbackId = -1L;
         try {
-            long callbackId = env.reinterpret(Long.BYTES).get(C_LONG, 0);
+            callbackId = env.reinterpret(Long.BYTES).get(C_LONG, 0);
             HostCallback callback = HOST_CALLBACKS.get(callbackId);
             if (callback == null) {
                 return trap("unknown host callback " + callbackId);
@@ -1674,8 +1707,44 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
             writeRawValues(raw, callback.type.returns(), results);
             return MemorySegment.NULL;
         } catch (Throwable e) {
+            if (callbackId >= 0) {
+                HOST_CALLBACK_FAILURES.put(callbackId, e);
+            }
             return trap(e.getMessage() != null ? e.getMessage() : e.toString());
         }
+    }
+
+    private void clearHostCallbackFailures() {
+        for (long callbackId : callbackIds) {
+            HOST_CALLBACK_FAILURES.remove(callbackId);
+        }
+    }
+
+    private Throwable takeHostCallbackFailure() {
+        for (long callbackId : callbackIds) {
+            Throwable failure = HOST_CALLBACK_FAILURES.remove(callbackId);
+            if (failure != null) {
+                return failure;
+            }
+        }
+        return null;
+    }
+
+    private static long asyncStackSizeBytes(long maxWasmStackBytes) {
+        if (maxWasmStackBytes > Long.MAX_VALUE - DEFAULT_ASYNC_STACK_HEADROOM_BYTES) {
+            return Long.MAX_VALUE;
+        }
+        return maxWasmStackBytes + DEFAULT_ASYNC_STACK_HEADROOM_BYTES;
+    }
+
+    private static RuntimeException hostFailure(Throwable failure) {
+        if (failure instanceof RuntimeException runtimeException) {
+            return runtimeException;
+        }
+        if (failure instanceof Error error) {
+            throw error;
+        }
+        return new WasmEngineException("Wasmtime host callback failed", failure);
     }
 
     private static MemorySegment trap(String message) {
@@ -2690,6 +2759,7 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
         private final MethodHandle configWasmExceptionsSet;
         private final MethodHandle configWasmBulkMemorySet;
         private final MethodHandle configWasmMultiMemorySet;
+        private final MethodHandle configAsyncStackSizeSet;
         private final MethodHandle configMaxWasmStackSet;
         private final MethodHandle configMemoryMayMoveSet;
         private final MethodHandle configConcurrencySupportSet;
@@ -2727,6 +2797,7 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
             configWasmExceptionsSet = downcall(linker, lookup, "wasmtime_config_wasm_exceptions_set", FunctionDescriptor.ofVoid(ValueLayout.ADDRESS, C_BOOL));
             configWasmBulkMemorySet = downcall(linker, lookup, "wasmtime_config_wasm_bulk_memory_set", FunctionDescriptor.ofVoid(ValueLayout.ADDRESS, C_BOOL));
             configWasmMultiMemorySet = downcall(linker, lookup, "wasmtime_config_wasm_multi_memory_set", FunctionDescriptor.ofVoid(ValueLayout.ADDRESS, C_BOOL));
+            configAsyncStackSizeSet = downcall(linker, lookup, "wasmtime_config_async_stack_size_set", FunctionDescriptor.ofVoid(ValueLayout.ADDRESS, ValueLayout.JAVA_LONG));
             configMaxWasmStackSet = downcall(linker, lookup, "wasmtime_config_max_wasm_stack_set", FunctionDescriptor.ofVoid(ValueLayout.ADDRESS, ValueLayout.JAVA_LONG));
             configMemoryMayMoveSet = downcall(linker, lookup, "wasmtime_config_memory_may_move_set", FunctionDescriptor.ofVoid(ValueLayout.ADDRESS, C_BOOL));
             configConcurrencySupportSet = downcall(linker, lookup, "wasmtime_config_concurrency_support_set", FunctionDescriptor.ofVoid(ValueLayout.ADDRESS, C_BOOL));

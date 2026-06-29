@@ -10,7 +10,6 @@ import java.io.UncheckedIOException
 import java.nio.charset.StandardCharsets
 import uk.shusek.krwa.log.Logger
 import uk.shusek.krwa.log.SystemLogger
-import uk.shusek.krwa.runtime.ByteArrayMemory
 import uk.shusek.krwa.runtime.ImportValues
 import uk.shusek.krwa.runtime.Instance
 import uk.shusek.krwa.wasi.WasiExitException
@@ -43,12 +42,11 @@ class Wat2Wasm private constructor() {
         @JvmStatic
         fun parse(input: InputStream): ByteArray {
             try {
-                ByteArrayInputStream(input.readAllBytes()).use { stdin ->
+                val bytes = input.readAllBytes()
+                Validate.validate(ByteArrayInputStream(bytes))
+                ByteArrayInputStream(bytes).use { stdin ->
                     ByteArrayOutputStream().use { stdout ->
                         ByteArrayOutputStream().use { stderr ->
-                            Validate.validate(stdin)
-                            stdin.reset()
-
                             val options =
                                 WasiOptions.builder()
                                     .withStdin(stdin, false)
@@ -71,10 +69,6 @@ class Wat2Wasm private constructor() {
                                                 .build()
 
                                         Instance.builder(WasmToolsRuntime.module)
-                                            .withMachineFactory { instance ->
-                                                WasmToolsRuntime.create(instance)
-                                            }
-                                            .withMemoryFactory { limits -> ByteArrayMemory(limits) }
                                             .withImportValues(imports)
                                             .build()
                                     }

@@ -9,7 +9,6 @@ import java.io.UncheckedIOException
 import java.nio.charset.StandardCharsets
 import uk.shusek.krwa.log.Logger
 import uk.shusek.krwa.log.SystemLogger
-import uk.shusek.krwa.runtime.ByteArrayMemory
 import uk.shusek.krwa.runtime.ImportValues
 import uk.shusek.krwa.runtime.Instance
 import uk.shusek.krwa.wasi.WasiExitException
@@ -85,12 +84,6 @@ class WasmSmith private constructor() {
                                                     .build()
 
                                             Instance.builder(WasmToolsRuntime.module)
-                                                .withMachineFactory { instance ->
-                                                    WasmToolsRuntime.create(instance)
-                                                }
-                                                .withMemoryFactory { limits ->
-                                                    ByteArrayMemory(limits)
-                                                }
                                                 .withImportValues(imports)
                                                 .build()
                                         }

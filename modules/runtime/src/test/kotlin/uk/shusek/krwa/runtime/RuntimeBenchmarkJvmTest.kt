@@ -2,9 +2,9 @@ package uk.shusek.krwa.runtime
 
 import kotlin.test.Test
 
-class InterpreterLoopBenchmarkJvmTest {
+class RuntimeBenchmarkJvmTest {
     @Test
-    fun benchmarksInterpreterLoop() {
+    fun benchmarksRuntimeExecution() {
         if (!benchmarkEnabled()) return
 
         val iterations = intProperty(IterationsProperty, DefaultIterations)
@@ -13,7 +13,7 @@ class InterpreterLoopBenchmarkJvmTest {
         val warmupRepetitions = intProperty(WarmupRepetitionsProperty, DefaultWarmupRepetitions)
         for (backend in benchmarkBackends()) {
             runCatching {
-                InterpreterLoopBenchmarkSupport.run(
+                RuntimeBenchmarkSupport.run(
                     backend = backend,
                     iterations = iterations,
                     repetitions = repetitions,
@@ -26,7 +26,7 @@ class InterpreterLoopBenchmarkJvmTest {
             }
 
             runCatching {
-                InterpreterLoopBenchmarkSupport.runMemoryScan(
+                RuntimeBenchmarkSupport.runMemoryScan(
                     backend = backend,
                     iterations = iterations,
                     repetitions = repetitions,
@@ -42,7 +42,7 @@ class InterpreterLoopBenchmarkJvmTest {
             }
 
             runCatching {
-                InterpreterLoopBenchmarkSupport.runHostCallback(
+                RuntimeBenchmarkSupport.runHostCallback(
                     backend = backend,
                     repetitions = hostRepetitions,
                     warmupRepetitions = warmupRepetitions,
@@ -76,7 +76,7 @@ class InterpreterLoopBenchmarkJvmTest {
                 }
             }
             ?.takeIf(List<ExecutionBackend>::isNotEmpty)
-            ?: listOf(ExecutionBackend.INTERPRETER)
+            ?: listOf(ExecutionBackend.PULLEY)
 
     private fun envName(name: String): String =
         when (name) {
