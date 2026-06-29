@@ -1,5 +1,6 @@
 import org.gradle.api.tasks.testing.Test
 import org.gradle.kotlin.dsl.register
+import org.gradle.kotlin.dsl.withType
 import uk.shusek.krwa.gradle.*
 
 dependencies {
@@ -11,4 +12,10 @@ dependencies {
     add("testImplementation", krwa("wasm"))
     add("testImplementation", krwa("wasm-corpus"))
 }
+
+tasks.withType<Test>().configureEach {
+    maxHeapSize = "2g"
+    jvmArgs("--enable-native-access=ALL-UNNAMED")
+}
+
 registerWasiSpecTests()

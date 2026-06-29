@@ -106,7 +106,8 @@ class Validate private constructor(private val features: List<String>) {
                     if (result.exitCode != 0) {
                         throw WatParseException(
                             result.stdout().toString(StandardCharsets.UTF_8) +
-                                result.stderr().toString(StandardCharsets.UTF_8)
+                                result.stderr().toString(StandardCharsets.UTF_8),
+                            WasiExitException(result.exitCode),
                         )
                     }
                     return
