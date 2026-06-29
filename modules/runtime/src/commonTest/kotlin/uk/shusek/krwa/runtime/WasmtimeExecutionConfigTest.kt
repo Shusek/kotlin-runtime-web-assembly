@@ -15,6 +15,7 @@ class WasmtimeExecutionConfigTest {
             maxInstances = 2L,
             maxTables = 4L,
             maxMemories = 8L,
+            maxFuel = 1_000_000L,
         )
 
         assertEquals(32L * 1024L * 1024L, config.maxMemoryBytes)
@@ -23,6 +24,7 @@ class WasmtimeExecutionConfigTest {
         assertEquals(2L, config.maxInstances)
         assertEquals(4L, config.maxTables)
         assertEquals(8L, config.maxMemories)
+        assertEquals(1_000_000L, config.maxFuel)
     }
 
     @Test
@@ -33,9 +35,13 @@ class WasmtimeExecutionConfigTest {
         val tableError = assertFailsWith<IllegalArgumentException> {
             WasmtimeExecutionConfig(maxTableElements = -2)
         }
+        val fuelError = assertFailsWith<IllegalArgumentException> {
+            WasmtimeExecutionConfig(maxFuel = -2)
+        }
 
         assertContains(stackError.message.orEmpty(), "max Wasm stack bytes must be positive")
         assertContains(tableError.message.orEmpty(), "max table elements must be")
+        assertContains(fuelError.message.orEmpty(), "max fuel must be")
     }
 
     @Test
@@ -217,6 +223,7 @@ class WasmtimeExecutionConfigTest {
             maxInstances = 16L,
             maxTables = 32L,
             maxMemories = 64L,
+            maxFuel = 5_000_000L,
         )
 
         assertEquals(256L * 1024L, config.maxWasmStackBytes)
@@ -224,6 +231,7 @@ class WasmtimeExecutionConfigTest {
         assertEquals(16L, config.maxInstances)
         assertEquals(32L, config.maxTables)
         assertEquals(64L, config.maxMemories)
+        assertEquals(5_000_000L, config.maxFuel)
     }
 
     @Test
@@ -234,9 +242,13 @@ class WasmtimeExecutionConfigTest {
         val memoryCountError = assertFailsWith<IllegalArgumentException> {
             preview3ComponentConfig(maxMemories = -2)
         }
+        val fuelError = assertFailsWith<IllegalArgumentException> {
+            preview3ComponentConfig(maxFuel = -2)
+        }
 
         assertContains(stackError.message.orEmpty(), "max Wasm stack bytes must be positive")
         assertContains(memoryCountError.message.orEmpty(), "Preview3 max memories must be")
+        assertContains(fuelError.message.orEmpty(), "Preview3 max fuel must be")
     }
 
     @Test
@@ -282,6 +294,7 @@ class WasmtimeExecutionConfigTest {
         maxInstances: Long = WasmtimeUnlimitedResourceLimit,
         maxTables: Long = WasmtimeUnlimitedResourceLimit,
         maxMemories: Long = WasmtimeUnlimitedResourceLimit,
+        maxFuel: Long = WasmtimeUnlimitedResourceLimit,
     ): WasmtimePreview3ComponentConfig = WasmtimePreview3ComponentConfig(
         precompiledComponentBytes = precompiledComponentBytes,
         hostPreopenRoot = hostPreopenRoot,
@@ -296,5 +309,6 @@ class WasmtimeExecutionConfigTest {
         maxInstances = maxInstances,
         maxTables = maxTables,
         maxMemories = maxMemories,
+        maxFuel = maxFuel,
     )
 }

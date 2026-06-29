@@ -412,6 +412,24 @@ class WasmModuleTest {
     }
 
     @Test
+    fun shouldTrapWhenWasmtimeFuelIsExhausted() {
+        val module = loadModule("compiled/infinite-loop.c.wasm")
+        configureWasmtimeExecution(
+            module,
+            WasmtimeExecutionConfig(maxFuel = 10_000),
+        )
+        try {
+            val instance = tryBuildPulley(module) ?: return
+            val exception = assertThrows(TrapException::class.java) {
+                instance.export("run").apply()
+            }
+            assertTrue(exception.message.orEmpty().contains("fuel", ignoreCase = true))
+        } finally {
+            clearWasmtimeExecution(module)
+        }
+    }
+
+    @Test
     fun shouldRunBasicCProgram() {
         // check with: wasmtime basic.c.wasm --invoke run
         val instance = Instance.builder(loadModule("compiled/basic.c.wasm")).build()

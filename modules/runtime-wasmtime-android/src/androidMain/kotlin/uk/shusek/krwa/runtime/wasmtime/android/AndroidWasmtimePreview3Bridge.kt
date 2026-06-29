@@ -122,6 +122,7 @@ private fun WasmtimePreview3ComponentConfig.toAndroidPreview3Call(): AndroidPrev
         maxInstances = maxInstances,
         maxTables = maxTables,
         maxMemories = maxMemories,
+        maxFuel = maxFuel,
         executionTimeoutMillis = executionTimeoutMillis,
     )
 }
@@ -143,6 +144,7 @@ private data class AndroidPreview3Call(
     val maxInstances: Long,
     val maxTables: Long,
     val maxMemories: Long,
+    val maxFuel: Long,
     val executionTimeoutMillis: Long,
 )
 
@@ -170,6 +172,7 @@ private object AndroidWasmtimePreview3Native {
                 call.maxInstances,
                 call.maxTables,
                 call.maxMemories,
+                call.maxFuel,
             )
         }
 
@@ -201,6 +204,7 @@ private object AndroidWasmtimePreview3Native {
             call.maxInstances,
             call.maxTables,
             call.maxMemories,
+            call.maxFuel,
             call.executionTimeoutMillis,
             cancellation?.handle ?: 0L,
         )
@@ -253,6 +257,7 @@ private object AndroidWasmtimePreview3Native {
                 call.maxInstances,
                 call.maxTables,
                 call.maxMemories,
+                call.maxFuel,
                 call.executionTimeoutMillis,
             )
         }
@@ -284,6 +289,7 @@ private object AndroidWasmtimePreview3Native {
             call.maxInstances,
             call.maxTables,
             call.maxMemories,
+            call.maxFuel,
             maxOutputBytes,
             call.executionTimeoutMillis,
             cancellation?.handle ?: 0L,
@@ -317,6 +323,7 @@ private object AndroidWasmtimePreview3Native {
         maxInstances: Long,
         maxTables: Long,
         maxMemories: Long,
+        maxFuel: Long,
     ): String?
 
     @JvmStatic
@@ -339,6 +346,7 @@ private object AndroidWasmtimePreview3Native {
         maxInstances: Long,
         maxTables: Long,
         maxMemories: Long,
+        maxFuel: Long,
         executionTimeoutMillis: Long,
         executionCancellationHandle: Long,
     ): String
@@ -373,6 +381,7 @@ private object AndroidWasmtimePreview3Native {
         maxInstances: Long,
         maxTables: Long,
         maxMemories: Long,
+        maxFuel: Long,
         executionTimeoutMillis: Long,
     ): String?
 
@@ -395,6 +404,7 @@ private object AndroidWasmtimePreview3Native {
         maxInstances: Long,
         maxTables: Long,
         maxMemories: Long,
+        maxFuel: Long,
         maxOutputBytes: Long,
         executionTimeoutMillis: Long,
         executionCancellationHandle: Long,

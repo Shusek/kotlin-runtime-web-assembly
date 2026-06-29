@@ -399,6 +399,83 @@ class WasmtimePreview3ComponentProbeTest {
     }
 
     @Test
+    fun jvmPreview3ComponentBridgeTrapsWhenPulleyComponentFuelIsExhausted() {
+        assumeTrue(System.getProperty("krwa.wasmtime.p3.bridge.integration") == "true")
+        val bridgeLibraryPath = Path.of(System.getProperty("krwa.wasmtime.p3.bridge.library"))
+        assertTrue(Files.isRegularFile(bridgeLibraryPath), "Missing bridge library: $bridgeLibraryPath")
+        val sandbox = Files.createTempDirectory("krwa-wasmtime-p3-call-fuel")
+        val componentBytes = compilePulleyComponent(
+            directory = sandbox,
+            name = "call-fuel-component",
+            watSource = """
+                (component
+                  (core module ${'$'}module
+                    (memory (export "memory") 1)
+                    (global ${'$'}heap (mut i32) (i32.const 4096))
+                    (func (export "cabi_realloc")
+                      (param ${'$'}old i32)
+                      (param ${'$'}old-align i32)
+                      (param ${'$'}align i32)
+                      (param ${'$'}size i32)
+                      (result i32)
+                      (local ${'$'}ptr i32)
+                      global.get ${'$'}heap
+                      local.set ${'$'}ptr
+                      global.get ${'$'}heap
+                      local.get ${'$'}size
+                      i32.add
+                      i32.const 7
+                      i32.add
+                      i32.const -8
+                      i32.and
+                      global.set ${'$'}heap
+                      local.get ${'$'}ptr
+                    )
+                    (func ${'$'}spin (export "spin") (param ${'$'}ptr i32) (param ${'$'}len i32) (result i32)
+                      loop ${'$'}again
+                        br ${'$'}again
+                      end
+                      unreachable
+                    )
+                  )
+                  (core instance ${'$'}instance (instantiate ${'$'}module))
+                  (alias core export ${'$'}instance "memory" (core memory ${'$'}memory))
+                  (alias core export ${'$'}instance "cabi_realloc" (core func ${'$'}realloc))
+                  (alias core export ${'$'}instance "spin" (core func ${'$'}spin-core))
+                  (func ${'$'}spin (param "value" string) (result string)
+                    (canon lift (core func ${'$'}spin-core) (memory ${'$'}memory) (realloc ${'$'}realloc))
+                  )
+                  (instance ${'$'}catalog
+                    (export "spin" (func ${'$'}spin))
+                  )
+                  (export "catalog" (instance ${'$'}catalog))
+                )
+            """.trimIndent(),
+            fuel = true,
+        )
+
+        try {
+            val error = assertFailsWith<WasmEngineException> {
+                wasmtimePreview3ComponentCallString(
+                    WasmtimePreview3ComponentConfig(
+                        precompiledComponentBytes = componentBytes,
+                        hostPreopenRoot = sandbox.toString(),
+                        guestPreopenRoot = "/",
+                        maxMemoryBytes = 64L * 1024L * 1024L,
+                        maxFuel = 10_000,
+                    ),
+                    exportName = "catalog.spin",
+                    argument = "suvio",
+                )
+            }
+
+            assertContains(error.message.orEmpty(), "fuel")
+        } finally {
+            sandbox.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
     fun jvmPreview3ComponentBridgeCancelsLongRunningPulleyComponentStringExport() {
         assumeTrue(System.getProperty("krwa.wasmtime.p3.bridge.integration") == "true")
         val bridgeLibraryPath = Path.of(System.getProperty("krwa.wasmtime.p3.bridge.library"))
@@ -798,12 +875,13 @@ class WasmtimePreview3ComponentProbeTest {
         directory: Path,
         name: String,
         watSource: String,
+        fuel: Boolean = false,
     ): ByteArray {
         val wasmtime = System.getProperty("krwa.wasmtime.cli")?.takeIf(String::isNotBlank) ?: "wasmtime"
         val wat = directory.resolve("$name.wat")
         val cwasm = directory.resolve("$name.cwasm")
         Files.writeString(wat, watSource)
-        return compilePulleyComponentFile(wasmtime, wat, cwasm)
+        return compilePulleyComponentFile(wasmtime, wat, cwasm, fuel)
     }
 
     private fun compilePulleyComponentFromCore(
@@ -1113,45 +1191,52 @@ class WasmtimePreview3ComponentProbeTest {
         wasmtime: String,
         input: Path,
         output: Path,
+        fuel: Boolean = false,
     ): ByteArray {
+        val command = mutableListOf(
+            wasmtime,
+            "compile",
+            "--target",
+            WasmtimePulleyTarget,
+            "-C",
+            "collector=drc",
+            "-W",
+            "component-model=y",
+            "-W",
+            "component-model-async=y",
+            "-W",
+            "epoch-interruption=y",
+            "-W",
+            "component-model-more-async-builtins=y",
+            "-W",
+            "component-model-async-stackful=y",
+            "-W",
+            "component-model-threading=y",
+            "-W",
+            "component-model-error-context=y",
+            "-W",
+            "gc=y",
+            "-W",
+            "function-references=y",
+            "-W",
+            "exceptions=y",
+            "-W",
+            "multi-memory=y",
+        )
+        if (fuel) {
+            command += listOf("-W", "fuel=1")
+        }
+        command += listOf(
+            "-o",
+            output.toString(),
+            input.toString(),
+        )
         runProcess(
             directory = input.parent,
             timeoutSeconds = 30,
             timeoutMessage = "wasmtime compile timed out",
             failureMessage = "wasmtime compile failed",
-            command = listOf(
-                wasmtime,
-                "compile",
-                "--target",
-                WasmtimePulleyTarget,
-                "-C",
-                "collector=drc",
-                "-W",
-                "component-model=y",
-                "-W",
-                "component-model-async=y",
-                "-W",
-                "epoch-interruption=y",
-                "-W",
-                "component-model-more-async-builtins=y",
-                "-W",
-                "component-model-async-stackful=y",
-                "-W",
-                "component-model-threading=y",
-                "-W",
-                "component-model-error-context=y",
-                "-W",
-                "gc=y",
-                "-W",
-                "function-references=y",
-                "-W",
-                "exceptions=y",
-                "-W",
-                "multi-memory=y",
-                "-o",
-                output.toString(),
-                input.toString(),
-            ),
+            command = command,
         )
         return Files.readAllBytes(output)
     }

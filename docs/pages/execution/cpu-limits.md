@@ -32,7 +32,8 @@ For untrusted code, keep all blocking host functions under the same timeout
 policy. A timeout cannot preempt arbitrary host code that ignores cancellation.
 
 Use `WasmtimeExecutionConfig` for limits the Wasmtime store can enforce during
-instantiation and execution:
+instantiation and execution. `maxFuel` enables Wasmtime fuel metering for guest
+Wasm instructions:
 
 ```kotlin
 configureWasmtimeExecution(
@@ -43,9 +44,31 @@ configureWasmtimeExecution(
         maxInstances = 1,
         maxTables = 32,
         maxMemories = 4,
+        maxFuel = 5_000_000,
     ),
 )
 ```
+
+Fuel is a store budget, not a wall-clock timer. A module can be instantiated and
+wait for the host to call an export without consuming fuel. Fuel is consumed only
+while guest Wasm instructions run; if the budget is exhausted, Wasmtime traps the
+call. `WasmtimeUnlimitedResourceLimit` (`-1`) disables fuel, `0` is allowed and
+traps as soon as guest execution needs fuel, and positive values are the
+available budget.
+
+For a regular `Instance`, the budget belongs to that Wasmtime store and is shared
+across exported calls on the same instance. For `WasmtimePreview3ComponentConfig`,
+the Preview 3 bridge creates a fresh store per component call or command run, so
+`maxFuel` is effectively a per-call budget. Precompiled Preview 3 components
+must be compiled with fuel enabled, for example `wasmtime compile -W fuel=1 ...`,
+otherwise Wasmtime rejects deserialization under a fuel-enabled engine.
+
+Fuel does not measure host work. It does not tick while the guest is idle, while a
+host import is blocked in I/O, or while the application waits outside Wasmtime.
+Keep blocking imports under the same timeout and cancellation policy as the Wasm
+entry call. On `wasmJs`, KRWA uses the browser or Node `WebAssembly` engine, which
+does not expose Wasmtime fuel; use workers/timeouts or guest instrumentation for
+that target.
 
 ## Coroutines and WASI Preview 3
 

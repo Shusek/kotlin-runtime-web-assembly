@@ -60,6 +60,15 @@ The coroutine APIs in this facade are for cooperative WASI Preview 3 work:
 waiting for `future<T>`, stream readiness, host tasks, and coroutine-scheduled
 P3 resumes. They are not a CPU quota for guest execution.
 
+When a precompiled Preview 3 component runs through the Wasmtime bridge,
+`WasmtimePreview3ComponentConfig(maxFuel = ...)` can enforce a deterministic
+Wasmtime fuel budget for guest Wasm instructions. Fuel is consumed only while
+guest Wasm is running; a component call waiting in host code or an already
+instantiated module waiting to be called does not burn fuel. Because the bridge
+uses precompiled component bytes, compile fuel-enabled artifacts with matching
+Wasmtime settings, for example `wasmtime compile -W fuel=1 ...`, before setting a
+finite `maxFuel`.
+
 `withCoroutineScope(...)` and `withCoroutineDispatcher(...)` decide where P3
 host tasks run. If that scope or dispatcher has parallelism greater than one,
 the guest-visible async surface can make progress on multiple CPU cores at the

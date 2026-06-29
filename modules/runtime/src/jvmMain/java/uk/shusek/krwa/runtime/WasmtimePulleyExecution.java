@@ -187,7 +187,8 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
             long maxTableElements,
             long maxInstances,
             long maxTables,
-            long maxMemories
+            long maxMemories,
+            long maxFuel
     ) {
         String normalizedTarget = normalizedTarget(targetName);
         if (!DEFAULT_WASMTIME_TARGET.equals(normalizedTarget)) {
@@ -200,7 +201,8 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
                 maxTableElements,
                 maxInstances,
                 maxTables,
-                maxMemories
+                maxMemories,
+                maxFuel
         );
         if (limitError != null) return limitError;
         if (
@@ -258,7 +260,8 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
                     maxTableElements,
                     maxInstances,
                     maxTables,
-                    maxMemories
+                    maxMemories,
+                    maxFuel
             );
             if (error.equals(MemorySegment.NULL)) {
                 return null;
@@ -294,7 +297,8 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
             long maxTableElements,
             long maxInstances,
             long maxTables,
-            long maxMemories
+            long maxMemories,
+            long maxFuel
     ) {
         String normalizedTarget = normalizedTarget(targetName);
         if (!DEFAULT_WASMTIME_TARGET.equals(normalizedTarget)) {
@@ -310,7 +314,8 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
                 maxTableElements,
                 maxInstances,
                 maxTables,
-                maxMemories
+                maxMemories,
+                maxFuel
         );
         if (limitError != null) return limitError;
         if (
@@ -369,7 +374,8 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
                     maxTableElements,
                     maxInstances,
                     maxTables,
-                    maxMemories
+                    maxMemories,
+                    maxFuel
             );
             if (error.equals(MemorySegment.NULL)) {
                 return null;
@@ -407,7 +413,8 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
             long maxTableElements,
             long maxInstances,
             long maxTables,
-            long maxMemories
+            long maxMemories,
+            long maxFuel
     ) {
         String normalizedTarget = normalizedTarget(targetName);
         if (!DEFAULT_WASMTIME_TARGET.equals(normalizedTarget)) {
@@ -423,7 +430,8 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
                 maxTableElements,
                 maxInstances,
                 maxTables,
-                maxMemories
+                maxMemories,
+                maxFuel
         );
         if (limitError != null) return limitError;
         if (
@@ -484,7 +492,8 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
                     maxTableElements,
                     maxInstances,
                     maxTables,
-                    maxMemories
+                    maxMemories,
+                    maxFuel
             );
             if (error.equals(MemorySegment.NULL)) {
                 return null;
@@ -522,7 +531,8 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
             long maxTableElements,
             long maxInstances,
             long maxTables,
-            long maxMemories
+            long maxMemories,
+            long maxFuel
     ) {
         String normalizedTarget = normalizedTarget(targetName);
         if (!DEFAULT_WASMTIME_TARGET.equals(normalizedTarget)) {
@@ -541,7 +551,8 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
                 maxTableElements,
                 maxInstances,
                 maxTables,
-                maxMemories
+                maxMemories,
+                maxFuel
         );
         if (limitError != null) return limitError;
         if (
@@ -602,7 +613,8 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
                     maxTableElements,
                     maxInstances,
                     maxTables,
-                    maxMemories
+                    maxMemories,
+                    maxFuel
             );
             if (error.equals(MemorySegment.NULL)) {
                 return null;
@@ -727,6 +739,7 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
             long maxInstances,
             long maxTables,
             long maxMemories,
+            long maxFuel,
             long executionTimeoutMillis
     ) {
         return preview3ComponentCallString(
@@ -749,6 +762,7 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
                 maxInstances,
                 maxTables,
                 maxMemories,
+                maxFuel,
                 executionTimeoutMillis,
                 0L
         );
@@ -774,6 +788,7 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
             long maxInstances,
             long maxTables,
             long maxMemories,
+            long maxFuel,
             long executionTimeoutMillis,
             long executionCancellationHandle
     ) {
@@ -796,7 +811,8 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
                 maxTableElements,
                 maxInstances,
                 maxTables,
-                maxMemories
+                maxMemories,
+                maxFuel
         );
         if (executionTimeoutMillis < 0) {
             throw new WasmEngineException("Wasmtime Preview3 execution timeout millis must not be negative");
@@ -867,6 +883,7 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
                     maxInstances,
                     maxTables,
                     maxMemories,
+                    maxFuel,
                     executionTimeoutMillis,
                     cancellationHandle,
                     resultOut
@@ -910,6 +927,7 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
             long maxInstances,
             long maxTables,
             long maxMemories,
+            long maxFuel,
             long executionTimeoutMillis
     ) {
         String normalizedTarget = normalizedTarget(targetName);
@@ -923,7 +941,8 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
                 maxTableElements,
                 maxInstances,
                 maxTables,
-                maxMemories
+                maxMemories,
+                maxFuel
         );
         if (limitError != null) return limitError;
         if (executionTimeoutMillis < 0) {
@@ -985,6 +1004,7 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
                     maxInstances,
                     maxTables,
                     maxMemories,
+                    maxFuel,
                     executionTimeoutMillis
             );
             if (error.equals(MemorySegment.NULL)) {
@@ -1033,7 +1053,8 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
                 UNLIMITED_RESOURCE_LIMIT,
                 DEFAULT_MAX_INSTANCES,
                 DEFAULT_MAX_TABLES,
-                DEFAULT_MAX_MEMORIES
+                DEFAULT_MAX_MEMORIES,
+                UNLIMITED_RESOURCE_LIMIT
         );
     }
 
@@ -1048,7 +1069,8 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
             long maxTableElements,
             long maxInstances,
             long maxTables,
-            long maxMemories
+            long maxMemories,
+            long maxFuel
     ) {
         if (maxMemoryBytes <= 0) {
             throw new WasmEngineException("Wasmtime max memory bytes must be positive");
@@ -1060,6 +1082,7 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
         validateResourceLimit("max instances", maxInstances);
         validateResourceLimit("max tables", maxTables);
         validateResourceLimit("max memories", maxMemories);
+        validateResourceLimit("max fuel", maxFuel);
         String target = normalizedTarget(targetName);
         byte[] bytes = module.originalBytes();
         if (bytes == null) {
@@ -1071,7 +1094,7 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
             WasmtimeApi api = WasmtimeApi.load(arena);
             trapNewHandle = api.trapNew;
 
-            ConfigResult config = createConfig(api, arena, target, maxWasmStackBytes);
+            ConfigResult config = createConfig(api, arena, target, maxWasmStackBytes, maxFuel);
             if (config.error != null) {
                 throw new WasmEngineException(config.error);
             }
@@ -1101,6 +1124,7 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
                     maxMemories
             );
             MemorySegment context = (MemorySegment) api.storeContext.invokeExact(store);
+            configureFuel(api, context, maxFuel);
 
             List<Long> callbackIds = new ArrayList<>();
             MemorySegment importExterns = buildImports(api, arena, context, module, imports, hostInstance, callbackIds);
@@ -1171,7 +1195,8 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
             long maxTableElements,
             long maxInstances,
             long maxTables,
-            long maxMemories
+            long maxMemories,
+            long maxFuel
     ) {
         if (maxMemoryBytes <= 0) {
             return "Wasmtime Preview3 max memory bytes must be positive";
@@ -1182,7 +1207,8 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
         if (maxTableElements < UNLIMITED_RESOURCE_LIMIT ||
                 maxInstances < UNLIMITED_RESOURCE_LIMIT ||
                 maxTables < UNLIMITED_RESOURCE_LIMIT ||
-                maxMemories < UNLIMITED_RESOURCE_LIMIT) {
+                maxMemories < UNLIMITED_RESOURCE_LIMIT ||
+                maxFuel < UNLIMITED_RESOURCE_LIMIT) {
             return "Wasmtime Preview3 resource limits must be " + UNLIMITED_RESOURCE_LIMIT +
                     " for unlimited or non-negative";
         }
@@ -1195,7 +1221,8 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
             long maxTableElements,
             long maxInstances,
             long maxTables,
-            long maxMemories
+            long maxMemories,
+            long maxFuel
     ) {
         String error = preview3LimitError(
                 maxMemoryBytes,
@@ -1203,7 +1230,8 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
                 maxTableElements,
                 maxInstances,
                 maxTables,
-                maxMemories
+                maxMemories,
+                maxFuel
         );
         if (error != null) {
             throw new WasmEngineException(error);
@@ -1212,14 +1240,15 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
 
     private static ConfigResult createConfig(Arena arena, String targetName) throws Throwable {
         WasmtimeApi api = WasmtimeApi.load(arena);
-        return createConfig(api, arena, targetName, DEFAULT_MAX_WASM_STACK_BYTES);
+        return createConfig(api, arena, targetName, DEFAULT_MAX_WASM_STACK_BYTES, UNLIMITED_RESOURCE_LIMIT);
     }
 
     private static ConfigResult createConfig(
             WasmtimeApi api,
             Arena arena,
             String targetName,
-            long maxWasmStackBytes
+            long maxWasmStackBytes,
+            long maxFuel
     ) throws Throwable {
         MemorySegment config = (MemorySegment) api.wasmConfigNew.invokeExact();
         requireNotNull(config, "wasm_config_new");
@@ -1234,7 +1263,23 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
         api.configWasmMultiMemorySet.invokeExact(config, (byte) 1);
         api.configMemoryMayMoveSet.invokeExact(config, (byte) 1);
         api.configConcurrencySupportSet.invokeExact(config, (byte) 0);
+        api.configConsumeFuelSet.invokeExact(config, (byte) (maxFuel == UNLIMITED_RESOURCE_LIMIT ? 0 : 1));
         return new ConfigResult(config, error);
+    }
+
+    private static void configureFuel(
+            WasmtimeApi api,
+            MemorySegment context,
+            long maxFuel
+    ) throws Throwable {
+        if (maxFuel == UNLIMITED_RESOURCE_LIMIT) {
+            return;
+        }
+        requireNoError(
+                api,
+                (MemorySegment) api.contextSetFuel.invokeExact(context, maxFuel),
+                "set Wasmtime fuel"
+        );
     }
 
     private static void validateResourceLimit(String name, long value) {
@@ -2541,6 +2586,7 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
                             ValueLayout.JAVA_LONG,
                             ValueLayout.JAVA_LONG,
                             ValueLayout.JAVA_LONG,
+                            ValueLayout.JAVA_LONG,
                             ValueLayout.JAVA_LONG
                     )
             );
@@ -2567,6 +2613,7 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
                             ValueLayout.ADDRESS,
                             ValueLayout.JAVA_LONG,
                             C_BOOL,
+                            ValueLayout.JAVA_LONG,
                             ValueLayout.JAVA_LONG,
                             ValueLayout.JAVA_LONG,
                             ValueLayout.JAVA_LONG,
@@ -2605,6 +2652,7 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
                             ValueLayout.JAVA_LONG,
                             ValueLayout.JAVA_LONG,
                             ValueLayout.JAVA_LONG,
+                            ValueLayout.JAVA_LONG,
                             ValueLayout.JAVA_LONG
                     )
             );
@@ -2633,6 +2681,7 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
                             ValueLayout.ADDRESS,
                             ValueLayout.JAVA_LONG,
                             C_BOOL,
+                            ValueLayout.JAVA_LONG,
                             ValueLayout.JAVA_LONG,
                             ValueLayout.JAVA_LONG,
                             ValueLayout.JAVA_LONG,
@@ -2672,6 +2721,7 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
                             ValueLayout.JAVA_LONG,
                             ValueLayout.JAVA_LONG,
                             ValueLayout.JAVA_LONG,
+                            ValueLayout.JAVA_LONG,
                             ValueLayout.ADDRESS,
                             ValueLayout.ADDRESS
                     )
@@ -2698,6 +2748,7 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
                             ValueLayout.ADDRESS,
                             ValueLayout.JAVA_LONG,
                             C_BOOL,
+                            ValueLayout.JAVA_LONG,
                             ValueLayout.JAVA_LONG,
                             ValueLayout.JAVA_LONG,
                             ValueLayout.JAVA_LONG,
@@ -2760,11 +2811,13 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
         private final MethodHandle configMaxWasmStackSet;
         private final MethodHandle configMemoryMayMoveSet;
         private final MethodHandle configConcurrencySupportSet;
+        private final MethodHandle configConsumeFuelSet;
         private final MethodHandle moduleNew;
         private final MethodHandle moduleDeserialize;
         private final MethodHandle storeNew;
         private final MethodHandle storeContext;
         private final MethodHandle storeLimiter;
+        private final MethodHandle contextSetFuel;
         private final MethodHandle instanceNew;
         private final MethodHandle instanceExportGet;
         private final MethodHandle funcCallUnchecked;
@@ -2798,11 +2851,13 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
             configMaxWasmStackSet = downcall(linker, lookup, "wasmtime_config_max_wasm_stack_set", FunctionDescriptor.ofVoid(ValueLayout.ADDRESS, ValueLayout.JAVA_LONG));
             configMemoryMayMoveSet = downcall(linker, lookup, "wasmtime_config_memory_may_move_set", FunctionDescriptor.ofVoid(ValueLayout.ADDRESS, C_BOOL));
             configConcurrencySupportSet = downcall(linker, lookup, "wasmtime_config_concurrency_support_set", FunctionDescriptor.ofVoid(ValueLayout.ADDRESS, C_BOOL));
+            configConsumeFuelSet = downcall(linker, lookup, "wasmtime_config_consume_fuel_set", FunctionDescriptor.ofVoid(ValueLayout.ADDRESS, C_BOOL));
             moduleNew = downcall(linker, lookup, "wasmtime_module_new", FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.JAVA_LONG, ValueLayout.ADDRESS));
             moduleDeserialize = downcall(linker, lookup, "wasmtime_module_deserialize", FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.JAVA_LONG, ValueLayout.ADDRESS));
             storeNew = downcall(linker, lookup, "wasmtime_store_new", FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.ADDRESS));
             storeContext = downcall(linker, lookup, "wasmtime_store_context", FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS));
             storeLimiter = downcall(linker, lookup, "wasmtime_store_limiter", FunctionDescriptor.ofVoid(ValueLayout.ADDRESS, ValueLayout.JAVA_LONG, ValueLayout.JAVA_LONG, ValueLayout.JAVA_LONG, ValueLayout.JAVA_LONG, ValueLayout.JAVA_LONG));
+            contextSetFuel = downcall(linker, lookup, "wasmtime_context_set_fuel", FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.JAVA_LONG));
             instanceNew = downcall(linker, lookup, "wasmtime_instance_new", FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.JAVA_LONG, ValueLayout.ADDRESS, ValueLayout.ADDRESS));
             instanceExportGet = downcall(linker, lookup, "wasmtime_instance_export_get", FunctionDescriptor.of(C_BOOL, ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.JAVA_LONG, ValueLayout.ADDRESS));
             funcCallUnchecked = downcall(linker, lookup, "wasmtime_func_call_unchecked", FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.JAVA_LONG, ValueLayout.ADDRESS));

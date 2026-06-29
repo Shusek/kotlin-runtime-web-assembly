@@ -46,7 +46,8 @@ const char *krwa_wasmtime_p3_precompiled_component_instantiate_unavailable_reaso
     int64_t max_table_elements,
     int64_t max_instances,
     int64_t max_tables,
-    int64_t max_memories
+    int64_t max_memories,
+    int64_t max_fuel
 );
 
 const char *krwa_wasmtime_p3_precompiled_component_call0_unavailable_reason(
@@ -72,7 +73,8 @@ const char *krwa_wasmtime_p3_precompiled_component_call0_unavailable_reason(
     int64_t max_table_elements,
     int64_t max_instances,
     int64_t max_tables,
-    int64_t max_memories
+    int64_t max_memories,
+    int64_t max_fuel
 );
 
 const char *krwa_wasmtime_p3_precompiled_component_call_s32_unavailable_reason(
@@ -100,7 +102,8 @@ const char *krwa_wasmtime_p3_precompiled_component_call_s32_unavailable_reason(
     int64_t max_table_elements,
     int64_t max_instances,
     int64_t max_tables,
-    int64_t max_memories
+    int64_t max_memories,
+    int64_t max_fuel
 );
 
 const char *krwa_wasmtime_p3_precompiled_component_call_string_unavailable_reason(
@@ -128,7 +131,8 @@ const char *krwa_wasmtime_p3_precompiled_component_call_string_unavailable_reaso
     int64_t max_table_elements,
     int64_t max_instances,
     int64_t max_tables,
-    int64_t max_memories
+    int64_t max_memories,
+    int64_t max_fuel
 );
 
 const char *krwa_wasmtime_p3_precompiled_component_call_string(
@@ -156,6 +160,7 @@ const char *krwa_wasmtime_p3_precompiled_component_call_string(
     int64_t max_instances,
     int64_t max_tables,
     int64_t max_memories,
+    int64_t max_fuel,
     uint64_t execution_timeout_millis,
     const void *execution_cancellation,
     uintptr_t *result_out
@@ -184,6 +189,7 @@ const char *krwa_wasmtime_p3_precompiled_command_run_unavailable_reason(
     int64_t max_instances,
     int64_t max_tables,
     int64_t max_memories,
+    int64_t max_fuel,
     uint64_t execution_timeout_millis
 );
 
@@ -197,6 +203,7 @@ int64_t krwa_pulley_create(
     int64_t max_instances,
     int64_t max_tables,
     int64_t max_memories,
+    int64_t max_fuel,
     const int64_t *callback_ids,
     size_t import_count,
     const int32_t *param_offsets,

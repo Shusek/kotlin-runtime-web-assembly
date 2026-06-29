@@ -70,6 +70,7 @@ struct P3Limits {
     max_instances: i64,
     max_tables: i64,
     max_memories: i64,
+    max_fuel: i64,
 }
 
 impl Default for P3Limits {
@@ -81,6 +82,7 @@ impl Default for P3Limits {
             max_instances: UNLIMITED_RESOURCE_LIMIT,
             max_tables: UNLIMITED_RESOURCE_LIMIT,
             max_memories: UNLIMITED_RESOURCE_LIMIT,
+            max_fuel: UNLIMITED_RESOURCE_LIMIT,
         }
     }
 }
@@ -93,6 +95,7 @@ impl P3Limits {
         validate_optional_resource_limit("max instances", self.max_instances)?;
         validate_optional_resource_limit("max tables", self.max_tables)?;
         validate_optional_resource_limit("max memories", self.max_memories)?;
+        validate_optional_resource_limit("max fuel", self.max_fuel)?;
         Ok(())
     }
 }
@@ -317,6 +320,7 @@ pub extern "C" fn krwa_wasmtime_p3_precompiled_component_instantiate_unavailable
     max_instances: i64,
     max_tables: i64,
     max_memories: i64,
+    max_fuel: i64,
 ) -> *const c_char {
     match check_component_instantiation(
         component_bytes,
@@ -342,6 +346,7 @@ pub extern "C" fn krwa_wasmtime_p3_precompiled_component_instantiate_unavailable
             max_instances,
             max_tables,
             max_memories,
+            max_fuel,
         ),
     ) {
         Ok(()) => ptr::null(),
@@ -374,6 +379,7 @@ pub extern "C" fn krwa_wasmtime_p3_precompiled_component_call0_unavailable_reaso
     max_instances: i64,
     max_tables: i64,
     max_memories: i64,
+    max_fuel: i64,
 ) -> *const c_char {
     match check_component_call0(
         component_bytes,
@@ -400,6 +406,7 @@ pub extern "C" fn krwa_wasmtime_p3_precompiled_component_call0_unavailable_reaso
             max_instances,
             max_tables,
             max_memories,
+            max_fuel,
         ),
     ) {
         Ok(()) => ptr::null(),
@@ -434,6 +441,7 @@ pub extern "C" fn krwa_wasmtime_p3_precompiled_component_call_s32_unavailable_re
     max_instances: i64,
     max_tables: i64,
     max_memories: i64,
+    max_fuel: i64,
 ) -> *const c_char {
     match check_component_call_s32(
         component_bytes,
@@ -462,6 +470,7 @@ pub extern "C" fn krwa_wasmtime_p3_precompiled_component_call_s32_unavailable_re
             max_instances,
             max_tables,
             max_memories,
+            max_fuel,
         ),
     ) {
         Ok(()) => ptr::null(),
@@ -496,6 +505,7 @@ pub extern "C" fn krwa_wasmtime_p3_precompiled_component_call_string_unavailable
     max_instances: i64,
     max_tables: i64,
     max_memories: i64,
+    max_fuel: i64,
 ) -> *const c_char {
     match check_component_call_string(
         component_bytes,
@@ -524,6 +534,7 @@ pub extern "C" fn krwa_wasmtime_p3_precompiled_component_call_string_unavailable
             max_instances,
             max_tables,
             max_memories,
+            max_fuel,
         ),
     ) {
         Ok(()) => ptr::null(),
@@ -557,6 +568,7 @@ pub extern "C" fn krwa_wasmtime_p3_precompiled_component_call_string(
     max_instances: i64,
     max_tables: i64,
     max_memories: i64,
+    max_fuel: i64,
     execution_timeout_millis: u64,
     execution_cancellation: *const ExecutionCancellationHandle,
     result_out: *mut *const c_char,
@@ -587,6 +599,7 @@ pub extern "C" fn krwa_wasmtime_p3_precompiled_component_call_string(
             max_instances,
             max_tables,
             max_memories,
+            max_fuel,
         ),
         execution_timeout_millis,
         execution_cancellation,
@@ -629,6 +642,7 @@ pub extern "C" fn krwa_wasmtime_p3_precompiled_command_run_unavailable_reason(
     max_instances: i64,
     max_tables: i64,
     max_memories: i64,
+    max_fuel: i64,
     execution_timeout_millis: u64,
 ) -> *const c_char {
     match check_command_run(
@@ -655,6 +669,7 @@ pub extern "C" fn krwa_wasmtime_p3_precompiled_command_run_unavailable_reason(
             max_instances,
             max_tables,
             max_memories,
+            max_fuel,
         ),
         execution_timeout_millis,
     ) {
@@ -689,6 +704,7 @@ pub extern "C" fn krwa_wasmtime_p3_precompiled_command_run_string(
     max_instances: i64,
     max_tables: i64,
     max_memories: i64,
+    max_fuel: i64,
     max_output_bytes: u64,
     execution_timeout_millis: u64,
     execution_cancellation: *const ExecutionCancellationHandle,
@@ -720,6 +736,7 @@ pub extern "C" fn krwa_wasmtime_p3_precompiled_command_run_string(
             max_instances,
             max_tables,
             max_memories,
+            max_fuel,
         ),
         max_output_bytes,
         execution_timeout_millis,
@@ -749,6 +766,7 @@ fn check_bridge(host_root: *const c_char, guest_root: *const c_char) -> Result<(
         &engine,
         p3_state(&preopens, &[], &[], HttpPolicy::default(), limits)?,
     );
+    configure_store_fuel(&mut store, limits)?;
     store.limiter(|state| &mut state.limits);
     Ok(())
 }
@@ -760,6 +778,7 @@ fn p3_limits_from_c(
     max_instances: i64,
     max_tables: i64,
     max_memories: i64,
+    max_fuel: i64,
 ) -> P3Limits {
     P3Limits {
         max_memory_bytes,
@@ -768,6 +787,7 @@ fn p3_limits_from_c(
         max_instances,
         max_tables,
         max_memories,
+        max_fuel,
     }
 }
 
@@ -814,6 +834,7 @@ fn check_component_instantiation(
         &engine,
         p3_state(&preopens, &arguments, &environment, http_policy, limits)?,
     );
+    configure_store_fuel(&mut store, limits)?;
     store.limiter(|state| &mut state.limits);
     let _ = arm_execution_deadline(&engine, &mut store, None, None);
     let runtime = tokio::runtime::Builder::new_current_thread()
@@ -876,6 +897,7 @@ fn check_command_run(
         &engine,
         p3_state(&preopens, &arguments, &environment, http_policy, limits)?,
     );
+    configure_store_fuel(&mut store, limits)?;
     store.limiter(|state| &mut state.limits);
     let watchdog = arm_execution_deadline(&engine, &mut store, execution_timeout, None);
     let runtime = tokio::runtime::Builder::new_current_thread()
@@ -948,6 +970,7 @@ fn run_command_string(
             Some(&stdio),
         )?,
     );
+    configure_store_fuel(&mut store, limits)?;
     store.limiter(|state| &mut state.limits);
     let watchdog = arm_execution_deadline(
         &engine,
@@ -1080,6 +1103,7 @@ fn check_component_call0(
         &engine,
         p3_state(&preopens, &arguments, &environment, http_policy, limits)?,
     );
+    configure_store_fuel(&mut store, limits)?;
     store.limiter(|state| &mut state.limits);
     let _ = arm_execution_deadline(&engine, &mut store, None, None);
     let runtime = tokio::runtime::Builder::new_current_thread()
@@ -1167,6 +1191,7 @@ fn check_component_call_s32(
         &engine,
         p3_state(&preopens, &arguments, &environment, http_policy, limits)?,
     );
+    configure_store_fuel(&mut store, limits)?;
     store.limiter(|state| &mut state.limits);
     let _ = arm_execution_deadline(&engine, &mut store, None, None);
     let runtime = tokio::runtime::Builder::new_current_thread()
@@ -1320,6 +1345,7 @@ fn call_component_string(
         &engine,
         p3_state(&preopens, &arguments, &environment, http_policy, limits)?,
     );
+    configure_store_fuel(&mut store, limits)?;
     store.limiter(|state| &mut state.limits);
     let watchdog = arm_execution_deadline(
         &engine,
@@ -1636,10 +1662,22 @@ fn p3_engine(limits: P3Limits) -> Result<Engine, String> {
     config.wasm_exceptions(true);
     config.wasm_bulk_memory(true);
     config.wasm_multi_memory(true);
+    config.consume_fuel(limits.max_fuel != UNLIMITED_RESOURCE_LIMIT);
     config.async_support(true);
     config.epoch_interruption(true);
     Engine::new(&config)
         .map_err(|error| format!("failed to create Wasmtime Preview3 engine: {error}"))
+}
+
+fn configure_store_fuel(store: &mut Store<KrwaP3State>, limits: P3Limits) -> Result<(), String> {
+    if limits.max_fuel == UNLIMITED_RESOURCE_LIMIT {
+        return Ok(());
+    }
+    let fuel = u64::try_from(limits.max_fuel)
+        .map_err(|_| "Wasmtime Preview3 max fuel exceeds u64".to_string())?;
+    store
+        .set_fuel(fuel)
+        .map_err(|error| format!("failed to set Wasmtime Preview3 fuel: {error}"))
 }
 
 fn p3_state(
@@ -2396,6 +2434,7 @@ mod tests {
             0,
             0,
             DEFAULT_MAX_WASM_STACK_BYTES,
+            UNLIMITED_RESOURCE_LIMIT,
             UNLIMITED_RESOURCE_LIMIT,
             UNLIMITED_RESOURCE_LIMIT,
             UNLIMITED_RESOURCE_LIMIT,

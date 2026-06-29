@@ -35,6 +35,7 @@ using ComponentInstantiateUnavailableReason = const char * (*)(
     std::int64_t,
     std::int64_t,
     std::int64_t,
+    std::int64_t,
     std::int64_t);
 
 using ComponentCallString = const char * (*)(
@@ -58,6 +59,7 @@ using ComponentCallString = const char * (*)(
     std::uint8_t,
     std::uint64_t,
     std::uint64_t,
+    std::int64_t,
     std::int64_t,
     std::int64_t,
     std::int64_t,
@@ -89,6 +91,7 @@ using CommandRunUnavailableReason = const char * (*)(
     std::int64_t,
     std::int64_t,
     std::int64_t,
+    std::int64_t,
     std::uint64_t);
 
 using CommandRunString = const char * (*)(
@@ -112,6 +115,7 @@ using CommandRunString = const char * (*)(
     std::uint8_t,
     std::uint64_t,
     std::uint64_t,
+    std::int64_t,
     std::int64_t,
     std::int64_t,
     std::int64_t,
@@ -413,7 +417,8 @@ Java_uk_shusek_krwa_runtime_wasmtime_android_AndroidWasmtimePreview3Native_nativ
     jlong maxTableElements,
     jlong maxInstances,
     jlong maxTables,
-    jlong maxMemories) {
+    jlong maxMemories,
+    jlong maxFuel) {
     std::string loadError;
     P3BridgeApi *api = loadApi(&loadError);
     if (api == nullptr) {
@@ -455,7 +460,8 @@ Java_uk_shusek_krwa_runtime_wasmtime_android_AndroidWasmtimePreview3Native_nativ
         static_cast<std::int64_t>(maxTableElements),
         static_cast<std::int64_t>(maxInstances),
         static_cast<std::int64_t>(maxTables),
-        static_cast<std::int64_t>(maxMemories));
+        static_cast<std::int64_t>(maxMemories),
+        static_cast<std::int64_t>(maxFuel));
     return nullableString(env, error);
 }
 
@@ -552,6 +558,7 @@ Java_uk_shusek_krwa_runtime_wasmtime_android_AndroidWasmtimePreview3Native_nativ
     jlong maxInstances,
     jlong maxTables,
     jlong maxMemories,
+    jlong maxFuel,
     jlong executionTimeoutMillis,
     jlong executionCancellationHandle) {
     std::string loadError;
@@ -605,6 +612,7 @@ Java_uk_shusek_krwa_runtime_wasmtime_android_AndroidWasmtimePreview3Native_nativ
         static_cast<std::int64_t>(maxInstances),
         static_cast<std::int64_t>(maxTables),
         static_cast<std::int64_t>(maxMemories),
+        static_cast<std::int64_t>(maxFuel),
         static_cast<std::uint64_t>(executionTimeoutMillis),
         reinterpret_cast<const void *>(executionCancellationHandle),
         &result);
@@ -639,6 +647,7 @@ Java_uk_shusek_krwa_runtime_wasmtime_android_AndroidWasmtimePreview3Native_nativ
     jlong maxInstances,
     jlong maxTables,
     jlong maxMemories,
+    jlong maxFuel,
     jlong executionTimeoutMillis) {
     std::string loadError;
     P3BridgeApi *api = loadApi(&loadError);
@@ -682,6 +691,7 @@ Java_uk_shusek_krwa_runtime_wasmtime_android_AndroidWasmtimePreview3Native_nativ
         static_cast<std::int64_t>(maxInstances),
         static_cast<std::int64_t>(maxTables),
         static_cast<std::int64_t>(maxMemories),
+        static_cast<std::int64_t>(maxFuel),
         static_cast<std::uint64_t>(executionTimeoutMillis));
     return nullableString(env, error);
 }
@@ -707,6 +717,7 @@ Java_uk_shusek_krwa_runtime_wasmtime_android_AndroidWasmtimePreview3Native_nativ
     jlong maxInstances,
     jlong maxTables,
     jlong maxMemories,
+    jlong maxFuel,
     jlong maxOutputBytes,
     jlong executionTimeoutMillis,
     jlong executionCancellationHandle) {
@@ -757,6 +768,7 @@ Java_uk_shusek_krwa_runtime_wasmtime_android_AndroidWasmtimePreview3Native_nativ
         static_cast<std::int64_t>(maxInstances),
         static_cast<std::int64_t>(maxTables),
         static_cast<std::int64_t>(maxMemories),
+        static_cast<std::int64_t>(maxFuel),
         static_cast<std::uint64_t>(maxOutputBytes),
         static_cast<std::uint64_t>(executionTimeoutMillis),
         reinterpret_cast<const void *>(executionCancellationHandle),

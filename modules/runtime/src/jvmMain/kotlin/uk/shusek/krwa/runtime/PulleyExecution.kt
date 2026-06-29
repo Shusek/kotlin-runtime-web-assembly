@@ -58,6 +58,7 @@ internal actual object PulleyExecution {
             Long::class.javaPrimitiveType,
             Long::class.javaPrimitiveType,
             Long::class.javaPrimitiveType,
+            Long::class.javaPrimitiveType,
         )
         method.isAccessible = true
         try {
@@ -74,6 +75,7 @@ internal actual object PulleyExecution {
                 config.maxInstances,
                 config.maxTables,
                 config.maxMemories,
+                config.maxFuel,
             ) as PlatformInstanceExecution
         } catch (e: InvocationTargetException) {
             throw e.targetException
@@ -146,6 +148,7 @@ actual fun wasmtimePreview3ComponentUnavailableReason(config: WasmtimePreview3Co
             Long::class.javaPrimitiveType,
             Long::class.javaPrimitiveType,
             Long::class.javaPrimitiveType,
+            Long::class.javaPrimitiveType,
         )
         val preopens = config.preopens
         val environment = config.environment.entries.toList()
@@ -170,6 +173,7 @@ actual fun wasmtimePreview3ComponentUnavailableReason(config: WasmtimePreview3Co
             config.maxInstances,
             config.maxTables,
             config.maxMemories,
+            config.maxFuel,
         ) as String?
     } catch (e: InvocationTargetException) {
         e.targetException.toWasmtimePreview3ComponentUnavailableReason()
@@ -203,6 +207,7 @@ actual fun wasmtimePreview3ComponentCall0UnavailableReason(
             Long::class.javaPrimitiveType,
             Long::class.javaPrimitiveType,
             Long::class.javaPrimitiveType,
+            Long::class.javaPrimitiveType,
         )
         val preopens = config.preopens
         val environment = config.environment.entries.toList()
@@ -228,6 +233,7 @@ actual fun wasmtimePreview3ComponentCall0UnavailableReason(
             config.maxInstances,
             config.maxTables,
             config.maxMemories,
+            config.maxFuel,
         ) as String?
     } catch (e: InvocationTargetException) {
         e.targetException.toWasmtimePreview3ComponentUnavailableReason()
@@ -265,6 +271,7 @@ actual fun wasmtimePreview3ComponentCallS32UnavailableReason(
             Long::class.javaPrimitiveType,
             Long::class.javaPrimitiveType,
             Long::class.javaPrimitiveType,
+            Long::class.javaPrimitiveType,
         )
         val preopens = config.preopens
         val environment = config.environment.entries.toList()
@@ -292,6 +299,7 @@ actual fun wasmtimePreview3ComponentCallS32UnavailableReason(
             config.maxInstances,
             config.maxTables,
             config.maxMemories,
+            config.maxFuel,
         ) as String?
     } catch (e: InvocationTargetException) {
         e.targetException.toWasmtimePreview3ComponentUnavailableReason()
@@ -329,6 +337,7 @@ actual fun wasmtimePreview3ComponentCallStringUnavailableReason(
             Long::class.javaPrimitiveType,
             Long::class.javaPrimitiveType,
             Long::class.javaPrimitiveType,
+            Long::class.javaPrimitiveType,
         )
         val preopens = config.preopens
         val environment = config.environment.entries.toList()
@@ -356,6 +365,7 @@ actual fun wasmtimePreview3ComponentCallStringUnavailableReason(
             config.maxInstances,
             config.maxTables,
             config.maxMemories,
+            config.maxFuel,
         ) as String?
     } catch (e: InvocationTargetException) {
         e.targetException.toWasmtimePreview3ComponentUnavailableReason()
@@ -425,6 +435,7 @@ fun wasmtimePreview3ComponentCallString(
             Long::class.javaPrimitiveType,
             Long::class.javaPrimitiveType,
             Long::class.javaPrimitiveType,
+            Long::class.javaPrimitiveType,
         )
         val preopens = config.preopens
         val environment = config.environment.entries.toList()
@@ -451,6 +462,7 @@ fun wasmtimePreview3ComponentCallString(
             config.maxInstances,
             config.maxTables,
             config.maxMemories,
+            config.maxFuel,
             config.executionTimeoutMillis,
             cancellation?.handle ?: 0L,
         ) as String
@@ -484,6 +496,7 @@ actual fun wasmtimePreview3CommandRunUnavailableReason(config: WasmtimePreview3C
             Long::class.javaPrimitiveType,
             Long::class.javaPrimitiveType,
             Long::class.javaPrimitiveType,
+            Long::class.javaPrimitiveType,
         )
         val preopens = config.preopens
         val environment = config.environment.entries.toList()
@@ -508,6 +521,7 @@ actual fun wasmtimePreview3CommandRunUnavailableReason(config: WasmtimePreview3C
             config.maxInstances,
             config.maxTables,
             config.maxMemories,
+            config.maxFuel,
             config.executionTimeoutMillis,
         ) as String?
     } catch (e: InvocationTargetException) {

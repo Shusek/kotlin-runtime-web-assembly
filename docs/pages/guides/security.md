@@ -8,6 +8,7 @@ with host process privileges. Treat every import as part of the security model.
 - expose only the host functions and WASI capabilities the guest needs,
 - validate pointers, lengths, handles, enum values, and resource identifiers,
 - enforce CPU or wall-clock limits outside the core runtime,
+- use Wasmtime fuel for deterministic guest-instruction budgets where available,
 - set memory limits appropriate for the workload,
 - keep filesystem preopens narrow and capability-based.
 
@@ -27,6 +28,8 @@ For untrusted modules:
 - run execution on a worker that can be cancelled or interrupted,
 - use [CPU limits](../execution/cpu-limits.md) instead of relying on guest
   cooperation,
+- cap guest execution with `WasmtimeExecutionConfig(maxFuel = ...)` on
+  Wasmtime-backed targets,
 - cap memory with `WasmtimeExecutionConfig`, target-specific engine limits, and
   bounded host allocation protocols.
 

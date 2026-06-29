@@ -47,8 +47,8 @@ platform/linking requirements that explicit `PULLEY` execution would enforce.
 Wasmtime execution can be configured per module before instantiation.
 `WasmtimeExecutionConfig` exposes Wasmtime store and engine limits for maximum
 linear memory bytes, maximum Wasm stack bytes, table elements, instances,
-tables, and memories. Optional count limits use
-`WasmtimeUnlimitedResourceLimit` (`-1`) for unlimited:
+tables, memories, and guest execution fuel. Optional count limits and `maxFuel`
+use `WasmtimeUnlimitedResourceLimit` (`-1`) for unlimited:
 
 ```kotlin
 configureWasmtimeExecution(
@@ -60,9 +60,14 @@ configureWasmtimeExecution(
         maxInstances = 1,
         maxTables = 32,
         maxMemories = 4,
+        maxFuel = 5_000_000,
     ),
 )
 ```
+
+Fuel is consumed only while Wasmtime executes guest Wasm instructions. Keeping an
+instance alive while it waits for the host to call an export does not consume
+fuel, and host work blocked outside Wasmtime is not metered by fuel.
 
 Embedders that package a platform-specific Wasmtime binding can install a provider
 without changing call sites that already select `ExecutionBackend.PULLEY`. This
@@ -131,7 +136,8 @@ module, but JS-exported or imported functions should not expose `v128`.
   the Wasmtime provider boundary and fail if it is not linked.
 - Do not expose a backend selector on `wasmJs`; `AUTO` already means the browser
   or Node WebAssembly engine. Use `WasmJsExecution` only for wasmJs-specific
-  native wrappers.
+  native wrappers. Wasmtime-only controls such as `maxFuel` are unavailable on
+  this path.
 
 For untrusted modules, pair platform execution with explicit
 [CPU limits](cpu-limits.md), memory limits, and narrow host capabilities.

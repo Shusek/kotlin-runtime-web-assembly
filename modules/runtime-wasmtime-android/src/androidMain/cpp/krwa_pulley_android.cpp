@@ -103,6 +103,7 @@ struct WasmtimeApi {
     void (*configMaxWasmStackSet)(wasm_config_t *, std::size_t) = nullptr;
     void (*configMemoryMayMoveSet)(wasm_config_t *, bool) = nullptr;
     void (*configConcurrencySupportSet)(wasm_config_t *, bool) = nullptr;
+    void (*configConsumeFuelSet)(wasm_config_t *, bool) = nullptr;
     wasmtime_error_t *(*moduleNew)(wasm_engine_t *, const std::uint8_t *, std::size_t, wasmtime_module_t **) = nullptr;
     wasmtime_error_t *(*moduleDeserialize)(wasm_engine_t *, const std::uint8_t *, std::size_t, wasmtime_module_t **) = nullptr;
     wasmtime_error_t *(*moduleSerialize)(wasmtime_module_t *, WasmByteVec *) = nullptr;
@@ -110,6 +111,7 @@ struct WasmtimeApi {
     wasmtime_store_t *(*storeNew)(wasm_engine_t *, void *, void (*)(void *)) = nullptr;
     wasmtime_context_t *(*storeContext)(wasmtime_store_t *) = nullptr;
     void (*storeLimiter)(wasmtime_store_t *, std::int64_t, std::int64_t, std::int64_t, std::int64_t, std::int64_t) = nullptr;
+    wasmtime_error_t *(*contextSetFuel)(wasmtime_context_t *, std::uint64_t) = nullptr;
     void (*storeDelete)(wasmtime_store_t *) = nullptr;
     wasmtime_error_t *(*instanceNew)(wasmtime_context_t *, const wasmtime_module_t *, const WasmtimeExtern *, std::size_t, WasmtimeInstance *, wasm_trap_t **) = nullptr;
     bool (*instanceExportGet)(wasmtime_context_t *, const WasmtimeInstance *, const char *, std::size_t, WasmtimeExtern *) = nullptr;
@@ -246,6 +248,7 @@ WasmtimeApi *loadApi(std::string *error) {
         !require("wasmtime_config_max_wasm_stack_set", &api.configMaxWasmStackSet) ||
         !require("wasmtime_config_memory_may_move_set", &api.configMemoryMayMoveSet) ||
         !require("wasmtime_config_concurrency_support_set", &api.configConcurrencySupportSet) ||
+        !require("wasmtime_config_consume_fuel_set", &api.configConsumeFuelSet) ||
         !require("wasmtime_module_new", &api.moduleNew) ||
         !require("wasmtime_module_deserialize", &api.moduleDeserialize) ||
         !require("wasmtime_module_serialize", &api.moduleSerialize) ||
@@ -253,6 +256,7 @@ WasmtimeApi *loadApi(std::string *error) {
         !require("wasmtime_store_new", &api.storeNew) ||
         !require("wasmtime_store_context", &api.storeContext) ||
         !require("wasmtime_store_limiter", &api.storeLimiter) ||
+        !require("wasmtime_context_set_fuel", &api.contextSetFuel) ||
         !require("wasmtime_store_delete", &api.storeDelete) ||
         !require("wasmtime_instance_new", &api.instanceNew) ||
         !require("wasmtime_instance_export_get", &api.instanceExportGet) ||
@@ -363,7 +367,8 @@ std::string configureWasmtime(
     wasm_config_t *config,
     const std::string &target,
     bool memoryMayMove,
-    std::int64_t maxWasmStackBytes
+    std::int64_t maxWasmStackBytes,
+    std::int64_t maxFuel
 ) {
     if (!target.empty() && target != "native" && target != "cranelift") {
         wasmtime_error_t *targetError = api->configTargetSet(config, target.c_str());
@@ -383,6 +388,7 @@ std::string configureWasmtime(
     api->configWasmMultiMemorySet(config, true);
     api->configMemoryMayMoveSet(config, memoryMayMove);
     api->configConcurrencySupportSet(config, false);
+    api->configConsumeFuelSet(config, maxFuel != -1);
     return {};
 }
 
@@ -397,7 +403,7 @@ std::string checkWasmtimeTarget(const std::string &target) {
     if (config == nullptr) {
         return "wasm_config_new returned null";
     }
-    std::string configError = configureWasmtime(api, config, target, false, 512L * 1024L);
+    std::string configError = configureWasmtime(api, config, target, false, 512L * 1024L, -1);
     if (!configError.empty()) {
         return configError;
     }
@@ -420,7 +426,7 @@ std::string checkWasmtimeModuleCompiler(const std::string &target, std::int64_t 
     if (config == nullptr) {
         return "wasm_config_new returned null";
     }
-    std::string configError = configureWasmtime(api, config, target, true, maxWasmStackBytes);
+    std::string configError = configureWasmtime(api, config, target, true, maxWasmStackBytes, -1);
     if (!configError.empty()) {
         return configError;
     }
@@ -829,7 +835,7 @@ Java_uk_shusek_krwa_runtime_wasmtime_android_AndroidWasmtimeModuleCompilerNative
         throwEngine(env, "wasm_config_new returned null");
         return nullptr;
     }
-    std::string configError = configureWasmtime(api, config, targetValue, true, maxWasmStackBytes);
+    std::string configError = configureWasmtime(api, config, targetValue, true, maxWasmStackBytes, -1);
     if (!configError.empty()) {
         throwEngine(env, configError);
         return nullptr;
@@ -901,6 +907,7 @@ Java_uk_shusek_krwa_runtime_wasmtime_android_AndroidWasmtimePulleyNative_create(
     jlong maxInstances,
     jlong maxTables,
     jlong maxMemories,
+    jlong maxFuel,
     jlongArray callbackIds,
     jobjectArray paramOpcodes,
     jobjectArray returnOpcodes
@@ -920,7 +927,8 @@ Java_uk_shusek_krwa_runtime_wasmtime_android_AndroidWasmtimePulleyNative_create(
         throwEngine(env, "Wasmtime max Wasm stack bytes must be positive");
         return 0;
     }
-    if (maxTableElements < -1 || maxInstances < -1 || maxTables < -1 || maxMemories < -1) {
+    if (maxTableElements < -1 || maxInstances < -1 || maxTables < -1 || maxMemories < -1 ||
+        maxFuel < -1) {
         throwEngine(env, "Wasmtime resource limits must be -1 for unlimited or non-negative");
         return 0;
     }
@@ -939,7 +947,8 @@ Java_uk_shusek_krwa_runtime_wasmtime_android_AndroidWasmtimePulleyNative_create(
         throwEngine(env, "wasm_config_new returned null");
         return 0;
     }
-    std::string configError = configureWasmtime(api, config, targetValue, precompiledModule, maxWasmStackBytes);
+    std::string configError =
+        configureWasmtime(api, config, targetValue, precompiledModule, maxWasmStackBytes, maxFuel);
     if (!configError.empty()) {
         throwEngine(env, configError);
         return 0;
@@ -987,6 +996,14 @@ Java_uk_shusek_krwa_runtime_wasmtime_android_AndroidWasmtimePulleyNative_create(
         maxTables,
         maxMemories);
     execution->context = api->storeContext(execution->store);
+    if (maxFuel != -1) {
+        wasmtime_error_t *fuelError =
+            api->contextSetFuel(execution->context, static_cast<std::uint64_t>(maxFuel));
+        if (fuelError != nullptr) {
+            throwEngine(env, "set Wasmtime fuel: " + consumeError(api, fuelError));
+            return 0;
+        }
+    }
 
     std::vector<WasmtimeExtern> imports(static_cast<std::size_t>(importCount));
     std::vector<jlong> callbackIdValues(static_cast<std::size_t>(importCount));

@@ -147,15 +147,24 @@ The runtime does not own a global CPU quota. Hosts that run untrusted code shoul
 enforce execution time at the Wasm call or resume boundary, for example by
 running JVM execution on an interruptible worker thread and cancelling it on
 timeout. Coroutine cancellation alone does not preempt CPU-bound Wasm execution.
+On JVM, Android, and iOS, `WasmtimeExecutionConfig(maxFuel = ...)` can add a
+deterministic Wasmtime fuel budget for guest Wasm instructions. Fuel is consumed
+only while guest Wasm is executing; an instantiated module waiting for the host to
+call an export does not burn fuel. On wasmJs, execution uses the host browser or
+Node `WebAssembly` engine, so Wasmtime fuel is not available.
 
 When using WASI Preview 3, also budget the async host side. A supplied
 `CoroutineDispatcher` or `CoroutineScope` controls where P3 host tasks and
 coroutine-scheduled P3 resumes run; a dispatcher with parallelism greater than
 one can consume multiple CPU cores. If billing or limits assume one core, use a
 bounded resource policy such as `withResourceBudget(parallelism = 1)`.
-`withResourceBudget(...)` is a resource limit, not a CPU meter. Real CPU
-accounting requires OS/process isolation, cgroup accounting, or a dedicated JVM
-worker pool measured with platform thread CPU counters.
+`WasmtimePreview3ComponentConfig(maxFuel = ...)` applies the same guest Wasm fuel
+budget to a precompiled Preview 3 bridge call or command run. The precompiled
+component must be built with Wasmtime fuel enabled, for example `wasmtime compile
+-W fuel=1 ...`, so the serialized artifact matches the fuel-enabled engine
+configuration. `withResourceBudget(...)` is a resource limit, not a CPU meter.
+Real CPU accounting requires OS/process isolation, cgroup accounting, or a
+dedicated JVM worker pool measured with platform thread CPU counters.
 See [CPU limits](docs/pages/execution/cpu-limits.md) and
 [wasi-preview3](modules/wasi-preview3/README.md).
 

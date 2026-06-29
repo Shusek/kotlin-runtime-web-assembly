@@ -54,7 +54,7 @@ page covers parsing, instantiation, exports, and memory.
 
 - [Security](guides/security.md): trust boundaries, host imports, and resource
   limits.
-- [CPU limits](execution/cpu-limits.md): timeouts, Wasmtime resource limits,
+- [CPU limits](execution/cpu-limits.md): timeouts, Wasmtime fuel/resource limits,
   and host-side accounting.
 - [Tools](guides/tools.md): WAT parsing, validation, and local integration
   helpers.

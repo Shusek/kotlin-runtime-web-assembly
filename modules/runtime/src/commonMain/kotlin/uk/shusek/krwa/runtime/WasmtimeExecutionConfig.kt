@@ -27,6 +27,7 @@ data class WasmtimeExecutionConfig(
     val maxInstances: Long = DefaultWasmtimeCoreMaxInstances,
     val maxTables: Long = DefaultWasmtimeCoreMaxTables,
     val maxMemories: Long = DefaultWasmtimeCoreMaxMemories,
+    val maxFuel: Long = WasmtimeUnlimitedResourceLimit,
 ) {
     init {
         require(maxMemoryBytes > 0) { "Wasmtime max memory bytes must be positive" }
@@ -35,6 +36,7 @@ data class WasmtimeExecutionConfig(
         validateWasmtimeResourceLimit("max instances", maxInstances)
         validateWasmtimeResourceLimit("max tables", maxTables)
         validateWasmtimeResourceLimit("max memories", maxMemories)
+        validateWasmtimeResourceLimit("max fuel", maxFuel)
     }
 }
 
@@ -141,6 +143,7 @@ data class WasmtimePreview3ComponentConfig(
     val maxInstances: Long = WasmtimeUnlimitedResourceLimit,
     val maxTables: Long = WasmtimeUnlimitedResourceLimit,
     val maxMemories: Long = WasmtimeUnlimitedResourceLimit,
+    val maxFuel: Long = WasmtimeUnlimitedResourceLimit,
 ) {
     constructor(
         target: String = WasmtimeNativeTarget,
@@ -157,6 +160,7 @@ data class WasmtimePreview3ComponentConfig(
         maxInstances: Long = WasmtimeUnlimitedResourceLimit,
         maxTables: Long = WasmtimeUnlimitedResourceLimit,
         maxMemories: Long = WasmtimeUnlimitedResourceLimit,
+        maxFuel: Long = WasmtimeUnlimitedResourceLimit,
     ) : this(
         target = target,
         precompiledComponentBytes = precompiledComponentBytes,
@@ -176,6 +180,7 @@ data class WasmtimePreview3ComponentConfig(
         maxInstances = maxInstances,
         maxTables = maxTables,
         maxMemories = maxMemories,
+        maxFuel = maxFuel,
     )
 
     val hostPreopenRoot: String
@@ -201,6 +206,7 @@ data class WasmtimePreview3ComponentConfig(
         validateWasmtimeResourceLimit("Preview3 max instances", maxInstances)
         validateWasmtimeResourceLimit("Preview3 max tables", maxTables)
         validateWasmtimeResourceLimit("Preview3 max memories", maxMemories)
+        validateWasmtimeResourceLimit("Preview3 max fuel", maxFuel)
         require(preopens.isNotEmpty()) {
             "Wasmtime Preview3 preopen list must not be empty"
         }

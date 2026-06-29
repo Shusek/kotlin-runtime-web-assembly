@@ -71,6 +71,7 @@ actual fun wasmtimePreview3ComponentUnavailableReason(config: WasmtimePreview3Co
             call.maxInstances,
             call.maxTables,
             call.maxMemories,
+            call.maxFuel,
         )?.toKString()
     }
 }
@@ -105,6 +106,7 @@ actual fun wasmtimePreview3ComponentCall0UnavailableReason(
             call.maxInstances,
             call.maxTables,
             call.maxMemories,
+            call.maxFuel,
         )?.toKString()
     }
 }
@@ -143,6 +145,7 @@ actual fun wasmtimePreview3ComponentCallS32UnavailableReason(
             call.maxInstances,
             call.maxTables,
             call.maxMemories,
+            call.maxFuel,
         )?.toKString()
     }
 }
@@ -181,6 +184,7 @@ actual fun wasmtimePreview3ComponentCallStringUnavailableReason(
             call.maxInstances,
             call.maxTables,
             call.maxMemories,
+            call.maxFuel,
         )?.toKString()
     }
 }
@@ -254,6 +258,7 @@ fun wasmtimePreview3ComponentCallString(
             call.maxInstances,
             call.maxTables,
             call.maxMemories,
+            call.maxFuel,
             call.executionTimeoutMillis,
             cancellation?.handle,
             resultOut.ptr,
@@ -292,6 +297,7 @@ actual fun wasmtimePreview3CommandRunUnavailableReason(config: WasmtimePreview3C
             call.maxInstances,
             call.maxTables,
             call.maxMemories,
+            call.maxFuel,
             call.executionTimeoutMillis,
         )?.toKString()
     }
@@ -332,6 +338,7 @@ private inline fun <T> WasmtimePreview3ComponentConfig.withIosPreview3Call(
                 maxInstances = maxInstances,
                 maxTables = maxTables,
                 maxMemories = maxMemories,
+                maxFuel = maxFuel,
                 executionTimeoutMillis = executionTimeoutMillis.toULong(),
             ),
         )
@@ -358,6 +365,7 @@ private data class IosPreview3Call(
     val maxInstances: Long,
     val maxTables: Long,
     val maxMemories: Long,
+    val maxFuel: Long,
     val executionTimeoutMillis: ULong,
 )
 
