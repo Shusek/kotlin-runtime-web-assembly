@@ -34,11 +34,12 @@ val extractedWasmTools =
         includeEmptyDirs = false
         into(layout.buildDirectory.dir("wasm-tools"))
     }
+val wasmToolsResources = files(layout.buildDirectory.dir("wasm-tools")).builtBy(extractedWasmTools)
 
 kotlin {
     sourceSets {
         named("main") {
-            resources.srcDir(layout.buildDirectory.dir("wasm-tools"))
+            resources.srcDir(wasmToolsResources)
         }
     }
 }
