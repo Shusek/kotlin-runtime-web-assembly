@@ -54,6 +54,20 @@ jobs:
           test -f "$library"
           echo "KRWA_WASMTIME_LIBRARY=$library" >> "$GITHUB_ENV"
 
+      - name: Install wasm-tools CLI
+        run: |
+          version="$(grep '^wasmTools = ' gradle/libs.versions.toml | cut -d '"' -f 2)"
+          archive="$RUNNER_TEMP/wasm-tools.tar.gz"
+          root="$RUNNER_TEMP/wasm-tools"
+          curl --fail --location --output "$archive" \
+            "https://github.com/bytecodealliance/wasm-tools/releases/download/v${version}/wasm-tools-${version}-x86_64-linux.tar.gz"
+          mkdir -p "$root"
+          tar -xzf "$archive" -C "$root"
+          executable="$root/wasm-tools-${version}-x86_64-linux/wasm-tools"
+          test -x "$executable"
+          echo "KRWA_WASM_TOOLS=$executable" >> "$GITHUB_ENV"
+          dirname "$executable" >> "$GITHUB_PATH"
+
       - name: Verify Component Model Gradle plugin
         run: ./gradlew --no-daemon :component-model-gradle-plugin:test :component-model-gradle-plugin:validatePlugins
         env:

@@ -9,6 +9,7 @@ import uk.shusek.krwa.log.Logger
 import uk.shusek.krwa.log.SystemLogger
 import uk.shusek.krwa.runtime.ImportValues
 import uk.shusek.krwa.runtime.Instance
+import uk.shusek.krwa.tools.wasm.WasmToolsCli
 import uk.shusek.krwa.tools.wasm.WasmToolsRuntime
 import uk.shusek.krwa.wasi.WasiExitException
 import uk.shusek.krwa.wasi.WasiOptions
@@ -34,6 +35,14 @@ object WasmToolsInvoker {
 
     @JvmStatic
     fun run(args: List<String>, directories: Map<String, Path>): Result {
+        val nioDirectories = directories.mapValues { (_, path) -> java.nio.file.Path.of(path.toString()) }
+        WasmToolsCli.run(args, directories = nioDirectories)?.let { cliResult ->
+            val result = Result(cliResult.exitCode, cliResult.stdout(), cliResult.stderr())
+            if (cliResult.exitCode != 0) {
+                throw ComponentModelException(result.stderrText() + result.stdoutText())
+            }
+            return result
+        }
         val stdin = Buffer()
         val stdout = Buffer()
         val stderr = Buffer()

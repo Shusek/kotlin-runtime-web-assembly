@@ -93,18 +93,27 @@ class Validate private constructor(private val features: List<String>) {
 
         private fun doValidate(input: InputStream, features: List<String>) {
             try {
-                ByteArrayInputStream(input.readAllBytes()).use { stdin ->
+                val bytes = input.readAllBytes()
+                val args = ArrayList<String>()
+                args.add("wasm-tools")
+                args.add("validate")
+                if (features.isNotEmpty()) {
+                    args.add("--features")
+                    args.add(features.joinToString(","))
+                }
+                args.add("-")
+                WasmToolsCli.run(args, bytes)?.let { result ->
+                    if (result.exitCode != 0) {
+                        throw WatParseException(
+                            result.stdout().toString(StandardCharsets.UTF_8) +
+                                result.stderr().toString(StandardCharsets.UTF_8)
+                        )
+                    }
+                    return
+                }
+                ByteArrayInputStream(bytes).use { stdin ->
                     ByteArrayOutputStream().use { stdout ->
                         ByteArrayOutputStream().use { stderr ->
-                            val args = ArrayList<String>()
-                            args.add("wasm-tools")
-                            args.add("validate")
-                            if (features.isNotEmpty()) {
-                                args.add("--features")
-                                args.add(features.joinToString(","))
-                            }
-                            args.add("-")
-
                             val options =
                                 WasiOptions.builder()
                                     .withStdin(stdin, false)

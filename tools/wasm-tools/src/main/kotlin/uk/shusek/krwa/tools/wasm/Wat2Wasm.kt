@@ -43,6 +43,15 @@ class Wat2Wasm private constructor() {
         fun parse(input: InputStream): ByteArray {
             try {
                 val bytes = input.readAllBytes()
+                WasmToolsCli.run(listOf("wasm-tools", "parse", "-"), bytes)?.let { result ->
+                    if (result.exitCode != 0 || result.stdout().isEmpty()) {
+                        throw WatParseException(
+                            result.stdout().toString(StandardCharsets.UTF_8) +
+                                result.stderr().toString(StandardCharsets.UTF_8)
+                        )
+                    }
+                    return result.stdout()
+                }
                 Validate.validate(ByteArrayInputStream(bytes))
                 ByteArrayInputStream(bytes).use { stdin ->
                     ByteArrayOutputStream().use { stdout ->
