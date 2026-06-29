@@ -75,6 +75,7 @@ dependencies {
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
     maxHeapSize = "2g"
+    jvmArgs("--enable-native-access=ALL-UNNAMED")
 }
 
 tasks.withType<Jar>().configureEach {
