@@ -24,6 +24,7 @@ class Context(
     private val tailCallFunctions: BooleanArray,
     private val tailCallTypes: BooleanArray,
     private val callIndirectClassResolver: IntFunction<String>,
+    private val interruptionChecks: Boolean,
     maxTempSlots: Int,
 ) {
     private val slots: List<Int>
@@ -117,6 +118,8 @@ class Context(
     fun trySaveBaseSlot(): Int = trySaveBaseSlot
 
     fun callIndirectClassName(typeId: Int): String = callIndirectClassResolver.apply(typeId)
+
+    fun interruptionChecks(): Boolean = interruptionChecks
 
     fun classNameForFuncGroup(prefix: String, funcId: Int): String =
         prefix + "FuncGroup_" + (funcId / maxFunctionsPerClass)

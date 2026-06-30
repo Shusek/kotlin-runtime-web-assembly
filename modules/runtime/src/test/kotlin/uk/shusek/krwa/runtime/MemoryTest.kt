@@ -98,6 +98,36 @@ class MemoryTest {
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("memoryImplementations")
+    fun largeOverlappingCopyDestAfterSrcCrossesPage(name: String, memorySupplier: Supplier<Memory>) {
+        val memory = memorySupplier.get()
+
+        val src = 512
+        val dest = 1000
+        val data = patternedBytes(70_000)
+        memory.write(src, data, 0, data.size)
+
+        memory.copy(dest, src, data.size)
+
+        assertArrayEquals(data, memory.readBytes(dest, data.size))
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("memoryImplementations")
+    fun largeOverlappingCopyDestBeforeSrcCrossesPage(name: String, memorySupplier: Supplier<Memory>) {
+        val memory = memorySupplier.get()
+
+        val src = 1000
+        val dest = 512
+        val data = patternedBytes(70_000)
+        memory.write(src, data, 0, data.size)
+
+        memory.copy(dest, src, data.size)
+
+        assertArrayEquals(data, memory.readBytes(dest, data.size))
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("memoryImplementations")
     fun nonOverlappingCopyCrossPage(name: String, memorySupplier: Supplier<Memory>) {
         val memory = memorySupplier.get()
 
@@ -206,5 +236,8 @@ class MemoryTest {
                     Supplier<Memory> { ByteBufferMemory(MemoryLimits(1, 1000, true)) },
                 ),
             )
+
+        private fun patternedBytes(size: Int): ByteArray =
+            ByteArray(size) { index -> ((index * 31 + 7) and 0xFF).toByte() }
     }
 }

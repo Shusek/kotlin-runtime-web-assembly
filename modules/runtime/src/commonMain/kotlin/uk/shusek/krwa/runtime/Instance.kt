@@ -73,6 +73,8 @@ private constructor(
     private val exnRefs: MutableMap<Int, WasmException> = HashMap()
     private var nextExnRef: Int = 0
     private val gcRefs = GcRefStore(this)
+    private var heapSubtypeCacheKeys: LongArray? = null
+    private var heapSubtypeCacheValues: ByteArray? = null
 
     private var tailCallPending: TailCallPending? = null
 
@@ -414,7 +416,7 @@ private constructor(
             return heapTypeSubOf(funcTypeIdx, targetHeapType)
         }
         // ANY hierarchy: i31, struct, array, or internalized externref.
-        if (Value.isI31(ref)) {
+        if (ref > Int.MAX_VALUE && Value.isI31(ref)) {
             return heapTypeSubOf(ValType.TypeIdxCode.I31.code(), targetHeapType)
         }
         val gc = gcRef(ref.toInt())
@@ -429,7 +431,28 @@ private constructor(
         if (actual == target) {
             return true
         }
-        return ValType.heapTypeSubtype(actual, target, module.typeSection())
+        val key = (actual.toLong() shl 32) xor (target.toLong() and 0xffffffffL)
+        val keys =
+            heapSubtypeCacheKeys ?: LongArray(HEAP_SUBTYPE_CACHE_SIZE).also {
+                heapSubtypeCacheKeys = it
+                heapSubtypeCacheValues = ByteArray(HEAP_SUBTYPE_CACHE_SIZE)
+            }
+        val values = heapSubtypeCacheValues!!
+        val index = heapSubtypeCacheIndex(key)
+        if (keys[index] == key) {
+            return values[index] != 0.toByte()
+        }
+        val result = ValType.heapTypeSubtype(actual, target, module.typeSection())
+        keys[index] = key
+        values[index] = if (result) 1 else 0
+        return result
+    }
+
+    private fun heapSubtypeCacheIndex(key: Long): Int {
+        var mixed = key xor (key ushr 33)
+        mixed *= -49064778989728563L
+        mixed = mixed xor (mixed ushr 33)
+        return mixed.toInt() and (HEAP_SUBTYPE_CACHE_SIZE - 1)
     }
 
     // Preserve the Java API behavior: modules without memory expose null, and generated machines
@@ -1131,6 +1154,7 @@ private constructor(
 
     companion object {
         const val START_FUNCTION_NAME: String = "_start"
+        private const val HEAP_SUBTYPE_CACHE_SIZE: Int = 2048
 
         @RuntimeJvmStatic
         fun builder(module: WasmModule): Builder = Builder.create(module)

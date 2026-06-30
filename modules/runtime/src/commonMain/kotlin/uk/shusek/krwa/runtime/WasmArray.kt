@@ -26,6 +26,13 @@ class WasmArray private constructor(
             else -> shortElements!![idx].toLong()
         }
 
+    internal fun getU16(idx: Int): Int =
+        when (storageKind) {
+            STORAGE_LONG -> longElements!![idx].toInt() and 0xFFFF
+            STORAGE_BYTE -> byteElements!![idx].toInt() and 0xFFFF
+            else -> shortElements!![idx].toInt() and 0xFFFF
+        }
+
     fun set(idx: Int, value: Long) {
         when (storageKind) {
             STORAGE_LONG -> longElements!![idx] = value

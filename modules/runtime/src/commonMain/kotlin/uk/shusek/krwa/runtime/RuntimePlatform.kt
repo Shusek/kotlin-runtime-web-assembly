@@ -8,6 +8,14 @@ internal expect object RuntimePlatform {
 
     fun defaultMachineFactory(): (Instance) -> Machine
 
+    fun compareByteArraysUnsigned(
+        left: ByteArray,
+        leftOffset: Int,
+        right: ByteArray,
+        rightOffset: Int,
+        length: Int,
+    ): Int
+
     fun createPlatformExecution(
         module: WasmModule,
         imports: ImportValues,

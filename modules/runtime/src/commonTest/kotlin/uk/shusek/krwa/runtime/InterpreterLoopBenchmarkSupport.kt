@@ -21,11 +21,7 @@ internal object InterpreterLoopBenchmarkSupport {
         backend: InterpreterLoopBenchmarkBackend,
     ): InterpreterLoopBenchmarkResult {
         val module = WasmParser.parse(LOOP_WASM)
-        val builder = Instance.builder(module)
-        if (backend == InterpreterLoopBenchmarkBackend.EXPERIMENTAL_FAST) {
-            builder.withExperimentalFastInterpreter()
-        }
-        val instance = builder.build()
+        val instance = Instance.builder(module).build()
         val run = instance.export("run")
         val expected = triangularI32(iterations)
 
@@ -88,7 +84,6 @@ internal object InterpreterLoopBenchmarkSupport {
 
 internal enum class InterpreterLoopBenchmarkBackend(val label: String) {
     STANDARD("standard"),
-    EXPERIMENTAL_FAST("experimentalFast"),
 }
 
 internal data class InterpreterLoopBenchmarkResult(

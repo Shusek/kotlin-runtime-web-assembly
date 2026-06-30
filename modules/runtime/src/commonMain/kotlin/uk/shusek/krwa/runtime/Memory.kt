@@ -178,6 +178,16 @@ interface Memory {
 
     fun readU8Int(addr: Int): Int = read(addr).toInt() and 0xFF
 
+    fun compareUnsignedBytes(leftAddr: Int, rightAddr: Int, length: Int): Int {
+        var index = 0
+        while (index < length) {
+            val diff = readU8Int(leftAddr + index) - readU8Int(rightAddr + index)
+            if (diff != 0) return diff
+            index++
+        }
+        return 0
+    }
+
     fun readI8(addr: Int): Long = read(addr).toLong()
 
     fun writeF32(addr: Int, data: Float)

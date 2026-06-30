@@ -355,6 +355,21 @@ exact raw stack semantics with a targeted wasm test first, or target a safer
 existing lowered shape such as `local_get_i32_load i32_const` / `i32_const
 i32_and` in hot `func=8`/`func=10`.
 
+Rejected temp candidate from `/private/tmp/krwa-perf-andconst.SpYUGQ`: fuse
+`i32.const K; i32.and` into a stack-top operation. It compiled and returned
+valid scores, but regressed against the clean branch baseline:
+
+```text
+interpreter run=1 score=227.946198 ms=17804.131
+interpreter run=2 score=244.738129 ms=16928.843
+interpreter run=3 score=239.291702 ms=17038.183
+interpreter score_avg=237.325343 score_min=227.946198 score_p50=239.291702 score_best=244.738129 valid_runs=3 invalid_runs=0 ms_avg=17257.052 ms_min=16928.843 ms_p50=17038.183 ms_max=17804.131
+```
+
+The micro-fusion direction is not currently closing the Chasm gap. Prefer
+making Chasm available as an explicit runtime/interpreter backend, then optimize
+KRWA internals against that local reference.
+
 Upstream Chasm source comparison:
 
 - Repo cloned for inspection: `/private/tmp/chasm-src`

@@ -8,6 +8,7 @@ import uk.shusek.krwa.wasm.types.FunctionBody
 import uk.shusek.krwa.wasm.types.FunctionType
 import uk.shusek.krwa.wasm.types.Instruction
 import uk.shusek.krwa.wasm.types.OpCode
+import uk.shusek.krwa.wasm.types.PackedType
 import uk.shusek.krwa.wasm.types.TypeSection
 import uk.shusek.krwa.wasm.types.ValType
 import uk.shusek.krwa.wasm.types.Value
@@ -1370,7 +1371,7 @@ open class InterpreterMachine(private val instance: Instance) : ResumableMachine
         val labelTrue = loweredFunction.labelTrue
         val labelFalse = loweredFunction.labelFalse
         val locals = currentFrame.localSlots()
-        val memory0 = instance.memory(0)
+        var memory0: Memory? = null
         var pc = currentFrame.loweredPc()
 
         while (currentFrame.ctrlStackSize() > 0) {
@@ -1542,41 +1543,58 @@ open class InterpreterMachine(private val instance: Instance) : ResumableMachine
                 LoweredFunction.LOCAL_GET_I32_LOAD -> {
                     val ptr = readLoweredMemPtr(locals[operands2[index]], operands[index])
                     val memoryIndex = operands3[index]
-                    val value = (if (memoryIndex == 0) memory0 else instance.memory(memoryIndex)).readI32(ptr)
+                    val memory =
+                        if (memoryIndex == 0) memory0 ?: instance.memory(0).also { memory0 = it }
+                        else instance.memory(memoryIndex)
+                    val value = memory.readI32(ptr)
                     stack.push(value)
                     pc = index + 2
                 }
                 LoweredFunction.LOCAL_GET_I32_LOAD8_U -> {
                     val ptr = readLoweredMemPtr(locals[operands2[index]], operands[index])
                     val memoryIndex = operands3[index]
-                    val value = (if (memoryIndex == 0) memory0 else instance.memory(memoryIndex)).readU8(ptr)
+                    val memory =
+                        if (memoryIndex == 0) memory0 ?: instance.memory(0).also { memory0 = it }
+                        else instance.memory(memoryIndex)
+                    val value = memory.readU8(ptr)
                     stack.push(value)
                     pc = index + 2
                 }
                 LoweredFunction.LOCAL_GET_I32_LOAD16_S -> {
                     val ptr = readLoweredMemPtr(locals[operands2[index]], operands[index])
                     val memoryIndex = operands3[index]
-                    val value = (if (memoryIndex == 0) memory0 else instance.memory(memoryIndex)).readI16(ptr)
+                    val memory =
+                        if (memoryIndex == 0) memory0 ?: instance.memory(0).also { memory0 = it }
+                        else instance.memory(memoryIndex)
+                    val value = memory.readI16(ptr)
                     stack.push(value)
                     pc = index + 2
                 }
                 LoweredFunction.LOCAL_GET_I32_LOAD16_U -> {
                     val ptr = readLoweredMemPtr(locals[operands2[index]], operands[index])
                     val memoryIndex = operands3[index]
-                    val value = (if (memoryIndex == 0) memory0 else instance.memory(memoryIndex)).readU16(ptr)
+                    val memory =
+                        if (memoryIndex == 0) memory0 ?: instance.memory(0).also { memory0 = it }
+                        else instance.memory(memoryIndex)
+                    val value = memory.readU16(ptr)
                     stack.push(value)
                     pc = index + 2
                 }
                 LoweredFunction.LOCAL_GET_I64_LOAD -> {
                     val ptr = readLoweredMemPtr(locals[operands2[index]], operands[index])
                     val memoryIndex = operands3[index]
-                    val value = (if (memoryIndex == 0) memory0 else instance.memory(memoryIndex)).readI64(ptr)
+                    val memory =
+                        if (memoryIndex == 0) memory0 ?: instance.memory(0).also { memory0 = it }
+                        else instance.memory(memoryIndex)
+                    val value = memory.readI64(ptr)
                     stack.push(value)
                     pc = index + 2
                 }
                 LoweredFunction.LOCAL_GET_LOCAL_GET_I32_LOAD8_U_I32_STORE8 -> {
                     val memoryIndex = operands[index].toInt()
-                    val memory = if (memoryIndex == 0) memory0 else instance.memory(memoryIndex)
+                    val memory =
+                        if (memoryIndex == 0) memory0 ?: instance.memory(0).also { memory0 = it }
+                        else instance.memory(memoryIndex)
                     val srcPtr = readLoweredMemPtr(locals[operands3[index]], 0)
                     val value = memory.readU8(srcPtr).toByte()
                     val dstPtr = readLoweredMemPtr(locals[operands2[index]], 0)
@@ -1664,56 +1682,83 @@ open class InterpreterMachine(private val instance: Instance) : ResumableMachine
                 LoweredFunction.I32_LOAD -> {
                     val ptr = readLoweredMemPtr(stack, operands[index])
                     val memoryIndex = operands2[index]
-                    val value = (if (memoryIndex == 0) memory0 else instance.memory(memoryIndex)).readI32(ptr)
+                    val memory =
+                        if (memoryIndex == 0) memory0 ?: instance.memory(0).also { memory0 = it }
+                        else instance.memory(memoryIndex)
+                    val value = memory.readI32(ptr)
                     stack.push(value)
                 }
                 LoweredFunction.I32_LOAD8_U -> {
                     val ptr = readLoweredMemPtr(stack, operands[index])
                     val memoryIndex = operands2[index]
-                    val value = (if (memoryIndex == 0) memory0 else instance.memory(memoryIndex)).readU8(ptr)
+                    val memory =
+                        if (memoryIndex == 0) memory0 ?: instance.memory(0).also { memory0 = it }
+                        else instance.memory(memoryIndex)
+                    val value = memory.readU8(ptr)
                     stack.push(value)
                 }
                 LoweredFunction.I32_LOAD16_S -> {
                     val ptr = readLoweredMemPtr(stack, operands[index])
                     val memoryIndex = operands2[index]
-                    val value = (if (memoryIndex == 0) memory0 else instance.memory(memoryIndex)).readI16(ptr)
+                    val memory =
+                        if (memoryIndex == 0) memory0 ?: instance.memory(0).also { memory0 = it }
+                        else instance.memory(memoryIndex)
+                    val value = memory.readI16(ptr)
                     stack.push(value)
                 }
                 LoweredFunction.I32_LOAD16_U -> {
                     val ptr = readLoweredMemPtr(stack, operands[index])
                     val memoryIndex = operands2[index]
-                    val value = (if (memoryIndex == 0) memory0 else instance.memory(memoryIndex)).readU16(ptr)
+                    val memory =
+                        if (memoryIndex == 0) memory0 ?: instance.memory(0).also { memory0 = it }
+                        else instance.memory(memoryIndex)
+                    val value = memory.readU16(ptr)
                     stack.push(value)
                 }
                 LoweredFunction.I64_LOAD -> {
                     val ptr = readLoweredMemPtr(stack, operands[index])
                     val memoryIndex = operands2[index]
-                    val value = (if (memoryIndex == 0) memory0 else instance.memory(memoryIndex)).readI64(ptr)
+                    val memory =
+                        if (memoryIndex == 0) memory0 ?: instance.memory(0).also { memory0 = it }
+                        else instance.memory(memoryIndex)
+                    val value = memory.readI64(ptr)
                     stack.push(value)
                 }
                 LoweredFunction.I32_STORE -> {
                     val value = stack.popI32()
                     val ptr = readLoweredMemPtr(stack, operands[index])
                     val memoryIndex = operands2[index]
-                    (if (memoryIndex == 0) memory0 else instance.memory(memoryIndex)).writeI32(ptr, value)
+                    val memory =
+                        if (memoryIndex == 0) memory0 ?: instance.memory(0).also { memory0 = it }
+                        else instance.memory(memoryIndex)
+                    memory.writeI32(ptr, value)
                 }
                 LoweredFunction.I32_STORE8 -> {
                     val value = stack.popI8()
                     val ptr = readLoweredMemPtr(stack, operands[index])
                     val memoryIndex = operands2[index]
-                    (if (memoryIndex == 0) memory0 else instance.memory(memoryIndex)).writeByte(ptr, value)
+                    val memory =
+                        if (memoryIndex == 0) memory0 ?: instance.memory(0).also { memory0 = it }
+                        else instance.memory(memoryIndex)
+                    memory.writeByte(ptr, value)
                 }
                 LoweredFunction.I32_STORE16 -> {
                     val value = stack.popI16()
                     val ptr = readLoweredMemPtr(stack, operands[index])
                     val memoryIndex = operands2[index]
-                    (if (memoryIndex == 0) memory0 else instance.memory(memoryIndex)).writeShort(ptr, value)
+                    val memory =
+                        if (memoryIndex == 0) memory0 ?: instance.memory(0).also { memory0 = it }
+                        else instance.memory(memoryIndex)
+                    memory.writeShort(ptr, value)
                 }
                 LoweredFunction.I64_STORE -> {
                     val value = stack.pop()
                     val ptr = readLoweredMemPtr(stack, operands[index])
                     val memoryIndex = operands2[index]
-                    (if (memoryIndex == 0) memory0 else instance.memory(memoryIndex)).writeLong(ptr, value)
+                    val memory =
+                        if (memoryIndex == 0) memory0 ?: instance.memory(0).also { memory0 = it }
+                        else instance.memory(memoryIndex)
+                    memory.writeLong(ptr, value)
                 }
                 LoweredFunction.SELECT -> {
                     val pred = stack.popI32()
@@ -4060,7 +4105,7 @@ open class InterpreterMachine(private val instance: Instance) : ResumableMachine
                     stack.replaceTop(lexerRef)
                     return false
                 }
-                val char = array.get(position).toInt() and 0xFFFF
+                val char = array.getU16(position)
                 if (char == 32 || char == 10 || char == 13 || char == 9) {
                     stack.replaceTop(lexerRef)
                     return false
@@ -4160,7 +4205,7 @@ open class InterpreterMachine(private val instance: Instance) : ResumableMachine
                 var index = start
                 var result = -1
                 while (index < sourceLength) {
-                    if ((array.get(index).toInt() and 0xFFFF) == targetChar) {
+                    if (array.getU16(index) == targetChar) {
                         result = index
                         break
                     }
@@ -4598,21 +4643,21 @@ open class InterpreterMachine(private val instance: Instance) : ResumableMachine
                 }
 
                 while (position < sourceLength) {
-                    val char = array.get(position).toInt() and 0xFFFF
+                    val char = array.getU16(position)
                     if (char == 32 || char == 10 || char == 13 || char == 9) {
                         position++
                     } else {
                         break
                     }
                 }
-                if (position >= sourceLength || (array.get(position).toInt() and 0xFFFF) != 34) {
+                if (position >= sourceLength || array.getU16(position) != 34) {
                     return false
                 }
 
                 val start = position + 1
                 var end = start
                 while (end < sourceLength) {
-                    val char = array.get(end).toInt() and 0xFFFF
+                    val char = array.getU16(end)
                     if (char == 34) {
                         val stringRef = registerStringFromCharArray(
                             targetInstance,
@@ -4689,7 +4734,7 @@ open class InterpreterMachine(private val instance: Instance) : ResumableMachine
         val length = end - start
         var hash = 0
         for (index in start until end) {
-            hash = (hash shl 5) - hash + (sourceArray.get(index).toInt() and 0xFFFF)
+            hash = (hash shl 5) - hash + sourceArray.getU16(index)
         }
         val cacheIndex = (hash * JSON_KEY_STRING_CACHE_MAGIC) ushr (32 - JSON_KEY_STRING_CACHE_BITS)
         val cachedRef = jsonKeyStringCacheRefs[cacheIndex]
@@ -4749,8 +4794,7 @@ open class InterpreterMachine(private val instance: Instance) : ResumableMachine
         var sourceIndex = start
         var cachedIndex = 0
         while (sourceIndex < end) {
-            if ((sourceArray.get(sourceIndex).toInt() and 0xFFFF) !=
-                (cachedArray.get(cachedIndex).toInt() and 0xFFFF)
+            if (sourceArray.getU16(sourceIndex) != cachedArray.getU16(cachedIndex)
             ) {
                 return false
             }
@@ -4825,8 +4869,7 @@ open class InterpreterMachine(private val instance: Instance) : ResumableMachine
         }
 
         for (index in 0 until length) {
-            if ((selfChars.get(index).toInt() and 0xFFFF) !=
-                (otherChars.get(index).toInt() and 0xFFFF)
+            if (selfChars.getU16(index) != otherChars.getU16(index)
             ) {
                 return false
             }
@@ -6935,6 +6978,25 @@ open class InterpreterMachine(private val instance: Instance) : ResumableMachine
         var data = instance.dataSegmentData(dataIdx)
         if (offset + len * elemSize > data.size) {
             throw TrapException("out of bounds memory access")
+        }
+        when (at.fieldType().storageType().packedType()) {
+            PackedType.I8 -> {
+                val elems = ByteArray(len)
+                for (i in 0 until len) {
+                    elems[i] = readFromData(data, offset + i, elemSize).toByte()
+                }
+                stack.push(instance.registerGcRef(WasmArray(typeIdx, elems)))
+                return
+            }
+            PackedType.I16 -> {
+                val elems = ShortArray(len)
+                for (i in 0 until len) {
+                    elems[i] = readFromData(data, offset + i * elemSize, elemSize).toShort()
+                }
+                stack.push(instance.registerGcRef(WasmArray(typeIdx, elems)))
+                return
+            }
+            null -> Unit
         }
         var elems = LongArray(len)
         for (i in 0 until (len)) {

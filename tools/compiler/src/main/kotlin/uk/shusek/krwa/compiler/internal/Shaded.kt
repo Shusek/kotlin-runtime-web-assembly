@@ -428,6 +428,11 @@ object Shaded {
     }
 
     @JvmStatic
+    fun throwInterruptedException(): RuntimeException {
+        throw WasmInterruptedException("Thread interrupted")
+    }
+
+    @JvmStatic
     fun readGlobal(index: Int, instance: Instance): Long {
         return instance.global(index).value
     }

@@ -66,6 +66,11 @@ object MachineFactoryCompiler {
             return this
         }
 
+        fun withInterruptionChecks(enabled: Boolean): Builder {
+            compilerBuilder.withInterruptionChecks(enabled)
+            return this
+        }
+
         fun withCache(cache: Cache): Builder {
             this.cache = cache
             return this

@@ -10,6 +10,8 @@ import uk.shusek.krwa.log.SystemLogger
 import uk.shusek.krwa.runtime.ByteArrayMemory
 import uk.shusek.krwa.runtime.ImportValues
 import uk.shusek.krwa.runtime.Instance
+import uk.shusek.krwa.runtime.InterpreterMachine
+import uk.shusek.krwa.runtime.Machine
 import uk.shusek.krwa.tools.wasm.WasmToolsModule
 import uk.shusek.krwa.wasi.WasiExitException
 import uk.shusek.krwa.wasi.WasiOptions
@@ -54,7 +56,7 @@ object WasmToolsInvoker {
                 wasi ->
                 val imports = ImportValues.builder().addFunction(*wasi.toHostFunctions()).build()
                 Instance.builder(MODULE)
-                    .withMachineFactory { instance -> WasmToolsModule.create(instance) }
+                    .withMachineFactory { instance -> createWasmToolsMachine(instance) }
                     .withMemoryFactory { limits -> ByteArrayMemory(limits) }
                     .withImportValues(imports)
                     .build()
@@ -68,6 +70,35 @@ object WasmToolsInvoker {
             throw ComponentModelException(result.stderrText() + result.stdoutText())
         }
         return result
+    }
+
+    private fun createWasmToolsMachine(instance: Instance): Machine =
+        try {
+            WasmToolsModule.create(instance)
+        } catch (e: IllegalStateException) {
+            if (!isMissingCompiledWasmToolsMachine(e)) {
+                throw e
+            }
+            LOGGER.log(
+                Logger.Level.WARNING,
+                "WasmTools compiled machine is unavailable; falling back to the interpreter.",
+                e,
+            )
+            InterpreterMachine(instance)
+        }
+
+    private fun isMissingCompiledWasmToolsMachine(error: Throwable): Boolean {
+        if (error.message?.contains("WasmToolsModuleMachine") != true) {
+            return false
+        }
+        var current: Throwable? = error
+        while (current != null) {
+            if (current is ClassNotFoundException) {
+                return true
+            }
+            current = current.cause
+        }
+        return false
     }
 
     @JvmStatic

@@ -10,6 +10,15 @@ internal actual object RuntimePlatform {
     actual fun defaultMachineFactory(): (Instance) -> Machine =
         RuntimeDefaults.defaultMachineFactory { Thread.currentThread().isInterrupted }
 
+    actual fun compareByteArraysUnsigned(
+        left: ByteArray,
+        leftOffset: Int,
+        right: ByteArray,
+        rightOffset: Int,
+        length: Int,
+    ): Int =
+        compareByteArraysUnsignedPortable(left, leftOffset, right, rightOffset, length)
+
     actual fun createPlatformExecution(
         module: WasmModule,
         imports: ImportValues,

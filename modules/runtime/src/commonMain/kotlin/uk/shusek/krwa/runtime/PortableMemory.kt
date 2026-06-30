@@ -139,6 +139,32 @@ class PortableMemory(private val limits: MemoryLimits) : Memory {
 
     override fun readU8(addr: Int): Long = read(addr).toLong() and 0xFFL
 
+    override fun compareUnsignedBytes(leftAddr: Int, rightAddr: Int, length: Int): Int {
+        checkBounds(leftAddr, length, sizeInBytes(), ::WasmRuntimeException)
+        checkBounds(rightAddr, length, sizeInBytes(), ::WasmRuntimeException)
+
+        var currentLeft = leftAddr
+        var currentRight = rightAddr
+        var remaining = length
+        while (remaining > 0) {
+            val leftOffset = currentLeft and PAGE_MASK
+            val rightOffset = currentRight and PAGE_MASK
+            val chunk = min(remaining, min(Memory.PAGE_SIZE - leftOffset, Memory.PAGE_SIZE - rightOffset))
+            val diff = RuntimePlatform.compareByteArraysUnsigned(
+                page(currentLeft ushr PAGE_SHIFT),
+                leftOffset,
+                page(currentRight ushr PAGE_SHIFT),
+                rightOffset,
+                chunk,
+            )
+            if (diff != 0) return diff
+            currentLeft += chunk
+            currentRight += chunk
+            remaining -= chunk
+        }
+        return 0
+    }
+
     override fun readBytes(addr: Int, len: Int): ByteArray {
         checkBounds(addr, len, sizeInBytes(), ::WasmRuntimeException)
         val result = ByteArray(len)
@@ -311,7 +337,16 @@ class PortableMemory(private val limits: MemoryLimits) : Memory {
     override fun copy(dest: Int, src: Int, size: Int) {
         checkBounds(dest, size, sizeInBytes(), ::WasmRuntimeException)
         checkBounds(src, size, sizeInBytes(), ::WasmRuntimeException)
-        write(dest, readBytes(src, size))
+        if (size == 0 || dest == src) {
+            return
+        }
+
+        val srcEnd = src.toLong() + size.toLong()
+        if (dest.toLong() < src.toLong() || dest.toLong() >= srcEnd) {
+            copyForward(dest, src, size)
+        } else {
+            copyBackward(dest, src, size)
+        }
     }
 
     override fun drop(segment: Int) {
@@ -517,6 +552,50 @@ class PortableMemory(private val limits: MemoryLimits) : Memory {
 
     private fun writeByteUnchecked(addr: Int, data: Byte) {
         page(addr ushr PAGE_SHIFT)[addr and PAGE_MASK] = data
+    }
+
+    private fun copyForward(dest: Int, src: Int, size: Int) {
+        var currentDest = dest
+        var currentSrc = src
+        var remaining = size
+        while (remaining > 0) {
+            val destOffset = currentDest and PAGE_MASK
+            val srcOffset = currentSrc and PAGE_MASK
+            val chunk = min(remaining, min(Memory.PAGE_SIZE - destOffset, Memory.PAGE_SIZE - srcOffset))
+            page(currentSrc ushr PAGE_SHIFT).copyInto(
+                destination = page(currentDest ushr PAGE_SHIFT),
+                destinationOffset = destOffset,
+                startIndex = srcOffset,
+                endIndex = srcOffset + chunk,
+            )
+            currentDest += chunk
+            currentSrc += chunk
+            remaining -= chunk
+        }
+    }
+
+    private fun copyBackward(dest: Int, src: Int, size: Int) {
+        var remaining = size
+        while (remaining > 0) {
+            val currentDestEnd = dest + remaining
+            val currentSrcEnd = src + remaining
+            val destEndOffset = currentDestEnd and PAGE_MASK
+            val srcEndOffset = currentSrcEnd and PAGE_MASK
+            val destChunk = if (destEndOffset == 0) Memory.PAGE_SIZE else destEndOffset
+            val srcChunk = if (srcEndOffset == 0) Memory.PAGE_SIZE else srcEndOffset
+            val chunk = min(remaining, min(destChunk, srcChunk))
+            val currentDest = currentDestEnd - chunk
+            val currentSrc = currentSrcEnd - chunk
+            val destOffset = currentDest and PAGE_MASK
+            val srcOffset = currentSrc and PAGE_MASK
+            page(currentSrc ushr PAGE_SHIFT).copyInto(
+                destination = page(currentDest ushr PAGE_SHIFT),
+                destinationOffset = destOffset,
+                startIndex = srcOffset,
+                endIndex = srcOffset + chunk,
+            )
+            remaining -= chunk
+        }
     }
 
     private companion object {

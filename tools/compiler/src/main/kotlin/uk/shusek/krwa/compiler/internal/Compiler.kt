@@ -53,7 +53,7 @@ import uk.shusek.krwa.compiler.internal.ShadedRefs.AOT_INTERPRETER_MACHINE_CALL
 import uk.shusek.krwa.compiler.internal.ShadedRefs.CALL_HOST_FUNCTION
 import uk.shusek.krwa.compiler.internal.ShadedRefs.CALL_INDIRECT
 import uk.shusek.krwa.compiler.internal.ShadedRefs.CALL_INDIRECT_ON_INTERPRETER
-import uk.shusek.krwa.compiler.internal.ShadedRefs.CHECK_INTERRUPTION
+import uk.shusek.krwa.compiler.internal.ShadedRefs.THROW_INTERRUPTED_EXCEPTION
 import uk.shusek.krwa.compiler.internal.ShadedRefs.INSTANCE_MEMORY
 import uk.shusek.krwa.compiler.internal.ShadedRefs.INSTANCE_TABLE
 import uk.shusek.krwa.compiler.internal.ShadedRefs.TABLE_INSTANCE
@@ -83,6 +83,7 @@ private constructor(
     maxFunctionsPerClass: Int,
     interpreterFallback: InterpreterFallback?,
     interpretedFunctions: Set<Int>?,
+    private val interruptionChecks: Boolean,
     private val classCollectorFactory: Supplier<ClassCollector>,
 ) {
     private val className: String = java.util.Objects.requireNonNull(className, "className")!!
@@ -842,7 +843,7 @@ private constructor(
         val funcId = slots + 5
         val refInstance = slots + 6
 
-        emitInvokeStatic(asm, CHECK_INTERRUPTION)
+        emitCheckInterruption(asm)
 
         val local = Label()
         val other = Label()
@@ -1072,6 +1073,7 @@ private constructor(
                 tailCallTypes,
                 if (useBridgeClasses) callIndirectClassResolver!!
                 else IntFunction { internalClassName },
+                interruptionChecks,
                 analysis.maxTempSlots(),
             )
 
@@ -1121,7 +1123,7 @@ private constructor(
                 }
                 CompilerOpCode.GOTO -> {
                     if (visitedTargets.contains(ins.operand(0))) {
-                        emitInvokeStatic(asm, CHECK_INTERRUPTION)
+                        emitCheckInterruption(asm)
                     }
                     asm.goTo(labels[ins.operand(0)]!!)
                 }
@@ -1135,7 +1137,7 @@ private constructor(
                     if (visitedTargets.contains(ins.operand(0))) {
                         val skip = Label()
                         asm.ifeq(skip)
-                        emitInvokeStatic(asm, CHECK_INTERRUPTION)
+                        emitCheckInterruption(asm)
                         asm.goTo(labels[ins.operand(0)]!!)
                         asm.mark(skip)
                     } else {
@@ -1144,7 +1146,7 @@ private constructor(
                 }
                 CompilerOpCode.SWITCH -> {
                     if (ins.operands().anyMatch { visitedTargets.contains(it) }) {
-                        emitInvokeStatic(asm, CHECK_INTERRUPTION)
+                        emitCheckInterruption(asm)
                     }
                     val table = Array(ins.operandCount() - 1) { labels[ins.operand(it)]!! }
                     val defaultLabel = labels[ins.operand(table.size)]!!
@@ -1167,11 +1169,24 @@ private constructor(
         }
     }
 
+    private fun emitCheckInterruption(asm: InstructionAdapter) {
+        if (interruptionChecks) {
+            val notInterrupted = Label()
+            asm.invokestatic("java/lang/Thread", "currentThread", "()Ljava/lang/Thread;", false)
+            asm.invokevirtual("java/lang/Thread", "isInterrupted", "()Z", false)
+            asm.ifeq(notInterrupted)
+            emitInvokeStatic(asm, THROW_INTERRUPTED_EXCEPTION)
+            asm.athrow()
+            asm.mark(notInterrupted)
+        }
+    }
+
     class Builder internal constructor(private val module: WasmModule?) {
         private var className: String? = null
         private var maxFunctionsPerClass = 0
         private var interpreterFallback: InterpreterFallback? = null
         private var interpretedFunctions: Set<Int>? = null
+        private var interruptionChecks = true
         private var classCollectorFactory: Supplier<ClassCollector>? = null
 
         fun withClassName(className: String?): Builder {
@@ -1191,6 +1206,11 @@ private constructor(
 
         fun withInterpretedFunctions(interpretedFunctions: Set<Int>?): Builder {
             this.interpretedFunctions = interpretedFunctions
+            return this
+        }
+
+        fun withInterruptionChecks(enabled: Boolean): Builder {
+            this.interruptionChecks = enabled
             return this
         }
 
@@ -1216,6 +1236,7 @@ private constructor(
                 maxFunctionsPerClass,
                 interpreterFallback,
                 interpretedFunctions,
+                interruptionChecks,
                 classCollectorFactory,
             )
         }

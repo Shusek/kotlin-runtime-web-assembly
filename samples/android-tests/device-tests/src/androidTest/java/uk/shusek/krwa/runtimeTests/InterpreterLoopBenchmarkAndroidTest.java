@@ -4,7 +4,6 @@ import android.util.Log;
 import androidx.test.platform.app.InstrumentationRegistry;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import uk.shusek.krwa.runtime.ExperimentalFastInterpreterMachineKt;
 import uk.shusek.krwa.runtime.Instance;
 import uk.shusek.krwa.wasm.WasmParser;
 
@@ -18,15 +17,10 @@ public final class InterpreterLoopBenchmarkAndroidTest {
         int warmups = configuredInt("krwaRuntimeBenchmarkWarmups", 2);
 
         log(run(iterations, repetitions, warmups, Backend.STANDARD));
-        log(run(iterations, repetitions, warmups, Backend.EXPERIMENTAL_FAST));
     }
 
     private static Result run(int iterations, int repetitions, int warmups, Backend backend) {
-        Instance.Builder builder = Instance.builder(WasmParser.Companion.parse(LOOP_WASM));
-        if (backend == Backend.EXPERIMENTAL_FAST) {
-            ExperimentalFastInterpreterMachineKt.withExperimentalFastInterpreter(builder);
-        }
-        Instance instance = builder.build();
+        Instance instance = Instance.builder(WasmParser.Companion.parse(LOOP_WASM)).build();
         var run = instance.export("run");
         int expected = triangularI32(iterations);
 
@@ -71,8 +65,7 @@ public final class InterpreterLoopBenchmarkAndroidTest {
     }
 
     private enum Backend {
-        STANDARD("standard"),
-        EXPERIMENTAL_FAST("experimentalFast");
+        STANDARD("standard");
 
         final String label;
 

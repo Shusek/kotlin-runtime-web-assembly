@@ -12,6 +12,10 @@ object ShadedRefs {
     @JvmField val CHECK_INTERRUPTION: Method = method(Shaded::class.java, "checkInterruption")
 
     @JvmField
+    val THROW_INTERRUPTED_EXCEPTION: Method =
+        method(Shaded::class.java, "throwInterruptedException")
+
+    @JvmField
     val CALL_INDIRECT: Method =
         method(
             Shaded::class.java,

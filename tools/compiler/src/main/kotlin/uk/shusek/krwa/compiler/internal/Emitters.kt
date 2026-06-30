@@ -162,7 +162,9 @@ internal object Emitters {
         val funcId = ins.operand(0).toInt()
         val functionType = ctx.functionTypes().get(funcId)
 
-        emitInvokeStatic(asm, ShadedRefs.CHECK_INTERRUPTION)
+        if (ctx.interruptionChecks()) {
+            emitInlineCheckInterruption(asm)
+        }
         if (hasTooManyParameters(functionType)) {
             emitBoxValuesOnStack(ctx, asm, functionType.params())
         }
@@ -183,6 +185,16 @@ internal object Emitters {
         if (functionType.returns().size > 1) {
             emitUnboxResult(asm, ctx, functionType.returns())
         }
+    }
+
+    private fun emitInlineCheckInterruption(asm: InstructionAdapter) {
+        val notInterrupted = Label()
+        asm.invokestatic("java/lang/Thread", "currentThread", "()Ljava/lang/Thread;", false)
+        asm.invokevirtual("java/lang/Thread", "isInterrupted", "()Z", false)
+        asm.ifeq(notInterrupted)
+        emitInvokeStatic(asm, ShadedRefs.THROW_INTERRUPTED_EXCEPTION)
+        asm.athrow()
+        asm.mark(notInterrupted)
     }
 
     fun CALL_INDIRECT(ctx: Context, ins: CompilerInstruction, asm: InstructionAdapter) {

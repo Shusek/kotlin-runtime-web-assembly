@@ -48,4 +48,11 @@ class WasmArrayTest {
         assertContentEquals(longArrayOf(1, 99, 3), array.elements())
         assertContentEquals(longArrayOf(1, 99, 3), elements)
     }
+
+    @Test
+    fun getU16ReadsPackedUnsignedValues() {
+        assertEquals(0xFFFF, WasmArray(1, longArrayOf(-1)).getU16(0))
+        assertEquals(0xFF80, WasmArray(1, byteArrayOf(0x80.toByte())).getU16(0))
+        assertEquals(0x8000, WasmArray(1, shortArrayOf(0x8000.toShort())).getU16(0))
+    }
 }

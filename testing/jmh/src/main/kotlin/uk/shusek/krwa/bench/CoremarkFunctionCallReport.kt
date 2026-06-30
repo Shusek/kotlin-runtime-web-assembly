@@ -21,7 +21,7 @@ fun main() {
     val warmups = intProperty("krwa.coremark.profile.warmups", 0).coerceAtLeast(0)
     val backend = profileBackend()
 
-    require(backend == CoremarkBackend.INTERPRETER || backend == CoremarkBackend.EXPERIMENTAL_FAST) {
+    require(backend == CoremarkBackend.INTERPRETER) {
         "Function call profile requires an interpreter backend"
     }
 
@@ -348,7 +348,5 @@ private fun intProperty(name: String, defaultValue: Int): Int =
 private fun profileBackend(): CoremarkBackend =
     when (System.getProperty("krwa.coremark.profile.backend", "interpreter").trim().lowercase(Locale.ROOT)) {
         "interpreter", "interpreted", "int" -> CoremarkBackend.INTERPRETER
-        "experimental", "experimental_fast", "experimental-fast", "fast" ->
-            CoremarkBackend.EXPERIMENTAL_FAST
         else -> error("Unsupported krwa.coremark.profile.backend")
     }

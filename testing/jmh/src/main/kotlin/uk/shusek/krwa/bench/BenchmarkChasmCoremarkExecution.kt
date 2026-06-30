@@ -22,16 +22,7 @@ import uk.shusek.krwa.wasm.WasmModule
 @BenchmarkMode(Mode.AverageTime)
 @Fork(1)
 open class BenchmarkChasmCoremarkExecution {
-    @Param(
-        "INTERPRETER",
-        "CHASM_INTERPRETER",
-        "CHASM_DIRECT",
-        "SLOT_PLAN_PROBE",
-        "EXPERIMENTAL_FAST",
-        "COMPILED",
-    )
-    @JvmField
-    var backendName: String = ""
+    @Param("INTERPRETER", "CHASM_INTERPRETER", "COMPILED") @JvmField var backendName: String = ""
 
     private lateinit var module: WasmModule
     private lateinit var backend: CoremarkBackend

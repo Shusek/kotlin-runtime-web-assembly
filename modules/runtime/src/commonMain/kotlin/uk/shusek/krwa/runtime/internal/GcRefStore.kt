@@ -6,7 +6,6 @@ import uk.shusek.krwa.runtime.StackFrame
 import uk.shusek.krwa.runtime.WasmArray
 import uk.shusek.krwa.runtime.WasmGcRef
 import uk.shusek.krwa.runtime.WasmStruct
-import uk.shusek.krwa.wasm.types.Value
 
 /**
  * Store for GC-managed references keyed by auto-assigned integers.
@@ -16,14 +15,19 @@ import uk.shusek.krwa.wasm.types.Value
  * are empty. At that point the only roots are globals and tables.
  */
 open class GcRefStore(private val instance: Instance) {
-    private val refs = ArrayList<WasmGcRef?>()
+    private var refs = arrayOfNulls<WasmGcRef>(MIN_CAPACITY)
+    private var size = 0
     private var allocsSinceLastSweep = 0
     private var sweepRequested = false
 
     /** Inserts a value with an automatically assigned key. */
     fun put(value: WasmGcRef): Int {
-        val id = ID_OFFSET + refs.size
-        refs.add(value)
+        if (size == refs.size) {
+            refs = refs.copyOf(refs.size shl 1)
+        }
+        val id = ID_OFFSET + size
+        refs[size] = value
+        size++
         allocsSinceLastSweep++
         if (allocsSinceLastSweep >= SWEEP_INTERVAL) {
             sweepRequested = true
@@ -34,7 +38,7 @@ open class GcRefStore(private val instance: Instance) {
     /** Retrieves a value by key, or null if missing. */
     operator fun get(key: Int): WasmGcRef? {
         val index = key - ID_OFFSET
-        if (index < 0 || index >= refs.size) {
+        if (index < 0 || index >= size) {
             return null
         }
         return refs[index]
@@ -89,7 +93,7 @@ open class GcRefStore(private val instance: Instance) {
         }
 
         // 4. Remove unreachable entries.
-        for (index in refs.indices) {
+        for (index in 0 until size) {
             if (!reachable.contains(ID_OFFSET + index)) {
                 refs[index] = null
             }
@@ -127,9 +131,10 @@ open class GcRefStore(private val instance: Instance) {
         const val ID_OFFSET: Int = 0x10000
 
         private const val SWEEP_INTERVAL: Int = 4096
+        private const val MIN_CAPACITY: Int = 1024
 
         /** Checks whether a raw reference value is a GC ref ID. */
         fun isGcRefId(value: Long): Boolean =
-            value >= ID_OFFSET && value != Value.REF_NULL_VALUE.toLong() && !Value.isI31(value)
+            value in ID_OFFSET..Int.MAX_VALUE
     }
 }
