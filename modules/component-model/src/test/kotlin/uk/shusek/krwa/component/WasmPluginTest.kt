@@ -2543,6 +2543,87 @@ class WasmPluginTest {
     }
 
     @Test
+    fun buildsSelectedWorldWhenCoreModuleImportsAsyncTaskReturnsForOtherWorlds() {
+        val witPackage =
+            WitPackage.parse(
+                """
+                package example:multi-world-async;
+                interface catalog {
+                  len: async func(input: string) -> u32;
+                }
+                interface playback {
+                  streams: async func(input: string) -> u32;
+                }
+                world catalog-plugin {
+                  export catalog;
+                }
+                world playback-plugin {
+                  export playback;
+                }
+                """
+                    .trimIndent()
+            )
+        val module =
+            Wat2Wasm.parse(
+                """
+                (module
+                  (import "[export]example:multi-world-async/catalog" "[task-return]len"
+                    (func ${'$'}task_return_len (param i32)))
+                  (import "[export]example:multi-world-async/playback" "[task-return]streams"
+                    (func ${'$'}task_return_streams (param i32)))
+                  (memory (export "memory") 1)
+                  (global ${'$'}heap (mut i32) (i32.const 1024))
+                  (func ${'$'}realloc
+                    (param ${'$'}old i32) (param ${'$'}old_size i32)
+                    (param ${'$'}align i32) (param ${'$'}new_size i32)
+                    (result i32)
+                    (local ${'$'}ptr i32)
+                    (local.set ${'$'}ptr (global.get ${'$'}heap))
+                    (global.set ${'$'}heap
+                      (i32.add (global.get ${'$'}heap) (local.get ${'$'}new_size)))
+                    (local.get ${'$'}ptr))
+                  (export "canonical_abi_realloc" (func ${'$'}realloc))
+                  (export "cabi_realloc" (func ${'$'}realloc))
+                  (func ${'$'}len (param ${'$'}ptr i32) (param ${'$'}len i32) (result i32)
+                    (call ${'$'}task_return_len (local.get ${'$'}len))
+                    (i32.const 0))
+                  (func ${'$'}streams (param ${'$'}ptr i32) (param ${'$'}len i32) (result i32)
+                    (call ${'$'}task_return_streams
+                      (i32.add (local.get ${'$'}len) (i32.const 10)))
+                    (i32.const 0))
+                  (func ${'$'}callback
+                    (param ${'$'}event i32) (param ${'$'}payload1 i32) (param ${'$'}payload2 i32)
+                    (result i32)
+                    unreachable)
+                  (export "[async-lift]example:multi-world-async/catalog#len"
+                    (func ${'$'}len))
+                  (export "[callback][async-lift]example:multi-world-async/catalog#len"
+                    (func ${'$'}callback))
+                  (export "[async-lift]example:multi-world-async/playback#streams"
+                    (func ${'$'}streams))
+                  (export "[callback][async-lift]example:multi-world-async/playback#streams"
+                    (func ${'$'}callback))
+                )
+                """
+                    .trimIndent()
+            )
+
+        val catalogPlugin =
+            WasmPlugin.builder(witPackage)
+                .withWorld("catalog-plugin")
+                .withModule(module)
+                .build()
+        val playbackPlugin =
+            WasmPlugin.builder(witPackage)
+                .withWorld("playback-plugin")
+                .withModule(module)
+                .build()
+
+        assertEquals(6L, catalogPlugin.call("catalog.len", "kotlin"))
+        assertEquals(16L, playbackPlugin.call("playback.streams", "kotlin"))
+    }
+
+    @Test
     fun resumesYieldedAsyncWitExportThroughCallbackTaskReturnAbi() {
         val witPackage =
             WitPackage.parse(

@@ -739,6 +739,13 @@ private constructor(
                     existing.add(key)
                     continue
                 }
+                val taskReturnFunction =
+                    findExportedAsyncTaskReturnFunction(imported.module(), imported.name())
+                if (taskReturnFunction != null) {
+                    addAsyncTaskReturnImport(functions, imported.module(), taskReturnFunction)
+                    existing.add(key)
+                    continue
+                }
                 val binding = findDeclaredHostImport(imported.module(), imported.name())
                 if (binding != null) {
                     val handler =
@@ -1634,6 +1641,17 @@ private constructor(
         private fun asyncTaskReturnPlainName(function: WitPackage.Function): String =
             "[task-return]${function.name()}"
 
+        private fun asyncTaskReturnFunctionName(importName: String): String? =
+            when {
+                importName.startsWith("[task-return][async]") ->
+                    importName.removePrefix("[task-return][async]")
+
+                importName.startsWith("[task-return]") ->
+                    importName.removePrefix("[task-return]")
+
+                else -> null
+            }
+
         private fun resourceDeclarations(
             declaration: WitPackage.InterfaceDeclaration
         ): List<WitPackage.TypeDeclaration> {
@@ -1658,6 +1676,67 @@ private constructor(
                 result.add("[export]$moduleName")
             }
             return result
+        }
+
+        private fun findExportedAsyncTaskReturnFunction(
+            moduleName: String,
+            importName: String,
+        ): WitPackage.Function? {
+            val functionName = asyncTaskReturnFunctionName(importName) ?: return null
+            for (world in witPackage.worlds()) {
+                for (item in world.exports()) {
+                    if (item.isFunction) {
+                        val function = item.function()!!
+                        if (
+                            function.isAsync &&
+                                matchesExportModuleName(
+                                    moduleName,
+                                    setOf(rootAsyncTaskReturnModuleName()),
+                                ) &&
+                                function.name() == functionName
+                        ) {
+                            return function
+                        }
+                        continue
+                    }
+                    val exportedInterface = requireInterface(item)
+                    val moduleNames = exportedTaskReturnModuleNames(item, exportedInterface)
+                    if (!matchesExportModuleName(moduleName, moduleNames)) {
+                        continue
+                    }
+                    for (binding in interfaceFunctionBindings(exportedInterface)) {
+                        if (binding.function.isAsync && binding.symbolName == functionName) {
+                            return binding.function
+                        }
+                    }
+                }
+            }
+            return null
+        }
+
+        private fun exportedTaskReturnModuleNames(
+            item: WitPackage.WorldItem,
+            declaration: WitPackage.InterfaceDeclaration,
+        ): Set<String> {
+            val result = LinkedHashSet<String>()
+            for (moduleName in interfaceModuleNames(item, declaration)) {
+                result.add("[export]$moduleName")
+            }
+            result.add(interfaceAsyncTaskReturnModuleName(declaration))
+            return result
+        }
+
+        private fun matchesExportModuleName(moduleName: String, moduleNames: Set<String>): Boolean {
+            if (moduleNames.contains(moduleName)) {
+                return true
+            }
+            val unversioned = WitNames.withoutVersion(moduleName)
+            for (candidate in moduleNames) {
+                if (WitNames.withoutVersion(candidate) == unversioned) {
+                    return true
+                }
+            }
+            return false
         }
 
         private fun deduplicateFunctions(functions: List<ImportFunction>): List<ImportFunction> {
