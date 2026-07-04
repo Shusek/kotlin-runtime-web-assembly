@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 #include <cstring>
 #include <memory>
 #include <mutex>
@@ -108,6 +109,7 @@ void wasmtime_config_concurrency_support_set(wasm_config_t *, bool);
 void wasmtime_config_consume_fuel_set(wasm_config_t *, bool);
 wasmtime_error_t *wasmtime_module_new(wasm_engine_t *, const std::uint8_t *, std::size_t, wasmtime_module_t **);
 wasmtime_error_t *wasmtime_module_deserialize(wasm_engine_t *, const std::uint8_t *, std::size_t, wasmtime_module_t **);
+wasmtime_error_t *wasmtime_module_serialize(wasmtime_module_t *, WasmByteVec *);
 void wasmtime_module_delete(wasmtime_module_t *);
 wasmtime_store_t *wasmtime_store_new(wasm_engine_t *, void *, void (*)(void *));
 wasmtime_context_t *wasmtime_store_context(wasmtime_store_t *);
@@ -298,6 +300,29 @@ std::string configurePulley(
     wasmtime_config_memory_may_move_set(config, true);
     wasmtime_config_concurrency_support_set(config, false);
     wasmtime_config_consume_fuel_set(config, maxFuel != -1);
+    return {};
+}
+
+std::string checkWasmtimeModuleCompiler(const char *target, std::uint64_t maxWasmStackBytes) {
+    const std::string targetValue = target == nullptr ? "" : std::string(target);
+    if (targetValue != "pulley64") {
+        return "Wasmtime module compiler only supports target pulley64 on iOS, got " + targetValue;
+    }
+
+    wasm_config_t *config = wasm_config_new();
+    if (config == nullptr) {
+        return "wasm_config_new returned null";
+    }
+    std::unique_ptr<wasm_config_t, decltype(&wasm_config_delete)> configGuard(config, wasm_config_delete);
+    std::string configError = configurePulley(config, static_cast<std::int64_t>(maxWasmStackBytes), -1);
+    if (!configError.empty()) {
+        return configError;
+    }
+    wasm_engine_t *engine = wasm_engine_new_with_config(configGuard.release());
+    if (engine == nullptr) {
+        return "wasm_engine_new_with_config returned null";
+    }
+    wasm_engine_delete(engine);
     return {};
 }
 
@@ -524,6 +549,89 @@ extern "C" const char *krwa_wasmtime_component_wasi_unavailable_reason(void) {
         }
     }
     return nullptr;
+}
+
+extern "C" const char *krwa_wasmtime_module_compiler_unavailable_reason(
+    const char *target,
+    std::uint64_t maxWasmStackBytes
+) {
+    gLastError.clear();
+    std::string reason = checkWasmtimeModuleCompiler(target, maxWasmStackBytes);
+    return reason.empty() ? nullptr : setError(reason);
+}
+
+extern "C" const char *krwa_wasmtime_compile_module_to_cwasm(
+    const std::uint8_t *moduleBytes,
+    std::size_t moduleSize,
+    const char *target,
+    std::uint64_t maxWasmStackBytes,
+    const std::uint8_t **resultOut,
+    std::size_t *resultSizeOut
+) {
+    gLastError.clear();
+    if (moduleBytes == nullptr || moduleSize == 0) {
+        return setError("module bytes must not be empty");
+    }
+    if (resultOut == nullptr || resultSizeOut == nullptr) {
+        return setError("compiled module output pointers must not be null");
+    }
+    *resultOut = nullptr;
+    *resultSizeOut = 0;
+
+    std::string unavailableReason = checkWasmtimeModuleCompiler(target, maxWasmStackBytes);
+    if (!unavailableReason.empty()) {
+        return setError(unavailableReason);
+    }
+
+    wasm_config_t *config = wasm_config_new();
+    if (config == nullptr) {
+        return setError("wasm_config_new returned null");
+    }
+    std::unique_ptr<wasm_config_t, decltype(&wasm_config_delete)> configGuard(config, wasm_config_delete);
+    std::string configError = configurePulley(config, static_cast<std::int64_t>(maxWasmStackBytes), -1);
+    if (!configError.empty()) {
+        return setError(configError);
+    }
+    wasm_engine_t *engine = wasm_engine_new_with_config(configGuard.release());
+    if (engine == nullptr) {
+        return setError("wasm_engine_new_with_config returned null");
+    }
+    std::unique_ptr<wasm_engine_t, decltype(&wasm_engine_delete)> engineGuard(engine, wasm_engine_delete);
+
+    wasmtime_module_t *module = nullptr;
+    wasmtime_error_t *moduleError = wasmtime_module_new(engine, moduleBytes, moduleSize, &module);
+    if (moduleError != nullptr) {
+        return setError("compile module for target pulley64: " + consumeError(moduleError));
+    }
+    std::unique_ptr<wasmtime_module_t, decltype(&wasmtime_module_delete)> moduleGuard(module, wasmtime_module_delete);
+
+    WasmByteVec serialized{};
+    wasmtime_error_t *serializeError = wasmtime_module_serialize(module, &serialized);
+    if (serializeError != nullptr) {
+        return setError("serialize module for target pulley64: " + consumeError(serializeError));
+    }
+    std::unique_ptr<WasmByteVec, void (*)(WasmByteVec *)> serializedGuard(
+        &serialized,
+        [](WasmByteVec *bytes) {
+            wasm_byte_vec_delete(bytes);
+        }
+    );
+    if (serialized.size == 0 || serialized.data == nullptr) {
+        return setError("serialized module is empty");
+    }
+
+    void *owned = std::malloc(serialized.size);
+    if (owned == nullptr) {
+        return setError("failed to allocate serialized module output");
+    }
+    std::memcpy(owned, serialized.data, serialized.size);
+    *resultOut = static_cast<const std::uint8_t *>(owned);
+    *resultSizeOut = serialized.size;
+    return nullptr;
+}
+
+extern "C" void krwa_wasmtime_compiled_module_free(const std::uint8_t *moduleBytes) {
+    std::free(const_cast<std::uint8_t *>(moduleBytes));
 }
 
 extern "C" std::int64_t krwa_pulley_create(

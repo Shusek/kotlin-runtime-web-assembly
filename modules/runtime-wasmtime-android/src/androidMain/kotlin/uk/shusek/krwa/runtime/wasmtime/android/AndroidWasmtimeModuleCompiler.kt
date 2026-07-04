@@ -1,6 +1,7 @@
 package uk.shusek.krwa.runtime.wasmtime.android
 
 import uk.shusek.krwa.runtime.WasmtimeNativeTarget
+import uk.shusek.krwa.runtime.WasmtimeModuleCompilerBuildIdentity
 import uk.shusek.krwa.wasm.WasmEngineException
 
 fun androidWasmtimeModuleCompilerUnavailableReason(
@@ -8,6 +9,14 @@ fun androidWasmtimeModuleCompilerUnavailableReason(
     maxWasmStackBytes: Long = DefaultCompilerMaxWasmStackBytes,
 ): String? =
     AndroidWasmtimeModuleCompilerNative.compilerUnavailableReason(target, maxWasmStackBytes)
+
+fun androidWasmtimeModuleCompilerIdentity(
+    target: String = WasmtimeNativeTarget,
+    maxWasmStackBytes: Long = DefaultCompilerMaxWasmStackBytes,
+): String? {
+    if (androidWasmtimeModuleCompilerUnavailableReason(target, maxWasmStackBytes) != null) return null
+    return "android:$WasmtimeModuleCompilerBuildIdentity:target=$target:maxWasmStackBytes=$maxWasmStackBytes"
+}
 
 fun androidWasmtimeCompileModuleToCwasm(
     moduleBytes: ByteArray,

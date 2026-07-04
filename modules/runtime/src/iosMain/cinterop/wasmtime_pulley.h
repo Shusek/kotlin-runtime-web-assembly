@@ -18,6 +18,16 @@ typedef int32_t (*krwa_pulley_host_callback_t)(
 const char *krwa_pulley_last_error(void);
 const char *krwa_pulley_unavailable_reason(void);
 const char *krwa_wasmtime_component_wasi_unavailable_reason(void);
+const char *krwa_wasmtime_module_compiler_unavailable_reason(const char *target, uint64_t max_wasm_stack_bytes);
+const char *krwa_wasmtime_compile_module_to_cwasm(
+    const uint8_t *module_bytes,
+    size_t module_size,
+    const char *target,
+    uint64_t max_wasm_stack_bytes,
+    const uint8_t **result_out,
+    size_t *result_size_out
+);
+void krwa_wasmtime_compiled_module_free(const uint8_t *module_bytes);
 
 void *krwa_wasmtime_p3_execution_cancellation_create(void);
 void krwa_wasmtime_p3_execution_cancellation_cancel(void *handle);
