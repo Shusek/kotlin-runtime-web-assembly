@@ -73,9 +73,9 @@ val wasiPreview1AdapterPackage = "uk/shusek/krwa/component/wasi-preview1"
 val wasiPreview1Adapters =
     mapOf(
         "wasi_snapshot_preview1.command.wasm" to
-            "0d475815ef77c71516d3b2d8937891c99f0e0aa9917378539540ea3f66b247a9",
+            "6a13fa0ed7af65de3468fd6172abcfe6bb74e0b7f3bd0ef06e72f51ee32bc2a2",
         "wasi_snapshot_preview1.reactor.wasm" to
-            "447b27d25221a12afd2c0732f7c150833aad9a2af42ae36ccff9270f4c7559bf",
+            "0acb10959bd3c1d2e7903ef82212910bfc156ab5698ef3f2ff669474ba59fb0a",
     )
 
 fun sha256(file: File): String {

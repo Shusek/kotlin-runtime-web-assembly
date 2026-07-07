@@ -24,9 +24,9 @@ val wasmtimePulleyVersion = libs.versions.wasmtime.get()
 val wasmtimePulleyAndroidArchiveName =
     "wasmtime-v$wasmtimePulleyVersion-aarch64-android-c-api.tar.xz"
 val wasmtimePulleyAndroidArchiveSha256 =
-    "ef0f55f4598e9285de8546572640bc76e6eb6f63c47570b55c87c6524b08d201"
+    "94b75abf63c6e16fa8c47189e3c5c569ecc34f3f3814ec5541dcf29268a03661"
 val wasmtimePulleyAndroidLibSha256 =
-    "d69d06585bc98a9ce9f33025da343c9783744de712580a7cb3c2189e89f96f2a"
+    "74141aa32ef91b12c0ed743d515f7384a6bcf35317b434a63aaba7b0511aaeb3"
 val wasmtimePulleyAndroidJniLib =
     layout.projectDirectory.file("src/androidMain/jniLibs/arm64-v8a/libwasmtime.so")
 val krwaPulleyAndroidJniLib =

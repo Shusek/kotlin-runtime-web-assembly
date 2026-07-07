@@ -22,7 +22,7 @@ apply(plugin = "org.jetbrains.kotlin.multiplatform")
 apply(plugin = "maven-publish")
 
 val wasmtimePulleyVersion = libs.versions.wasmtime.get()
-val wasmtimePulleyGitRevision = "423be7a4e4d30bb377c836d317521d1eb874e157"
+val wasmtimePulleyGitRevision = "823d1b8f251494a06288194d0df746191f535ff7"
 val wasmtimePulleyFeatures =
     "pulley,cranelift,gc,gc-drc,gc-null,all-arch,component-model,component-model-async,wasi,wasi-http,disable-logging"
 val wasmtimePulleyIosTargets = listOf(

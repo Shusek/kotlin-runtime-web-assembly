@@ -27,7 +27,7 @@ okio = "3.17.0"
 picocli = "4.7.7"
 velocity = "1.7"
 wasmTools = "1.252.0"
-wasmtime = "46.0.0"
+wasmtime = "46.0.1"
 zerofs = "0.1.0"
 zip4j = "2.11.6"
 
