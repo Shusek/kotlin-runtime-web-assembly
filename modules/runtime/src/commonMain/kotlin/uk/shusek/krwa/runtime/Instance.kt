@@ -36,6 +36,13 @@ import uk.shusek.krwa.wasm.types.TypeSection
 import uk.shusek.krwa.wasm.types.ValType
 import uk.shusek.krwa.wasm.types.Value
 
+/**
+ * A live WebAssembly instance.
+ *
+ * Instances and resources obtained from them are not safe for concurrent use. Embedders should
+ * serialize calls per instance. [close] is idempotent; execution access and previously obtained
+ * exported functions or memories fail fast after the instance has been closed.
+ */
 class Instance
 private constructor(
     private val module: WasmModule,
@@ -66,6 +73,7 @@ private constructor(
     private val exports: Map<String, Export> = exports
     private val fluentExports = Exports.create(this)
     private var platformExecution: PlatformInstanceExecution? = null
+    private var resolvedExecutionBackend: ExecutionBackend = ExecutionBackend.AUTO
     private var closed: Boolean = false
     private val exnRefs: MutableMap<Int, WasmException> = HashMap()
     private var nextExnRef: Int = 0
@@ -75,11 +83,18 @@ private constructor(
 
     fun wasmtimeExecutionConfig(): WasmtimeExecutionConfig? = wasmtimeExecutionConfig
 
+    fun isClosed(): Boolean = closed
+
+    internal fun ensureOpen() {
+        check(!closed) { "WebAssembly instance is closed" }
+    }
+
     override fun close() {
         if (closed) return
         closed = true
-        platformExecution?.close()
+        val execution = platformExecution
         platformExecution = null
+        execution?.close()
     }
 
     private class TailCallPending(val funcId: Int, val args: LongArray)
@@ -104,6 +119,7 @@ private constructor(
     }
 
     fun initialize(start: Boolean): Instance {
+        ensureOpen()
         // Globals must be initialized before element/data segments, because segment offsets can
         // reference local globals via global.get.
         for (i in globalInitializers.indices) {
@@ -177,13 +193,16 @@ private constructor(
         return this
     }
 
-    fun exportType(name: String): FunctionType =
-        platformExecution?.exportType(name) ?: type(functionType(exports[name]!!.index()))
+    fun exportType(name: String): FunctionType {
+        ensureOpen()
+        return platformExecution?.exportType(name) ?: type(functionType(exports[name]!!.index()))
+    }
 
-    fun executionBackend(): ExecutionBackend = platformExecution?.backend ?: ExecutionBackend.AUTO
+    fun executionBackend(): ExecutionBackend = resolvedExecutionBackend
 
     class Exports private constructor(private val instance: Instance) {
         private fun getExport(type: ExternalType, name: String): Export {
+            instance.ensureOpen()
             val export = instance.exports[name]
             if (export == null) {
                 throw InvalidException("Unknown export with name $name")
@@ -196,7 +215,14 @@ private constructor(
         }
 
         fun function(name: String): ExportFunction {
-            instance.platformExecution?.let { return it.export(name) }
+            instance.ensureOpen()
+            instance.platformExecution?.let { execution ->
+                val function = execution.export(name)
+                return ExportFunction { args ->
+                    instance.ensureOpen()
+                    function.apply(*args)
+                }
+            }
             getExport(ExternalType.FUNCTION, name)
             throw WasmEngineException("platform WebAssembly execution is not available")
         }
@@ -217,7 +243,8 @@ private constructor(
         }
 
         fun memory(name: String): Memory {
-            instance.platformExecution?.let { return it.memory(name) }
+            instance.ensureOpen()
+            instance.platformExecution?.let { return instance.guardMemory(it.memory(name)) }
             val export = getExport(ExternalType.MEMORY, name)
             return instance.memory(export.index())
         }
@@ -227,11 +254,15 @@ private constructor(
         }
     }
 
-    fun exports(): Exports = fluentExports
+    fun exports(): Exports {
+        ensureOpen()
+        return fluentExports
+    }
 
     fun export(name: String): ExportFunction = fluentExports.function(name)
 
     fun function(idx: Int): FunctionBody? {
+        ensureOpen()
         if (idx < 0 || idx >= functions.size + imports.functionCount()) {
             throw InvalidException("unknown function $idx")
         } else if (idx < imports.functionCount()) {
@@ -247,41 +278,51 @@ private constructor(
     fun tableCount(): Int = imports.tableCount() + tables.size
 
     fun memory(): Memory {
+        ensureOpen()
         platformExecution?.let {
-            return it.memory(0)
+            return guardMemory(
+                it.memory(0)
                 ?: throw InvalidException("native WebAssembly memory 0 is not exported")
+            )
         }
         if (imports.memoryCount() > 0) {
-            return imports.memory(0).memory()!!
+            return guardMemory(imports.memory(0).memory()!!)
         }
         if (memories.isNotEmpty()) {
-            return memories[0]
+            return guardMemory(memories[0])
         }
         return jvmNull()
     }
 
     fun memory(index: Int): Memory {
+        ensureOpen()
         platformExecution?.let {
-            return it.memory(index)
+            return guardMemory(
+                it.memory(index)
                 ?: throw InvalidException("native WebAssembly memory $index is not exported")
+            )
         }
         val totalMemories = memories.size + imports.memoryCount()
         if (index < 0 || index >= totalMemories) {
             throw InvalidException("unknown memory $index")
         }
         if (index < imports.memoryCount()) {
-            return imports.memory(index).memory()!!
+            return guardMemory(imports.memory(index).memory()!!)
         }
-        return memories[index - imports.memoryCount()]
+        return guardMemory(memories[index - imports.memoryCount()])
     }
+
+    private fun guardMemory(memory: Memory): Memory = InstanceMemory(this, memory)
 
     fun dataSegmentData(idx: Int): ByteArray = dataSegments[idx].data()
 
     fun dropDataSegment(idx: Int) {
+        ensureOpen()
         dataSegments[idx] = PassiveDataSegment.EMPTY
     }
 
     fun global(idx: Int): GlobalInstance {
+        ensureOpen()
         if (idx < imports.globalCount()) {
             return imports.global(idx).instance()
         }
@@ -311,6 +352,7 @@ private constructor(
     fun module(): WasmModule = module
 
     fun table(idx: Int): TableInstance {
+        ensureOpen()
         if (idx < 0 || idx >= tables.size + imports.tableCount()) {
             throw InvalidException("unknown table $idx")
         }
@@ -321,6 +363,7 @@ private constructor(
     }
 
     fun elementOrNull(idx: Int): Element? {
+        ensureOpen()
         if (idx < 0 || idx >= elements.size) {
             throw InvalidException("unknown elem segment $idx")
         }
@@ -334,10 +377,12 @@ private constructor(
     fun elementCount(): Int = elements.size
 
     fun setElement(idx: Int, value: Element?) {
+        ensureOpen()
         elements[idx] = value
     }
 
     fun tag(idx: Int): TagInstance {
+        ensureOpen()
         if (idx < imports.tagCount()) {
             return imports.tag(idx).tag()
         }
@@ -347,14 +392,19 @@ private constructor(
     fun tagCount(): Int = tags.size
 
     fun registerException(ex: WasmException): Int {
+        ensureOpen()
         val ref = nextExnRef++
         exnRefs[ref] = ex
         return ref
     }
 
-    fun exn(idx: Int): WasmException? = exnRefs[idx]
+    fun exn(idx: Int): WasmException? {
+        ensureOpen()
+        return exnRefs[idx]
+    }
 
     fun array(idx: Int): LongArray? {
+        ensureOpen()
         val gcRef = gcRefs.get(idx)
         if (gcRef is WasmArray) {
             return gcRef.elements()
@@ -362,9 +412,15 @@ private constructor(
         return null
     }
 
-    fun registerGcRef(ref: WasmGcRef): Int = gcRefs.put(ref)
+    fun registerGcRef(ref: WasmGcRef): Int {
+        ensureOpen()
+        return gcRefs.put(ref)
+    }
 
-    fun gcRef(idx: Int): WasmGcRef? = gcRefs.get(idx)
+    fun gcRef(idx: Int): WasmGcRef? {
+        ensureOpen()
+        return gcRefs.get(idx)
+    }
 
     internal fun gcRefUnchecked(idx: Int): WasmGcRef = gcRefs.getUnchecked(idx)
 
@@ -374,6 +430,7 @@ private constructor(
         targetHeapType: Int,
         sourceHeapType: Int,
     ): Boolean {
+        ensureOpen()
         if (ref == Value.REF_NULL_VALUE.toLong()) {
             return nullable
         }
@@ -422,6 +479,7 @@ private constructor(
 
     /** Epoch-based GC safe point. Call when the wasm stack is guaranteed empty. */
     fun gcSafePoint() {
+        ensureOpen()
         gcRefs.safePoint()
     }
 
@@ -432,10 +490,12 @@ private constructor(
     fun tailCallArgs(): LongArray = tailCallPending!!.args
 
     fun setTailCall(funcId: Int, args: LongArray) {
+        ensureOpen()
         tailCallPending = TailCallPending(funcId, args)
     }
 
     fun clearTailCall() {
+        ensureOpen()
         tailCallPending = null
     }
 
@@ -448,8 +508,12 @@ private constructor(
         private var importValues: ImportValues? = null
         private var executionBackend: ExecutionBackend = ExecutionBackend.AUTO
         private var wasmtimeExecutionConfig: WasmtimeExecutionConfig? = null
+        private var executionPolicyApplied: Boolean = false
 
         fun withMemoryLimits(limits: MemoryLimits): Builder {
+            check(!executionPolicyApplied) {
+                "memory limits cannot be combined with an atomic execution policy"
+            }
             memoryLimits = limits
             return this
         }
@@ -460,12 +524,45 @@ private constructor(
         }
 
         fun withExecutionBackend(backend: ExecutionBackend): Builder {
+            check(!executionPolicyApplied) {
+                "execution backend cannot be combined with an atomic execution policy"
+            }
             executionBackend = backend
             return this
         }
 
         fun withWasmtimeExecutionConfig(config: WasmtimeExecutionConfig?): Builder {
+            check(!executionPolicyApplied) {
+                "Wasmtime configuration cannot be combined with an atomic execution policy"
+            }
             wasmtimeExecutionConfig = config
+            return this
+        }
+
+        /** Applies one complete engine and resource policy, replacing prior backend settings. */
+        fun withExecutionPolicy(policy: WasmExecutionPolicy): Builder {
+            when (policy) {
+                is WasmExecutionPolicy.Automatic -> {
+                    executionBackend = ExecutionBackend.AUTO
+                    memoryLimits = policy.maxMemoryBytes?.let(module::cappedFirstMemoryLimits)
+                    wasmtimeExecutionConfig = policy.maxMemoryBytes?.let { maxMemoryBytes ->
+                        WasmtimeExecutionConfig(maxMemoryBytes = maxMemoryBytes)
+                    }
+                }
+
+                is WasmExecutionPolicy.HostWebAssembly -> {
+                    executionBackend = ExecutionBackend.NATIVE
+                    memoryLimits = policy.maxMemoryBytes?.let(module::cappedFirstMemoryLimits)
+                    wasmtimeExecutionConfig = null
+                }
+
+                is WasmExecutionPolicy.Wasmtime -> {
+                    executionBackend = ExecutionBackend.PULLEY
+                    memoryLimits = null
+                    wasmtimeExecutionConfig = policy.config
+                }
+            }
+            executionPolicyApplied = true
             return this
         }
 
@@ -883,17 +980,20 @@ private constructor(
 
         fun build(): Instance {
             val hostInstance = buildHostInstance(initializeInstance = true, startInstance = false)
-            val platformExecution =
-                RuntimePlatform.createPlatformExecution(
-                    module,
-                    hostInstance.imports(),
-                    executionBackend,
-                    hostInstance,
-                    memoryLimits,
-                )
-                    ?: throw WasmEngineException("${executionBackend.name.lowercase()} WebAssembly execution is not available")
-            hostInstance.platformExecution = platformExecution
             try {
+                val platformExecution =
+                    RuntimePlatform.createPlatformExecution(
+                        module,
+                        hostInstance.imports(),
+                        executionBackend,
+                        hostInstance,
+                        memoryLimits,
+                    )
+                        ?: throw WasmEngineException(
+                            "${executionBackend.name.lowercase()} WebAssembly execution is not available"
+                        )
+                hostInstance.platformExecution = platformExecution
+                hostInstance.resolvedExecutionBackend = platformExecution.backend
                 val startFunction = hostInstance.exports[START_FUNCTION_NAME]
                 if (startFunction != null) {
                     try {
@@ -1039,4 +1139,15 @@ private constructor(
         @RuntimeJvmStatic
         fun builder(module: WasmModule): Builder = Builder.create(module)
     }
+}
+
+private fun WasmModule.cappedFirstMemoryLimits(maxMemoryBytes: Long): MemoryLimits {
+    val maxPages = (maxMemoryBytes / Memory.PAGE_SIZE.toLong()).toInt()
+    val memory = memorySection()?.getMemory(0) ?: return MemoryLimits(0, maxPages)
+    val declaredLimits = memory.limits()
+    return MemoryLimits(
+        declaredLimits.initialPages(),
+        minOf(declaredLimits.maximumPages(), maxPages),
+        declaredLimits.shared(),
+    )
 }

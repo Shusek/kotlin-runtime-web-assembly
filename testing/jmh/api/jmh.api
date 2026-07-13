@@ -1,0 +1,99 @@
+public class uk/shusek/krwa/bench/BenchmarkParsing {
+	public field fileName Ljava/lang/String;
+	public fun <init> ()V
+	public fun benchmark (Lorg/openjdk/jmh/infra/Blackhole;)V
+	public fun setup ()V
+}
+
+public class uk/shusek/krwa/bench/BenchmarkWat2Wasm {
+	public fun <init> ()V
+	public fun benchmarkAot (Lorg/openjdk/jmh/infra/Blackhole;)V
+	public fun setup ()V
+}
+
+public final class uk/shusek/krwa/bench/jmh_generated/BenchmarkParsing_benchmark_jmhTest {
+	public fun <init> ()V
+	public fun benchmark_AverageTime (Lorg/openjdk/jmh/runner/InfraControl;Lorg/openjdk/jmh/infra/ThreadParams;)Lorg/openjdk/jmh/results/BenchmarkTaskResult;
+	public fun benchmark_SampleTime (Lorg/openjdk/jmh/runner/InfraControl;Lorg/openjdk/jmh/infra/ThreadParams;)Lorg/openjdk/jmh/results/BenchmarkTaskResult;
+	public fun benchmark_SingleShotTime (Lorg/openjdk/jmh/runner/InfraControl;Lorg/openjdk/jmh/infra/ThreadParams;)Lorg/openjdk/jmh/results/BenchmarkTaskResult;
+	public fun benchmark_Throughput (Lorg/openjdk/jmh/runner/InfraControl;Lorg/openjdk/jmh/infra/ThreadParams;)Lorg/openjdk/jmh/results/BenchmarkTaskResult;
+	public static fun benchmark_avgt_jmhStub (Lorg/openjdk/jmh/runner/InfraControl;Lorg/openjdk/jmh/results/RawResults;Lorg/openjdk/jmh/infra/BenchmarkParams;Lorg/openjdk/jmh/infra/IterationParams;Lorg/openjdk/jmh/infra/ThreadParams;Lorg/openjdk/jmh/infra/Blackhole;Lorg/openjdk/jmh/infra/Control;ILuk/shusek/krwa/bench/jmh_generated/BenchmarkParsing_jmhType;)V
+	public static fun benchmark_sample_jmhStub (Lorg/openjdk/jmh/runner/InfraControl;Lorg/openjdk/jmh/results/RawResults;Lorg/openjdk/jmh/infra/BenchmarkParams;Lorg/openjdk/jmh/infra/IterationParams;Lorg/openjdk/jmh/infra/ThreadParams;Lorg/openjdk/jmh/infra/Blackhole;Lorg/openjdk/jmh/infra/Control;ILorg/openjdk/jmh/util/SampleBuffer;IJILuk/shusek/krwa/bench/jmh_generated/BenchmarkParsing_jmhType;)V
+	public static fun benchmark_ss_jmhStub (Lorg/openjdk/jmh/runner/InfraControl;Lorg/openjdk/jmh/results/RawResults;Lorg/openjdk/jmh/infra/BenchmarkParams;Lorg/openjdk/jmh/infra/IterationParams;Lorg/openjdk/jmh/infra/ThreadParams;Lorg/openjdk/jmh/infra/Blackhole;Lorg/openjdk/jmh/infra/Control;IILuk/shusek/krwa/bench/jmh_generated/BenchmarkParsing_jmhType;)V
+	public static fun benchmark_thrpt_jmhStub (Lorg/openjdk/jmh/runner/InfraControl;Lorg/openjdk/jmh/results/RawResults;Lorg/openjdk/jmh/infra/BenchmarkParams;Lorg/openjdk/jmh/infra/IterationParams;Lorg/openjdk/jmh/infra/ThreadParams;Lorg/openjdk/jmh/infra/Blackhole;Lorg/openjdk/jmh/infra/Control;ILuk/shusek/krwa/bench/jmh_generated/BenchmarkParsing_jmhType;)V
+}
+
+public class uk/shusek/krwa/bench/jmh_generated/BenchmarkParsing_jmhType : uk/shusek/krwa/bench/jmh_generated/BenchmarkParsing_jmhType_B3 {
+	public fun <init> ()V
+}
+
+public class uk/shusek/krwa/bench/jmh_generated/BenchmarkParsing_jmhType_B1 : uk/shusek/krwa/bench/BenchmarkParsing {
+	public fun <init> ()V
+}
+
+public class uk/shusek/krwa/bench/jmh_generated/BenchmarkParsing_jmhType_B2 : uk/shusek/krwa/bench/jmh_generated/BenchmarkParsing_jmhType_B1 {
+	public field readyInvocation Z
+	public field readyIteration Z
+	public field readyTrial Z
+	public field setupInvocationMutex I
+	public static final field setupInvocationMutexUpdater Ljava/util/concurrent/atomic/AtomicIntegerFieldUpdater;
+	public field setupIterationMutex I
+	public static final field setupIterationMutexUpdater Ljava/util/concurrent/atomic/AtomicIntegerFieldUpdater;
+	public field setupTrialMutex I
+	public static final field setupTrialMutexUpdater Ljava/util/concurrent/atomic/AtomicIntegerFieldUpdater;
+	public field tearInvocationMutex I
+	public static final field tearInvocationMutexUpdater Ljava/util/concurrent/atomic/AtomicIntegerFieldUpdater;
+	public field tearIterationMutex I
+	public static final field tearIterationMutexUpdater Ljava/util/concurrent/atomic/AtomicIntegerFieldUpdater;
+	public field tearTrialMutex I
+	public static final field tearTrialMutexUpdater Ljava/util/concurrent/atomic/AtomicIntegerFieldUpdater;
+	public fun <init> ()V
+}
+
+public class uk/shusek/krwa/bench/jmh_generated/BenchmarkParsing_jmhType_B3 : uk/shusek/krwa/bench/jmh_generated/BenchmarkParsing_jmhType_B2 {
+	public fun <init> ()V
+}
+
+public final class uk/shusek/krwa/bench/jmh_generated/BenchmarkWat2Wasm_benchmarkAot_jmhTest {
+	public fun <init> ()V
+	public fun benchmarkAot_AverageTime (Lorg/openjdk/jmh/runner/InfraControl;Lorg/openjdk/jmh/infra/ThreadParams;)Lorg/openjdk/jmh/results/BenchmarkTaskResult;
+	public fun benchmarkAot_SampleTime (Lorg/openjdk/jmh/runner/InfraControl;Lorg/openjdk/jmh/infra/ThreadParams;)Lorg/openjdk/jmh/results/BenchmarkTaskResult;
+	public fun benchmarkAot_SingleShotTime (Lorg/openjdk/jmh/runner/InfraControl;Lorg/openjdk/jmh/infra/ThreadParams;)Lorg/openjdk/jmh/results/BenchmarkTaskResult;
+	public fun benchmarkAot_Throughput (Lorg/openjdk/jmh/runner/InfraControl;Lorg/openjdk/jmh/infra/ThreadParams;)Lorg/openjdk/jmh/results/BenchmarkTaskResult;
+	public static fun benchmarkAot_avgt_jmhStub (Lorg/openjdk/jmh/runner/InfraControl;Lorg/openjdk/jmh/results/RawResults;Lorg/openjdk/jmh/infra/BenchmarkParams;Lorg/openjdk/jmh/infra/IterationParams;Lorg/openjdk/jmh/infra/ThreadParams;Lorg/openjdk/jmh/infra/Blackhole;Lorg/openjdk/jmh/infra/Control;ILuk/shusek/krwa/bench/jmh_generated/BenchmarkWat2Wasm_jmhType;)V
+	public static fun benchmarkAot_sample_jmhStub (Lorg/openjdk/jmh/runner/InfraControl;Lorg/openjdk/jmh/results/RawResults;Lorg/openjdk/jmh/infra/BenchmarkParams;Lorg/openjdk/jmh/infra/IterationParams;Lorg/openjdk/jmh/infra/ThreadParams;Lorg/openjdk/jmh/infra/Blackhole;Lorg/openjdk/jmh/infra/Control;ILorg/openjdk/jmh/util/SampleBuffer;IJILuk/shusek/krwa/bench/jmh_generated/BenchmarkWat2Wasm_jmhType;)V
+	public static fun benchmarkAot_ss_jmhStub (Lorg/openjdk/jmh/runner/InfraControl;Lorg/openjdk/jmh/results/RawResults;Lorg/openjdk/jmh/infra/BenchmarkParams;Lorg/openjdk/jmh/infra/IterationParams;Lorg/openjdk/jmh/infra/ThreadParams;Lorg/openjdk/jmh/infra/Blackhole;Lorg/openjdk/jmh/infra/Control;IILuk/shusek/krwa/bench/jmh_generated/BenchmarkWat2Wasm_jmhType;)V
+	public static fun benchmarkAot_thrpt_jmhStub (Lorg/openjdk/jmh/runner/InfraControl;Lorg/openjdk/jmh/results/RawResults;Lorg/openjdk/jmh/infra/BenchmarkParams;Lorg/openjdk/jmh/infra/IterationParams;Lorg/openjdk/jmh/infra/ThreadParams;Lorg/openjdk/jmh/infra/Blackhole;Lorg/openjdk/jmh/infra/Control;ILuk/shusek/krwa/bench/jmh_generated/BenchmarkWat2Wasm_jmhType;)V
+}
+
+public class uk/shusek/krwa/bench/jmh_generated/BenchmarkWat2Wasm_jmhType : uk/shusek/krwa/bench/jmh_generated/BenchmarkWat2Wasm_jmhType_B3 {
+	public fun <init> ()V
+}
+
+public class uk/shusek/krwa/bench/jmh_generated/BenchmarkWat2Wasm_jmhType_B1 : uk/shusek/krwa/bench/BenchmarkWat2Wasm {
+	public fun <init> ()V
+}
+
+public class uk/shusek/krwa/bench/jmh_generated/BenchmarkWat2Wasm_jmhType_B2 : uk/shusek/krwa/bench/jmh_generated/BenchmarkWat2Wasm_jmhType_B1 {
+	public field readyInvocation Z
+	public field readyIteration Z
+	public field readyTrial Z
+	public field setupInvocationMutex I
+	public static final field setupInvocationMutexUpdater Ljava/util/concurrent/atomic/AtomicIntegerFieldUpdater;
+	public field setupIterationMutex I
+	public static final field setupIterationMutexUpdater Ljava/util/concurrent/atomic/AtomicIntegerFieldUpdater;
+	public field setupTrialMutex I
+	public static final field setupTrialMutexUpdater Ljava/util/concurrent/atomic/AtomicIntegerFieldUpdater;
+	public field tearInvocationMutex I
+	public static final field tearInvocationMutexUpdater Ljava/util/concurrent/atomic/AtomicIntegerFieldUpdater;
+	public field tearIterationMutex I
+	public static final field tearIterationMutexUpdater Ljava/util/concurrent/atomic/AtomicIntegerFieldUpdater;
+	public field tearTrialMutex I
+	public static final field tearTrialMutexUpdater Ljava/util/concurrent/atomic/AtomicIntegerFieldUpdater;
+	public fun <init> ()V
+}
+
+public class uk/shusek/krwa/bench/jmh_generated/BenchmarkWat2Wasm_jmhType_B3 : uk/shusek/krwa/bench/jmh_generated/BenchmarkWat2Wasm_jmhType_B2 {
+	public fun <init> ()V
+}
+

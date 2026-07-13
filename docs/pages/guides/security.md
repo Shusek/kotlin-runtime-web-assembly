@@ -12,6 +12,11 @@ with host process privileges. Treat every import as part of the security model.
 - set memory limits appropriate for the workload,
 - keep filesystem preopens narrow and capability-based.
 
+Apply engine and resource settings atomically with `WasmExecutionPolicy`. For
+example, `WasmExecutionPolicy.Wasmtime(WasmtimeExecutionConfig(...))` binds the
+target, memory limits, stack limits, and fuel budget into one selection. On
+`wasmJs`, use `HostWebAssembly`; Wasmtime and CWasm are not available there.
+
 Network, filesystem, clock, and random capabilities should be configured
 explicitly. Avoid "default everything" host setups for plugins from outside the
 application trust boundary.

@@ -1,0 +1,36 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, wasmJs]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <uk.shusek.krwa:annotations>
+open annotation class uk.shusek.krwa.annotations/Buffer : kotlin/Annotation { // uk.shusek.krwa.annotations/Buffer|null[0]
+    constructor <init>() // uk.shusek.krwa.annotations/Buffer.<init>|<init>(){}[0]
+}
+
+open annotation class uk.shusek.krwa.annotations/CString : kotlin/Annotation { // uk.shusek.krwa.annotations/CString|null[0]
+    constructor <init>() // uk.shusek.krwa.annotations/CString.<init>|<init>(){}[0]
+}
+
+open annotation class uk.shusek.krwa.annotations/HostModule : kotlin/Annotation { // uk.shusek.krwa.annotations/HostModule|null[0]
+    constructor <init>(kotlin/String) // uk.shusek.krwa.annotations/HostModule.<init>|<init>(kotlin.String){}[0]
+
+    final val value // uk.shusek.krwa.annotations/HostModule.value|{}value[0]
+        final fun <get-value>(): kotlin/String // uk.shusek.krwa.annotations/HostModule.value.<get-value>|<get-value>(){}[0]
+}
+
+open annotation class uk.shusek.krwa.annotations/WasmExport : kotlin/Annotation { // uk.shusek.krwa.annotations/WasmExport|null[0]
+    constructor <init>(kotlin/String = ...) // uk.shusek.krwa.annotations/WasmExport.<init>|<init>(kotlin.String){}[0]
+
+    final val value // uk.shusek.krwa.annotations/WasmExport.value|{}value[0]
+        final fun <get-value>(): kotlin/String // uk.shusek.krwa.annotations/WasmExport.value.<get-value>|<get-value>(){}[0]
+}
+
+open annotation class uk.shusek.krwa.annotations/WasmModuleInterface : kotlin/Annotation { // uk.shusek.krwa.annotations/WasmModuleInterface|null[0]
+    constructor <init>(kotlin/String) // uk.shusek.krwa.annotations/WasmModuleInterface.<init>|<init>(kotlin.String){}[0]
+
+    final val value // uk.shusek.krwa.annotations/WasmModuleInterface.value|{}value[0]
+        final fun <get-value>(): kotlin/String // uk.shusek.krwa.annotations/WasmModuleInterface.value.<get-value>|<get-value>(){}[0]
+}

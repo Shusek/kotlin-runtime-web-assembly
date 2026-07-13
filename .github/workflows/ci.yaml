@@ -127,3 +127,59 @@ jobs:
 
       - name: Build Dokka API docs
         run: ./gradlew --no-daemon :dokkaGenerate
+
+  ios-runtime:
+    name: iOS Runtime And ABI
+    runs-on: macos-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v6
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 25
+          cache: gradle
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Verify native toolchain
+        run: |
+          cargo --version
+          rustup --version
+          cmake --version
+          xcrun --sdk iphonesimulator --find clang++
+
+      - name: Create compatible iOS simulator
+        run: |
+          set -euo pipefail
+          runtime="$(xcrun simctl list runtimes | awk '/^iOS / && $0 !~ /unavailable/ { value=$NF } END { gsub(/[()]/, "", value); print value }')"
+          device_id=""
+          while IFS= read -r device_type; do
+            if device_id="$(xcrun simctl create 'KRWA CI' "$device_type" "$runtime" 2>/dev/null)"; then
+              break
+            fi
+          done < <(xcrun simctl list devicetypes | awk '/^iPhone / { value=$NF; gsub(/[()]/, "", value); print value }')
+          test -n "$device_id"
+          echo "KRWA_TEST_SIMULATOR_ID=$device_id" >> "$GITHUB_ENV"
+
+      - name: Compile iOS runtime and component integration
+        run: >-
+          ./gradlew --no-daemon
+          :runtime:compileKotlinIosSimulatorArm64
+          :component-model:compileKotlinIosSimulatorArm64
+          :ios-runtime-smoke:iosSimulatorArm64Test
+
+      - name: Check public Kotlin ABI
+        run: ./gradlew --no-daemon checkKotlinAbi
+
+      - name: Delete test simulator
+        if: always()
+        run: |
+          if [ -n "${KRWA_TEST_SIMULATOR_ID:-}" ]; then
+            xcrun simctl delete "$KRWA_TEST_SIMULATOR_ID" || true
+          fi

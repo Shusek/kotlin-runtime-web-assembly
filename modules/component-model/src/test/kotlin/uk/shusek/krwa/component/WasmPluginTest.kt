@@ -114,6 +114,51 @@ class WasmPluginTest {
     }
 
     @Test
+    fun closedPluginRejectsDirectAndPreviouslyBoundCalls() {
+        val witPackage =
+            WitPackage.parse(
+                """
+                package example:closed-plugin;
+
+                world plugin {
+                  export api;
+                }
+
+                interface api {
+                  value: func() -> u32;
+                }
+                """
+                    .trimIndent()
+            )
+        val plugin =
+            WasmPlugin.builder(witPackage)
+                .withModule(
+                    Wat2Wasm.parse(
+                        """
+                        (module
+                          (memory (export "memory") 1)
+                          (func (export "api.value") (result i32)
+                            (i32.const 42)))
+                        """
+                            .trimIndent()
+                    )
+                )
+                .build()
+        val instance = plugin.instance()
+        val bound = plugin.exports().getValue("api.value")
+
+        plugin.close()
+        plugin.close()
+
+        assertTrue(plugin.isClosed())
+        assertTrue(instance.isClosed())
+        assertThrows(IllegalStateException::class.java) { plugin.call("api.value") }
+        assertThrows(IllegalStateException::class.java) { bound.call() }
+        assertThrows(IllegalStateException::class.java) { plugin.instance() }
+        assertThrows(IllegalStateException::class.java) { plugin.exports() }
+    }
+
+    @Test
     fun usesExplicitPulleyBackendForJvmPluginModulesWhenLinked() {
         if (!ExecutionBackend.PULLEY.isAvailable()) {
             return

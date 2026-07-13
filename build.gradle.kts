@@ -21,6 +21,22 @@ val hostOs = providers.gradleProperty("krwa.host.os")
     .lowercase()
 val hostIsMacOs = "mac" in hostOs || "darwin" in hostOs
 
+tasks.register("verifyImmutablePublicationVersion") {
+    group = "verification"
+    description = "Rejects mutable or malformed versions before publishing repository artifacts."
+    val publicationVersion = providers.gradleProperty("version")
+    inputs.property("publicationVersion", publicationVersion)
+    doLast {
+        val value = publicationVersion.get()
+        check(!value.endsWith("-SNAPSHOT", ignoreCase = true)) {
+            "Published KRWA versions must be immutable; got $value"
+        }
+        check(Regex("[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z]+(?:[.-][0-9A-Za-z]+)*)?").matches(value)) {
+            "Published KRWA version has an unsupported format: $value"
+        }
+    }
+}
+
 plugins.withType<WasmNodeJsRootPlugin>().configureEach {
     extensions.configure<WasmNodeJsEnvSpec>(WasmNodeJsEnvSpec.EXTENSION_NAME) {
         download.set(false)

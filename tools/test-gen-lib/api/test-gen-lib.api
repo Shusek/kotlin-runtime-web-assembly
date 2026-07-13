@@ -1,0 +1,195 @@
+public final class uk/shusek/krwa/testgen/Constants {
+	public static final field Companion Luk/shusek/krwa/testgen/Constants$Companion;
+	public static final field SPEC_JSON Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/testgen/Constants$Companion {
+}
+
+public final class uk/shusek/krwa/testgen/GeneratedKotlinSource {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Luk/shusek/krwa/testgen/GeneratedKotlinSource;
+	public static synthetic fun copy$default (Luk/shusek/krwa/testgen/GeneratedKotlinSource;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Luk/shusek/krwa/testgen/GeneratedKotlinSource;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getPackageName ()Ljava/lang/String;
+	public final fun getSource ()Ljava/lang/String;
+	public final fun getTypeName ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/testgen/KotlinTestGen {
+	public static final field Companion Luk/shusek/krwa/testgen/KotlinTestGen$Companion;
+	public fun <init> (Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;)V
+	public final fun generate (Ljava/lang/String;Luk/shusek/krwa/testgen/wast/Wast;Ljava/lang/String;)Luk/shusek/krwa/testgen/GeneratedKotlinSource;
+}
+
+public final class uk/shusek/krwa/testgen/KotlinTestGen$Companion {
+}
+
+public final class uk/shusek/krwa/testgen/StringUtils {
+	public static final field Companion Luk/shusek/krwa/testgen/StringUtils$Companion;
+	public static final fun capitalize (Ljava/lang/String;)Ljava/lang/String;
+	public static final fun escapedCamelCase (Ljava/lang/String;)Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/testgen/StringUtils$Companion {
+	public final fun capitalize (Ljava/lang/String;)Ljava/lang/String;
+	public final fun escapedCamelCase (Ljava/lang/String;)Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/testgen/TestGen {
+	public static final field Companion Luk/shusek/krwa/testgen/TestGen$Companion;
+	public static final fun execute (Ljava/lang/String;Ljava/lang/String;Ljava/io/File;Ljava/io/File;Ljava/io/File;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;)V
+}
+
+public final class uk/shusek/krwa/testgen/TestGen$Companion {
+	public final fun execute (Ljava/lang/String;Ljava/lang/String;Ljava/io/File;Ljava/io/File;Ljava/io/File;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;)V
+}
+
+public final class uk/shusek/krwa/testgen/TestGenCli {
+	public static final field INSTANCE Luk/shusek/krwa/testgen/TestGenCli;
+	public static final fun main ([Ljava/lang/String;)V
+}
+
+public final class uk/shusek/krwa/testgen/TestGenConfig {
+	public fun <init> ()V
+	public final fun getCompiledWastTargetFolder ()Ljava/lang/String;
+	public final fun getExcludedInvalidWasts ()Ljava/util/List;
+	public final fun getExcludedMalformedWasts ()Ljava/util/List;
+	public final fun getExcludedTests ()Ljava/util/List;
+	public final fun getExcludedUninstantiableWasts ()Ljava/util/List;
+	public final fun getExcludedUnlinkableWasts ()Ljava/util/List;
+	public final fun getExcludedWasts ()Ljava/util/List;
+	public final fun getIncludedWasts ()Ljava/util/List;
+	public final fun getSourceDestinationFolder ()Ljava/lang/String;
+	public final fun getTestSuiteRepo ()Ljava/lang/String;
+	public final fun getTestSuiteRepoRef ()Ljava/lang/String;
+	public final fun getTestsuiteFolder ()Ljava/lang/String;
+	public final fun setCompiledWastTargetFolder (Ljava/lang/String;)V
+	public final fun setExcludedInvalidWasts (Ljava/util/List;)V
+	public final fun setExcludedMalformedWasts (Ljava/util/List;)V
+	public final fun setExcludedTests (Ljava/util/List;)V
+	public final fun setExcludedUninstantiableWasts (Ljava/util/List;)V
+	public final fun setExcludedUnlinkableWasts (Ljava/util/List;)V
+	public final fun setExcludedWasts (Ljava/util/List;)V
+	public final fun setIncludedWasts (Ljava/util/List;)V
+	public final fun setSourceDestinationFolder (Ljava/lang/String;)V
+	public final fun setTestSuiteRepo (Ljava/lang/String;)V
+	public final fun setTestSuiteRepoRef (Ljava/lang/String;)V
+	public final fun setTestsuiteFolder (Ljava/lang/String;)V
+}
+
+public class uk/shusek/krwa/testgen/TestSuiteDownloader {
+	public fun <init> ()V
+	public fun downloadTestsuite (Ljava/lang/String;Ljava/lang/String;Ljava/io/File;)V
+}
+
+public class uk/shusek/krwa/testgen/wast/Action {
+	public fun <init> ()V
+	public fun args ()[Luk/shusek/krwa/testgen/wast/WasmValue;
+	public fun field ()Ljava/lang/String;
+	public fun module ()Ljava/lang/String;
+	public fun toString ()Ljava/lang/String;
+	public fun type ()Luk/shusek/krwa/testgen/wast/ActionType;
+}
+
+public final class uk/shusek/krwa/testgen/wast/ActionType : java/lang/Enum {
+	public static final field GET Luk/shusek/krwa/testgen/wast/ActionType;
+	public static final field INVOKE Luk/shusek/krwa/testgen/wast/ActionType;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public final fun value ()Ljava/lang/String;
+	public static fun valueOf (Ljava/lang/String;)Luk/shusek/krwa/testgen/wast/ActionType;
+	public static fun values ()[Luk/shusek/krwa/testgen/wast/ActionType;
+}
+
+public class uk/shusek/krwa/testgen/wast/Command {
+	public fun <init> ()V
+	public fun action ()Luk/shusek/krwa/testgen/wast/Action;
+	public fun as ()Ljava/lang/String;
+	public fun expected ()[Luk/shusek/krwa/testgen/wast/WasmValue;
+	public fun filename ()Ljava/lang/String;
+	public fun line ()I
+	public fun moduleType ()Ljava/lang/String;
+	public fun name ()Ljava/lang/String;
+	public fun text ()Ljava/lang/String;
+	public fun toString ()Ljava/lang/String;
+	public fun type ()Luk/shusek/krwa/testgen/wast/CommandType;
+}
+
+public final class uk/shusek/krwa/testgen/wast/CommandType : java/lang/Enum {
+	public static final field ACTION Luk/shusek/krwa/testgen/wast/CommandType;
+	public static final field ASSERT_EXCEPTION Luk/shusek/krwa/testgen/wast/CommandType;
+	public static final field ASSERT_EXHAUSTION Luk/shusek/krwa/testgen/wast/CommandType;
+	public static final field ASSERT_INVALID Luk/shusek/krwa/testgen/wast/CommandType;
+	public static final field ASSERT_MALFORMED Luk/shusek/krwa/testgen/wast/CommandType;
+	public static final field ASSERT_RETURN Luk/shusek/krwa/testgen/wast/CommandType;
+	public static final field ASSERT_TRAP Luk/shusek/krwa/testgen/wast/CommandType;
+	public static final field ASSERT_UNINSTANTIABLE Luk/shusek/krwa/testgen/wast/CommandType;
+	public static final field ASSERT_UNLINKABLE Luk/shusek/krwa/testgen/wast/CommandType;
+	public static final field MODULE Luk/shusek/krwa/testgen/wast/CommandType;
+	public static final field REGISTER Luk/shusek/krwa/testgen/wast/CommandType;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public final fun value ()Ljava/lang/String;
+	public static fun valueOf (Ljava/lang/String;)Luk/shusek/krwa/testgen/wast/CommandType;
+	public static fun values ()[Luk/shusek/krwa/testgen/wast/CommandType;
+}
+
+public final class uk/shusek/krwa/testgen/wast/LaneType : java/lang/Enum {
+	public static final field F32 Luk/shusek/krwa/testgen/wast/LaneType;
+	public static final field F64 Luk/shusek/krwa/testgen/wast/LaneType;
+	public static final field I16 Luk/shusek/krwa/testgen/wast/LaneType;
+	public static final field I32 Luk/shusek/krwa/testgen/wast/LaneType;
+	public static final field I64 Luk/shusek/krwa/testgen/wast/LaneType;
+	public static final field I8 Luk/shusek/krwa/testgen/wast/LaneType;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public final fun value ()Ljava/lang/String;
+	public static fun valueOf (Ljava/lang/String;)Luk/shusek/krwa/testgen/wast/LaneType;
+	public static fun values ()[Luk/shusek/krwa/testgen/wast/LaneType;
+}
+
+public class uk/shusek/krwa/testgen/wast/WasmValue {
+	public fun <init> ()V
+	public fun intLaneValue (Ljava/lang/String;)Ljava/lang/String;
+	public fun laneType ()Luk/shusek/krwa/testgen/wast/LaneType;
+	public fun shortLaneValue (Ljava/lang/String;)Ljava/lang/String;
+	public fun toArgsValue ()Ljava/lang/String;
+	public fun toAssertion (Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
+	public fun toExpectedValue ()Ljava/lang/String;
+	public fun toResultValue (Ljava/lang/String;)Ljava/lang/String;
+	public fun type ()Luk/shusek/krwa/testgen/wast/WasmValueType;
+}
+
+public final class uk/shusek/krwa/testgen/wast/WasmValueType : java/lang/Enum {
+	public static final field ANY_REF Luk/shusek/krwa/testgen/wast/WasmValueType;
+	public static final field ARRAY_REF Luk/shusek/krwa/testgen/wast/WasmValueType;
+	public static final field EQ_REF Luk/shusek/krwa/testgen/wast/WasmValueType;
+	public static final field EXN_REF Luk/shusek/krwa/testgen/wast/WasmValueType;
+	public static final field EXTERN_REF Luk/shusek/krwa/testgen/wast/WasmValueType;
+	public static final field F32 Luk/shusek/krwa/testgen/wast/WasmValueType;
+	public static final field F64 Luk/shusek/krwa/testgen/wast/WasmValueType;
+	public static final field FUNC_REF Luk/shusek/krwa/testgen/wast/WasmValueType;
+	public static final field I31_REF Luk/shusek/krwa/testgen/wast/WasmValueType;
+	public static final field I32 Luk/shusek/krwa/testgen/wast/WasmValueType;
+	public static final field I64 Luk/shusek/krwa/testgen/wast/WasmValueType;
+	public static final field NULL_EXTERN_REF Luk/shusek/krwa/testgen/wast/WasmValueType;
+	public static final field NULL_FUNC_REF Luk/shusek/krwa/testgen/wast/WasmValueType;
+	public static final field NULL_REF Luk/shusek/krwa/testgen/wast/WasmValueType;
+	public static final field REF_NULL Luk/shusek/krwa/testgen/wast/WasmValueType;
+	public static final field STRUCT_REF Luk/shusek/krwa/testgen/wast/WasmValueType;
+	public static final field V128 Luk/shusek/krwa/testgen/wast/WasmValueType;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public final fun value ()Ljava/lang/String;
+	public static fun valueOf (Ljava/lang/String;)Luk/shusek/krwa/testgen/wast/WasmValueType;
+	public static fun values ()[Luk/shusek/krwa/testgen/wast/WasmValueType;
+}
+
+public class uk/shusek/krwa/testgen/wast/Wast {
+	public fun <init> ()V
+	public fun commands ()[Luk/shusek/krwa/testgen/wast/Command;
+	public fun sourceFilename ()Ljava/io/File;
+}
+

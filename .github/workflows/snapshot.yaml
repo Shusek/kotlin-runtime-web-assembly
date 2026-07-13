@@ -24,6 +24,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Select immutable development version
+        run: echo "KRWA_PUBLISH_VERSION=0.3.0-dev.${GITHUB_SHA:0:12}" >> "$GITHUB_ENV"
+
       - name: Setup Python
         uses: actions/setup-python@v6
         with:
@@ -57,8 +60,22 @@ jobs:
           rsync -a build/dokka/html/ build/pages/api/
           touch build/pages/.nojekyll
 
+      - name: Restore immutable development artifacts
+        run: |
+          set -euo pipefail
+          if git fetch origin refs/heads/dev-maven:refs/remotes/origin/dev-maven; then
+            mkdir -p build/pages/maven
+            git archive refs/remotes/origin/dev-maven | tar -x -C build/pages/maven
+          fi
+
       - name: Publish snapshot artifacts
-        run: ./gradlew --no-daemon -Pkrwa.githubPagesMavenRepository="$PWD/build/pages/maven" publishAllPublicationsToGithubPagesRepository -x test
+        run: >-
+          ./gradlew --no-daemon
+          -Pversion="$KRWA_PUBLISH_VERSION"
+          -Pkrwa.githubPagesMavenRepository="$PWD/build/pages/maven"
+          verifyImmutablePublicationVersion
+          publishAllPublicationsToGithubPagesRepository
+          -x test
 
       - name: Upload Pages workspace
         uses: actions/upload-artifact@v7
@@ -76,6 +93,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+
+      - name: Select immutable development version
+        run: echo "KRWA_PUBLISH_VERSION=0.3.0-dev.${GITHUB_SHA:0:12}" >> "$GITHUB_ENV"
 
       - name: Setup Java
         uses: actions/setup-java@v5
@@ -98,6 +118,8 @@ jobs:
       - name: Publish iOS snapshot artifacts
         run: |
           ./gradlew --no-daemon -Pkrwa.githubPagesMavenRepository="$PWD/build/ios-maven" \
+            -Pversion="$KRWA_PUBLISH_VERSION" \
+            verifyImmutablePublicationVersion \
             :annotations:annotations:publishIosArm64PublicationToGithubPagesRepository \
             :annotations:annotations:publishIosSimulatorArm64PublicationToGithubPagesRepository \
             :wasm:publishIosArm64PublicationToGithubPagesRepository \
@@ -128,8 +150,18 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
 
     steps:
+      - name: Checkout workflow sources
+        uses: actions/checkout@v6
+
+      - name: Select immutable development version
+        run: echo "KRWA_PUBLISH_VERSION=0.3.0-dev.${GITHUB_SHA:0:12}" >> "$GITHUB_ENV"
+
       - name: Download Pages workspace
         uses: actions/download-artifact@v7
         with:
@@ -146,6 +178,26 @@ jobs:
         run: |
           rsync -a build/ios-maven/ build/pages/maven/
           touch build/pages/.nojekyll
+
+      - name: Persist immutable development artifacts
+        run: |
+          set -euo pipefail
+          storage="$RUNNER_TEMP/krwa-dev-maven"
+          if git fetch origin refs/heads/dev-maven:refs/remotes/origin/dev-maven; then
+            git worktree add --detach "$storage" refs/remotes/origin/dev-maven
+          else
+            git worktree add --detach "$storage"
+            git -C "$storage" switch --orphan dev-maven
+          fi
+          rsync -a --delete --exclude=.git build/pages/maven/ "$storage"/
+          touch "$storage/.nojekyll"
+          git -C "$storage" config user.name github-actions[bot]
+          git -C "$storage" config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git -C "$storage" add --all
+          if ! git -C "$storage" diff --cached --quiet; then
+            git -C "$storage" commit -m "Publish $KRWA_PUBLISH_VERSION"
+            git -C "$storage" push origin HEAD:refs/heads/dev-maven
+          fi
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v5

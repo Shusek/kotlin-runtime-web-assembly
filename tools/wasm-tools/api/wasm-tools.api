@@ -1,0 +1,159 @@
+public final class uk/shusek/krwa/tools/wasm/Files {
+	public static final field Companion Luk/shusek/krwa/tools/wasm/Files$Companion;
+	public static final fun copyDirectory (Ljava/nio/file/Path;Ljava/nio/file/Path;)V
+}
+
+public final class uk/shusek/krwa/tools/wasm/Files$Companion {
+	public final fun copyDirectory (Ljava/nio/file/Path;Ljava/nio/file/Path;)V
+}
+
+public final class uk/shusek/krwa/tools/wasm/Validate {
+	public static final field Companion Luk/shusek/krwa/tools/wasm/Validate$Companion;
+	public static final fun builder ()Luk/shusek/krwa/tools/wasm/Validate$Builder;
+	public static final fun validate (Ljava/io/File;)V
+	public static final fun validate (Ljava/io/InputStream;)V
+	public static final fun validate (Ljava/lang/String;)V
+	public final fun validateModule (Ljava/io/File;)V
+	public final fun validateModule (Ljava/io/InputStream;)V
+	public final fun validateModule (Ljava/lang/String;)V
+}
+
+public final class uk/shusek/krwa/tools/wasm/Validate$Builder {
+	public static final field Companion Luk/shusek/krwa/tools/wasm/Validate$Builder$Companion;
+	public final fun build ()Luk/shusek/krwa/tools/wasm/Validate;
+	public final fun withFeatures ([Luk/shusek/krwa/tools/wasm/WasmFeature;)Luk/shusek/krwa/tools/wasm/Validate$Builder;
+	public final fun withoutFeature (Luk/shusek/krwa/tools/wasm/WasmFeature;)Luk/shusek/krwa/tools/wasm/Validate$Builder;
+}
+
+public final class uk/shusek/krwa/tools/wasm/Validate$Builder$Companion {
+}
+
+public final class uk/shusek/krwa/tools/wasm/Validate$Companion {
+	public final fun builder ()Luk/shusek/krwa/tools/wasm/Validate$Builder;
+	public final fun validate (Ljava/io/File;)V
+	public final fun validate (Ljava/io/InputStream;)V
+	public final fun validate (Ljava/lang/String;)V
+}
+
+public final class uk/shusek/krwa/tools/wasm/WasmFeature : java/lang/Enum {
+	public static final field ALL Luk/shusek/krwa/tools/wasm/WasmFeature;
+	public static final field BULK_MEMORY Luk/shusek/krwa/tools/wasm/WasmFeature;
+	public static final field BULK_MEMORY_OPT Luk/shusek/krwa/tools/wasm/WasmFeature;
+	public static final field CALL_INDIRECT_OVERLONG Luk/shusek/krwa/tools/wasm/WasmFeature;
+	public static final field CM_ASYNC Luk/shusek/krwa/tools/wasm/WasmFeature;
+	public static final field CM_ASYNC_BUILTINS Luk/shusek/krwa/tools/wasm/WasmFeature;
+	public static final field CM_ASYNC_STACKFUL Luk/shusek/krwa/tools/wasm/WasmFeature;
+	public static final field CM_ERROR_CONTEXT Luk/shusek/krwa/tools/wasm/WasmFeature;
+	public static final field CM_FIXED_SIZE_LIST Luk/shusek/krwa/tools/wasm/WasmFeature;
+	public static final field CM_GC Luk/shusek/krwa/tools/wasm/WasmFeature;
+	public static final field CM_NESTED_NAMES Luk/shusek/krwa/tools/wasm/WasmFeature;
+	public static final field CM_THREADING Luk/shusek/krwa/tools/wasm/WasmFeature;
+	public static final field CM_VALUES Luk/shusek/krwa/tools/wasm/WasmFeature;
+	public static final field COMPONENT_MODEL Luk/shusek/krwa/tools/wasm/WasmFeature;
+	public static final field CUSTOM_PAGE_SIZES Luk/shusek/krwa/tools/wasm/WasmFeature;
+	public static final field EXCEPTIONS Luk/shusek/krwa/tools/wasm/WasmFeature;
+	public static final field EXTENDED_CONST Luk/shusek/krwa/tools/wasm/WasmFeature;
+	public static final field FLOATS Luk/shusek/krwa/tools/wasm/WasmFeature;
+	public static final field FUNCTION_REFERENCES Luk/shusek/krwa/tools/wasm/WasmFeature;
+	public static final field GC Luk/shusek/krwa/tools/wasm/WasmFeature;
+	public static final field GC_TYPES Luk/shusek/krwa/tools/wasm/WasmFeature;
+	public static final field LEGACY_EXCEPTIONS Luk/shusek/krwa/tools/wasm/WasmFeature;
+	public static final field LIME1 Luk/shusek/krwa/tools/wasm/WasmFeature;
+	public static final field MEMORY64 Luk/shusek/krwa/tools/wasm/WasmFeature;
+	public static final field MEMORY_CONTROL Luk/shusek/krwa/tools/wasm/WasmFeature;
+	public static final field MULTI_MEMORY Luk/shusek/krwa/tools/wasm/WasmFeature;
+	public static final field MULTI_VALUE Luk/shusek/krwa/tools/wasm/WasmFeature;
+	public static final field MUTABLE_GLOBAL Luk/shusek/krwa/tools/wasm/WasmFeature;
+	public static final field MVP Luk/shusek/krwa/tools/wasm/WasmFeature;
+	public static final field REFERENCE_TYPES Luk/shusek/krwa/tools/wasm/WasmFeature;
+	public static final field RELAXED_SIMD Luk/shusek/krwa/tools/wasm/WasmFeature;
+	public static final field SATURATING_FLOAT_TO_INT Luk/shusek/krwa/tools/wasm/WasmFeature;
+	public static final field SHARED_EVERYTHING_THREADS Luk/shusek/krwa/tools/wasm/WasmFeature;
+	public static final field SIGN_EXTENSION Luk/shusek/krwa/tools/wasm/WasmFeature;
+	public static final field SIMD Luk/shusek/krwa/tools/wasm/WasmFeature;
+	public static final field STACK_SWITCHING Luk/shusek/krwa/tools/wasm/WasmFeature;
+	public static final field TAIL_CALL Luk/shusek/krwa/tools/wasm/WasmFeature;
+	public static final field THREADS Luk/shusek/krwa/tools/wasm/WasmFeature;
+	public static final field WASM1 Luk/shusek/krwa/tools/wasm/WasmFeature;
+	public static final field WASM2 Luk/shusek/krwa/tools/wasm/WasmFeature;
+	public static final field WASM3 Luk/shusek/krwa/tools/wasm/WasmFeature;
+	public static final field WIDE_ARITHMETIC Luk/shusek/krwa/tools/wasm/WasmFeature;
+	public final fun flag ()Ljava/lang/String;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public final fun negatedFlag ()Ljava/lang/String;
+	public static fun valueOf (Ljava/lang/String;)Luk/shusek/krwa/tools/wasm/WasmFeature;
+	public static fun values ()[Luk/shusek/krwa/tools/wasm/WasmFeature;
+}
+
+public final class uk/shusek/krwa/tools/wasm/WasmSmith {
+	public static final field Companion Luk/shusek/krwa/tools/wasm/WasmSmith$Companion;
+	public static final fun run ([BLjava/util/Map;Ljava/lang/String;)[B
+}
+
+public final class uk/shusek/krwa/tools/wasm/WasmSmith$Companion {
+	public final fun run ([BLjava/util/Map;Ljava/lang/String;)[B
+}
+
+public class uk/shusek/krwa/tools/wasm/WasmSmithException : java/lang/RuntimeException {
+	public fun <init> (Ljava/lang/String;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/Throwable;)V
+}
+
+public final class uk/shusek/krwa/tools/wasm/WasmToolsCli {
+	public static final field INSTANCE Luk/shusek/krwa/tools/wasm/WasmToolsCli;
+	public static final fun run (Ljava/util/List;[BLjava/util/Map;)Luk/shusek/krwa/tools/wasm/WasmToolsCli$Result;
+	public static synthetic fun run$default (Ljava/util/List;[BLjava/util/Map;ILjava/lang/Object;)Luk/shusek/krwa/tools/wasm/WasmToolsCli$Result;
+}
+
+public final class uk/shusek/krwa/tools/wasm/WasmToolsCli$Result {
+	public final fun getExitCode ()I
+	public final fun stderr ()[B
+	public final fun stdout ()[B
+}
+
+public final class uk/shusek/krwa/tools/wasm/WasmToolsRuntime {
+	public static final field INSTANCE Luk/shusek/krwa/tools/wasm/WasmToolsRuntime;
+	public final fun getExecutionConfig ()Luk/shusek/krwa/runtime/WasmtimeExecutionConfig;
+	public final fun getModule ()Luk/shusek/krwa/wasm/WasmModule;
+}
+
+public final class uk/shusek/krwa/tools/wasm/Wast2Json {
+	public static final field Companion Luk/shusek/krwa/tools/wasm/Wast2Json$Companion;
+	public static final fun builder ()Luk/shusek/krwa/tools/wasm/Wast2Json$Builder;
+	public final fun process ()V
+}
+
+public final class uk/shusek/krwa/tools/wasm/Wast2Json$Builder {
+	public static final field Companion Luk/shusek/krwa/tools/wasm/Wast2Json$Builder$Companion;
+	public final fun build ()Luk/shusek/krwa/tools/wasm/Wast2Json;
+	public final fun withFile (Ljava/io/File;)Luk/shusek/krwa/tools/wasm/Wast2Json$Builder;
+	public final fun withOptions ([Ljava/lang/String;)Luk/shusek/krwa/tools/wasm/Wast2Json$Builder;
+	public final fun withOutput (Ljava/io/File;)Luk/shusek/krwa/tools/wasm/Wast2Json$Builder;
+}
+
+public final class uk/shusek/krwa/tools/wasm/Wast2Json$Builder$Companion {
+}
+
+public final class uk/shusek/krwa/tools/wasm/Wast2Json$Companion {
+	public final fun builder ()Luk/shusek/krwa/tools/wasm/Wast2Json$Builder;
+}
+
+public final class uk/shusek/krwa/tools/wasm/Wat2Wasm {
+	public static final field Companion Luk/shusek/krwa/tools/wasm/Wat2Wasm$Companion;
+	public static final fun parse (Ljava/io/File;)[B
+	public static final fun parse (Ljava/io/InputStream;)[B
+	public static final fun parse (Ljava/lang/String;)[B
+}
+
+public final class uk/shusek/krwa/tools/wasm/Wat2Wasm$Companion {
+	public final fun parse (Ljava/io/File;)[B
+	public final fun parse (Ljava/io/InputStream;)[B
+	public final fun parse (Ljava/lang/String;)[B
+}
+
+public class uk/shusek/krwa/tools/wasm/WatParseException : java/lang/RuntimeException {
+	public fun <init> ()V
+	public fun <init> (Ljava/lang/String;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/Throwable;)V
+}
+

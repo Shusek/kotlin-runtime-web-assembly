@@ -1,0 +1,11 @@
+public final class uk/shusek/krwa/experimental/cli/Cli : java/lang/Runnable {
+	public static final field Companion Luk/shusek/krwa/experimental/cli/Cli$Companion;
+	public fun <init> ()V
+	public static final fun main ([Ljava/lang/String;)V
+	public fun run ()V
+}
+
+public final class uk/shusek/krwa/experimental/cli/Cli$Companion {
+	public final fun main ([Ljava/lang/String;)V
+}
+

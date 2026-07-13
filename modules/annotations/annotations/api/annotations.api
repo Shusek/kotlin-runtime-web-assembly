@@ -1,0 +1,18 @@
+public abstract interface annotation class uk/shusek/krwa/annotations/Buffer : java/lang/annotation/Annotation {
+}
+
+public abstract interface annotation class uk/shusek/krwa/annotations/CString : java/lang/annotation/Annotation {
+}
+
+public abstract interface annotation class uk/shusek/krwa/annotations/HostModule : java/lang/annotation/Annotation {
+	public abstract fun value ()Ljava/lang/String;
+}
+
+public abstract interface annotation class uk/shusek/krwa/annotations/WasmExport : java/lang/annotation/Annotation {
+	public abstract fun value ()Ljava/lang/String;
+}
+
+public abstract interface annotation class uk/shusek/krwa/annotations/WasmModuleInterface : java/lang/annotation/Annotation {
+	public abstract fun value ()Ljava/lang/String;
+}
+

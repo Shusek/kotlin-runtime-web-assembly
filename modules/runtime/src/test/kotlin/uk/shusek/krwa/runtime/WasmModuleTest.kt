@@ -153,6 +153,63 @@ class WasmModuleTest {
     }
 
     @Test
+    fun shouldApplyWasmtimeExecutionPolicyAtomically() {
+        val provider = MockPulleyProvider()
+        val previousProvider = PulleyExecutionProviders.install(provider)
+        try {
+            val config = WasmtimeExecutionConfig(target = WasmtimePulleyTarget, maxFuel = 37)
+            val instance =
+                Instance.builder(loadModule("compiled/add.wat.wasm"))
+                    .withExecutionBackend(ExecutionBackend.NATIVE)
+                    .withWasmtimeExecutionConfig(WasmtimeExecutionConfig(maxFuel = 1))
+                    .withExecutionPolicy(WasmExecutionPolicy.Wasmtime(config))
+                    .build()
+
+            instance.use {
+                assertEquals(ExecutionBackend.PULLEY, it.executionBackend())
+                assertEquals(11L, it.export("add").apply(5, 6)[0])
+            }
+            assertEquals(listOf(config), provider.configs)
+
+            val partialOverride = assertThrows(IllegalStateException::class.java) {
+                Instance.builder(loadModule("compiled/add.wat.wasm"))
+                    .withExecutionPolicy(WasmExecutionPolicy.Wasmtime(config))
+                    .withExecutionBackend(ExecutionBackend.NATIVE)
+            }
+            assertTrue(partialOverride.message.orEmpty().contains("atomic execution policy"))
+        } finally {
+            PulleyExecutionProviders.install(previousProvider)
+        }
+    }
+
+    @Test
+    fun shouldFailFastForResourcesRetainedAfterClose() {
+        val provider = MockPulleyProvider()
+        val previousProvider = PulleyExecutionProviders.install(provider)
+        try {
+            val instance =
+                Instance.builder(loadModule("compiled/add.wat.wasm"))
+                    .withExecutionPolicy(
+                        WasmExecutionPolicy.Wasmtime(WasmtimeExecutionConfig(maxFuel = 37)),
+                    )
+                    .build()
+            val add = instance.export("add")
+            val memory = instance.memory(0)
+
+            instance.close()
+
+            assertTrue(instance.isClosed())
+            assertThrows(IllegalStateException::class.java) { instance.export("add") }
+            assertThrows(IllegalStateException::class.java) { add.apply(5, 6) }
+            assertThrows(IllegalStateException::class.java) { memory.pages() }
+            instance.close()
+            assertEquals(1, provider.closeCalls.get())
+        } finally {
+            PulleyExecutionProviders.install(previousProvider)
+        }
+    }
+
+    @Test
     fun shouldRejectUnavailableInstalledPulleyProviderOnAndroidRuntime() {
         val propertyName = "java.runtime.name"
         val previousRuntimeName = System.getProperty(propertyName)
@@ -1027,6 +1084,7 @@ class WasmModuleTest {
             val createCalls = AtomicInteger()
             val closeCalls = AtomicInteger()
             val configs = ArrayList<WasmtimeExecutionConfig?>()
+            private val memory = ByteArrayMemory(MemoryLimits(1, 2))
 
             override fun availability(): ExecutionBackendAvailability =
                 ExecutionBackendAvailability(available = true)
@@ -1051,10 +1109,9 @@ class WasmModuleTest {
                         return FunctionType.of(listOf(ValType.I32, ValType.I32), listOf(ValType.I32))
                     }
 
-                    override fun memory(name: String): Memory =
-                        throw InvalidException("Unknown export with name $name")
+                    override fun memory(name: String): Memory = memory
 
-                    override fun memory(index: Int): Memory? = null
+                    override fun memory(index: Int): Memory? = if (index == 0) memory else null
 
                     override fun close() {
                         closeCalls.incrementAndGet()

@@ -1,0 +1,1349 @@
+public final class uk/shusek/krwa/component/CanonicalAbi {
+	public static final field Companion Luk/shusek/krwa/component/CanonicalAbi$Companion;
+	public static final field MAX_FLAT_PARAMS I
+	public static final field MAX_FLAT_RESULTS I
+	public static final field REALLOC_EXPORT Ljava/lang/String;
+	public final fun alignment (Luk/shusek/krwa/component/WitPackage$TypeRef;)I
+	public final fun asyncLiftedExportFunctionType (Luk/shusek/krwa/component/WitPackage$Function;)Luk/shusek/krwa/wasm/types/FunctionType;
+	public final fun asyncLoweredHostFunction (Ljava/lang/String;Ljava/lang/String;Luk/shusek/krwa/wasm/types/FunctionType;Luk/shusek/krwa/component/WitPackage$Function;Luk/shusek/krwa/component/HostHandler;)Luk/shusek/krwa/runtime/HostFunction;
+	public final fun asyncLoweredHostFunction (Ljava/lang/String;Ljava/lang/String;Luk/shusek/krwa/wasm/types/FunctionType;Luk/shusek/krwa/component/WitPackage$Function;Luk/shusek/krwa/component/HostHandler;Luk/shusek/krwa/component/CanonicalFutureIntrinsics;)Luk/shusek/krwa/runtime/HostFunction;
+	public final fun asyncTaskReturnFunctionType (Luk/shusek/krwa/component/WitPackage$Function;)Luk/shusek/krwa/wasm/types/FunctionType;
+	public final fun bind (Luk/shusek/krwa/runtime/Instance;Ljava/lang/String;Luk/shusek/krwa/component/WitPackage$Function;Luk/shusek/krwa/component/CanonicalAbi$AsyncTaskReturn;Ljava/lang/String;)Luk/shusek/krwa/component/CanonicalAbi$BoundFunction;
+	public static synthetic fun bind$default (Luk/shusek/krwa/component/CanonicalAbi;Luk/shusek/krwa/runtime/Instance;Ljava/lang/String;Luk/shusek/krwa/component/WitPackage$Function;Luk/shusek/krwa/component/CanonicalAbi$AsyncTaskReturn;Ljava/lang/String;ILjava/lang/Object;)Luk/shusek/krwa/component/CanonicalAbi$BoundFunction;
+	public final fun call (Luk/shusek/krwa/runtime/Instance;Ljava/lang/String;Luk/shusek/krwa/component/WitPackage$Function;[Ljava/lang/Object;)Ljava/lang/Object;
+	public final fun coreFunctionType (Luk/shusek/krwa/component/WitPackage$Function;Luk/shusek/krwa/component/CanonicalAbi$Direction;)Luk/shusek/krwa/wasm/types/FunctionType;
+	public final fun elementSize (Luk/shusek/krwa/component/WitPackage$TypeRef;)I
+	public final fun flattenType (Luk/shusek/krwa/component/WitPackage$TypeRef;)Ljava/util/List;
+	public final fun hostFunction (Ljava/lang/String;Ljava/lang/String;Luk/shusek/krwa/component/WitPackage$Function;Luk/shusek/krwa/component/HostHandler;)Luk/shusek/krwa/runtime/HostFunction;
+	public final fun hostFunction (Ljava/lang/String;Ljava/lang/String;Luk/shusek/krwa/component/WitPackage$Function;Luk/shusek/krwa/component/HostHandler;Luk/shusek/krwa/component/CanonicalFutureIntrinsics;)Luk/shusek/krwa/runtime/HostFunction;
+	public final fun liftFlatValues (Luk/shusek/krwa/component/CanonicalAbi$Context;Ljava/util/List;[JI)Ljava/util/List;
+	public final fun listElementStride (Luk/shusek/krwa/component/WitPackage$TypeRef;)I
+	public final fun loadListElements (Luk/shusek/krwa/component/CanonicalAbi$Context;IILuk/shusek/krwa/component/WitPackage$TypeRef;)Ljava/util/List;
+	public final fun loadValues (Luk/shusek/krwa/component/CanonicalAbi$Context;ILjava/util/List;)Ljava/util/List;
+	public final fun lowerFlatValues (Luk/shusek/krwa/component/CanonicalAbi$Context;Ljava/util/List;Ljava/util/List;I)[J
+	public static final fun of (Luk/shusek/krwa/component/WitPackage;)Luk/shusek/krwa/component/CanonicalAbi;
+	public final fun storeListElements (Luk/shusek/krwa/component/CanonicalAbi$Context;ILuk/shusek/krwa/component/WitPackage$TypeRef;Ljava/util/List;)V
+	public final fun storeValues (Luk/shusek/krwa/component/CanonicalAbi$Context;ILjava/util/List;Ljava/util/List;)V
+	public final fun witPackage ()Luk/shusek/krwa/component/WitPackage;
+}
+
+public abstract interface class uk/shusek/krwa/component/CanonicalAbi$AsyncTaskReturn {
+	public abstract fun reset ()V
+	public abstract fun takeRawResults ()[J
+}
+
+public final class uk/shusek/krwa/component/CanonicalAbi$BoundFunction {
+	public final fun call ([Ljava/lang/Object;)Ljava/lang/Object;
+	public final fun coreFunctionType ()Luk/shusek/krwa/wasm/types/FunctionType;
+}
+
+public final class uk/shusek/krwa/component/CanonicalAbi$Companion {
+	public final fun of (Luk/shusek/krwa/component/WitPackage;)Luk/shusek/krwa/component/CanonicalAbi;
+}
+
+public final class uk/shusek/krwa/component/CanonicalAbi$Context {
+	public static final field Companion Luk/shusek/krwa/component/CanonicalAbi$Context$Companion;
+	public static final fun forInstance (Luk/shusek/krwa/runtime/Instance;)Luk/shusek/krwa/component/CanonicalAbi$Context;
+	public final fun memory ()Luk/shusek/krwa/runtime/Memory;
+	public static final fun of (Luk/shusek/krwa/runtime/Memory;Luk/shusek/krwa/component/CanonicalAbi$Reallocator;)Luk/shusek/krwa/component/CanonicalAbi$Context;
+	public final fun reallocate (IIII)I
+}
+
+public final class uk/shusek/krwa/component/CanonicalAbi$Context$Companion {
+	public final fun forInstance (Luk/shusek/krwa/runtime/Instance;)Luk/shusek/krwa/component/CanonicalAbi$Context;
+	public final fun of (Luk/shusek/krwa/runtime/Memory;Luk/shusek/krwa/component/CanonicalAbi$Reallocator;)Luk/shusek/krwa/component/CanonicalAbi$Context;
+}
+
+public final class uk/shusek/krwa/component/CanonicalAbi$CoreValType : java/lang/Enum {
+	public static final field F32 Luk/shusek/krwa/component/CanonicalAbi$CoreValType;
+	public static final field F64 Luk/shusek/krwa/component/CanonicalAbi$CoreValType;
+	public static final field I32 Luk/shusek/krwa/component/CanonicalAbi$CoreValType;
+	public static final field I64 Luk/shusek/krwa/component/CanonicalAbi$CoreValType;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public final fun valType ()Luk/shusek/krwa/wasm/types/ValType;
+	public static fun valueOf (Ljava/lang/String;)Luk/shusek/krwa/component/CanonicalAbi$CoreValType;
+	public static fun values ()[Luk/shusek/krwa/component/CanonicalAbi$CoreValType;
+}
+
+public final class uk/shusek/krwa/component/CanonicalAbi$Direction : java/lang/Enum {
+	public static final field LIFTED_EXPORT Luk/shusek/krwa/component/CanonicalAbi$Direction;
+	public static final field LOWERED_IMPORT Luk/shusek/krwa/component/CanonicalAbi$Direction;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Luk/shusek/krwa/component/CanonicalAbi$Direction;
+	public static fun values ()[Luk/shusek/krwa/component/CanonicalAbi$Direction;
+}
+
+public abstract interface class uk/shusek/krwa/component/CanonicalAbi$Reallocator {
+	public abstract fun realloc (IIII)I
+}
+
+public abstract interface class uk/shusek/krwa/component/CanonicalFutureIntrinsics {
+	public fun completedFutureHandle (Ljava/lang/Object;)J
+	public abstract fun futureCancelRead (J)J
+	public abstract fun futureCancelWrite (J)J
+	public abstract fun futureDropReadable (J)V
+	public abstract fun futureDropWritable (J)V
+	public abstract fun futureNew ()J
+	public abstract fun futureRead (Luk/shusek/krwa/runtime/Instance;JILuk/shusek/krwa/component/CanonicalAbi;Luk/shusek/krwa/component/WitPackage$TypeRef;)J
+	public abstract fun futureWrite (Luk/shusek/krwa/runtime/Instance;JILuk/shusek/krwa/component/CanonicalAbi;Luk/shusek/krwa/component/WitPackage$TypeRef;)J
+}
+
+public final class uk/shusek/krwa/component/CanonicalFutureIntrinsics$DefaultImpls {
+	public static fun completedFutureHandle (Luk/shusek/krwa/component/CanonicalFutureIntrinsics;Ljava/lang/Object;)J
+}
+
+public abstract interface class uk/shusek/krwa/component/CanonicalStreamIntrinsics {
+	public abstract fun streamCancelRead (J)J
+	public abstract fun streamCancelWrite (J)J
+	public abstract fun streamDropReadable (J)V
+	public abstract fun streamDropWritable (J)V
+	public abstract fun streamNew (Luk/shusek/krwa/component/WitPackage$TypeRef;)J
+	public abstract fun streamRead (Luk/shusek/krwa/runtime/Instance;JIILuk/shusek/krwa/component/CanonicalAbi;Luk/shusek/krwa/component/WitPackage$TypeRef;)J
+	public abstract fun streamWrite (Luk/shusek/krwa/runtime/Instance;JIILuk/shusek/krwa/component/CanonicalAbi;Luk/shusek/krwa/component/WitPackage$TypeRef;)J
+}
+
+public class uk/shusek/krwa/component/ComponentModelException : java/lang/RuntimeException {
+	public fun <init> (Ljava/lang/String;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/Throwable;)V
+}
+
+public abstract interface class uk/shusek/krwa/component/HostHandler {
+	public abstract fun apply (Ljava/util/List;)Ljava/lang/Object;
+}
+
+public final class uk/shusek/krwa/component/KotlinWitBindgen {
+	public static final field INSTANCE Luk/shusek/krwa/component/KotlinWitBindgen;
+	public static final fun main ([Ljava/lang/String;)V
+	public static final fun run ([Ljava/lang/String;Ljava/io/PrintStream;Ljava/io/PrintStream;)I
+}
+
+public final class uk/shusek/krwa/component/KotlinWitBindings {
+	public static final field Companion Luk/shusek/krwa/component/KotlinWitBindings$Companion;
+	public static final fun builder (Luk/shusek/krwa/component/WitPackage;)Luk/shusek/krwa/component/KotlinWitBindings$Builder;
+	public final fun generate ()Ljava/lang/String;
+	public static final fun generate (Lokio/Path;Ljava/lang/String;)Ljava/lang/String;
+	public static final fun generate (Luk/shusek/krwa/component/WitPackage;Ljava/lang/String;)Ljava/lang/String;
+	public final fun generateFiles ()Ljava/util/List;
+	public static final fun write (Lokio/Path;Ljava/lang/String;Lokio/Path;)Lokio/Path;
+	public static final fun write (Luk/shusek/krwa/component/WitPackage;Ljava/lang/String;Lokio/Path;)Lokio/Path;
+	public static final fun writeDirectory (Lokio/Path;Ljava/lang/String;Lokio/Path;)Ljava/util/List;
+	public static final fun writeDirectory (Luk/shusek/krwa/component/WitPackage;Ljava/lang/String;Lokio/Path;)Ljava/util/List;
+	public final fun writeTo (Lokio/Path;)Lokio/Path;
+	public final fun writeToDirectory (Lokio/Path;)Ljava/util/List;
+}
+
+public final class uk/shusek/krwa/component/KotlinWitBindings$Builder {
+	public final fun build ()Luk/shusek/krwa/component/KotlinWitBindings;
+	public final fun withGuestExportAdapters (Z)Luk/shusek/krwa/component/KotlinWitBindings$Builder;
+	public final fun withPackageName (Ljava/lang/String;)Luk/shusek/krwa/component/KotlinWitBindings$Builder;
+	public final fun withPluginHelpers (Z)Luk/shusek/krwa/component/KotlinWitBindings$Builder;
+	public final fun withRuntimePackageName (Ljava/lang/String;)Luk/shusek/krwa/component/KotlinWitBindings$Builder;
+	public final fun withRuntimeTypes (Z)Luk/shusek/krwa/component/KotlinWitBindings$Builder;
+	public final fun withWitSource (Ljava/lang/String;)Luk/shusek/krwa/component/KotlinWitBindings$Builder;
+}
+
+public final class uk/shusek/krwa/component/KotlinWitBindings$Companion {
+	public final fun builder (Luk/shusek/krwa/component/WitPackage;)Luk/shusek/krwa/component/KotlinWitBindings$Builder;
+	public final fun generate (Lokio/Path;Ljava/lang/String;)Ljava/lang/String;
+	public final fun generate (Luk/shusek/krwa/component/WitPackage;Ljava/lang/String;)Ljava/lang/String;
+	public final fun write (Lokio/Path;Ljava/lang/String;Lokio/Path;)Lokio/Path;
+	public final fun write (Luk/shusek/krwa/component/WitPackage;Ljava/lang/String;Lokio/Path;)Lokio/Path;
+	public final fun writeDirectory (Lokio/Path;Ljava/lang/String;Lokio/Path;)Ljava/util/List;
+	public final fun writeDirectory (Luk/shusek/krwa/component/WitPackage;Ljava/lang/String;Lokio/Path;)Ljava/util/List;
+}
+
+public final class uk/shusek/krwa/component/KotlinWitBindings$GeneratedFile {
+	public fun <init> (Lokio/Path;Ljava/lang/String;)V
+	public final fun component1 ()Lokio/Path;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun copy (Lokio/Path;Ljava/lang/String;)Luk/shusek/krwa/component/KotlinWitBindings$GeneratedFile;
+	public static synthetic fun copy$default (Luk/shusek/krwa/component/KotlinWitBindings$GeneratedFile;Lokio/Path;Ljava/lang/String;ILjava/lang/Object;)Luk/shusek/krwa/component/KotlinWitBindings$GeneratedFile;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getContent ()Ljava/lang/String;
+	public final fun getRelativePath ()Lokio/Path;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/component/KtorWasiHttpClient : uk/shusek/krwa/component/WasiSuspendingHttpClient {
+	public fun <init> (Lio/ktor/client/HttpClient;)V
+	public fun send (Luk/shusek/krwa/component/WasiHttpRequest;)Luk/shusek/krwa/component/WasiHttpResponse;
+	public fun sendSuspending (Luk/shusek/krwa/component/WasiHttpRequest;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public abstract interface class uk/shusek/krwa/component/WasiComponentInvoker {
+	public abstract fun call (Ljava/lang/String;[Ljava/lang/Object;)Ljava/lang/Object;
+}
+
+public abstract interface class uk/shusek/krwa/component/WasiHostImportBuilder {
+	public abstract fun withHostImport (Ljava/lang/String;Ljava/lang/String;Luk/shusek/krwa/component/HostHandler;)Luk/shusek/krwa/component/WasiHostImportBuilder;
+	public abstract fun withHostImport (Ljava/lang/String;Luk/shusek/krwa/component/HostHandler;)Luk/shusek/krwa/component/WasiHostImportBuilder;
+	public fun withWasiPreview3CanonicalIntrinsics (Luk/shusek/krwa/component/WasiPreview3CanonicalIntrinsics;)Luk/shusek/krwa/component/WasiHostImportBuilder;
+}
+
+public final class uk/shusek/krwa/component/WasiHostImportBuilder$DefaultImpls {
+	public static fun withWasiPreview3CanonicalIntrinsics (Luk/shusek/krwa/component/WasiHostImportBuilder;Luk/shusek/krwa/component/WasiPreview3CanonicalIntrinsics;)Luk/shusek/krwa/component/WasiHostImportBuilder;
+}
+
+public abstract interface class uk/shusek/krwa/component/WasiHttpClient {
+	public abstract fun send (Luk/shusek/krwa/component/WasiHttpRequest;)Luk/shusek/krwa/component/WasiHttpResponse;
+	public fun sendSuspending (Luk/shusek/krwa/component/WasiHttpRequest;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public final class uk/shusek/krwa/component/WasiHttpClient$DefaultImpls {
+	public static fun sendSuspending (Luk/shusek/krwa/component/WasiHttpClient;Luk/shusek/krwa/component/WasiHttpRequest;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public abstract interface class uk/shusek/krwa/component/WasiHttpHandler {
+	public abstract fun handle (Luk/shusek/krwa/component/WasiPreview2$HttpRequestSnapshot;)Luk/shusek/krwa/component/WasiPreview2$HttpResponseSnapshot;
+}
+
+public final class uk/shusek/krwa/component/WasiHttpHeader {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
+	public final fun getName ()Ljava/lang/String;
+	public final fun getValue ()Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/component/WasiHttpRequest {
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/util/List;[BLkotlin/time/Duration;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getBody ()[B
+	public final fun getHeaders ()Ljava/util/List;
+	public final fun getMethod ()Ljava/lang/String;
+	public final fun getTimeout-FghU774 ()Lkotlin/time/Duration;
+	public final fun getUri ()Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/component/WasiHttpResponse {
+	public fun <init> (ILjava/util/Map;Lkotlinx/io/RawSource;)V
+	public fun <init> (ILjava/util/Map;[B)V
+	public final fun consumeBodySource ()Lkotlinx/io/RawSource;
+	public final fun getBody ()[B
+	public final fun getHeaders ()Ljava/util/Map;
+	public final fun getStatus ()I
+}
+
+public abstract interface class uk/shusek/krwa/component/WasiMemoryRawSource : kotlinx/io/RawSource {
+	public abstract fun readAtMostToMemory (Luk/shusek/krwa/component/WasiPreview3CanonicalContext;II)I
+}
+
+public final class uk/shusek/krwa/component/WasiPreview : java/lang/Enum {
+	public static final field PREVIEW1 Luk/shusek/krwa/component/WasiPreview;
+	public static final field PREVIEW2 Luk/shusek/krwa/component/WasiPreview;
+	public static final field PREVIEW3 Luk/shusek/krwa/component/WasiPreview;
+	public final fun binaryKind ()Luk/shusek/krwa/component/WasiPreview$BinaryKind;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public final fun isComponentModel ()Z
+	public final fun isReleaseCandidate ()Z
+	public final fun isStable ()Z
+	public final fun requireStable ()V
+	public final fun stability ()Luk/shusek/krwa/component/WasiPreview$Stability;
+	public static fun valueOf (Ljava/lang/String;)Luk/shusek/krwa/component/WasiPreview;
+	public static fun values ()[Luk/shusek/krwa/component/WasiPreview;
+	public final fun version ()Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/component/WasiPreview$BinaryKind : java/lang/Enum {
+	public static final field COMPONENT Luk/shusek/krwa/component/WasiPreview$BinaryKind;
+	public static final field CORE_MODULE Luk/shusek/krwa/component/WasiPreview$BinaryKind;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Luk/shusek/krwa/component/WasiPreview$BinaryKind;
+	public static fun values ()[Luk/shusek/krwa/component/WasiPreview$BinaryKind;
+}
+
+public final class uk/shusek/krwa/component/WasiPreview$Stability : java/lang/Enum {
+	public static final field RELEASE_CANDIDATE Luk/shusek/krwa/component/WasiPreview$Stability;
+	public static final field STABLE Luk/shusek/krwa/component/WasiPreview$Stability;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Luk/shusek/krwa/component/WasiPreview$Stability;
+	public static fun values ()[Luk/shusek/krwa/component/WasiPreview$Stability;
+}
+
+public final class uk/shusek/krwa/component/WasiPreview2 {
+	public static final field Companion Luk/shusek/krwa/component/WasiPreview2$Companion;
+	public static final field DEFAULT_VERSION Ljava/lang/String;
+	public static final field KOTLIN_COMPONENT_MODEL_VERSION Ljava/lang/String;
+	public final fun arguments ()Ljava/util/List;
+	public static final fun builder ()Luk/shusek/krwa/component/WasiPreview2$Builder;
+	public final fun environment ()Ljava/util/Map;
+	public final fun handleHttpRequest (Luk/shusek/krwa/component/WasiComponentInvoker;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;[B)Luk/shusek/krwa/component/WasiPreview2$HttpResponseSnapshot;
+	public final fun handleHttpRequest (Luk/shusek/krwa/component/WasiComponentInvoker;Luk/shusek/krwa/component/WasiPreview2$HttpRequestSnapshot;)Luk/shusek/krwa/component/WasiPreview2$HttpResponseSnapshot;
+	public final fun initialCwd ()Ljava/lang/String;
+	public final fun inputStreams ()Luk/shusek/krwa/component/WitResourceTable;
+	public final fun install (Luk/shusek/krwa/component/WasiHostImportBuilder;)Luk/shusek/krwa/component/WasiHostImportBuilder;
+	public final fun newIncomingRequest (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;[B)Luk/shusek/krwa/component/WitResource;
+	public final fun newResponseOutparam ()Luk/shusek/krwa/component/WitResource;
+	public final fun outputStreams ()Luk/shusek/krwa/component/WitResourceTable;
+	public final fun responseOutparamHttpResponse (Luk/shusek/krwa/component/WitResource;)Luk/shusek/krwa/component/WasiPreview2$HttpResponseSnapshot;
+	public final fun responseOutparamIsSet (Luk/shusek/krwa/component/WitResource;)Z
+	public final fun responseOutparamResponse (Luk/shusek/krwa/component/WitResource;)Ljava/lang/Object;
+	public final fun version ()Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/component/WasiPreview2$Builder {
+	public fun <init> ()V
+	public final fun build ()Luk/shusek/krwa/component/WasiPreview2;
+	public final fun getArguments ()Ljava/util/List;
+	public final fun getEnvironment ()Ljava/util/Map;
+	public final fun getFileSystem ()Lokio/FileSystem;
+	public final fun getHttpClient ()Luk/shusek/krwa/component/WasiHttpClient;
+	public final fun getInitialCwd ()Ljava/lang/String;
+	public final fun getInsecureRandom ()Lkotlin/random/Random;
+	public final fun getInsecureSeedLower ()J
+	public final fun getInsecureSeedUpper ()J
+	public final fun getMonotonicClock ()Lkotlin/jvm/functions/Function0;
+	public final fun getMonotonicResolutionNanos ()J
+	public final fun getNetworkingEnabled ()Z
+	public final fun getSecureRandom ()Lorg/kotlincrypto/random/CryptoRand;
+	public final fun getStderr ()Luk/shusek/krwa/component/WasiPreview2$WasiOutputStream;
+	public final fun getStdin ()Luk/shusek/krwa/component/WasiPreview2$WasiInputStream;
+	public final fun getStdout ()Luk/shusek/krwa/component/WasiPreview2$WasiOutputStream;
+	public final fun getTerminalStderr ()Z
+	public final fun getTerminalStdin ()Z
+	public final fun getTerminalStdout ()Z
+	public final fun getVersion ()Ljava/lang/String;
+	public final fun getWallClock ()Lkotlin/time/Clock;
+	public final fun getWallClockResolutionNanos ()J
+	public final fun getWallClockTimeZone ()Lkotlinx/datetime/TimeZone;
+	public final fun setFileSystem (Lokio/FileSystem;)V
+	public final fun setHttpClient (Luk/shusek/krwa/component/WasiHttpClient;)V
+	public final fun setInitialCwd (Ljava/lang/String;)V
+	public final fun setInsecureRandom (Lkotlin/random/Random;)V
+	public final fun setInsecureSeedLower (J)V
+	public final fun setInsecureSeedUpper (J)V
+	public final fun setMonotonicClock (Lkotlin/jvm/functions/Function0;)V
+	public final fun setMonotonicResolutionNanos (J)V
+	public final fun setNetworkingEnabled (Z)V
+	public final fun setSecureRandom (Lorg/kotlincrypto/random/CryptoRand;)V
+	public final fun setStderr (Luk/shusek/krwa/component/WasiPreview2$WasiOutputStream;)V
+	public final fun setStdin (Luk/shusek/krwa/component/WasiPreview2$WasiInputStream;)V
+	public final fun setStdout (Luk/shusek/krwa/component/WasiPreview2$WasiOutputStream;)V
+	public final fun setTerminalStderr (Z)V
+	public final fun setTerminalStdin (Z)V
+	public final fun setTerminalStdout (Z)V
+	public final fun setVersion (Ljava/lang/String;)V
+	public final fun setWallClock (Lkotlin/time/Clock;)V
+	public final fun setWallClockResolutionNanos (J)V
+	public final fun setWallClockTimeZone (Lkotlinx/datetime/TimeZone;)V
+	public final fun withArguments (Ljava/util/List;)Luk/shusek/krwa/component/WasiPreview2$Builder;
+	public final fun withArguments ([Ljava/lang/String;)Luk/shusek/krwa/component/WasiPreview2$Builder;
+	public final fun withEnvironment (Ljava/lang/String;Ljava/lang/String;)Luk/shusek/krwa/component/WasiPreview2$Builder;
+	public final fun withEnvironment (Ljava/util/Map;)Luk/shusek/krwa/component/WasiPreview2$Builder;
+	public final fun withFileSystem (Lokio/FileSystem;)Luk/shusek/krwa/component/WasiPreview2$Builder;
+	public final fun withFixedWallClock (Lkotlin/time/Instant;Ljava/lang/String;)Luk/shusek/krwa/component/WasiPreview2$Builder;
+	public static synthetic fun withFixedWallClock$default (Luk/shusek/krwa/component/WasiPreview2$Builder;Lkotlin/time/Instant;Ljava/lang/String;ILjava/lang/Object;)Luk/shusek/krwa/component/WasiPreview2$Builder;
+	public final fun withHttpClient (Lio/ktor/client/HttpClient;)Luk/shusek/krwa/component/WasiPreview2$Builder;
+	public final fun withHttpClient (Luk/shusek/krwa/component/WasiHttpClient;)Luk/shusek/krwa/component/WasiPreview2$Builder;
+	public final fun withInitialCwd (Ljava/lang/String;)Luk/shusek/krwa/component/WasiPreview2$Builder;
+	public final fun withInitialCwd (Lokio/Path;)Luk/shusek/krwa/component/WasiPreview2$Builder;
+	public final fun withInsecureRandom (Lkotlin/random/Random;)Luk/shusek/krwa/component/WasiPreview2$Builder;
+	public final fun withInsecureSeed (JJ)Luk/shusek/krwa/component/WasiPreview2$Builder;
+	public final fun withMonotonicClock (Lkotlin/jvm/functions/Function0;)Luk/shusek/krwa/component/WasiPreview2$Builder;
+	public final fun withMonotonicResolutionNanos (J)Luk/shusek/krwa/component/WasiPreview2$Builder;
+	public final fun withNetworking ()Luk/shusek/krwa/component/WasiPreview2$Builder;
+	public final fun withNetworking (Z)Luk/shusek/krwa/component/WasiPreview2$Builder;
+	public final fun withPreopenedDirectory (Ljava/lang/String;Ljava/lang/String;)Luk/shusek/krwa/component/WasiPreview2$Builder;
+	public final fun withPreopenedDirectory (Ljava/lang/String;Lokio/Path;)Luk/shusek/krwa/component/WasiPreview2$Builder;
+	public final fun withPreopenedDirectory (Ljava/lang/String;Lokio/Path;Z)Luk/shusek/krwa/component/WasiPreview2$Builder;
+	public final fun withReadOnlyPreopenedDirectory (Ljava/lang/String;Ljava/lang/String;)Luk/shusek/krwa/component/WasiPreview2$Builder;
+	public final fun withReadOnlyPreopenedDirectory (Ljava/lang/String;Lokio/Path;)Luk/shusek/krwa/component/WasiPreview2$Builder;
+	public final fun withSecureRandom (Lkotlin/random/Random;)Luk/shusek/krwa/component/WasiPreview2$Builder;
+	public final fun withSecureRandom (Lorg/kotlincrypto/random/CryptoRand;)Luk/shusek/krwa/component/WasiPreview2$Builder;
+	public final fun withStderr (Lkotlinx/io/RawSink;)Luk/shusek/krwa/component/WasiPreview2$Builder;
+	public final fun withStdin (Lkotlinx/io/RawSource;)Luk/shusek/krwa/component/WasiPreview2$Builder;
+	public final fun withStdin (Lkotlinx/io/RawSource;Lkotlin/jvm/functions/Function0;)Luk/shusek/krwa/component/WasiPreview2$Builder;
+	public final fun withStdout (Lkotlinx/io/RawSink;)Luk/shusek/krwa/component/WasiPreview2$Builder;
+	public final fun withSystemEnvironment ()Luk/shusek/krwa/component/WasiPreview2$Builder;
+	public final fun withTerminal (Z)Luk/shusek/krwa/component/WasiPreview2$Builder;
+	public final fun withTerminalStderr (Z)Luk/shusek/krwa/component/WasiPreview2$Builder;
+	public final fun withTerminalStdin (Z)Luk/shusek/krwa/component/WasiPreview2$Builder;
+	public final fun withTerminalStdout (Z)Luk/shusek/krwa/component/WasiPreview2$Builder;
+	public final fun withVersion (Ljava/lang/String;)Luk/shusek/krwa/component/WasiPreview2$Builder;
+	public final fun withWallClock (Lkotlin/jvm/functions/Function0;Ljava/lang/String;)Luk/shusek/krwa/component/WasiPreview2$Builder;
+	public final fun withWallClock (Lkotlin/time/Clock;Ljava/lang/String;)Luk/shusek/krwa/component/WasiPreview2$Builder;
+	public final fun withWallClock (Lkotlin/time/Clock;Lkotlinx/datetime/TimeZone;)Luk/shusek/krwa/component/WasiPreview2$Builder;
+	public static synthetic fun withWallClock$default (Luk/shusek/krwa/component/WasiPreview2$Builder;Lkotlin/jvm/functions/Function0;Ljava/lang/String;ILjava/lang/Object;)Luk/shusek/krwa/component/WasiPreview2$Builder;
+	public static synthetic fun withWallClock$default (Luk/shusek/krwa/component/WasiPreview2$Builder;Lkotlin/time/Clock;Ljava/lang/String;ILjava/lang/Object;)Luk/shusek/krwa/component/WasiPreview2$Builder;
+	public final fun withWallClockResolutionNanos (J)Luk/shusek/krwa/component/WasiPreview2$Builder;
+	public final fun withoutNetworking ()Luk/shusek/krwa/component/WasiPreview2$Builder;
+}
+
+public final class uk/shusek/krwa/component/WasiPreview2$Companion {
+	public final fun builder ()Luk/shusek/krwa/component/WasiPreview2$Builder;
+}
+
+public final class uk/shusek/krwa/component/WasiPreview2$DescriptorTag {
+}
+
+public final class uk/shusek/krwa/component/WasiPreview2$DirectoryEntryStreamTag {
+}
+
+public final class uk/shusek/krwa/component/WasiPreview2$ErrorTag {
+}
+
+public final class uk/shusek/krwa/component/WasiPreview2$ExitException : java/lang/RuntimeException {
+	public fun <init> (I)V
+	public final fun getStatusCode ()I
+	public final fun statusCode ()I
+}
+
+public final class uk/shusek/krwa/component/WasiPreview2$FutureIncomingResponseTag {
+}
+
+public final class uk/shusek/krwa/component/WasiPreview2$FutureTrailersTag {
+}
+
+public final class uk/shusek/krwa/component/WasiPreview2$HttpFieldsTag {
+}
+
+public final class uk/shusek/krwa/component/WasiPreview2$HttpRequestSnapshot {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;[B)V
+	public final fun authority ()Ljava/lang/String;
+	public final fun body ()[B
+	public final fun getAuthority ()Ljava/lang/String;
+	public final fun getBody ()[B
+	public final fun getHeaders ()Ljava/util/Map;
+	public final fun getMethod ()Ljava/lang/String;
+	public final fun getPathWithQuery ()Ljava/lang/String;
+	public final fun getScheme ()Ljava/lang/String;
+	public final fun headers ()Ljava/util/Map;
+	public final fun method ()Ljava/lang/String;
+	public final fun pathWithQuery ()Ljava/lang/String;
+	public final fun scheme ()Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/component/WasiPreview2$HttpResponseSnapshot {
+	public fun <init> (ILjava/util/Map;[BZ)V
+	public final fun body ()[B
+	public final fun bodyFinished ()Z
+	public final fun getBody ()[B
+	public final fun getHeaders ()Ljava/util/Map;
+	public final fun getStatusCode ()I
+	public final fun headers ()Ljava/util/Map;
+	public final fun isBodyFinished ()Z
+	public final fun statusCode ()I
+}
+
+public final class uk/shusek/krwa/component/WasiPreview2$IncomingBodyTag {
+}
+
+public final class uk/shusek/krwa/component/WasiPreview2$IncomingDatagramStreamTag {
+}
+
+public final class uk/shusek/krwa/component/WasiPreview2$IncomingRequestTag {
+}
+
+public final class uk/shusek/krwa/component/WasiPreview2$IncomingResponseTag {
+}
+
+public final class uk/shusek/krwa/component/WasiPreview2$InputStreamTag {
+}
+
+public final class uk/shusek/krwa/component/WasiPreview2$NetworkTag {
+}
+
+public final class uk/shusek/krwa/component/WasiPreview2$OutgoingBodyTag {
+}
+
+public final class uk/shusek/krwa/component/WasiPreview2$OutgoingDatagramStreamTag {
+}
+
+public final class uk/shusek/krwa/component/WasiPreview2$OutgoingRequestTag {
+}
+
+public final class uk/shusek/krwa/component/WasiPreview2$OutgoingResponseTag {
+}
+
+public final class uk/shusek/krwa/component/WasiPreview2$OutputStreamTag {
+}
+
+public final class uk/shusek/krwa/component/WasiPreview2$PollableTag {
+}
+
+public final class uk/shusek/krwa/component/WasiPreview2$RequestOptionsTag {
+}
+
+public final class uk/shusek/krwa/component/WasiPreview2$ResolveAddressStreamTag {
+}
+
+public final class uk/shusek/krwa/component/WasiPreview2$ResponseOutparamTag {
+}
+
+public final class uk/shusek/krwa/component/WasiPreview2$TcpSocketTag {
+}
+
+public final class uk/shusek/krwa/component/WasiPreview2$TerminalInputTag {
+}
+
+public final class uk/shusek/krwa/component/WasiPreview2$TerminalOutputTag {
+}
+
+public final class uk/shusek/krwa/component/WasiPreview2$UdpSocketTag {
+}
+
+public final class uk/shusek/krwa/component/WasiPreview2$WasiInputStream {
+}
+
+public final class uk/shusek/krwa/component/WasiPreview2$WasiOutputStream {
+}
+
+public final class uk/shusek/krwa/component/WasiPreview3 : uk/shusek/krwa/component/WasiPreview3CanonicalIntrinsics {
+	public static final field Companion Luk/shusek/krwa/component/WasiPreview3$Companion;
+	public static final field DEFAULT_VERSION Ljava/lang/String;
+	public final fun acceptTcpConnection (J)Luk/shusek/krwa/component/WitResult;
+	public final fun acceptTcpConnection (Luk/shusek/krwa/component/WitStream;)Luk/shusek/krwa/component/WitResult;
+	public final fun awaitFuture (Luk/shusek/krwa/component/WitFuture;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun awaitFutureValue (JLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun awaitStreamReadable (JLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun awaitStreamReadable (Luk/shusek/krwa/component/WitStream;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun awaitStreamWritable (JLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun awaitStreamWritable (Luk/shusek/krwa/component/WitStream;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static final fun builder ()Luk/shusek/krwa/component/WasiPreview3$Builder;
+	public final fun byteStream (Lkotlinx/coroutines/flow/Flow;)Luk/shusek/krwa/component/WitStream;
+	public final fun byteStream ([B)Luk/shusek/krwa/component/WitStream;
+	public final fun cancel ()V
+	public final fun close ()V
+	public final fun completeFuture (JLjava/lang/Object;)V
+	public final fun completeFuture (Luk/shusek/krwa/component/WitFuture;Ljava/lang/Object;)V
+	public final fun completedFuture (Ljava/lang/Object;)Luk/shusek/krwa/component/WitFuture;
+	public fun completedFutureHandle (Ljava/lang/Object;)J
+	public final fun completedFutureOf (Ljava/lang/Object;)Luk/shusek/krwa/component/WitFuture;
+	public fun futureCancelRead (J)J
+	public fun futureCancelWrite (J)J
+	public final fun futureCompleted (J)Z
+	public final fun futureCompleted (Luk/shusek/krwa/component/WitFuture;)Z
+	public fun futureDropReadable (J)V
+	public fun futureDropWritable (J)V
+	public fun futureNew ()J
+	public fun futureRead (Luk/shusek/krwa/component/WasiPreview3CanonicalContext;JILuk/shusek/krwa/component/WitPackage$TypeRef;)J
+	public final fun futureValue (J)Ljava/lang/Object;
+	public final fun futureValue (Luk/shusek/krwa/component/WitFuture;)Ljava/lang/Object;
+	public fun futureWrite (Luk/shusek/krwa/component/WasiPreview3CanonicalContext;JILuk/shusek/krwa/component/WitPackage$TypeRef;)J
+	public final fun handleHttpRequest (Luk/shusek/krwa/component/WasiComponentInvoker;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;[B)Luk/shusek/krwa/component/WasiPreview2$HttpResponseSnapshot;
+	public final fun handleHttpRequest (Luk/shusek/krwa/component/WasiComponentInvoker;Luk/shusek/krwa/component/WasiPreview2$HttpRequestSnapshot;)Luk/shusek/krwa/component/WasiPreview2$HttpResponseSnapshot;
+	public final fun httpFields (Ljava/util/Map;)Luk/shusek/krwa/component/WitResource;
+	public final fun httpFieldsSnapshot (J)Ljava/util/Map;
+	public final fun httpFieldsSnapshot (Luk/shusek/krwa/component/WitResource;)Ljava/util/Map;
+	public final fun httpRequestTrailers (J)Luk/shusek/krwa/component/WitResult;
+	public final fun httpRequestTrailers (Luk/shusek/krwa/component/WitResource;)Luk/shusek/krwa/component/WitResult;
+	public final fun httpResponseTrailers (J)Luk/shusek/krwa/component/WitResult;
+	public final fun httpResponseTrailers (Luk/shusek/krwa/component/WitResource;)Luk/shusek/krwa/component/WitResult;
+	public final fun install (Luk/shusek/krwa/component/WasiHostImportBuilder;)Luk/shusek/krwa/component/WasiHostImportBuilder;
+	public final fun pendingFuture ()Luk/shusek/krwa/component/WitFuture;
+	public final fun readByteStreamChunk (JILkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun readByteStreamChunk (Luk/shusek/krwa/component/WitStream;ILkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun readByteStreamChunk$default (Luk/shusek/krwa/component/WasiPreview3;JILkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public static synthetic fun readByteStreamChunk$default (Luk/shusek/krwa/component/WasiPreview3;Luk/shusek/krwa/component/WitStream;ILkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public final fun streamBytes (J)[B
+	public final fun streamBytes (Luk/shusek/krwa/component/WitStream;)[B
+	public fun streamCancelRead (J)J
+	public fun streamCancelWrite (J)J
+	public final fun streamDirectoryEntries (J)Ljava/util/List;
+	public final fun streamDirectoryEntries (Luk/shusek/krwa/component/WitStream;)Ljava/util/List;
+	public fun streamDropReadable (J)V
+	public fun streamDropWritable (J)V
+	public fun streamNew (Luk/shusek/krwa/component/WitPackage$TypeRef;)J
+	public final fun streamOf (Ljava/lang/Iterable;)Luk/shusek/krwa/component/WitStream;
+	public fun streamRead (Luk/shusek/krwa/component/WasiPreview3CanonicalContext;JIILuk/shusek/krwa/component/WitPackage$TypeRef;)J
+	public final fun streamValues (J)Ljava/util/List;
+	public final fun streamValues (Luk/shusek/krwa/component/WitStream;)Ljava/util/List;
+	public fun streamWrite (Luk/shusek/krwa/component/WasiPreview3CanonicalContext;JIILuk/shusek/krwa/component/WitPackage$TypeRef;)J
+	public final fun tcpLocalAddress (J)Luk/shusek/krwa/component/WitResult;
+	public final fun tcpLocalAddress (Luk/shusek/krwa/component/WitResource;)Luk/shusek/krwa/component/WitResult;
+	public final fun tcpRemoteAddress (J)Luk/shusek/krwa/component/WitResult;
+	public final fun tcpRemoteAddress (Luk/shusek/krwa/component/WitResource;)Luk/shusek/krwa/component/WitResult;
+	public final fun version ()Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/component/WasiPreview3$Builder {
+	public fun <init> ()V
+	public final fun build ()Luk/shusek/krwa/component/WasiPreview3;
+	public final fun getArguments ()Ljava/util/List;
+	public final fun getEnvironment ()Ljava/util/Map;
+	public final fun getFileSystem ()Lokio/FileSystem;
+	public final fun getHttpClient ()Luk/shusek/krwa/component/WasiHttpClient;
+	public final fun getHttpHandler ()Luk/shusek/krwa/component/WasiHttpHandler;
+	public final fun getInitialCwd ()Ljava/lang/String;
+	public final fun getInsecureRandom ()Lkotlin/random/Random;
+	public final fun getInsecureSeedLower ()J
+	public final fun getInsecureSeedUpper ()J
+	public final fun getMaxCanonicalThreads ()I
+	public final fun getMaxInFlightHostTasks ()I
+	public final fun getMaxPendingFutures ()I
+	public final fun getMaxPendingStreams ()I
+	public final fun getMaxWaitables ()I
+	public final fun getMonotonicClock ()Lkotlin/jvm/functions/Function0;
+	public final fun getMonotonicResolutionNanos ()J
+	public final fun getNetworkingEnabled ()Z
+	public final fun getSecureRandom ()Lorg/kotlincrypto/random/CryptoRand;
+	public final fun getStderr ()Lkotlinx/io/RawSink;
+	public final fun getStdin ()Lkotlinx/io/RawSource;
+	public final fun getStdout ()Lkotlinx/io/RawSink;
+	public final fun getStreamBufferCapacity ()I
+	public final fun getTerminalStderr ()Z
+	public final fun getTerminalStdin ()Z
+	public final fun getTerminalStdout ()Z
+	public final fun getVersion ()Ljava/lang/String;
+	public final fun getWallClock ()Lkotlin/time/Clock;
+	public final fun getWallClockResolutionNanos ()J
+	public final fun getWallClockTimeZone ()Lkotlinx/datetime/TimeZone;
+	public final fun setFileSystem (Lokio/FileSystem;)V
+	public final fun setHttpClient (Luk/shusek/krwa/component/WasiHttpClient;)V
+	public final fun setHttpHandler (Luk/shusek/krwa/component/WasiHttpHandler;)V
+	public final fun setInitialCwd (Ljava/lang/String;)V
+	public final fun setInsecureRandom (Lkotlin/random/Random;)V
+	public final fun setInsecureSeedLower (J)V
+	public final fun setInsecureSeedUpper (J)V
+	public final fun setMaxCanonicalThreads (I)V
+	public final fun setMaxInFlightHostTasks (I)V
+	public final fun setMaxPendingFutures (I)V
+	public final fun setMaxPendingStreams (I)V
+	public final fun setMaxWaitables (I)V
+	public final fun setMonotonicClock (Lkotlin/jvm/functions/Function0;)V
+	public final fun setMonotonicResolutionNanos (J)V
+	public final fun setNetworkingEnabled (Z)V
+	public final fun setSecureRandom (Lorg/kotlincrypto/random/CryptoRand;)V
+	public final fun setStderr (Lkotlinx/io/RawSink;)V
+	public final fun setStdin (Lkotlinx/io/RawSource;)V
+	public final fun setStdout (Lkotlinx/io/RawSink;)V
+	public final fun setStreamBufferCapacity (I)V
+	public final fun setTerminalStderr (Z)V
+	public final fun setTerminalStdin (Z)V
+	public final fun setTerminalStdout (Z)V
+	public final fun setVersion (Ljava/lang/String;)V
+	public final fun setWallClock (Lkotlin/time/Clock;)V
+	public final fun setWallClockResolutionNanos (J)V
+	public final fun setWallClockTimeZone (Lkotlinx/datetime/TimeZone;)V
+	public final fun withArguments (Ljava/util/List;)Luk/shusek/krwa/component/WasiPreview3$Builder;
+	public final fun withArguments ([Ljava/lang/String;)Luk/shusek/krwa/component/WasiPreview3$Builder;
+	public final fun withCoroutineDispatcher (Lkotlinx/coroutines/CoroutineDispatcher;)Luk/shusek/krwa/component/WasiPreview3$Builder;
+	public final fun withCoroutineScope (Lkotlinx/coroutines/CoroutineScope;)Luk/shusek/krwa/component/WasiPreview3$Builder;
+	public final fun withEnvironment (Ljava/lang/String;Ljava/lang/String;)Luk/shusek/krwa/component/WasiPreview3$Builder;
+	public final fun withEnvironment (Ljava/util/Map;)Luk/shusek/krwa/component/WasiPreview3$Builder;
+	public final fun withFileSystem (Lokio/FileSystem;)Luk/shusek/krwa/component/WasiPreview3$Builder;
+	public final fun withFixedWallClock (Lkotlin/time/Instant;Ljava/lang/String;)Luk/shusek/krwa/component/WasiPreview3$Builder;
+	public static synthetic fun withFixedWallClock$default (Luk/shusek/krwa/component/WasiPreview3$Builder;Lkotlin/time/Instant;Ljava/lang/String;ILjava/lang/Object;)Luk/shusek/krwa/component/WasiPreview3$Builder;
+	public final fun withHttpClient (Lio/ktor/client/HttpClient;)Luk/shusek/krwa/component/WasiPreview3$Builder;
+	public final fun withHttpClient (Luk/shusek/krwa/component/WasiHttpClient;)Luk/shusek/krwa/component/WasiPreview3$Builder;
+	public final fun withHttpHandler (Luk/shusek/krwa/component/WasiHttpHandler;)Luk/shusek/krwa/component/WasiPreview3$Builder;
+	public final fun withInitialCwd (Ljava/lang/String;)Luk/shusek/krwa/component/WasiPreview3$Builder;
+	public final fun withInsecureRandom (Lkotlin/random/Random;)Luk/shusek/krwa/component/WasiPreview3$Builder;
+	public final fun withInsecureSeed (JJ)Luk/shusek/krwa/component/WasiPreview3$Builder;
+	public final fun withMonotonicClock (Lkotlin/jvm/functions/Function0;)Luk/shusek/krwa/component/WasiPreview3$Builder;
+	public final fun withMonotonicResolutionNanos (J)Luk/shusek/krwa/component/WasiPreview3$Builder;
+	public final fun withNetworking ()Luk/shusek/krwa/component/WasiPreview3$Builder;
+	public final fun withNetworking (Z)Luk/shusek/krwa/component/WasiPreview3$Builder;
+	public final fun withPreopenedDirectory (Ljava/lang/String;Ljava/lang/String;)Luk/shusek/krwa/component/WasiPreview3$Builder;
+	public final fun withPreopenedDirectory (Ljava/lang/String;Lokio/Path;)Luk/shusek/krwa/component/WasiPreview3$Builder;
+	public final fun withPreopenedDirectory (Ljava/lang/String;Lokio/Path;Z)Luk/shusek/krwa/component/WasiPreview3$Builder;
+	public final fun withReadOnlyPreopenedDirectory (Ljava/lang/String;Ljava/lang/String;)Luk/shusek/krwa/component/WasiPreview3$Builder;
+	public final fun withReadOnlyPreopenedDirectory (Ljava/lang/String;Lokio/Path;)Luk/shusek/krwa/component/WasiPreview3$Builder;
+	public final fun withResourceBudget (IIIIILkotlinx/coroutines/CoroutineDispatcher;)Luk/shusek/krwa/component/WasiPreview3$Builder;
+	public static synthetic fun withResourceBudget$default (Luk/shusek/krwa/component/WasiPreview3$Builder;IIIIILkotlinx/coroutines/CoroutineDispatcher;ILjava/lang/Object;)Luk/shusek/krwa/component/WasiPreview3$Builder;
+	public final fun withSecureRandom (Lkotlin/random/Random;)Luk/shusek/krwa/component/WasiPreview3$Builder;
+	public final fun withSecureRandom (Lorg/kotlincrypto/random/CryptoRand;)Luk/shusek/krwa/component/WasiPreview3$Builder;
+	public final fun withStderr (Lkotlinx/io/RawSink;)Luk/shusek/krwa/component/WasiPreview3$Builder;
+	public final fun withStdin (Lkotlinx/io/RawSource;)Luk/shusek/krwa/component/WasiPreview3$Builder;
+	public final fun withStdout (Lkotlinx/io/RawSink;)Luk/shusek/krwa/component/WasiPreview3$Builder;
+	public final fun withTerminalStderr (Z)Luk/shusek/krwa/component/WasiPreview3$Builder;
+	public final fun withTerminalStdin (Z)Luk/shusek/krwa/component/WasiPreview3$Builder;
+	public final fun withTerminalStdout (Z)Luk/shusek/krwa/component/WasiPreview3$Builder;
+	public final fun withUdpWebSocketProxy (Ljava/lang/String;)Luk/shusek/krwa/component/WasiPreview3$Builder;
+	public final fun withVersion (Ljava/lang/String;)Luk/shusek/krwa/component/WasiPreview3$Builder;
+	public final fun withWallClock (Lkotlin/jvm/functions/Function0;Ljava/lang/String;)Luk/shusek/krwa/component/WasiPreview3$Builder;
+	public final fun withWallClock (Lkotlin/time/Clock;Ljava/lang/String;)Luk/shusek/krwa/component/WasiPreview3$Builder;
+	public final fun withWallClock (Lkotlin/time/Clock;Lkotlinx/datetime/TimeZone;)Luk/shusek/krwa/component/WasiPreview3$Builder;
+	public static synthetic fun withWallClock$default (Luk/shusek/krwa/component/WasiPreview3$Builder;Lkotlin/jvm/functions/Function0;Ljava/lang/String;ILjava/lang/Object;)Luk/shusek/krwa/component/WasiPreview3$Builder;
+	public static synthetic fun withWallClock$default (Luk/shusek/krwa/component/WasiPreview3$Builder;Lkotlin/time/Clock;Ljava/lang/String;ILjava/lang/Object;)Luk/shusek/krwa/component/WasiPreview3$Builder;
+	public final fun withWallClockResolutionNanos (J)Luk/shusek/krwa/component/WasiPreview3$Builder;
+	public final fun withoutNetworking ()Luk/shusek/krwa/component/WasiPreview3$Builder;
+}
+
+public final class uk/shusek/krwa/component/WasiPreview3$Companion {
+	public final fun builder ()Luk/shusek/krwa/component/WasiPreview3$Builder;
+}
+
+public final class uk/shusek/krwa/component/WasiPreview3$ExitException : java/lang/RuntimeException {
+	public fun <init> (I)V
+	public final fun statusCode ()I
+}
+
+public abstract interface class uk/shusek/krwa/component/WasiPreview3CanonicalContext {
+	public abstract fun loadFutureValue (ILuk/shusek/krwa/component/WitPackage$TypeRef;)Ljava/lang/Object;
+	public abstract fun loadListElements (IILuk/shusek/krwa/component/WitPackage$TypeRef;)Ljava/util/List;
+	public abstract fun readMemory (II)[B
+	public fun readMemory (I[BII)V
+	public abstract fun storeFutureValue (ILuk/shusek/krwa/component/WitPackage$TypeRef;Ljava/lang/Object;)V
+	public abstract fun storeListElements (ILuk/shusek/krwa/component/WitPackage$TypeRef;Ljava/util/List;)V
+	public abstract fun writeMemory (I[B)V
+	public fun writeMemory (I[BII)V
+}
+
+public final class uk/shusek/krwa/component/WasiPreview3CanonicalContext$DefaultImpls {
+	public static fun readMemory (Luk/shusek/krwa/component/WasiPreview3CanonicalContext;I[BII)V
+	public static fun writeMemory (Luk/shusek/krwa/component/WasiPreview3CanonicalContext;I[BII)V
+}
+
+public abstract interface class uk/shusek/krwa/component/WasiPreview3CanonicalIntrinsics {
+	public fun awaitFutureValue (JLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun awaitStreamReadable (JLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun awaitStreamWritable (JLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun completedFutureHandle (Ljava/lang/Object;)J
+	public abstract fun futureCancelRead (J)J
+	public abstract fun futureCancelWrite (J)J
+	public abstract fun futureDropReadable (J)V
+	public abstract fun futureDropWritable (J)V
+	public abstract fun futureNew ()J
+	public abstract fun futureRead (Luk/shusek/krwa/component/WasiPreview3CanonicalContext;JILuk/shusek/krwa/component/WitPackage$TypeRef;)J
+	public abstract fun futureWrite (Luk/shusek/krwa/component/WasiPreview3CanonicalContext;JILuk/shusek/krwa/component/WitPackage$TypeRef;)J
+	public abstract fun streamCancelRead (J)J
+	public abstract fun streamCancelWrite (J)J
+	public abstract fun streamDropReadable (J)V
+	public abstract fun streamDropWritable (J)V
+	public abstract fun streamNew (Luk/shusek/krwa/component/WitPackage$TypeRef;)J
+	public abstract fun streamRead (Luk/shusek/krwa/component/WasiPreview3CanonicalContext;JIILuk/shusek/krwa/component/WitPackage$TypeRef;)J
+	public abstract fun streamWrite (Luk/shusek/krwa/component/WasiPreview3CanonicalContext;JIILuk/shusek/krwa/component/WitPackage$TypeRef;)J
+}
+
+public final class uk/shusek/krwa/component/WasiPreview3CanonicalIntrinsics$DefaultImpls {
+	public static fun awaitFutureValue (Luk/shusek/krwa/component/WasiPreview3CanonicalIntrinsics;JLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static fun awaitStreamReadable (Luk/shusek/krwa/component/WasiPreview3CanonicalIntrinsics;JLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static fun awaitStreamWritable (Luk/shusek/krwa/component/WasiPreview3CanonicalIntrinsics;JLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static fun completedFutureHandle (Luk/shusek/krwa/component/WasiPreview3CanonicalIntrinsics;Ljava/lang/Object;)J
+}
+
+public final class uk/shusek/krwa/component/WasiPreviewJvmPlatformKt {
+	public static final fun withInsecureRandom (Luk/shusek/krwa/component/WasiPreview2$Builder;Ljava/util/Random;)Luk/shusek/krwa/component/WasiPreview2$Builder;
+	public static final fun withInsecureRandom (Luk/shusek/krwa/component/WasiPreview3$Builder;Ljava/util/Random;)Luk/shusek/krwa/component/WasiPreview3$Builder;
+	public static final fun withKtorHttpClient (Luk/shusek/krwa/component/WasiPreview2$Builder;Lio/ktor/client/HttpClient;)Luk/shusek/krwa/component/WasiPreview2$Builder;
+	public static final fun withKtorHttpClient (Luk/shusek/krwa/component/WasiPreview3$Builder;Lio/ktor/client/HttpClient;)Luk/shusek/krwa/component/WasiPreview3$Builder;
+	public static final fun withSecureRandom (Luk/shusek/krwa/component/WasiPreview2$Builder;Ljava/util/Random;)Luk/shusek/krwa/component/WasiPreview2$Builder;
+	public static final fun withSecureRandom (Luk/shusek/krwa/component/WasiPreview3$Builder;Ljava/util/Random;)Luk/shusek/krwa/component/WasiPreview3$Builder;
+}
+
+public abstract interface class uk/shusek/krwa/component/WasiSuspendingHttpClient : uk/shusek/krwa/component/WasiHttpClient {
+	public abstract fun sendSuspending (Luk/shusek/krwa/component/WasiHttpRequest;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public final class uk/shusek/krwa/component/WasmComponentPackager {
+	public static final field INSTANCE Luk/shusek/krwa/component/WasmComponentPackager;
+	public static final fun main ([Ljava/lang/String;)V
+	public static final fun run ([Ljava/lang/String;Ljava/io/PrintStream;Ljava/io/PrintStream;)I
+}
+
+public final class uk/shusek/krwa/component/WasmComponentTools {
+	public static final field INSTANCE Luk/shusek/krwa/component/WasmComponentTools;
+	public static final fun componentFromCore (Lokio/Path;Ljava/lang/String;Lokio/Path;Z[Lokio/Path;)[B
+	public static final fun componentFromCore (Lokio/Path;Ljava/lang/String;Lokio/Path;[Lokio/Path;)[B
+	public static final fun componentNew (Lokio/Path;[Lokio/Path;)[B
+	public static final fun embedWit (Lokio/Path;Ljava/lang/String;Lokio/Path;)[B
+	public static final fun embedWit (Lokio/Path;Ljava/lang/String;Lokio/Path;Z)[B
+	public static final fun parseWat (Ljava/lang/String;)[B
+	public static final fun unbundleComponent (Lokio/Path;)Luk/shusek/krwa/component/WasmComponentTools$UnbundledComponent;
+	public static final fun unbundleComponent ([B)Luk/shusek/krwa/component/WasmComponentTools$UnbundledComponent;
+	public static final fun validateComponent (Lokio/Path;)V
+	public static final fun validateComponent (Lokio/Path;Z)V
+	public static final fun writeComponentFromCore (Lokio/Path;Ljava/lang/String;Lokio/Path;Lokio/Path;ZZ[Lokio/Path;)Lokio/Path;
+	public static final fun writeComponentFromCore (Lokio/Path;Ljava/lang/String;Lokio/Path;Lokio/Path;Z[Lokio/Path;)Lokio/Path;
+}
+
+public final class uk/shusek/krwa/component/WasmComponentTools$UnbundledComponent {
+	public static final field Companion Luk/shusek/krwa/component/WasmComponentTools$UnbundledComponent$Companion;
+	public final fun component ()[B
+	public final fun module (Ljava/lang/String;)[B
+	public final fun modules ()Ljava/util/Map;
+	public final fun singleModule ()[B
+}
+
+public final class uk/shusek/krwa/component/WasmComponentTools$UnbundledComponent$Companion {
+}
+
+public final class uk/shusek/krwa/component/WasmPlugin : java/lang/AutoCloseable, uk/shusek/krwa/component/WasiComponentInvoker {
+	public static final field Companion Luk/shusek/krwa/component/WasmPlugin$Companion;
+	public static final fun builder (Luk/shusek/krwa/component/WitPackage;)Luk/shusek/krwa/component/WasmPlugin$Builder;
+	public static final fun builderFromComponent (Lokio/Path;)Luk/shusek/krwa/component/WasmPlugin$Builder;
+	public static final fun builderFromComponent ([B)Luk/shusek/krwa/component/WasmPlugin$Builder;
+	public fun call (Ljava/lang/String;[Ljava/lang/Object;)Ljava/lang/Object;
+	public fun close ()V
+	public final fun exports ()Ljava/util/Map;
+	public final fun exports (Ljava/lang/Class;)Ljava/lang/Object;
+	public final fun instance ()Luk/shusek/krwa/runtime/Instance;
+	public final fun isClosed ()Z
+	public final fun witPackage ()Luk/shusek/krwa/component/WitPackage;
+	public final fun world ()Luk/shusek/krwa/component/WitPackage$WorldDeclaration;
+}
+
+public final class uk/shusek/krwa/component/WasmPlugin$Builder : uk/shusek/krwa/component/WasiHostImportBuilder {
+	public static final field Companion Luk/shusek/krwa/component/WasmPlugin$Builder$Companion;
+	public final fun build ()Luk/shusek/krwa/component/WasmPlugin;
+	public final fun withCanonicalFutureIntrinsics (Luk/shusek/krwa/component/CanonicalFutureIntrinsics;)Luk/shusek/krwa/component/WasmPlugin$Builder;
+	public final fun withCanonicalStreamIntrinsics (Luk/shusek/krwa/component/CanonicalStreamIntrinsics;)Luk/shusek/krwa/component/WasmPlugin$Builder;
+	public final fun withComponent (Lokio/Path;)Luk/shusek/krwa/component/WasmPlugin$Builder;
+	public final fun withComponent ([B)Luk/shusek/krwa/component/WasmPlugin$Builder;
+	public final fun withComponentModule (Lokio/Path;Ljava/lang/String;)Luk/shusek/krwa/component/WasmPlugin$Builder;
+	public final fun withComponentModule ([BLjava/lang/String;)Luk/shusek/krwa/component/WasmPlugin$Builder;
+	public final fun withExecutionBackend (Luk/shusek/krwa/runtime/ExecutionBackend;)Luk/shusek/krwa/component/WasmPlugin$Builder;
+	public final fun withExecutionPolicy (Luk/shusek/krwa/runtime/WasmExecutionPolicy;)Luk/shusek/krwa/component/WasmPlugin$Builder;
+	public final fun withHost (Ljava/lang/Object;)Luk/shusek/krwa/component/WasmPlugin$Builder;
+	public synthetic fun withHostImport (Ljava/lang/String;Ljava/lang/String;Luk/shusek/krwa/component/HostHandler;)Luk/shusek/krwa/component/WasiHostImportBuilder;
+	public fun withHostImport (Ljava/lang/String;Ljava/lang/String;Luk/shusek/krwa/component/HostHandler;)Luk/shusek/krwa/component/WasmPlugin$Builder;
+	public synthetic fun withHostImport (Ljava/lang/String;Luk/shusek/krwa/component/HostHandler;)Luk/shusek/krwa/component/WasiHostImportBuilder;
+	public fun withHostImport (Ljava/lang/String;Luk/shusek/krwa/component/HostHandler;)Luk/shusek/krwa/component/WasmPlugin$Builder;
+	public final fun withMaxMemoryPages (Ljava/lang/Integer;)Luk/shusek/krwa/component/WasmPlugin$Builder;
+	public final fun withModule (Lokio/Path;)Luk/shusek/krwa/component/WasmPlugin$Builder;
+	public final fun withModule (Luk/shusek/krwa/wasm/WasmModule;)Luk/shusek/krwa/component/WasmPlugin$Builder;
+	public final fun withModule ([B)Luk/shusek/krwa/component/WasmPlugin$Builder;
+	public final fun withResourceBudget (II)Luk/shusek/krwa/component/WasmPlugin$Builder;
+	public static synthetic fun withResourceBudget$default (Luk/shusek/krwa/component/WasmPlugin$Builder;IIILjava/lang/Object;)Luk/shusek/krwa/component/WasmPlugin$Builder;
+	public final fun withWasiPreview1 (Luk/shusek/krwa/wasi/WasiPreview1;)Luk/shusek/krwa/component/WasmPlugin$Builder;
+	public final fun withWasiPreview2 (Luk/shusek/krwa/component/WasiPreview2;)Luk/shusek/krwa/component/WasmPlugin$Builder;
+	public final fun withWasiPreview3 (Luk/shusek/krwa/component/WasiPreview3;)Luk/shusek/krwa/component/WasmPlugin$Builder;
+	public synthetic fun withWasiPreview3CanonicalIntrinsics (Luk/shusek/krwa/component/WasiPreview3CanonicalIntrinsics;)Luk/shusek/krwa/component/WasiHostImportBuilder;
+	public fun withWasiPreview3CanonicalIntrinsics (Luk/shusek/krwa/component/WasiPreview3CanonicalIntrinsics;)Luk/shusek/krwa/component/WasmPlugin$Builder;
+	public final fun withWasmtimeExecutionConfig (Luk/shusek/krwa/runtime/WasmtimeExecutionConfig;)Luk/shusek/krwa/component/WasmPlugin$Builder;
+	public final fun withWorld (Ljava/lang/String;)Luk/shusek/krwa/component/WasmPlugin$Builder;
+}
+
+public final class uk/shusek/krwa/component/WasmPlugin$Builder$Companion {
+}
+
+public final class uk/shusek/krwa/component/WasmPlugin$Companion {
+	public final fun builder (Luk/shusek/krwa/component/WitPackage;)Luk/shusek/krwa/component/WasmPlugin$Builder;
+	public final fun builderFromComponent (Lokio/Path;)Luk/shusek/krwa/component/WasmPlugin$Builder;
+	public final fun builderFromComponent ([B)Luk/shusek/krwa/component/WasmPlugin$Builder;
+}
+
+public final class uk/shusek/krwa/component/WasmToolsInvoker {
+	public static final field INSTANCE Luk/shusek/krwa/component/WasmToolsInvoker;
+	public static final fun directory (Ljava/lang/String;Lokio/Path;)Ljava/util/Map;
+	public static final fun run (Ljava/util/List;Ljava/util/Map;)Luk/shusek/krwa/component/WasmToolsInvoker$Result;
+}
+
+public final class uk/shusek/krwa/component/WasmToolsInvoker$Result {
+	public final fun exitCode ()I
+	public final fun stderrText ()Ljava/lang/String;
+	public final fun stdout ()[B
+	public final fun stdoutText ()Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/component/Wit {
+	public static final field INSTANCE Luk/shusek/krwa/component/Wit;
+	public static final fun encodePackage (Lokio/Path;)[B
+	public static final fun json (Ljava/lang/String;)Ljava/lang/String;
+	public static final fun json (Lokio/Path;)Ljava/lang/String;
+	public static final fun json (Lokio/Source;)Ljava/lang/String;
+	public static final fun normalize (Ljava/lang/String;)Ljava/lang/String;
+	public static final fun normalize (Lokio/Path;)Ljava/lang/String;
+	public static final fun normalize (Lokio/Source;)Ljava/lang/String;
+	public static final fun parse (Ljava/lang/String;)Luk/shusek/krwa/component/WitPackage;
+	public static final fun parse (Lokio/Path;)Luk/shusek/krwa/component/WitPackage;
+	public static final fun parse ([B)Luk/shusek/krwa/component/WitPackage;
+	public static final fun parseNormalized (Ljava/lang/String;)Luk/shusek/krwa/component/WitPackage;
+}
+
+public abstract interface class uk/shusek/krwa/component/WitFuture {
+	public static final field Companion Luk/shusek/krwa/component/WitFuture$Companion;
+	public abstract fun getHandle ()J
+	public fun handle ()J
+	public static fun of (J)Luk/shusek/krwa/component/WitFuture;
+}
+
+public final class uk/shusek/krwa/component/WitFuture$Companion {
+	public final fun of (J)Luk/shusek/krwa/component/WitFuture;
+}
+
+public final class uk/shusek/krwa/component/WitFuture$DefaultImpls {
+	public static fun handle (Luk/shusek/krwa/component/WitFuture;)J
+}
+
+public final class uk/shusek/krwa/component/WitFuture$Handle : uk/shusek/krwa/component/WitFuture {
+	public fun <init> (J)V
+	public final fun component1 ()J
+	public final fun copy (J)Luk/shusek/krwa/component/WitFuture$Handle;
+	public static synthetic fun copy$default (Luk/shusek/krwa/component/WitFuture$Handle;JILjava/lang/Object;)Luk/shusek/krwa/component/WitFuture$Handle;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getHandle ()J
+	public fun handle ()J
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/component/WitNames {
+	public static final field INSTANCE Luk/shusek/krwa/component/WitNames;
+	public static final fun enumName (Ljava/lang/String;)Ljava/lang/String;
+	public static final fun lastSegment (Ljava/lang/String;)Ljava/lang/String;
+	public static final fun matchesMemberName (Ljava/lang/String;Ljava/lang/String;)Z
+	public static final fun memberName (Ljava/lang/String;)Ljava/lang/String;
+	public static final fun qualifiedInterfaceName (Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
+	public static final fun stripIdentifierEscape (Ljava/lang/String;)Ljava/lang/String;
+	public static final fun typeName (Ljava/lang/String;)Ljava/lang/String;
+	public static final fun withoutVersion (Ljava/lang/String;)Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/component/WitPackage {
+	public static final field Companion Luk/shusek/krwa/component/WitPackage$Companion;
+	public final fun declarations ()Ljava/util/List;
+	public final fun interfaces ()Ljava/util/List;
+	public final fun packageName ()Ljava/lang/String;
+	public static final fun parse (Ljava/lang/String;)Luk/shusek/krwa/component/WitPackage;
+	public final fun worlds ()Ljava/util/List;
+}
+
+public final class uk/shusek/krwa/component/WitPackage$Case {
+	public fun <init> (Ljava/lang/String;Luk/shusek/krwa/component/WitPackage$TypeRef;)V
+	public final fun name ()Ljava/lang/String;
+	public final fun type ()Luk/shusek/krwa/component/WitPackage$TypeRef;
+}
+
+public final class uk/shusek/krwa/component/WitPackage$Companion {
+	public final fun parse (Ljava/lang/String;)Luk/shusek/krwa/component/WitPackage;
+}
+
+public abstract interface class uk/shusek/krwa/component/WitPackage$Declaration {
+	public abstract fun name ()Ljava/lang/String;
+	public fun packageName ()Ljava/lang/String;
+	public fun qualifiedName ()Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/component/WitPackage$Declaration$DefaultImpls {
+	public static fun packageName (Luk/shusek/krwa/component/WitPackage$Declaration;)Ljava/lang/String;
+	public static fun qualifiedName (Luk/shusek/krwa/component/WitPackage$Declaration;)Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/component/WitPackage$Direction : java/lang/Enum {
+	public static final field EXPORT Luk/shusek/krwa/component/WitPackage$Direction;
+	public static final field IMPORT Luk/shusek/krwa/component/WitPackage$Direction;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Luk/shusek/krwa/component/WitPackage$Direction;
+	public static fun values ()[Luk/shusek/krwa/component/WitPackage$Direction;
+}
+
+public final class uk/shusek/krwa/component/WitPackage$Field {
+	public fun <init> (Ljava/lang/String;Luk/shusek/krwa/component/WitPackage$TypeRef;)V
+	public final fun name ()Ljava/lang/String;
+	public final fun type ()Luk/shusek/krwa/component/WitPackage$TypeRef;
+}
+
+public final class uk/shusek/krwa/component/WitPackage$Function : uk/shusek/krwa/component/WitPackage$InterfaceMember {
+	public fun <init> (Ljava/lang/String;Ljava/util/List;Ljava/util/List;)V
+	public fun <init> (Ljava/lang/String;Ljava/util/List;Ljava/util/List;Z)V
+	public fun <init> (Ljava/lang/String;Ljava/util/List;Ljava/util/List;ZZ)V
+	public fun <init> (Ljava/lang/String;Ljava/util/List;Ljava/util/List;ZZZ)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/util/List;Ljava/util/List;ZZZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun isAsync ()Z
+	public final fun isConstructor ()Z
+	public final fun isStatic ()Z
+	public fun name ()Ljava/lang/String;
+	public fun packageName ()Ljava/lang/String;
+	public final fun parameters ()Ljava/util/List;
+	public fun qualifiedName ()Ljava/lang/String;
+	public final fun results ()Ljava/util/List;
+}
+
+public final class uk/shusek/krwa/component/WitPackage$IncludeDeclaration {
+	public fun <init> (Ljava/lang/String;Ljava/util/List;)V
+	public final fun aliasFor (Ljava/lang/String;)Ljava/lang/String;
+	public final fun items ()Ljava/util/List;
+	public final fun path ()Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/component/WitPackage$IncludeItem {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
+	public final fun alias ()Ljava/lang/String;
+	public final fun name ()Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/component/WitPackage$InterfaceDeclaration : uk/shusek/krwa/component/WitPackage$Declaration {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/util/List;)V
+	public final fun functions ()Ljava/util/List;
+	public final fun members ()Ljava/util/List;
+	public fun name ()Ljava/lang/String;
+	public fun packageName ()Ljava/lang/String;
+	public fun qualifiedName ()Ljava/lang/String;
+}
+
+public abstract interface class uk/shusek/krwa/component/WitPackage$InterfaceMember : uk/shusek/krwa/component/WitPackage$Declaration {
+}
+
+public final class uk/shusek/krwa/component/WitPackage$InterfaceMember$DefaultImpls {
+	public static fun packageName (Luk/shusek/krwa/component/WitPackage$InterfaceMember;)Ljava/lang/String;
+	public static fun qualifiedName (Luk/shusek/krwa/component/WitPackage$InterfaceMember;)Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/component/WitPackage$TypeDeclaration : uk/shusek/krwa/component/WitPackage$InterfaceMember {
+	public fun <init> (Luk/shusek/krwa/component/WitPackage$TypeDeclaration$Kind;Ljava/lang/String;Ljava/util/List;Ljava/util/List;Luk/shusek/krwa/component/WitPackage$TypeRef;)V
+	public fun <init> (Luk/shusek/krwa/component/WitPackage$TypeDeclaration$Kind;Ljava/lang/String;Ljava/util/List;Ljava/util/List;Luk/shusek/krwa/component/WitPackage$TypeRef;Ljava/util/List;)V
+	public synthetic fun <init> (Luk/shusek/krwa/component/WitPackage$TypeDeclaration$Kind;Ljava/lang/String;Ljava/util/List;Ljava/util/List;Luk/shusek/krwa/component/WitPackage$TypeRef;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun cases ()Ljava/util/List;
+	public final fun fields ()Ljava/util/List;
+	public final fun functions ()Ljava/util/List;
+	public final fun kind ()Luk/shusek/krwa/component/WitPackage$TypeDeclaration$Kind;
+	public fun name ()Ljava/lang/String;
+	public fun packageName ()Ljava/lang/String;
+	public fun qualifiedName ()Ljava/lang/String;
+	public final fun target ()Luk/shusek/krwa/component/WitPackage$TypeRef;
+}
+
+public final class uk/shusek/krwa/component/WitPackage$TypeDeclaration$Kind : java/lang/Enum {
+	public static final field ALIAS Luk/shusek/krwa/component/WitPackage$TypeDeclaration$Kind;
+	public static final field ENUM Luk/shusek/krwa/component/WitPackage$TypeDeclaration$Kind;
+	public static final field FLAGS Luk/shusek/krwa/component/WitPackage$TypeDeclaration$Kind;
+	public static final field RECORD Luk/shusek/krwa/component/WitPackage$TypeDeclaration$Kind;
+	public static final field RESOURCE Luk/shusek/krwa/component/WitPackage$TypeDeclaration$Kind;
+	public static final field VARIANT Luk/shusek/krwa/component/WitPackage$TypeDeclaration$Kind;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Luk/shusek/krwa/component/WitPackage$TypeDeclaration$Kind;
+	public static fun values ()[Luk/shusek/krwa/component/WitPackage$TypeDeclaration$Kind;
+}
+
+public final class uk/shusek/krwa/component/WitPackage$TypeRef {
+	public static final field Companion Luk/shusek/krwa/component/WitPackage$TypeRef$Companion;
+	public final fun arguments ()Ljava/util/List;
+	public static final fun constructed (Luk/shusek/krwa/component/WitPackage$TypeRef$TypeKind;Ljava/util/List;)Luk/shusek/krwa/component/WitPackage$TypeRef;
+	public final fun kind ()Luk/shusek/krwa/component/WitPackage$TypeRef$TypeKind;
+	public final fun name ()Ljava/lang/String;
+	public static final fun named (Ljava/lang/String;)Luk/shusek/krwa/component/WitPackage$TypeRef;
+	public static final fun primitive (Ljava/lang/String;)Luk/shusek/krwa/component/WitPackage$TypeRef;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/component/WitPackage$TypeRef$Companion {
+	public final fun constructed (Luk/shusek/krwa/component/WitPackage$TypeRef$TypeKind;Ljava/util/List;)Luk/shusek/krwa/component/WitPackage$TypeRef;
+	public final fun named (Ljava/lang/String;)Luk/shusek/krwa/component/WitPackage$TypeRef;
+	public final fun primitive (Ljava/lang/String;)Luk/shusek/krwa/component/WitPackage$TypeRef;
+}
+
+public final class uk/shusek/krwa/component/WitPackage$TypeRef$TypeKind : java/lang/Enum {
+	public static final field BORROW Luk/shusek/krwa/component/WitPackage$TypeRef$TypeKind;
+	public static final field FUTURE Luk/shusek/krwa/component/WitPackage$TypeRef$TypeKind;
+	public static final field LIST Luk/shusek/krwa/component/WitPackage$TypeRef$TypeKind;
+	public static final field NAMED Luk/shusek/krwa/component/WitPackage$TypeRef$TypeKind;
+	public static final field OPTION Luk/shusek/krwa/component/WitPackage$TypeRef$TypeKind;
+	public static final field OWN Luk/shusek/krwa/component/WitPackage$TypeRef$TypeKind;
+	public static final field PRIMITIVE Luk/shusek/krwa/component/WitPackage$TypeRef$TypeKind;
+	public static final field RESULT Luk/shusek/krwa/component/WitPackage$TypeRef$TypeKind;
+	public static final field STREAM Luk/shusek/krwa/component/WitPackage$TypeRef$TypeKind;
+	public static final field TUPLE Luk/shusek/krwa/component/WitPackage$TypeRef$TypeKind;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Luk/shusek/krwa/component/WitPackage$TypeRef$TypeKind;
+	public static fun values ()[Luk/shusek/krwa/component/WitPackage$TypeRef$TypeKind;
+}
+
+public final class uk/shusek/krwa/component/WitPackage$UseDeclaration : uk/shusek/krwa/component/WitPackage$Declaration, uk/shusek/krwa/component/WitPackage$InterfaceMember {
+	public fun <init> (Ljava/lang/String;Ljava/util/List;)V
+	public final fun items ()Ljava/util/List;
+	public fun name ()Ljava/lang/String;
+	public fun packageName ()Ljava/lang/String;
+	public final fun path ()Ljava/lang/String;
+	public fun qualifiedName ()Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/component/WitPackage$UseItem {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
+	public final fun alias ()Ljava/lang/String;
+	public final fun localName ()Ljava/lang/String;
+	public final fun name ()Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/component/WitPackage$WorldDeclaration : uk/shusek/krwa/component/WitPackage$Declaration {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/util/List;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/util/List;Ljava/util/List;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;)V
+	public final fun declarations ()Ljava/util/List;
+	public final fun exports ()Ljava/util/List;
+	public final fun imports ()Ljava/util/List;
+	public final fun includeDeclarations ()Ljava/util/List;
+	public final fun includes ()Ljava/util/List;
+	public fun name ()Ljava/lang/String;
+	public fun packageName ()Ljava/lang/String;
+	public fun qualifiedName ()Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/component/WitPackage$WorldItem {
+	public fun <init> (Luk/shusek/krwa/component/WitPackage$Direction;Ljava/lang/String;Luk/shusek/krwa/component/WitPackage$Function;Luk/shusek/krwa/component/WitPackage$TypeRef;)V
+	public final fun direction ()Luk/shusek/krwa/component/WitPackage$Direction;
+	public final fun function ()Luk/shusek/krwa/component/WitPackage$Function;
+	public final fun isFunction ()Z
+	public final fun name ()Ljava/lang/String;
+	public final fun type ()Luk/shusek/krwa/component/WitPackage$TypeRef;
+}
+
+public final class uk/shusek/krwa/component/WitParseException : uk/shusek/krwa/component/ComponentModelException {
+	public fun <init> (Ljava/lang/String;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/Throwable;)V
+}
+
+public final class uk/shusek/krwa/component/WitReflection {
+	public static final field INSTANCE Luk/shusek/krwa/component/WitReflection;
+	public static final fun exports (Luk/shusek/krwa/component/WasmPlugin;Ljava/lang/Class;)Ljava/lang/Object;
+	public static final fun hostHandler (Ljava/util/List;Ljava/lang/String;Ljava/lang/String;)Luk/shusek/krwa/component/HostHandler;
+}
+
+public final class uk/shusek/krwa/component/WitResource {
+	public fun <init> (J)V
+	public final fun component1 ()J
+	public final fun copy (J)Luk/shusek/krwa/component/WitResource;
+	public static synthetic fun copy$default (Luk/shusek/krwa/component/WitResource;JILjava/lang/Object;)Luk/shusek/krwa/component/WitResource;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getHandle ()J
+	public final fun handle ()J
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/component/WitResourceTable {
+	public fun <init> ()V
+	public final fun clear ()V
+	public final fun contains (J)Z
+	public final fun contains (Luk/shusek/krwa/component/WitResource;)Z
+	public final fun get (J)Ljava/lang/Object;
+	public final fun get (Luk/shusek/krwa/component/WitResource;)Ljava/lang/Object;
+	public final fun insert (Ljava/lang/Object;)Luk/shusek/krwa/component/WitResource;
+	public final fun insertResource (Ljava/lang/Object;)Luk/shusek/krwa/component/WitResource;
+	public final fun remove (J)Ljava/lang/Object;
+	public final fun remove (Luk/shusek/krwa/component/WitResource;)Ljava/lang/Object;
+	public final fun size ()I
+	public final fun snapshot ()Ljava/util/List;
+}
+
+public abstract interface class uk/shusek/krwa/component/WitResult {
+	public static final field Companion Luk/shusek/krwa/component/WitResult$Companion;
+	public static fun err (Ljava/lang/Object;)Luk/shusek/krwa/component/WitResult$Err;
+	public static fun ok (Ljava/lang/Object;)Luk/shusek/krwa/component/WitResult$Ok;
+}
+
+public final class uk/shusek/krwa/component/WitResult$Companion {
+	public final fun err (Ljava/lang/Object;)Luk/shusek/krwa/component/WitResult$Err;
+	public final fun ok (Ljava/lang/Object;)Luk/shusek/krwa/component/WitResult$Ok;
+}
+
+public final class uk/shusek/krwa/component/WitResult$Err : uk/shusek/krwa/component/WitResult {
+	public fun <init> (Ljava/lang/Object;)V
+	public final fun component1 ()Ljava/lang/Object;
+	public final fun copy (Ljava/lang/Object;)Luk/shusek/krwa/component/WitResult$Err;
+	public static synthetic fun copy$default (Luk/shusek/krwa/component/WitResult$Err;Ljava/lang/Object;ILjava/lang/Object;)Luk/shusek/krwa/component/WitResult$Err;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getValue ()Ljava/lang/Object;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+	public final fun value ()Ljava/lang/Object;
+}
+
+public final class uk/shusek/krwa/component/WitResult$Ok : uk/shusek/krwa/component/WitResult {
+	public fun <init> (Ljava/lang/Object;)V
+	public final fun component1 ()Ljava/lang/Object;
+	public final fun copy (Ljava/lang/Object;)Luk/shusek/krwa/component/WitResult$Ok;
+	public static synthetic fun copy$default (Luk/shusek/krwa/component/WitResult$Ok;Ljava/lang/Object;ILjava/lang/Object;)Luk/shusek/krwa/component/WitResult$Ok;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getValue ()Ljava/lang/Object;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+	public final fun value ()Ljava/lang/Object;
+}
+
+public abstract interface class uk/shusek/krwa/component/WitStream {
+	public static final field Companion Luk/shusek/krwa/component/WitStream$Companion;
+	public abstract fun getHandle ()J
+	public fun handle ()J
+	public static fun of (J)Luk/shusek/krwa/component/WitStream;
+}
+
+public final class uk/shusek/krwa/component/WitStream$Companion {
+	public final fun of (J)Luk/shusek/krwa/component/WitStream;
+}
+
+public final class uk/shusek/krwa/component/WitStream$DefaultImpls {
+	public static fun handle (Luk/shusek/krwa/component/WitStream;)J
+}
+
+public final class uk/shusek/krwa/component/WitStream$Handle : uk/shusek/krwa/component/WitStream {
+	public fun <init> (J)V
+	public final fun component1 ()J
+	public final fun copy (J)Luk/shusek/krwa/component/WitStream$Handle;
+	public static synthetic fun copy$default (Luk/shusek/krwa/component/WitStream$Handle;JILjava/lang/Object;)Luk/shusek/krwa/component/WitStream$Handle;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getHandle ()J
+	public fun handle ()J
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/component/WitTuple1 {
+	public fun <init> (Ljava/lang/Object;)V
+	public final fun component1 ()Ljava/lang/Object;
+	public final fun copy (Ljava/lang/Object;)Luk/shusek/krwa/component/WitTuple1;
+	public static synthetic fun copy$default (Luk/shusek/krwa/component/WitTuple1;Ljava/lang/Object;ILjava/lang/Object;)Luk/shusek/krwa/component/WitTuple1;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun first ()Ljava/lang/Object;
+	public final fun getFirst ()Ljava/lang/Object;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/component/WitTuple4 {
+	public fun <init> (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)V
+	public final fun component1 ()Ljava/lang/Object;
+	public final fun component2 ()Ljava/lang/Object;
+	public final fun component3 ()Ljava/lang/Object;
+	public final fun component4 ()Ljava/lang/Object;
+	public final fun copy (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Luk/shusek/krwa/component/WitTuple4;
+	public static synthetic fun copy$default (Luk/shusek/krwa/component/WitTuple4;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;ILjava/lang/Object;)Luk/shusek/krwa/component/WitTuple4;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun first ()Ljava/lang/Object;
+	public final fun fourth ()Ljava/lang/Object;
+	public final fun getFirst ()Ljava/lang/Object;
+	public final fun getFourth ()Ljava/lang/Object;
+	public final fun getSecond ()Ljava/lang/Object;
+	public final fun getThird ()Ljava/lang/Object;
+	public fun hashCode ()I
+	public final fun second ()Ljava/lang/Object;
+	public final fun third ()Ljava/lang/Object;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/component/WitTuple5 {
+	public fun <init> (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)V
+	public final fun component1 ()Ljava/lang/Object;
+	public final fun component2 ()Ljava/lang/Object;
+	public final fun component3 ()Ljava/lang/Object;
+	public final fun component4 ()Ljava/lang/Object;
+	public final fun component5 ()Ljava/lang/Object;
+	public final fun copy (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Luk/shusek/krwa/component/WitTuple5;
+	public static synthetic fun copy$default (Luk/shusek/krwa/component/WitTuple5;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;ILjava/lang/Object;)Luk/shusek/krwa/component/WitTuple5;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun fifth ()Ljava/lang/Object;
+	public final fun first ()Ljava/lang/Object;
+	public final fun fourth ()Ljava/lang/Object;
+	public final fun getFifth ()Ljava/lang/Object;
+	public final fun getFirst ()Ljava/lang/Object;
+	public final fun getFourth ()Ljava/lang/Object;
+	public final fun getSecond ()Ljava/lang/Object;
+	public final fun getThird ()Ljava/lang/Object;
+	public fun hashCode ()I
+	public final fun second ()Ljava/lang/Object;
+	public final fun third ()Ljava/lang/Object;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/component/WitTuple6 {
+	public fun <init> (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)V
+	public final fun component1 ()Ljava/lang/Object;
+	public final fun component2 ()Ljava/lang/Object;
+	public final fun component3 ()Ljava/lang/Object;
+	public final fun component4 ()Ljava/lang/Object;
+	public final fun component5 ()Ljava/lang/Object;
+	public final fun component6 ()Ljava/lang/Object;
+	public final fun copy (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Luk/shusek/krwa/component/WitTuple6;
+	public static synthetic fun copy$default (Luk/shusek/krwa/component/WitTuple6;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;ILjava/lang/Object;)Luk/shusek/krwa/component/WitTuple6;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun fifth ()Ljava/lang/Object;
+	public final fun first ()Ljava/lang/Object;
+	public final fun fourth ()Ljava/lang/Object;
+	public final fun getFifth ()Ljava/lang/Object;
+	public final fun getFirst ()Ljava/lang/Object;
+	public final fun getFourth ()Ljava/lang/Object;
+	public final fun getSecond ()Ljava/lang/Object;
+	public final fun getSixth ()Ljava/lang/Object;
+	public final fun getThird ()Ljava/lang/Object;
+	public fun hashCode ()I
+	public final fun second ()Ljava/lang/Object;
+	public final fun sixth ()Ljava/lang/Object;
+	public final fun third ()Ljava/lang/Object;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/component/WitTuple7 {
+	public fun <init> (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)V
+	public final fun component1 ()Ljava/lang/Object;
+	public final fun component2 ()Ljava/lang/Object;
+	public final fun component3 ()Ljava/lang/Object;
+	public final fun component4 ()Ljava/lang/Object;
+	public final fun component5 ()Ljava/lang/Object;
+	public final fun component6 ()Ljava/lang/Object;
+	public final fun component7 ()Ljava/lang/Object;
+	public final fun copy (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Luk/shusek/krwa/component/WitTuple7;
+	public static synthetic fun copy$default (Luk/shusek/krwa/component/WitTuple7;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;ILjava/lang/Object;)Luk/shusek/krwa/component/WitTuple7;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun fifth ()Ljava/lang/Object;
+	public final fun first ()Ljava/lang/Object;
+	public final fun fourth ()Ljava/lang/Object;
+	public final fun getFifth ()Ljava/lang/Object;
+	public final fun getFirst ()Ljava/lang/Object;
+	public final fun getFourth ()Ljava/lang/Object;
+	public final fun getSecond ()Ljava/lang/Object;
+	public final fun getSeventh ()Ljava/lang/Object;
+	public final fun getSixth ()Ljava/lang/Object;
+	public final fun getThird ()Ljava/lang/Object;
+	public fun hashCode ()I
+	public final fun second ()Ljava/lang/Object;
+	public final fun seventh ()Ljava/lang/Object;
+	public final fun sixth ()Ljava/lang/Object;
+	public final fun third ()Ljava/lang/Object;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/component/WitTuple8 {
+	public fun <init> (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)V
+	public final fun component1 ()Ljava/lang/Object;
+	public final fun component2 ()Ljava/lang/Object;
+	public final fun component3 ()Ljava/lang/Object;
+	public final fun component4 ()Ljava/lang/Object;
+	public final fun component5 ()Ljava/lang/Object;
+	public final fun component6 ()Ljava/lang/Object;
+	public final fun component7 ()Ljava/lang/Object;
+	public final fun component8 ()Ljava/lang/Object;
+	public final fun copy (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Luk/shusek/krwa/component/WitTuple8;
+	public static synthetic fun copy$default (Luk/shusek/krwa/component/WitTuple8;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;ILjava/lang/Object;)Luk/shusek/krwa/component/WitTuple8;
+	public final fun eighth ()Ljava/lang/Object;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun fifth ()Ljava/lang/Object;
+	public final fun first ()Ljava/lang/Object;
+	public final fun fourth ()Ljava/lang/Object;
+	public final fun getEighth ()Ljava/lang/Object;
+	public final fun getFifth ()Ljava/lang/Object;
+	public final fun getFirst ()Ljava/lang/Object;
+	public final fun getFourth ()Ljava/lang/Object;
+	public final fun getSecond ()Ljava/lang/Object;
+	public final fun getSeventh ()Ljava/lang/Object;
+	public final fun getSixth ()Ljava/lang/Object;
+	public final fun getThird ()Ljava/lang/Object;
+	public fun hashCode ()I
+	public final fun second ()Ljava/lang/Object;
+	public final fun seventh ()Ljava/lang/Object;
+	public final fun sixth ()Ljava/lang/Object;
+	public final fun third ()Ljava/lang/Object;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/component/WitValue {
+	public static final field Companion Luk/shusek/krwa/component/WitValue$Companion;
+	public static final fun err (Ljava/lang/Object;)Luk/shusek/krwa/component/WitValue$Variant;
+	public static final fun flags ([Ljava/lang/String;)Ljava/util/Map;
+	public static final fun none ()Luk/shusek/krwa/component/WitValue$Variant;
+	public static final fun ok (Ljava/lang/Object;)Luk/shusek/krwa/component/WitValue$Variant;
+	public static final fun record ([Ljava/lang/Object;)Ljava/util/Map;
+	public static final fun some (Ljava/lang/Object;)Luk/shusek/krwa/component/WitValue$Variant;
+	public static final fun variant (Ljava/lang/String;)Luk/shusek/krwa/component/WitValue$Variant;
+	public static final fun variant (Ljava/lang/String;Ljava/lang/Object;)Luk/shusek/krwa/component/WitValue$Variant;
+}
+
+public final class uk/shusek/krwa/component/WitValue$Companion {
+	public final fun err (Ljava/lang/Object;)Luk/shusek/krwa/component/WitValue$Variant;
+	public final fun flags ([Ljava/lang/String;)Ljava/util/Map;
+	public final fun none ()Luk/shusek/krwa/component/WitValue$Variant;
+	public final fun ok (Ljava/lang/Object;)Luk/shusek/krwa/component/WitValue$Variant;
+	public final fun record ([Ljava/lang/Object;)Ljava/util/Map;
+	public final fun some (Ljava/lang/Object;)Luk/shusek/krwa/component/WitValue$Variant;
+	public final fun variant (Ljava/lang/String;)Luk/shusek/krwa/component/WitValue$Variant;
+	public final fun variant (Ljava/lang/String;Ljava/lang/Object;)Luk/shusek/krwa/component/WitValue$Variant;
+}
+
+public final class uk/shusek/krwa/component/WitValue$Variant {
+	public final fun getHasValue ()Z
+	public final fun getLabel ()Ljava/lang/String;
+	public final fun getValue ()Ljava/lang/Object;
+	public final fun hasValue ()Z
+	public final fun label ()Ljava/lang/String;
+	public fun toString ()Ljava/lang/String;
+	public final fun value ()Ljava/lang/Object;
+}
+

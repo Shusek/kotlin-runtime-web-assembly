@@ -1,7 +1,7 @@
 # Installation
 
-When a public release is available, use Maven Central. For snapshots, add the
-public GitHub Pages Maven repository:
+When a public release is available, use Maven Central. For development builds,
+add the public GitHub Pages Maven repository and pin the commit-derived version:
 
 ```kotlin
 // settings.gradle.kts
@@ -18,7 +18,7 @@ Use the BOM so all modules stay on the same version:
 
 ```kotlin
 // build.gradle.kts
-val runtimeVersion = "0.3.0-SNAPSHOT"
+val runtimeVersion = "0.3.0-dev.<12-character-commit>"
 
 dependencies {
     implementation(platform("uk.shusek.krwa:bom:$runtimeVersion"))

@@ -50,6 +50,7 @@ val commonComponentModelSources =
         "WasiPreview3CanonicalIntrinsics.kt",
         "WasiPreview3ResourceLimits.kt",
         "WasmPlugin.kt",
+        "WasmPluginIntrinsics.kt",
         "WasmPluginPlatform.kt",
         "WitFuture.kt",
         "WitNames.kt",

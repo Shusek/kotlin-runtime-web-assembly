@@ -24,6 +24,22 @@ Build imports before constructing an instance when the guest expects host
 functions, memories, tables, or globals. Call exported functions through the
 runtime export APIs after instantiation.
 
+`Instance` owns the selected platform engine and all native export handles.
+Close it when the plugin session ends. `close()` is idempotent; calls through
+the instance, an export function retained earlier, or an exported memory fail
+after close instead of reaching a released native handle. An instance is not a
+concurrent execution primitive: serialize calls per instance or give each
+worker its own instance.
+
+```kotlin
+val instance = Instance.builder(module).build()
+try {
+    instance.export("run").apply()
+} finally {
+    instance.close()
+}
+```
+
 ## Guest Memory
 
 Core Wasm exchanges structured data through linear memory. Hosts usually pass a

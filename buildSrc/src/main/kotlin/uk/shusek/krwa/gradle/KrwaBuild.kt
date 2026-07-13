@@ -22,6 +22,7 @@ import org.gradle.kotlin.dsl.register
 import org.gradle.kotlin.dsl.withType
 import org.gradle.process.CommandLineArgumentProvider
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
+import org.jetbrains.kotlin.gradle.dsl.abi.ExperimentalAbiValidation
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
@@ -85,6 +86,7 @@ fun PublishingExtension.configureKrwaRepositories(project: Project) {
 private fun Project.lib(alias: String) =
     rootProject.extensions.getByType<VersionCatalogsExtension>().named("libs").findLibrary(alias).get()
 
+@OptIn(ExperimentalAbiValidation::class)
 fun Project.configureKrwaJvmProject() {
     group = rootProject.group
 
@@ -102,6 +104,7 @@ fun Project.configureKrwaJvmProject() {
     }
 
     extensions.configure<KotlinJvmProjectExtension> {
+        abiValidation {}
         compilerOptions {
             jvmTarget.set(JvmTarget.fromTarget("25"))
             javaParameters.set(true)
@@ -226,8 +229,9 @@ fun Project.registerTaskAlias(alias: String, target: String) {
     }
 }
 
-@OptIn(ExperimentalWasmDsl::class)
+@OptIn(ExperimentalWasmDsl::class, ExperimentalAbiValidation::class)
 fun KotlinMultiplatformExtension.krwaArmIosAndWebWasmTargets() {
+    abiValidation {}
     jvm {
         compilerOptions {
             jvmTarget.set(JvmTarget.fromTarget("25"))

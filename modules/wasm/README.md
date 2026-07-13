@@ -11,8 +11,8 @@ module using `Parser.parse`:
 
 <!--
 ```java
-//DEPS uk.shusek.krwa:wasm-corpus:0.3.0-SNAPSHOT
-//DEPS uk.shusek.krwa:wasm:0.3.0-SNAPSHOT
+//DEPS uk.shusek.krwa:wasm-corpus:0.3.0-dev.<12-character-commit>
+//DEPS uk.shusek.krwa:wasm:0.3.0-dev.<12-character-commit>
 ```
 -->
 

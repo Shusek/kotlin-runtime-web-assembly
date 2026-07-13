@@ -29,9 +29,11 @@ the regular `Instance` API. `WasmJsExecution.instantiate` remains available as a
 wasmJs-specific native facade for exported globals, tables, and exception tags
 where callers need the native wrapper objects.
 
-`ExecutionBackend.PULLEY` selects the Wasmtime integration where it is linked.
-The enum name is kept for the existing provider API, but the default Wasmtime
-target is native code generation. A platform execution backend owns native
+`ExecutionBackend.PULLEY` selects the historical Wasmtime provider boundary
+where it is linked. It does **not** by itself mean that Wasmtime must use the
+Pulley compiler target. `WasmtimeExecutionConfig.target` selects either
+`WasmtimePulleyTarget` (`pulley64`) or `WasmtimeNativeTarget` (`native`, normally
+Cranelift). A platform execution backend owns native
 exports and native linear memories while still receiving KRWA `ImportValues` for
 host callbacks. The JVM implementation loads the Wasmtime C API from
 `krwa.wasmtime.library`, `KRWA_WASMTIME_LIBRARY`, or common system library
@@ -44,7 +46,9 @@ Use `ExecutionBackend.PULLEY.availability()` or `.isAvailable()` before exposing
 Wasmtime as a user-selectable mode. The availability check reports the same
 platform/linking requirements that explicit `PULLEY` execution would enforce.
 
-Wasmtime execution can be configured per instance during instantiation.
+Wasmtime execution can be configured per instance during instantiation. Prefer
+`withExecutionPolicy`, because it applies the engine, target, memory, and fuel
+settings as one value instead of allowing a partially updated builder.
 `WasmtimeExecutionConfig` exposes Wasmtime store and engine limits for maximum
 linear memory bytes, maximum Wasm stack bytes, table elements, instances,
 tables, memories, and guest execution fuel. Optional count limits and `maxFuel`
@@ -53,16 +57,18 @@ use `WasmtimeUnlimitedResourceLimit` (`-1`) for unlimited:
 ```kotlin
 val instance =
     Instance.builder(module)
-        .withExecutionBackend(ExecutionBackend.PULLEY)
-        .withWasmtimeExecutionConfig(
-            WasmtimeExecutionConfig(
-                maxMemoryBytes = 64L * 1024L * 1024L,
-                maxWasmStackBytes = 256L * 1024L,
-                maxTableElements = WasmtimeUnlimitedResourceLimit,
-                maxInstances = 1,
-                maxTables = 32,
-                maxMemories = 4,
-                maxFuel = 5_000_000,
+        .withExecutionPolicy(
+            WasmExecutionPolicy.Wasmtime(
+                WasmtimeExecutionConfig(
+                    target = WasmtimePulleyTarget,
+                    maxMemoryBytes = 64L * 1024L * 1024L,
+                    maxWasmStackBytes = 256L * 1024L,
+                    maxTableElements = WasmtimeUnlimitedResourceLimit,
+                    maxInstances = 1,
+                    maxTables = 32,
+                    maxMemories = 4,
+                    maxFuel = 5_000_000,
+                ),
             ),
         )
         .build()
@@ -131,6 +137,18 @@ surface; modules may still use SIMD internally when the host engine supports the
 module, but JS-exported or imported functions should not expose `v128`.
 
 ## Choosing A Mode
+
+The effective platform matrix is intentionally asymmetric:
+
+| Platform | Raw Wasm | Pulley CWasm | Cranelift CWasm |
+| --- | --- | --- | --- |
+| JVM / Android with the Suvio provider | Pulley | Pulley | Cranelift |
+| iOS | Pulley | Pulley | unavailable |
+| wasmJs | host `WebAssembly` | unavailable | unavailable |
+
+CWasm is a Wasmtime-specific serialized artifact and is therefore never used
+on `wasmJs`. iOS builds only the Pulley target; a `native`/Cranelift target must
+fail availability checks there instead of silently selecting another mode.
 
 - Use the default `ExecutionBackend.AUTO` for normal hosts. It requires a linked
   Wasmtime backend on JVM, Android, and iOS, and uses the host WebAssembly engine

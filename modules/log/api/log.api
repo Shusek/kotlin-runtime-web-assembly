@@ -1,0 +1,97 @@
+public class uk/shusek/krwa/log/BasicLogger : uk/shusek/krwa/log/Logger {
+	public fun <init> ()V
+	public fun debug (Ljava/lang/String;)V
+	public fun debug (Ljava/util/function/Supplier;)V
+	public fun debug (Ljava/util/function/Supplier;Ljava/lang/Throwable;)V
+	public fun debugf (Ljava/lang/String;[Ljava/lang/Object;)V
+	public fun error (Ljava/lang/String;)V
+	public fun error (Ljava/util/function/Supplier;)V
+	public fun error (Ljava/util/function/Supplier;Ljava/lang/Throwable;)V
+	public fun errorf (Ljava/lang/String;[Ljava/lang/Object;)V
+	public fun info (Ljava/lang/String;)V
+	public fun info (Ljava/util/function/Supplier;)V
+	public fun info (Ljava/util/function/Supplier;Ljava/lang/Throwable;)V
+	public fun infof (Ljava/lang/String;[Ljava/lang/Object;)V
+	public fun isLoggable (Luk/shusek/krwa/log/Logger$Level;)Z
+	public fun log (Luk/shusek/krwa/log/Logger$Level;Ljava/lang/String;Ljava/lang/Throwable;)V
+	public fun trace (Ljava/lang/String;)V
+	public fun trace (Ljava/util/function/Supplier;)V
+	public fun trace (Ljava/util/function/Supplier;Ljava/lang/Throwable;)V
+	public fun tracef (Ljava/lang/String;[Ljava/lang/Object;)V
+	public fun warn (Ljava/lang/String;)V
+	public fun warn (Ljava/util/function/Supplier;)V
+	public fun warn (Ljava/util/function/Supplier;Ljava/lang/Throwable;)V
+	public fun warnf (Ljava/lang/String;[Ljava/lang/Object;)V
+}
+
+public abstract interface class uk/shusek/krwa/log/Logger {
+	public static final field Companion Luk/shusek/krwa/log/Logger$Companion;
+	public fun debug (Ljava/lang/String;)V
+	public fun debug (Ljava/util/function/Supplier;)V
+	public fun debug (Ljava/util/function/Supplier;Ljava/lang/Throwable;)V
+	public fun debugf (Ljava/lang/String;[Ljava/lang/Object;)V
+	public fun error (Ljava/lang/String;)V
+	public fun error (Ljava/util/function/Supplier;)V
+	public fun error (Ljava/util/function/Supplier;Ljava/lang/Throwable;)V
+	public fun errorf (Ljava/lang/String;[Ljava/lang/Object;)V
+	public fun info (Ljava/lang/String;)V
+	public fun info (Ljava/util/function/Supplier;)V
+	public fun info (Ljava/util/function/Supplier;Ljava/lang/Throwable;)V
+	public fun infof (Ljava/lang/String;[Ljava/lang/Object;)V
+	public abstract fun isLoggable (Luk/shusek/krwa/log/Logger$Level;)Z
+	public abstract fun log (Luk/shusek/krwa/log/Logger$Level;Ljava/lang/String;Ljava/lang/Throwable;)V
+	public fun trace (Ljava/lang/String;)V
+	public fun trace (Ljava/util/function/Supplier;)V
+	public fun trace (Ljava/util/function/Supplier;Ljava/lang/Throwable;)V
+	public fun tracef (Ljava/lang/String;[Ljava/lang/Object;)V
+	public fun warn (Ljava/lang/String;)V
+	public fun warn (Ljava/util/function/Supplier;)V
+	public fun warn (Ljava/util/function/Supplier;Ljava/lang/Throwable;)V
+	public fun warnf (Ljava/lang/String;[Ljava/lang/Object;)V
+}
+
+public final class uk/shusek/krwa/log/Logger$Companion {
+}
+
+public final class uk/shusek/krwa/log/Logger$DefaultImpls {
+	public static fun debug (Luk/shusek/krwa/log/Logger;Ljava/lang/String;)V
+	public static fun debug (Luk/shusek/krwa/log/Logger;Ljava/util/function/Supplier;)V
+	public static fun debug (Luk/shusek/krwa/log/Logger;Ljava/util/function/Supplier;Ljava/lang/Throwable;)V
+	public static fun debugf (Luk/shusek/krwa/log/Logger;Ljava/lang/String;[Ljava/lang/Object;)V
+	public static fun error (Luk/shusek/krwa/log/Logger;Ljava/lang/String;)V
+	public static fun error (Luk/shusek/krwa/log/Logger;Ljava/util/function/Supplier;)V
+	public static fun error (Luk/shusek/krwa/log/Logger;Ljava/util/function/Supplier;Ljava/lang/Throwable;)V
+	public static fun errorf (Luk/shusek/krwa/log/Logger;Ljava/lang/String;[Ljava/lang/Object;)V
+	public static fun info (Luk/shusek/krwa/log/Logger;Ljava/lang/String;)V
+	public static fun info (Luk/shusek/krwa/log/Logger;Ljava/util/function/Supplier;)V
+	public static fun info (Luk/shusek/krwa/log/Logger;Ljava/util/function/Supplier;Ljava/lang/Throwable;)V
+	public static fun infof (Luk/shusek/krwa/log/Logger;Ljava/lang/String;[Ljava/lang/Object;)V
+	public static fun trace (Luk/shusek/krwa/log/Logger;Ljava/lang/String;)V
+	public static fun trace (Luk/shusek/krwa/log/Logger;Ljava/util/function/Supplier;)V
+	public static fun trace (Luk/shusek/krwa/log/Logger;Ljava/util/function/Supplier;Ljava/lang/Throwable;)V
+	public static fun tracef (Luk/shusek/krwa/log/Logger;Ljava/lang/String;[Ljava/lang/Object;)V
+	public static fun warn (Luk/shusek/krwa/log/Logger;Ljava/lang/String;)V
+	public static fun warn (Luk/shusek/krwa/log/Logger;Ljava/util/function/Supplier;)V
+	public static fun warn (Luk/shusek/krwa/log/Logger;Ljava/util/function/Supplier;Ljava/lang/Throwable;)V
+	public static fun warnf (Luk/shusek/krwa/log/Logger;Ljava/lang/String;[Ljava/lang/Object;)V
+}
+
+public final class uk/shusek/krwa/log/Logger$Level : java/lang/Enum {
+	public static final field ALL Luk/shusek/krwa/log/Logger$Level;
+	public static final field DEBUG Luk/shusek/krwa/log/Logger$Level;
+	public static final field ERROR Luk/shusek/krwa/log/Logger$Level;
+	public static final field INFO Luk/shusek/krwa/log/Logger$Level;
+	public static final field OFF Luk/shusek/krwa/log/Logger$Level;
+	public static final field TRACE Luk/shusek/krwa/log/Logger$Level;
+	public static final field WARNING Luk/shusek/krwa/log/Logger$Level;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public final fun getName ()Ljava/lang/String;
+	public final fun getSeverity ()I
+	public static fun valueOf (Ljava/lang/String;)Luk/shusek/krwa/log/Logger$Level;
+	public static fun values ()[Luk/shusek/krwa/log/Logger$Level;
+}
+
+public class uk/shusek/krwa/log/SystemLogger : uk/shusek/krwa/log/BasicLogger {
+	public fun <init> ()V
+}
+

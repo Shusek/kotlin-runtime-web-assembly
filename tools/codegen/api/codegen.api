@@ -1,0 +1,28 @@
+public final class uk/shusek/krwa/codegen/CodegenUtils {
+	public static final field Companion Luk/shusek/krwa/codegen/CodegenUtils$Companion;
+	public static final fun camelCaseToSnakeCase (Ljava/lang/String;)Ljava/lang/String;
+	public static final fun snakeCaseToCamelCase (Ljava/lang/String;Z)Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/codegen/CodegenUtils$Companion {
+	public final fun camelCaseToSnakeCase (Ljava/lang/String;)Ljava/lang/String;
+	public final fun snakeCaseToCamelCase (Ljava/lang/String;Z)Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/codegen/ModuleInterfaceCodegen {
+	public static final field Companion Luk/shusek/krwa/codegen/ModuleInterfaceCodegen$Companion;
+	public static final fun builder (Luk/shusek/krwa/wasm/WasmModule;)Luk/shusek/krwa/codegen/ModuleInterfaceCodegen$Builder;
+	public final fun generate ()Ljava/util/Map;
+}
+
+public final class uk/shusek/krwa/codegen/ModuleInterfaceCodegen$Builder {
+	public final fun build ()Luk/shusek/krwa/codegen/ModuleInterfaceCodegen;
+	public final fun withGeneratorName (Ljava/lang/String;)Luk/shusek/krwa/codegen/ModuleInterfaceCodegen$Builder;
+	public final fun withPackageName (Ljava/lang/String;)Luk/shusek/krwa/codegen/ModuleInterfaceCodegen$Builder;
+	public final fun withTypeName (Ljava/lang/String;)Luk/shusek/krwa/codegen/ModuleInterfaceCodegen$Builder;
+}
+
+public final class uk/shusek/krwa/codegen/ModuleInterfaceCodegen$Companion {
+	public final fun builder (Luk/shusek/krwa/wasm/WasmModule;)Luk/shusek/krwa/codegen/ModuleInterfaceCodegen$Builder;
+}
+

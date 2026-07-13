@@ -1,0 +1,55 @@
+public final class uk/shusek/krwa/wasitestgen/Specification {
+	public static final field Companion Luk/shusek/krwa/wasitestgen/Specification$Companion;
+	public fun <init> (Ljava/util/List;Ljava/lang/String;Ljava/util/List;Ljava/util/Map;ILjava/lang/String;)V
+	public final fun args ()Ljava/util/List;
+	public static final fun createDefault ()Luk/shusek/krwa/wasitestgen/Specification;
+	public final fun dirs ()Ljava/util/List;
+	public final fun env ()Ljava/util/Map;
+	public final fun exitCode ()I
+	public final fun root ()Ljava/util/Optional;
+	public final fun stdout ()Ljava/util/Optional;
+}
+
+public final class uk/shusek/krwa/wasitestgen/Specification$Companion {
+	public final fun createDefault ()Luk/shusek/krwa/wasitestgen/Specification;
+}
+
+public final class uk/shusek/krwa/wasitestgen/StringUtils {
+	public static final field INSTANCE Luk/shusek/krwa/wasitestgen/StringUtils;
+	public final fun capitalize (Ljava/lang/String;)Ljava/lang/String;
+	public final fun escapedCamelCase (Ljava/lang/String;)Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/wasitestgen/WasiKotlinTestSources {
+	public static final field INSTANCE Luk/shusek/krwa/wasitestgen/WasiKotlinTestSources;
+	public final fun write (Ljava/util/Map;Ljava/io/File;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;)V
+}
+
+public final class uk/shusek/krwa/wasitestgen/WasiTestGen {
+	public static final field INSTANCE Luk/shusek/krwa/wasitestgen/WasiTestGen;
+	public final fun execute (Ljava/lang/String;Ljava/lang/String;Ljava/io/File;Ljava/io/File;Ljava/io/File;Ljava/util/List;Ljava/util/List;)V
+}
+
+public final class uk/shusek/krwa/wasitestgen/WasiTestGenCli {
+	public static final field INSTANCE Luk/shusek/krwa/wasitestgen/WasiTestGenCli;
+	public static final fun main ([Ljava/lang/String;)V
+}
+
+public final class uk/shusek/krwa/wasitestgen/WasiTestGenConfig {
+	public fun <init> ()V
+	public final fun getExcludes ()Ljava/util/List;
+	public final fun getIncludes ()Ljava/util/List;
+	public final fun getProjectDirectory ()Ljava/lang/String;
+	public final fun getSourceDestinationFolder ()Ljava/lang/String;
+	public final fun getTestSuiteFolder ()Ljava/lang/String;
+	public final fun getTestSuiteRepo ()Ljava/lang/String;
+	public final fun getTestSuiteRepoRef ()Ljava/lang/String;
+	public final fun setExcludes (Ljava/util/List;)V
+	public final fun setIncludes (Ljava/util/List;)V
+	public final fun setProjectDirectory (Ljava/lang/String;)V
+	public final fun setSourceDestinationFolder (Ljava/lang/String;)V
+	public final fun setTestSuiteFolder (Ljava/lang/String;)V
+	public final fun setTestSuiteRepo (Ljava/lang/String;)V
+	public final fun setTestSuiteRepoRef (Ljava/lang/String;)V
+}
+

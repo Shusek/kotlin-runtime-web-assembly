@@ -1,0 +1,188 @@
+public final class uk/shusek/krwa/wasi/preview3/KotlinWasiPreview3 {
+	public static final field Companion Luk/shusek/krwa/wasi/preview3/KotlinWasiPreview3$Companion;
+	public final fun await (Luk/shusek/krwa/component/WitFuture;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun byteStream ([B)Luk/shusek/krwa/component/WitStream;
+	public final fun cancel ()V
+	public final fun close ()V
+	public final fun completed (Ljava/lang/Object;)Luk/shusek/krwa/component/WitFuture;
+	public final fun fileSystem (Ljava/lang/String;)Luk/shusek/krwa/wasi/preview3/WasiFileSystem;
+	public static synthetic fun fileSystem$default (Luk/shusek/krwa/wasi/preview3/KotlinWasiPreview3;Ljava/lang/String;ILjava/lang/Object;)Luk/shusek/krwa/wasi/preview3/WasiFileSystem;
+	public final fun fileSystemOrNull (Ljava/lang/String;)Luk/shusek/krwa/wasi/preview3/WasiFileSystem;
+	public static synthetic fun fileSystemOrNull$default (Luk/shusek/krwa/wasi/preview3/KotlinWasiPreview3;Ljava/lang/String;ILjava/lang/Object;)Luk/shusek/krwa/wasi/preview3/WasiFileSystem;
+	public final fun getFileSystems ()Ljava/util/Map;
+	public final fun getVersion ()Ljava/lang/String;
+	public final fun getWasi ()Luk/shusek/krwa/component/WasiPreview3;
+	public final fun install (Luk/shusek/krwa/component/WasmPlugin$Builder;)Luk/shusek/krwa/component/WasmPlugin$Builder;
+}
+
+public final class uk/shusek/krwa/wasi/preview3/KotlinWasiPreview3$Builder {
+	public fun <init> ()V
+	public final fun build ()Luk/shusek/krwa/wasi/preview3/KotlinWasiPreview3;
+	public final fun withArguments (Ljava/util/List;)Luk/shusek/krwa/wasi/preview3/KotlinWasiPreview3$Builder;
+	public final fun withArguments ([Ljava/lang/String;)Luk/shusek/krwa/wasi/preview3/KotlinWasiPreview3$Builder;
+	public final fun withCoroutineDispatcher (Lkotlinx/coroutines/CoroutineDispatcher;)Luk/shusek/krwa/wasi/preview3/KotlinWasiPreview3$Builder;
+	public final fun withCoroutineScope (Lkotlinx/coroutines/CoroutineScope;)Luk/shusek/krwa/wasi/preview3/KotlinWasiPreview3$Builder;
+	public final fun withEnvironment (Ljava/lang/String;Ljava/lang/String;)Luk/shusek/krwa/wasi/preview3/KotlinWasiPreview3$Builder;
+	public final fun withEnvironment (Ljava/util/Map;)Luk/shusek/krwa/wasi/preview3/KotlinWasiPreview3$Builder;
+	public final fun withFixedWallClock-SxA4cEA (Luk/shusek/krwa/wasi/preview3/WasiInstant;Ljava/lang/String;J)Luk/shusek/krwa/wasi/preview3/KotlinWasiPreview3$Builder;
+	public static synthetic fun withFixedWallClock-SxA4cEA$default (Luk/shusek/krwa/wasi/preview3/KotlinWasiPreview3$Builder;Luk/shusek/krwa/wasi/preview3/WasiInstant;Ljava/lang/String;JILjava/lang/Object;)Luk/shusek/krwa/wasi/preview3/KotlinWasiPreview3$Builder;
+	public final fun withInitialCwd (Ljava/lang/String;)Luk/shusek/krwa/wasi/preview3/KotlinWasiPreview3$Builder;
+	public final fun withInsecureRandom (Lkotlin/random/Random;)Luk/shusek/krwa/wasi/preview3/KotlinWasiPreview3$Builder;
+	public final fun withInsecureSeed-PWzV0Is (JJ)Luk/shusek/krwa/wasi/preview3/KotlinWasiPreview3$Builder;
+	public final fun withMonotonicClock (Lkotlin/jvm/functions/Function0;)Luk/shusek/krwa/wasi/preview3/KotlinWasiPreview3$Builder;
+	public final fun withMonotonicResolution-LRDsOJo (J)Luk/shusek/krwa/wasi/preview3/KotlinWasiPreview3$Builder;
+	public final fun withNetworking ()Luk/shusek/krwa/wasi/preview3/KotlinWasiPreview3$Builder;
+	public final fun withNetworking (Z)Luk/shusek/krwa/wasi/preview3/KotlinWasiPreview3$Builder;
+	public final fun withPreopenedDirectory (Ljava/lang/String;Ljava/lang/String;)Luk/shusek/krwa/wasi/preview3/KotlinWasiPreview3$Builder;
+	public final fun withPreopenedDirectory (Ljava/lang/String;Ljava/lang/String;Z)Luk/shusek/krwa/wasi/preview3/KotlinWasiPreview3$Builder;
+	public final fun withReadOnlyPreopenedDirectory (Ljava/lang/String;Ljava/lang/String;)Luk/shusek/krwa/wasi/preview3/KotlinWasiPreview3$Builder;
+	public final fun withResourceBudget (IIIIILkotlinx/coroutines/CoroutineDispatcher;)Luk/shusek/krwa/wasi/preview3/KotlinWasiPreview3$Builder;
+	public static synthetic fun withResourceBudget$default (Luk/shusek/krwa/wasi/preview3/KotlinWasiPreview3$Builder;IIIIILkotlinx/coroutines/CoroutineDispatcher;ILjava/lang/Object;)Luk/shusek/krwa/wasi/preview3/KotlinWasiPreview3$Builder;
+	public final fun withSecureRandom (Lkotlin/random/Random;)Luk/shusek/krwa/wasi/preview3/KotlinWasiPreview3$Builder;
+	public final fun withSecureRandom (Lorg/kotlincrypto/random/CryptoRand;)Luk/shusek/krwa/wasi/preview3/KotlinWasiPreview3$Builder;
+	public final fun withTerminalStderr (Z)Luk/shusek/krwa/wasi/preview3/KotlinWasiPreview3$Builder;
+	public final fun withTerminalStdin (Z)Luk/shusek/krwa/wasi/preview3/KotlinWasiPreview3$Builder;
+	public final fun withTerminalStdout (Z)Luk/shusek/krwa/wasi/preview3/KotlinWasiPreview3$Builder;
+	public final fun withVersion (Ljava/lang/String;)Luk/shusek/krwa/wasi/preview3/KotlinWasiPreview3$Builder;
+	public final fun withWallClock-SxA4cEA (Lkotlin/jvm/functions/Function0;Ljava/lang/String;J)Luk/shusek/krwa/wasi/preview3/KotlinWasiPreview3$Builder;
+	public final fun withWallClock-SxA4cEA (Lkotlin/time/Clock;Ljava/lang/String;J)Luk/shusek/krwa/wasi/preview3/KotlinWasiPreview3$Builder;
+	public static synthetic fun withWallClock-SxA4cEA$default (Luk/shusek/krwa/wasi/preview3/KotlinWasiPreview3$Builder;Lkotlin/jvm/functions/Function0;Ljava/lang/String;JILjava/lang/Object;)Luk/shusek/krwa/wasi/preview3/KotlinWasiPreview3$Builder;
+	public static synthetic fun withWallClock-SxA4cEA$default (Luk/shusek/krwa/wasi/preview3/KotlinWasiPreview3$Builder;Lkotlin/time/Clock;Ljava/lang/String;JILjava/lang/Object;)Luk/shusek/krwa/wasi/preview3/KotlinWasiPreview3$Builder;
+	public final fun withWallClockResolution-LRDsOJo (J)Luk/shusek/krwa/wasi/preview3/KotlinWasiPreview3$Builder;
+	public final fun withoutNetworking ()Luk/shusek/krwa/wasi/preview3/KotlinWasiPreview3$Builder;
+}
+
+public final class uk/shusek/krwa/wasi/preview3/KotlinWasiPreview3$Companion {
+	public final fun builder ()Luk/shusek/krwa/wasi/preview3/KotlinWasiPreview3$Builder;
+	public final fun of (Luk/shusek/krwa/component/WasiPreview3;)Luk/shusek/krwa/wasi/preview3/KotlinWasiPreview3;
+}
+
+public final class uk/shusek/krwa/wasi/preview3/WasiFileEntry {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Luk/shusek/krwa/wasi/preview3/WasiFileMetadata;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Luk/shusek/krwa/wasi/preview3/WasiFileMetadata;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Luk/shusek/krwa/wasi/preview3/WasiFileMetadata;)Luk/shusek/krwa/wasi/preview3/WasiFileEntry;
+	public static synthetic fun copy$default (Luk/shusek/krwa/wasi/preview3/WasiFileEntry;Ljava/lang/String;Ljava/lang/String;Luk/shusek/krwa/wasi/preview3/WasiFileMetadata;ILjava/lang/Object;)Luk/shusek/krwa/wasi/preview3/WasiFileEntry;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getMetadata ()Luk/shusek/krwa/wasi/preview3/WasiFileMetadata;
+	public final fun getName ()Ljava/lang/String;
+	public final fun getPath ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/wasi/preview3/WasiFileMetadata {
+	public fun <init> (ZZZJLuk/shusek/krwa/wasi/preview3/WasiInstant;)V
+	public final fun component1 ()Z
+	public final fun component2 ()Z
+	public final fun component3 ()Z
+	public final fun component4 ()J
+	public final fun component5 ()Luk/shusek/krwa/wasi/preview3/WasiInstant;
+	public final fun copy (ZZZJLuk/shusek/krwa/wasi/preview3/WasiInstant;)Luk/shusek/krwa/wasi/preview3/WasiFileMetadata;
+	public static synthetic fun copy$default (Luk/shusek/krwa/wasi/preview3/WasiFileMetadata;ZZZJLuk/shusek/krwa/wasi/preview3/WasiInstant;ILjava/lang/Object;)Luk/shusek/krwa/wasi/preview3/WasiFileMetadata;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getLastModifiedTime ()Luk/shusek/krwa/wasi/preview3/WasiInstant;
+	public final fun getSize ()J
+	public fun hashCode ()I
+	public final fun isDirectory ()Z
+	public final fun isRegularFile ()Z
+	public final fun isSymbolicLink ()Z
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/wasi/preview3/WasiFileSystem {
+	public static final field Companion Luk/shusek/krwa/wasi/preview3/WasiFileSystem$Companion;
+	public static final field DEFAULT_CHARSET Ljava/lang/String;
+	public static final field DEFAULT_CHUNK_SIZE I
+	public final fun appendBytes (Ljava/lang/String;[BZ)V
+	public static synthetic fun appendBytes$default (Luk/shusek/krwa/wasi/preview3/WasiFileSystem;Ljava/lang/String;[BZILjava/lang/Object;)V
+	public final fun appendText (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Z)V
+	public static synthetic fun appendText$default (Luk/shusek/krwa/wasi/preview3/WasiFileSystem;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZILjava/lang/Object;)V
+	public final fun createDirectories (Ljava/lang/String;)V
+	public final fun delete (Ljava/lang/String;Z)V
+	public static synthetic fun delete$default (Luk/shusek/krwa/wasi/preview3/WasiFileSystem;Ljava/lang/String;ZILjava/lang/Object;)V
+	public final fun exists (Ljava/lang/String;)Z
+	public final fun getGuestRoot ()Ljava/lang/String;
+	public final fun getHostRoot ()Ljava/lang/String;
+	public final fun getWritable ()Z
+	public final fun hostPath (Ljava/lang/String;)Ljava/lang/String;
+	public final fun list (Ljava/lang/String;)Ljava/util/List;
+	public static synthetic fun list$default (Luk/shusek/krwa/wasi/preview3/WasiFileSystem;Ljava/lang/String;ILjava/lang/Object;)Ljava/util/List;
+	public final fun metadata (Ljava/lang/String;)Luk/shusek/krwa/wasi/preview3/WasiFileMetadata;
+	public final fun readByteChunks (Ljava/lang/String;I)Lkotlinx/coroutines/flow/Flow;
+	public static synthetic fun readByteChunks$default (Luk/shusek/krwa/wasi/preview3/WasiFileSystem;Ljava/lang/String;IILjava/lang/Object;)Lkotlinx/coroutines/flow/Flow;
+	public final fun readBytes (Ljava/lang/String;)[B
+	public final fun readText (Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
+	public static synthetic fun readText$default (Luk/shusek/krwa/wasi/preview3/WasiFileSystem;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Ljava/lang/String;
+	public final fun writeByteChunks (Ljava/lang/String;Lkotlinx/coroutines/flow/Flow;ZZLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun writeByteChunks$default (Luk/shusek/krwa/wasi/preview3/WasiFileSystem;Ljava/lang/String;Lkotlinx/coroutines/flow/Flow;ZZLkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public final fun writeBytes (Ljava/lang/String;[BZ)V
+	public static synthetic fun writeBytes$default (Luk/shusek/krwa/wasi/preview3/WasiFileSystem;Ljava/lang/String;[BZILjava/lang/Object;)V
+	public final fun writeText (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Z)V
+	public static synthetic fun writeText$default (Luk/shusek/krwa/wasi/preview3/WasiFileSystem;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZILjava/lang/Object;)V
+}
+
+public final class uk/shusek/krwa/wasi/preview3/WasiFileSystem$Companion {
+}
+
+public final class uk/shusek/krwa/wasi/preview3/WasiFileSystemJvmKt {
+	public static final fun readWitByteStream (Luk/shusek/krwa/wasi/preview3/WasiFileSystem;Ljava/lang/String;Luk/shusek/krwa/component/WasiPreview3;I)Luk/shusek/krwa/component/WitStream;
+	public static synthetic fun readWitByteStream$default (Luk/shusek/krwa/wasi/preview3/WasiFileSystem;Ljava/lang/String;Luk/shusek/krwa/component/WasiPreview3;IILjava/lang/Object;)Luk/shusek/krwa/component/WitStream;
+	public static final fun writeWitByteStream (Luk/shusek/krwa/wasi/preview3/WasiFileSystem;Ljava/lang/String;Luk/shusek/krwa/component/WitStream;Luk/shusek/krwa/component/WasiPreview3;ZZLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun writeWitByteStream$default (Luk/shusek/krwa/wasi/preview3/WasiFileSystem;Ljava/lang/String;Luk/shusek/krwa/component/WitStream;Luk/shusek/krwa/component/WasiPreview3;ZZLkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+}
+
+public final class uk/shusek/krwa/wasi/preview3/WasiInstant {
+	public static final field Companion Luk/shusek/krwa/wasi/preview3/WasiInstant$Companion;
+	public fun <init> (JI)V
+	public synthetic fun <init> (JIILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()J
+	public final fun component2 ()I
+	public final fun copy (JI)Luk/shusek/krwa/wasi/preview3/WasiInstant;
+	public static synthetic fun copy$default (Luk/shusek/krwa/wasi/preview3/WasiInstant;JIILjava/lang/Object;)Luk/shusek/krwa/wasi/preview3/WasiInstant;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getEpochSeconds ()J
+	public final fun getNanoseconds ()I
+	public fun hashCode ()I
+	public final fun toKotlinInstant ()Lkotlin/time/Instant;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/wasi/preview3/WasiInstant$Companion {
+	public final fun fromEpochMilliseconds (J)Luk/shusek/krwa/wasi/preview3/WasiInstant;
+	public final fun fromEpochSeconds (JI)Luk/shusek/krwa/wasi/preview3/WasiInstant;
+	public static synthetic fun fromEpochSeconds$default (Luk/shusek/krwa/wasi/preview3/WasiInstant$Companion;JIILjava/lang/Object;)Luk/shusek/krwa/wasi/preview3/WasiInstant;
+	public final fun fromKotlinInstant (Lkotlin/time/Instant;)Luk/shusek/krwa/wasi/preview3/WasiInstant;
+	public final fun now (Lkotlin/time/Clock;)Luk/shusek/krwa/wasi/preview3/WasiInstant;
+	public static synthetic fun now$default (Luk/shusek/krwa/wasi/preview3/WasiInstant$Companion;Lkotlin/time/Clock;ILjava/lang/Object;)Luk/shusek/krwa/wasi/preview3/WasiInstant;
+}
+
+public final class uk/shusek/krwa/wasi/preview3/WasiPreview3CoroutinesKt {
+	public static final fun asByteArray (Luk/shusek/krwa/component/WitStream;Luk/shusek/krwa/component/WasiPreview3;)[B
+	public static final fun asByteChunks (Lkotlinx/io/RawSource;IZ)Lkotlinx/coroutines/flow/Flow;
+	public static final fun asByteChunks (Luk/shusek/krwa/component/WitStream;Luk/shusek/krwa/component/WasiPreview3;I)Lkotlinx/coroutines/flow/Flow;
+	public static synthetic fun asByteChunks$default (Lkotlinx/io/RawSource;IZILjava/lang/Object;)Lkotlinx/coroutines/flow/Flow;
+	public static synthetic fun asByteChunks$default (Luk/shusek/krwa/component/WitStream;Luk/shusek/krwa/component/WasiPreview3;IILjava/lang/Object;)Lkotlinx/coroutines/flow/Flow;
+	public static final fun asByteFlow (Luk/shusek/krwa/component/WitStream;Luk/shusek/krwa/component/WasiPreview3;)Lkotlinx/coroutines/flow/Flow;
+	public static final fun asDeferred (Luk/shusek/krwa/component/WitFuture;Luk/shusek/krwa/component/WasiPreview3;Lkotlinx/coroutines/CoroutineScope;)Lkotlinx/coroutines/Deferred;
+	public static final fun asList (Luk/shusek/krwa/component/WitStream;Luk/shusek/krwa/component/WasiPreview3;)Ljava/util/List;
+	public static final fun await (Luk/shusek/krwa/component/WasiPreview3;Luk/shusek/krwa/component/WitFuture;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static final fun awaitReadable (Luk/shusek/krwa/component/WitStream;Luk/shusek/krwa/component/WasiPreview3;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static final fun awaitWritable (Luk/shusek/krwa/component/WitStream;Luk/shusek/krwa/component/WasiPreview3;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static final fun byteChunkFlowToWitByteStream (Lkotlinx/coroutines/flow/Flow;Luk/shusek/krwa/component/WasiPreview3;)Luk/shusek/krwa/component/WitStream;
+	public static final fun completed (Luk/shusek/krwa/component/WasiPreview3;Ljava/lang/Object;)Luk/shusek/krwa/component/WitFuture;
+	public static final fun requireCompleted (Luk/shusek/krwa/component/WitFuture;Luk/shusek/krwa/component/WasiPreview3;)V
+	public static final fun toCompletedWitFuture (Lkotlinx/coroutines/Deferred;Luk/shusek/krwa/component/WasiPreview3;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static final fun toWitByteStream (Lkotlinx/io/RawSource;Luk/shusek/krwa/component/WasiPreview3;IZ)Luk/shusek/krwa/component/WitStream;
+	public static final fun toWitByteStream ([BLuk/shusek/krwa/component/WasiPreview3;)Luk/shusek/krwa/component/WitStream;
+	public static synthetic fun toWitByteStream$default (Lkotlinx/io/RawSource;Luk/shusek/krwa/component/WasiPreview3;IZILjava/lang/Object;)Luk/shusek/krwa/component/WitStream;
+	public static final fun toWitFuture (Lkotlinx/coroutines/Deferred;Luk/shusek/krwa/component/WasiPreview3;Lkotlinx/coroutines/CoroutineScope;)Luk/shusek/krwa/component/WitFuture;
+	public static final fun toWitStream (Ljava/lang/Iterable;Luk/shusek/krwa/component/WasiPreview3;)Luk/shusek/krwa/component/WitStream;
+	public static final fun ubyteFlowToWitByteStream (Lkotlinx/coroutines/flow/Flow;Luk/shusek/krwa/component/WasiPreview3;)Luk/shusek/krwa/component/WitStream;
+	public static final fun writeTo (Lkotlinx/coroutines/flow/Flow;Lkotlinx/io/RawSink;ZLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static final fun writeTo (Luk/shusek/krwa/component/WitStream;Lkotlinx/io/RawSink;Luk/shusek/krwa/component/WasiPreview3;IZLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun writeTo$default (Lkotlinx/coroutines/flow/Flow;Lkotlinx/io/RawSink;ZLkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public static synthetic fun writeTo$default (Luk/shusek/krwa/component/WitStream;Lkotlinx/io/RawSink;Luk/shusek/krwa/component/WasiPreview3;IZLkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+}
+

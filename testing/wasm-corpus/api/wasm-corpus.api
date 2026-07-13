@@ -1,0 +1,12 @@
+public final class uk/shusek/krwa/corpus/CorpusResources {
+	public static final field INSTANCE Luk/shusek/krwa/corpus/CorpusResources;
+	public static final fun getResource (Ljava/lang/String;)Ljava/io/InputStream;
+}
+
+public final class uk/shusek/krwa/corpus/WatGenerator {
+	public static final field INSTANCE Luk/shusek/krwa/corpus/WatGenerator;
+	public static final fun bigWat (II)Ljava/lang/String;
+	public static final fun main ([Ljava/lang/String;)V
+	public static final fun methodTooLarge (I)Ljava/lang/String;
+}
+

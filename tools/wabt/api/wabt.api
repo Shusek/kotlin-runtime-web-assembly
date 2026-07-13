@@ -1,0 +1,49 @@
+public final class uk/shusek/krwa/wabt/Files {
+	public static final field Companion Luk/shusek/krwa/wabt/Files$Companion;
+	public static final fun copyDirectory (Ljava/nio/file/Path;Ljava/nio/file/Path;)V
+}
+
+public final class uk/shusek/krwa/wabt/Files$Companion {
+	public final fun copyDirectory (Ljava/nio/file/Path;Ljava/nio/file/Path;)V
+}
+
+public final class uk/shusek/krwa/wabt/Wast2Json {
+	public static final field Companion Luk/shusek/krwa/wabt/Wast2Json$Companion;
+	public static final fun builder ()Luk/shusek/krwa/wabt/Wast2Json$Builder;
+	public final fun process ()V
+}
+
+public final class uk/shusek/krwa/wabt/Wast2Json$Builder {
+	public static final field Companion Luk/shusek/krwa/wabt/Wast2Json$Builder$Companion;
+	public final fun build ()Luk/shusek/krwa/wabt/Wast2Json;
+	public final fun withFile (Ljava/io/File;)Luk/shusek/krwa/wabt/Wast2Json$Builder;
+	public final fun withOptions ([Ljava/lang/String;)Luk/shusek/krwa/wabt/Wast2Json$Builder;
+	public final fun withOutput (Ljava/io/File;)Luk/shusek/krwa/wabt/Wast2Json$Builder;
+}
+
+public final class uk/shusek/krwa/wabt/Wast2Json$Builder$Companion {
+}
+
+public final class uk/shusek/krwa/wabt/Wast2Json$Companion {
+	public final fun builder ()Luk/shusek/krwa/wabt/Wast2Json$Builder;
+}
+
+public final class uk/shusek/krwa/wabt/Wat2Wasm {
+	public static final field Companion Luk/shusek/krwa/wabt/Wat2Wasm$Companion;
+	public static final fun parse (Ljava/io/File;)[B
+	public static final fun parse (Ljava/io/InputStream;)[B
+	public static final fun parse (Ljava/lang/String;)[B
+}
+
+public final class uk/shusek/krwa/wabt/Wat2Wasm$Companion {
+	public final fun parse (Ljava/io/File;)[B
+	public final fun parse (Ljava/io/InputStream;)[B
+	public final fun parse (Ljava/lang/String;)[B
+}
+
+public class uk/shusek/krwa/wabt/WatParseException : java/lang/RuntimeException {
+	public fun <init> ()V
+	public fun <init> (Ljava/lang/String;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/Throwable;)V
+}
+

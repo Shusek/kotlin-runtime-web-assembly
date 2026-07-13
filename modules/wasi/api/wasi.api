@@ -1,0 +1,506 @@
+public final class uk/shusek/krwa/wasi/Descriptors {
+	public fun <init> ()V
+	public final fun allocate (Luk/shusek/krwa/wasi/Descriptors$Descriptor;)I
+	public final fun closeAll ()V
+	public final fun free (I)V
+	public final fun get (I)Luk/shusek/krwa/wasi/Descriptors$Descriptor;
+	public final fun set (ILuk/shusek/krwa/wasi/Descriptors$Descriptor;)V
+}
+
+public abstract interface class uk/shusek/krwa/wasi/Descriptors$DataReader {
+	public abstract fun read ([B)I
+}
+
+public abstract interface class uk/shusek/krwa/wasi/Descriptors$DataWriter {
+	public abstract fun write ([B)I
+}
+
+public abstract interface class uk/shusek/krwa/wasi/Descriptors$Descriptor {
+}
+
+public abstract interface class uk/shusek/krwa/wasi/Descriptors$Directory {
+	public abstract fun path ()Ljava/nio/file/Path;
+}
+
+public final class uk/shusek/krwa/wasi/Descriptors$InStream : uk/shusek/krwa/wasi/Descriptors$DataReader, uk/shusek/krwa/wasi/Descriptors$Descriptor {
+	public fun <init> (Ljava/io/InputStream;)V
+	public fun <init> (Ljava/io/InputStream;Z)V
+	public synthetic fun <init> (Ljava/io/InputStream;ZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Lokio/Source;)V
+	public fun <init> (Lokio/Source;Z)V
+	public fun <init> (Lokio/Source;ZLkotlin/jvm/functions/Function0;)V
+	public synthetic fun <init> (Lokio/Source;ZLkotlin/jvm/functions/Function0;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun available ()I
+	public final fun isTty ()Z
+	public fun read ([B)I
+}
+
+public final class uk/shusek/krwa/wasi/Descriptors$OpenDirectory : uk/shusek/krwa/wasi/Descriptors$Descriptor, uk/shusek/krwa/wasi/Descriptors$Directory {
+	public fun <init> (Ljava/nio/file/Path;)V
+	public fun path ()Ljava/nio/file/Path;
+}
+
+public final class uk/shusek/krwa/wasi/Descriptors$OpenFile : java/io/Closeable, uk/shusek/krwa/wasi/Descriptors$DataReader, uk/shusek/krwa/wasi/Descriptors$DataWriter, uk/shusek/krwa/wasi/Descriptors$Descriptor {
+	public fun <init> (Ljava/nio/file/Path;Ljava/nio/channels/FileChannel;IJ)V
+	public final fun channel ()Ljava/nio/channels/FileChannel;
+	public fun close ()V
+	public final fun fdFlags ()I
+	public final fun path ()Ljava/nio/file/Path;
+	public fun read ([B)I
+	public final fun read ([BJ)I
+	public final fun rights ()J
+	public fun write ([B)I
+	public final fun write ([BJ)I
+}
+
+public final class uk/shusek/krwa/wasi/Descriptors$OutStream : uk/shusek/krwa/wasi/Descriptors$DataWriter, uk/shusek/krwa/wasi/Descriptors$Descriptor {
+	public fun <init> (Ljava/io/OutputStream;)V
+	public fun <init> (Ljava/io/OutputStream;Z)V
+	public synthetic fun <init> (Ljava/io/OutputStream;ZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Lokio/Sink;)V
+	public fun <init> (Lokio/Sink;Z)V
+	public synthetic fun <init> (Lokio/Sink;ZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun isTty ()Z
+	public fun write ([B)I
+}
+
+public final class uk/shusek/krwa/wasi/Descriptors$PreopenedDirectory : uk/shusek/krwa/wasi/Descriptors$Descriptor, uk/shusek/krwa/wasi/Descriptors$Directory {
+	public fun <init> ([BLjava/nio/file/Path;)V
+	public final fun name ()[B
+	public fun path ()Ljava/nio/file/Path;
+}
+
+public final class uk/shusek/krwa/wasi/Files {
+	public static final field Companion Luk/shusek/krwa/wasi/Files$Companion;
+	public static final fun copyDirectory (Ljava/nio/file/Path;Ljava/nio/file/Path;)V
+}
+
+public final class uk/shusek/krwa/wasi/Files$Companion {
+	public final fun copyDirectory (Ljava/nio/file/Path;Ljava/nio/file/Path;)V
+}
+
+public final class uk/shusek/krwa/wasi/IO {
+	public static final field Companion Luk/shusek/krwa/wasi/IO$Companion;
+	public static final fun nullInputStream ()Ljava/io/InputStream;
+	public static final fun nullOutputStream ()Ljava/io/OutputStream;
+	public static final fun nullSink ()Lkotlinx/io/RawSink;
+	public static final fun nullSource ()Lkotlinx/io/RawSource;
+}
+
+public final class uk/shusek/krwa/wasi/IO$Companion {
+	public final fun nullInputStream ()Ljava/io/InputStream;
+	public final fun nullOutputStream ()Ljava/io/OutputStream;
+	public final fun nullSink ()Lkotlinx/io/RawSink;
+	public final fun nullSource ()Lkotlinx/io/RawSource;
+}
+
+public final class uk/shusek/krwa/wasi/WasiClockId {
+	public static final field Companion Luk/shusek/krwa/wasi/WasiClockId$Companion;
+	public static final field MONOTONIC I
+	public static final field PROCESS_CPUTIME_ID I
+	public static final field REALTIME I
+	public static final field THREAD_CPUTIME_ID I
+}
+
+public final class uk/shusek/krwa/wasi/WasiClockId$Companion {
+}
+
+public final class uk/shusek/krwa/wasi/WasiDirectory {
+	public final fun getFileSystem ()Lokio/FileSystem;
+	public final fun getPath ()Lokio/Path;
+}
+
+public final class uk/shusek/krwa/wasi/WasiErrno : java/lang/Enum {
+	public static final field E2BIG Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field EACCES Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field EADDRINUSE Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field EADDRNOTAVAIL Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field EAFNOSUPPORT Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field EAGAIN Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field EALREADY Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field EBADF Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field EBADMSG Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field EBUSY Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field ECANCELED Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field ECHILD Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field ECONNABORTED Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field ECONNREFUSED Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field ECONNRESET Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field EDEADLK Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field EDESTADDRREQ Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field EDOM Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field EDQUOT Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field EEXIST Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field EFAULT Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field EFBIG Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field EHOSTUNREACH Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field EIDRM Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field EILSEQ Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field EINPROGRESS Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field EINTR Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field EINVAL Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field EIO Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field EISCONN Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field EISDIR Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field ELOOP Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field EMFILE Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field EMLINK Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field EMSGSIZE Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field EMULTIHOP Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field ENAMETOOLONG Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field ENETDOWN Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field ENETRESET Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field ENETUNREACH Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field ENFILE Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field ENOBUFS Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field ENODEV Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field ENOENT Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field ENOEXEC Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field ENOLCK Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field ENOLINK Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field ENOMEM Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field ENOMSG Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field ENOPROTOOPT Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field ENOSPC Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field ENOSYS Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field ENOTCAPABLE Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field ENOTCONN Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field ENOTDIR Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field ENOTEMPTY Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field ENOTRECOVERABLE Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field ENOTSOCK Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field ENOTSUP Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field ENOTTY Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field ENXIO Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field EOVERFLOW Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field EOWNERDEAD Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field EPERM Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field EPIPE Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field EPROTO Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field EPROTONOSUPPORT Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field EPROTOTYPE Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field ERANGE Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field EROFS Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field ESPIPE Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field ESRCH Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field ESTALE Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field ESUCCESS Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field ETIMEDOUT Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field ETXTBSY Luk/shusek/krwa/wasi/WasiErrno;
+	public static final field EXDEV Luk/shusek/krwa/wasi/WasiErrno;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public final fun value ()I
+	public static fun valueOf (Ljava/lang/String;)Luk/shusek/krwa/wasi/WasiErrno;
+	public static fun values ()[Luk/shusek/krwa/wasi/WasiErrno;
+}
+
+public final class uk/shusek/krwa/wasi/WasiEventType {
+	public static final field CLOCK B
+	public static final field Companion Luk/shusek/krwa/wasi/WasiEventType$Companion;
+	public static final field FD_READ B
+	public static final field FD_WRITE B
+}
+
+public final class uk/shusek/krwa/wasi/WasiEventType$Companion {
+}
+
+public final class uk/shusek/krwa/wasi/WasiExitException : uk/shusek/krwa/wasm/WasmEngineException {
+	public fun <init> (I)V
+	public final fun exitCode ()I
+}
+
+public final class uk/shusek/krwa/wasi/WasiFdFlags {
+	public static final field APPEND I
+	public static final field Companion Luk/shusek/krwa/wasi/WasiFdFlags$Companion;
+	public static final field DSYNC I
+	public static final field NONBLOCK I
+	public static final field RSYNC I
+	public static final field SYNC I
+}
+
+public final class uk/shusek/krwa/wasi/WasiFdFlags$Companion {
+}
+
+public final class uk/shusek/krwa/wasi/WasiFileType : java/lang/Enum {
+	public static final field BLOCK_DEVICE Luk/shusek/krwa/wasi/WasiFileType;
+	public static final field CHARACTER_DEVICE Luk/shusek/krwa/wasi/WasiFileType;
+	public static final field DIRECTORY Luk/shusek/krwa/wasi/WasiFileType;
+	public static final field REGULAR_FILE Luk/shusek/krwa/wasi/WasiFileType;
+	public static final field SOCKET_DGRAM Luk/shusek/krwa/wasi/WasiFileType;
+	public static final field SOCKET_STREAM Luk/shusek/krwa/wasi/WasiFileType;
+	public static final field SYMBOLIC_LINK Luk/shusek/krwa/wasi/WasiFileType;
+	public static final field UNKNOWN Luk/shusek/krwa/wasi/WasiFileType;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public final fun value ()I
+	public static fun valueOf (Ljava/lang/String;)Luk/shusek/krwa/wasi/WasiFileType;
+	public static fun values ()[Luk/shusek/krwa/wasi/WasiFileType;
+}
+
+public final class uk/shusek/krwa/wasi/WasiFstFlags {
+	public static final field ATIM I
+	public static final field ATIM_NOW I
+	public static final field Companion Luk/shusek/krwa/wasi/WasiFstFlags$Companion;
+	public static final field MTIM I
+	public static final field MTIM_NOW I
+}
+
+public final class uk/shusek/krwa/wasi/WasiFstFlags$Companion {
+}
+
+public final class uk/shusek/krwa/wasi/WasiLookupFlags {
+	public static final field Companion Luk/shusek/krwa/wasi/WasiLookupFlags$Companion;
+	public static final field SYMLINK_FOLLOW I
+}
+
+public final class uk/shusek/krwa/wasi/WasiLookupFlags$Companion {
+}
+
+public final class uk/shusek/krwa/wasi/WasiOpenFlags {
+	public static final field CREAT I
+	public static final field Companion Luk/shusek/krwa/wasi/WasiOpenFlags$Companion;
+	public static final field DIRECTORY I
+	public static final field EXCL I
+	public static final field TRUNC I
+}
+
+public final class uk/shusek/krwa/wasi/WasiOpenFlags$Companion {
+}
+
+public final class uk/shusek/krwa/wasi/WasiOptions {
+	public static final field Companion Luk/shusek/krwa/wasi/WasiOptions$Companion;
+	public final fun arguments ()Ljava/util/List;
+	public static final fun builder ()Luk/shusek/krwa/wasi/WasiOptions$Builder;
+	public final fun clock ()Lkotlin/time/Clock;
+	public final fun directories ()Ljava/util/Map;
+	public final fun environment ()Ljava/util/Map;
+	public final fun preopenedDirectories ()Ljava/util/Map;
+	public final fun random ()Lorg/kotlincrypto/random/CryptoRand;
+	public final fun stderr ()Ljava/io/OutputStream;
+	public final fun stderrIsTty ()Z
+	public final fun stderrSink ()Lkotlinx/io/RawSink;
+	public final fun stdin ()Ljava/io/InputStream;
+	public final fun stdinAvailable ()I
+	public final fun stdinIsTty ()Z
+	public final fun stdinSource ()Lkotlinx/io/RawSource;
+	public final fun stdout ()Ljava/io/OutputStream;
+	public final fun stdoutIsTty ()Z
+	public final fun stdoutSink ()Lkotlinx/io/RawSink;
+	public final fun throwOnExit0 ()Z
+}
+
+public final class uk/shusek/krwa/wasi/WasiOptions$Builder {
+	public fun <init> ()V
+	public final fun build ()Luk/shusek/krwa/wasi/WasiOptions;
+	public final fun inheritSystem ()Luk/shusek/krwa/wasi/WasiOptions$Builder;
+	public final fun withArguments (Ljava/util/List;)Luk/shusek/krwa/wasi/WasiOptions$Builder;
+	public final fun withClock (Lkotlin/time/Clock;)Luk/shusek/krwa/wasi/WasiOptions$Builder;
+	public final fun withDirectory (Ljava/lang/String;Ljava/nio/file/Path;)Luk/shusek/krwa/wasi/WasiOptions$Builder;
+	public final fun withDirectory (Ljava/lang/String;Lokio/Path;)Luk/shusek/krwa/wasi/WasiOptions$Builder;
+	public final fun withDirectory (Ljava/lang/String;Lokio/Path;Lokio/FileSystem;)Luk/shusek/krwa/wasi/WasiOptions$Builder;
+	public final fun withEnvironment (Ljava/lang/String;Ljava/lang/String;)Luk/shusek/krwa/wasi/WasiOptions$Builder;
+	public final fun withRandom (Ljava/util/Random;)Luk/shusek/krwa/wasi/WasiOptions$Builder;
+	public final fun withRandom (Lkotlin/random/Random;)Luk/shusek/krwa/wasi/WasiOptions$Builder;
+	public final fun withRandom (Lorg/kotlincrypto/random/CryptoRand;)Luk/shusek/krwa/wasi/WasiOptions$Builder;
+	public final fun withStderr (Ljava/io/OutputStream;)Luk/shusek/krwa/wasi/WasiOptions$Builder;
+	public final fun withStderr (Ljava/io/OutputStream;Z)Luk/shusek/krwa/wasi/WasiOptions$Builder;
+	public final fun withStderr (Lkotlinx/io/RawSink;)Luk/shusek/krwa/wasi/WasiOptions$Builder;
+	public final fun withStderr (Lkotlinx/io/RawSink;Z)Luk/shusek/krwa/wasi/WasiOptions$Builder;
+	public final fun withStdin (Ljava/io/InputStream;)Luk/shusek/krwa/wasi/WasiOptions$Builder;
+	public final fun withStdin (Ljava/io/InputStream;Z)Luk/shusek/krwa/wasi/WasiOptions$Builder;
+	public final fun withStdin (Lkotlinx/io/RawSource;)Luk/shusek/krwa/wasi/WasiOptions$Builder;
+	public final fun withStdin (Lkotlinx/io/RawSource;Z)Luk/shusek/krwa/wasi/WasiOptions$Builder;
+	public final fun withStdout (Ljava/io/OutputStream;)Luk/shusek/krwa/wasi/WasiOptions$Builder;
+	public final fun withStdout (Ljava/io/OutputStream;Z)Luk/shusek/krwa/wasi/WasiOptions$Builder;
+	public final fun withStdout (Lkotlinx/io/RawSink;)Luk/shusek/krwa/wasi/WasiOptions$Builder;
+	public final fun withStdout (Lkotlinx/io/RawSink;Z)Luk/shusek/krwa/wasi/WasiOptions$Builder;
+	public final fun withThrowOnExit0 (Z)Luk/shusek/krwa/wasi/WasiOptions$Builder;
+}
+
+public final class uk/shusek/krwa/wasi/WasiOptions$Companion {
+	public final fun builder ()Luk/shusek/krwa/wasi/WasiOptions$Builder;
+}
+
+public final class uk/shusek/krwa/wasi/WasiPreview1 : java/io/Closeable, uk/shusek/krwa/wasi/WasiPreview1Host {
+	public static final field Companion Luk/shusek/krwa/wasi/WasiPreview1$Companion;
+	public fun adapterCloseBadfd (I)I
+	public fun adapterOpenBadfd (I)I
+	public fun argsGet (Luk/shusek/krwa/runtime/Memory;II)I
+	public fun argsSizesGet (Luk/shusek/krwa/runtime/Memory;II)I
+	public static final fun builder ()Luk/shusek/krwa/wasi/WasiPreview1$Builder;
+	public fun clockResGet (Luk/shusek/krwa/runtime/Memory;II)I
+	public fun clockTimeGet (Luk/shusek/krwa/runtime/Memory;IJI)I
+	public fun close ()V
+	public fun environGet (Luk/shusek/krwa/runtime/Memory;II)I
+	public fun environSizesGet (Luk/shusek/krwa/runtime/Memory;II)I
+	public fun fdAdvise (IJJI)I
+	public fun fdAllocate (IJJ)I
+	public fun fdClose (I)I
+	public fun fdDatasync (I)I
+	public fun fdFdstatGet (Luk/shusek/krwa/runtime/Memory;II)I
+	public fun fdFdstatSetFlags (II)I
+	public fun fdFdstatSetRights (IJJ)I
+	public fun fdFilestatGet (Luk/shusek/krwa/runtime/Memory;II)I
+	public fun fdFilestatSetSize (IJ)I
+	public fun fdFilestatSetTimes (IJJI)I
+	public fun fdPread (Luk/shusek/krwa/runtime/Memory;IIIJI)I
+	public fun fdPrestatDirName (Luk/shusek/krwa/runtime/Memory;III)I
+	public fun fdPrestatGet (Luk/shusek/krwa/runtime/Memory;II)I
+	public fun fdPwrite (Luk/shusek/krwa/runtime/Memory;IIIJI)I
+	public fun fdRead (Luk/shusek/krwa/runtime/Memory;IIII)I
+	public fun fdReaddir (Luk/shusek/krwa/runtime/Memory;IIIJI)I
+	public fun fdRenumber (II)I
+	public fun fdSeek (Luk/shusek/krwa/runtime/Memory;IJII)I
+	public fun fdSync (I)I
+	public fun fdTell (Luk/shusek/krwa/runtime/Memory;II)I
+	public fun fdWrite (Luk/shusek/krwa/runtime/Memory;IIII)I
+	public fun pathCreateDirectory (ILjava/lang/String;)I
+	public fun pathFilestatGet (Luk/shusek/krwa/runtime/Memory;IILjava/lang/String;I)I
+	public fun pathFilestatSetTimes (IILjava/lang/String;JJI)I
+	public fun pathLink (IILjava/lang/String;ILjava/lang/String;)I
+	public fun pathOpen (Luk/shusek/krwa/runtime/Memory;IILjava/lang/String;IJJII)I
+	public fun pathReadlink (Luk/shusek/krwa/runtime/Memory;ILjava/lang/String;III)I
+	public fun pathRemoveDirectory (ILjava/lang/String;)I
+	public fun pathRename (ILjava/lang/String;ILjava/lang/String;)I
+	public fun pathSymlink (Ljava/lang/String;ILjava/lang/String;)I
+	public fun pathUnlinkFile (ILjava/lang/String;)I
+	public fun pollOneoff (Luk/shusek/krwa/runtime/Memory;IIII)I
+	public fun procExit (I)V
+	public fun procRaise (I)I
+	public fun randomGet (Luk/shusek/krwa/runtime/Memory;II)I
+	public fun schedYield ()I
+	public fun sockAccept (III)I
+	public fun sockRecv (IIIIII)I
+	public fun sockSend (IIIII)I
+	public fun sockShutdown (II)I
+	public final fun toHostFunctions ()[Luk/shusek/krwa/runtime/HostFunction;
+	public final fun toHostFunctions (Ljava/lang/String;)[Luk/shusek/krwa/runtime/HostFunction;
+}
+
+public final class uk/shusek/krwa/wasi/WasiPreview1$Builder {
+	public static final field Companion Luk/shusek/krwa/wasi/WasiPreview1$Builder$Companion;
+	public final fun build ()Luk/shusek/krwa/wasi/WasiPreview1;
+	public final fun withLogger (Luk/shusek/krwa/log/Logger;)Luk/shusek/krwa/wasi/WasiPreview1$Builder;
+	public final fun withOptions (Luk/shusek/krwa/wasi/WasiOptions;)Luk/shusek/krwa/wasi/WasiPreview1$Builder;
+}
+
+public final class uk/shusek/krwa/wasi/WasiPreview1$Builder$Companion {
+}
+
+public final class uk/shusek/krwa/wasi/WasiPreview1$Companion {
+	public final fun builder ()Luk/shusek/krwa/wasi/WasiPreview1$Builder;
+}
+
+public abstract interface class uk/shusek/krwa/wasi/WasiPreview1Host {
+	public abstract fun adapterCloseBadfd (I)I
+	public abstract fun adapterOpenBadfd (I)I
+	public abstract fun argsGet (Luk/shusek/krwa/runtime/Memory;II)I
+	public abstract fun argsSizesGet (Luk/shusek/krwa/runtime/Memory;II)I
+	public abstract fun clockResGet (Luk/shusek/krwa/runtime/Memory;II)I
+	public abstract fun clockTimeGet (Luk/shusek/krwa/runtime/Memory;IJI)I
+	public abstract fun environGet (Luk/shusek/krwa/runtime/Memory;II)I
+	public abstract fun environSizesGet (Luk/shusek/krwa/runtime/Memory;II)I
+	public abstract fun fdAdvise (IJJI)I
+	public abstract fun fdAllocate (IJJ)I
+	public abstract fun fdClose (I)I
+	public abstract fun fdDatasync (I)I
+	public abstract fun fdFdstatGet (Luk/shusek/krwa/runtime/Memory;II)I
+	public abstract fun fdFdstatSetFlags (II)I
+	public abstract fun fdFdstatSetRights (IJJ)I
+	public abstract fun fdFilestatGet (Luk/shusek/krwa/runtime/Memory;II)I
+	public abstract fun fdFilestatSetSize (IJ)I
+	public abstract fun fdFilestatSetTimes (IJJI)I
+	public abstract fun fdPread (Luk/shusek/krwa/runtime/Memory;IIIJI)I
+	public abstract fun fdPrestatDirName (Luk/shusek/krwa/runtime/Memory;III)I
+	public abstract fun fdPrestatGet (Luk/shusek/krwa/runtime/Memory;II)I
+	public abstract fun fdPwrite (Luk/shusek/krwa/runtime/Memory;IIIJI)I
+	public abstract fun fdRead (Luk/shusek/krwa/runtime/Memory;IIII)I
+	public abstract fun fdReaddir (Luk/shusek/krwa/runtime/Memory;IIIJI)I
+	public abstract fun fdRenumber (II)I
+	public abstract fun fdSeek (Luk/shusek/krwa/runtime/Memory;IJII)I
+	public abstract fun fdSync (I)I
+	public abstract fun fdTell (Luk/shusek/krwa/runtime/Memory;II)I
+	public abstract fun fdWrite (Luk/shusek/krwa/runtime/Memory;IIII)I
+	public abstract fun pathCreateDirectory (ILjava/lang/String;)I
+	public abstract fun pathFilestatGet (Luk/shusek/krwa/runtime/Memory;IILjava/lang/String;I)I
+	public abstract fun pathFilestatSetTimes (IILjava/lang/String;JJI)I
+	public abstract fun pathLink (IILjava/lang/String;ILjava/lang/String;)I
+	public abstract fun pathOpen (Luk/shusek/krwa/runtime/Memory;IILjava/lang/String;IJJII)I
+	public abstract fun pathReadlink (Luk/shusek/krwa/runtime/Memory;ILjava/lang/String;III)I
+	public abstract fun pathRemoveDirectory (ILjava/lang/String;)I
+	public abstract fun pathRename (ILjava/lang/String;ILjava/lang/String;)I
+	public abstract fun pathSymlink (Ljava/lang/String;ILjava/lang/String;)I
+	public abstract fun pathUnlinkFile (ILjava/lang/String;)I
+	public abstract fun pollOneoff (Luk/shusek/krwa/runtime/Memory;IIII)I
+	public abstract fun procExit (I)V
+	public abstract fun procRaise (I)I
+	public abstract fun randomGet (Luk/shusek/krwa/runtime/Memory;II)I
+	public abstract fun schedYield ()I
+	public abstract fun sockAccept (III)I
+	public abstract fun sockRecv (IIIIII)I
+	public abstract fun sockSend (IIIII)I
+	public abstract fun sockShutdown (II)I
+}
+
+public final class uk/shusek/krwa/wasi/WasiPreview1HostFunctions {
+	public static final field INSTANCE Luk/shusek/krwa/wasi/WasiPreview1HostFunctions;
+	public final fun toHostFunctions (Luk/shusek/krwa/wasi/WasiPreview1Host;)[Luk/shusek/krwa/runtime/HostFunction;
+	public final fun toHostFunctions (Luk/shusek/krwa/wasi/WasiPreview1Host;Ljava/lang/String;)[Luk/shusek/krwa/runtime/HostFunction;
+}
+
+public final class uk/shusek/krwa/wasi/WasiRights {
+	public static final field Companion Luk/shusek/krwa/wasi/WasiRights$Companion;
+	public static final field DIRECTORY_RIGHTS_BASE I
+	public static final field FD_ADVISE I
+	public static final field FD_ALLOCATE I
+	public static final field FD_DATASYNC I
+	public static final field FD_FDSTAT_SET_FLAGS I
+	public static final field FD_FILESTAT_GET I
+	public static final field FD_FILESTAT_SET_SIZE I
+	public static final field FD_FILESTAT_SET_TIMES I
+	public static final field FD_READ I
+	public static final field FD_READDIR I
+	public static final field FD_SEEK I
+	public static final field FD_SYNC I
+	public static final field FD_TELL I
+	public static final field FD_WRITE I
+	public static final field FILE_RIGHTS_BASE I
+	public static final field PATH_CREATE_DIRECTORY I
+	public static final field PATH_CREATE_FILE I
+	public static final field PATH_FILESTAT_GET I
+	public static final field PATH_FILESTAT_SET_SIZE I
+	public static final field PATH_FILESTAT_SET_TIMES I
+	public static final field PATH_LINK_SOURCE I
+	public static final field PATH_LINK_TARGET I
+	public static final field PATH_OPEN I
+	public static final field PATH_READLINK I
+	public static final field PATH_REMOVE_DIRECTORY I
+	public static final field PATH_RENAME_SOURCE I
+	public static final field PATH_RENAME_TARGET I
+	public static final field PATH_SYMLINK I
+	public static final field PATH_UNLINK_FILE I
+	public static final field POLL_FD_READWRITE I
+	public static final field SOCK_ACCEPT I
+	public static final field SOCK_SHUTDOWN I
+}
+
+public final class uk/shusek/krwa/wasi/WasiRights$Companion {
+}
+
+public final class uk/shusek/krwa/wasi/WasiSubClockFlags {
+	public static final field Companion Luk/shusek/krwa/wasi/WasiSubClockFlags$Companion;
+	public static final field SUBSCRIPTION_CLOCK_ABSTIME I
+}
+
+public final class uk/shusek/krwa/wasi/WasiSubClockFlags$Companion {
+}
+
+public final class uk/shusek/krwa/wasi/WasiWhence {
+	public static final field CUR I
+	public static final field Companion Luk/shusek/krwa/wasi/WasiWhence$Companion;
+	public static final field END I
+	public static final field SET I
+}
+
+public final class uk/shusek/krwa/wasi/WasiWhence$Companion {
+}
+

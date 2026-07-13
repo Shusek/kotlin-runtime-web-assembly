@@ -1,0 +1,1288 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, wasmJs]
+// Alias: ios => [iosArm64, iosSimulatorArm64]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <uk.shusek.krwa:component-model>
+open annotation class uk.shusek.krwa.component/ComponentModelJvmOverloads : kotlin/Annotation { // uk.shusek.krwa.component/ComponentModelJvmOverloads|null[1]
+    constructor <init>() // uk.shusek.krwa.component/ComponentModelJvmOverloads.<init>|<init>(){}[1]
+}
+
+open annotation class uk.shusek.krwa.component/ComponentModelJvmStatic : kotlin/Annotation { // uk.shusek.krwa.component/ComponentModelJvmStatic|null[1]
+    constructor <init>() // uk.shusek.krwa.component/ComponentModelJvmStatic.<init>|<init>(){}[1]
+}
+
+open annotation class uk.shusek.krwa.component/ComponentModelJvmSuppressWildcards : kotlin/Annotation { // uk.shusek.krwa.component/ComponentModelJvmSuppressWildcards|null[1]
+    constructor <init>() // uk.shusek.krwa.component/ComponentModelJvmSuppressWildcards.<init>|<init>(){}[1]
+}
+
+final enum class uk.shusek.krwa.component/WasiPreview : kotlin/Enum<uk.shusek.krwa.component/WasiPreview> { // uk.shusek.krwa.component/WasiPreview|null[0]
+    enum entry PREVIEW1 // uk.shusek.krwa.component/WasiPreview.PREVIEW1|null[0]
+    enum entry PREVIEW2 // uk.shusek.krwa.component/WasiPreview.PREVIEW2|null[0]
+    enum entry PREVIEW3 // uk.shusek.krwa.component/WasiPreview.PREVIEW3|null[0]
+
+    final val entries // uk.shusek.krwa.component/WasiPreview.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<uk.shusek.krwa.component/WasiPreview> // uk.shusek.krwa.component/WasiPreview.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun binaryKind(): uk.shusek.krwa.component/WasiPreview.BinaryKind // uk.shusek.krwa.component/WasiPreview.binaryKind|binaryKind(){}[0]
+    final fun isComponentModel(): kotlin/Boolean // uk.shusek.krwa.component/WasiPreview.isComponentModel|isComponentModel(){}[0]
+    final fun isReleaseCandidate(): kotlin/Boolean // uk.shusek.krwa.component/WasiPreview.isReleaseCandidate|isReleaseCandidate(){}[0]
+    final fun isStable(): kotlin/Boolean // uk.shusek.krwa.component/WasiPreview.isStable|isStable(){}[0]
+    final fun requireStable() // uk.shusek.krwa.component/WasiPreview.requireStable|requireStable(){}[0]
+    final fun stability(): uk.shusek.krwa.component/WasiPreview.Stability // uk.shusek.krwa.component/WasiPreview.stability|stability(){}[0]
+    final fun valueOf(kotlin/String): uk.shusek.krwa.component/WasiPreview // uk.shusek.krwa.component/WasiPreview.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<uk.shusek.krwa.component/WasiPreview> // uk.shusek.krwa.component/WasiPreview.values|values#static(){}[0]
+    final fun version(): kotlin/String // uk.shusek.krwa.component/WasiPreview.version|version(){}[0]
+
+    final enum class BinaryKind : kotlin/Enum<uk.shusek.krwa.component/WasiPreview.BinaryKind> { // uk.shusek.krwa.component/WasiPreview.BinaryKind|null[0]
+        enum entry COMPONENT // uk.shusek.krwa.component/WasiPreview.BinaryKind.COMPONENT|null[0]
+        enum entry CORE_MODULE // uk.shusek.krwa.component/WasiPreview.BinaryKind.CORE_MODULE|null[0]
+
+        final val entries // uk.shusek.krwa.component/WasiPreview.BinaryKind.entries|#static{}entries[0]
+            final fun <get-entries>(): kotlin.enums/EnumEntries<uk.shusek.krwa.component/WasiPreview.BinaryKind> // uk.shusek.krwa.component/WasiPreview.BinaryKind.entries.<get-entries>|<get-entries>#static(){}[0]
+
+        final fun valueOf(kotlin/String): uk.shusek.krwa.component/WasiPreview.BinaryKind // uk.shusek.krwa.component/WasiPreview.BinaryKind.valueOf|valueOf#static(kotlin.String){}[0]
+        final fun values(): kotlin/Array<uk.shusek.krwa.component/WasiPreview.BinaryKind> // uk.shusek.krwa.component/WasiPreview.BinaryKind.values|values#static(){}[0]
+    }
+
+    final enum class Stability : kotlin/Enum<uk.shusek.krwa.component/WasiPreview.Stability> { // uk.shusek.krwa.component/WasiPreview.Stability|null[0]
+        enum entry RELEASE_CANDIDATE // uk.shusek.krwa.component/WasiPreview.Stability.RELEASE_CANDIDATE|null[0]
+        enum entry STABLE // uk.shusek.krwa.component/WasiPreview.Stability.STABLE|null[0]
+
+        final val entries // uk.shusek.krwa.component/WasiPreview.Stability.entries|#static{}entries[0]
+            final fun <get-entries>(): kotlin.enums/EnumEntries<uk.shusek.krwa.component/WasiPreview.Stability> // uk.shusek.krwa.component/WasiPreview.Stability.entries.<get-entries>|<get-entries>#static(){}[0]
+
+        final fun valueOf(kotlin/String): uk.shusek.krwa.component/WasiPreview.Stability // uk.shusek.krwa.component/WasiPreview.Stability.valueOf|valueOf#static(kotlin.String){}[0]
+        final fun values(): kotlin/Array<uk.shusek.krwa.component/WasiPreview.Stability> // uk.shusek.krwa.component/WasiPreview.Stability.values|values#static(){}[0]
+    }
+}
+
+abstract fun interface uk.shusek.krwa.component/HostHandler { // uk.shusek.krwa.component/HostHandler|null[0]
+    abstract fun apply(kotlin.collections/List<kotlin/Any?>): kotlin/Any? // uk.shusek.krwa.component/HostHandler.apply|apply(kotlin.collections.List<kotlin.Any?>){}[0]
+}
+
+abstract fun interface uk.shusek.krwa.component/WasiHttpHandler { // uk.shusek.krwa.component/WasiHttpHandler|null[0]
+    abstract fun handle(uk.shusek.krwa.component/WasiPreview2.HttpRequestSnapshot): uk.shusek.krwa.component/WasiPreview2.HttpResponseSnapshot // uk.shusek.krwa.component/WasiHttpHandler.handle|handle(uk.shusek.krwa.component.WasiPreview2.HttpRequestSnapshot){}[0]
+}
+
+abstract interface <#A: out kotlin/Any?> uk.shusek.krwa.component/WitFuture { // uk.shusek.krwa.component/WitFuture|null[0]
+    abstract val handle // uk.shusek.krwa.component/WitFuture.handle|{}handle[0]
+        abstract fun <get-handle>(): kotlin/Long // uk.shusek.krwa.component/WitFuture.handle.<get-handle>|<get-handle>(){}[0]
+
+    open fun handle(): kotlin/Long // uk.shusek.krwa.component/WitFuture.handle|handle(){}[0]
+
+    final class <#A1: out kotlin/Any?> Handle : uk.shusek.krwa.component/WitFuture<#A1> { // uk.shusek.krwa.component/WitFuture.Handle|null[0]
+        constructor <init>(kotlin/Long) // uk.shusek.krwa.component/WitFuture.Handle.<init>|<init>(kotlin.Long){}[0]
+
+        final val handle // uk.shusek.krwa.component/WitFuture.Handle.handle|{}handle[0]
+            final fun <get-handle>(): kotlin/Long // uk.shusek.krwa.component/WitFuture.Handle.handle.<get-handle>|<get-handle>(){}[0]
+
+        final fun component1(): kotlin/Long // uk.shusek.krwa.component/WitFuture.Handle.component1|component1(){}[0]
+        final fun copy(kotlin/Long = ...): uk.shusek.krwa.component/WitFuture.Handle<#A1> // uk.shusek.krwa.component/WitFuture.Handle.copy|copy(kotlin.Long){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // uk.shusek.krwa.component/WitFuture.Handle.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // uk.shusek.krwa.component/WitFuture.Handle.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // uk.shusek.krwa.component/WitFuture.Handle.toString|toString(){}[0]
+    }
+
+    final object Companion { // uk.shusek.krwa.component/WitFuture.Companion|null[0]
+        final fun <#A2: kotlin/Any?> of(kotlin/Long): uk.shusek.krwa.component/WitFuture<#A2> // uk.shusek.krwa.component/WitFuture.Companion.of|of(kotlin.Long){0§<kotlin.Any?>}[0]
+    }
+}
+
+abstract interface <#A: out kotlin/Any?> uk.shusek.krwa.component/WitStream { // uk.shusek.krwa.component/WitStream|null[0]
+    abstract val handle // uk.shusek.krwa.component/WitStream.handle|{}handle[0]
+        abstract fun <get-handle>(): kotlin/Long // uk.shusek.krwa.component/WitStream.handle.<get-handle>|<get-handle>(){}[0]
+
+    open fun handle(): kotlin/Long // uk.shusek.krwa.component/WitStream.handle|handle(){}[0]
+
+    final class <#A1: out kotlin/Any?> Handle : uk.shusek.krwa.component/WitStream<#A1> { // uk.shusek.krwa.component/WitStream.Handle|null[0]
+        constructor <init>(kotlin/Long) // uk.shusek.krwa.component/WitStream.Handle.<init>|<init>(kotlin.Long){}[0]
+
+        final val handle // uk.shusek.krwa.component/WitStream.Handle.handle|{}handle[0]
+            final fun <get-handle>(): kotlin/Long // uk.shusek.krwa.component/WitStream.Handle.handle.<get-handle>|<get-handle>(){}[0]
+
+        final fun component1(): kotlin/Long // uk.shusek.krwa.component/WitStream.Handle.component1|component1(){}[0]
+        final fun copy(kotlin/Long = ...): uk.shusek.krwa.component/WitStream.Handle<#A1> // uk.shusek.krwa.component/WitStream.Handle.copy|copy(kotlin.Long){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // uk.shusek.krwa.component/WitStream.Handle.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // uk.shusek.krwa.component/WitStream.Handle.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // uk.shusek.krwa.component/WitStream.Handle.toString|toString(){}[0]
+    }
+
+    final object Companion { // uk.shusek.krwa.component/WitStream.Companion|null[0]
+        final fun <#A2: kotlin/Any?> of(kotlin/Long): uk.shusek.krwa.component/WitStream<#A2> // uk.shusek.krwa.component/WitStream.Companion.of|of(kotlin.Long){0§<kotlin.Any?>}[0]
+    }
+}
+
+abstract interface uk.shusek.krwa.component/CanonicalFutureIntrinsics { // uk.shusek.krwa.component/CanonicalFutureIntrinsics|null[0]
+    abstract fun futureCancelRead(kotlin/Long): kotlin/Long // uk.shusek.krwa.component/CanonicalFutureIntrinsics.futureCancelRead|futureCancelRead(kotlin.Long){}[0]
+    abstract fun futureCancelWrite(kotlin/Long): kotlin/Long // uk.shusek.krwa.component/CanonicalFutureIntrinsics.futureCancelWrite|futureCancelWrite(kotlin.Long){}[0]
+    abstract fun futureDropReadable(kotlin/Long) // uk.shusek.krwa.component/CanonicalFutureIntrinsics.futureDropReadable|futureDropReadable(kotlin.Long){}[0]
+    abstract fun futureDropWritable(kotlin/Long) // uk.shusek.krwa.component/CanonicalFutureIntrinsics.futureDropWritable|futureDropWritable(kotlin.Long){}[0]
+    abstract fun futureNew(): kotlin/Long // uk.shusek.krwa.component/CanonicalFutureIntrinsics.futureNew|futureNew(){}[0]
+    abstract fun futureRead(uk.shusek.krwa.runtime/Instance, kotlin/Long, kotlin/Int, uk.shusek.krwa.component/CanonicalAbi, uk.shusek.krwa.component/WitPackage.TypeRef): kotlin/Long // uk.shusek.krwa.component/CanonicalFutureIntrinsics.futureRead|futureRead(uk.shusek.krwa.runtime.Instance;kotlin.Long;kotlin.Int;uk.shusek.krwa.component.CanonicalAbi;uk.shusek.krwa.component.WitPackage.TypeRef){}[0]
+    abstract fun futureWrite(uk.shusek.krwa.runtime/Instance, kotlin/Long, kotlin/Int, uk.shusek.krwa.component/CanonicalAbi, uk.shusek.krwa.component/WitPackage.TypeRef): kotlin/Long // uk.shusek.krwa.component/CanonicalFutureIntrinsics.futureWrite|futureWrite(uk.shusek.krwa.runtime.Instance;kotlin.Long;kotlin.Int;uk.shusek.krwa.component.CanonicalAbi;uk.shusek.krwa.component.WitPackage.TypeRef){}[0]
+    open fun completedFutureHandle(kotlin/Any?): kotlin/Long // uk.shusek.krwa.component/CanonicalFutureIntrinsics.completedFutureHandle|completedFutureHandle(kotlin.Any?){}[0]
+}
+
+abstract interface uk.shusek.krwa.component/CanonicalStreamIntrinsics { // uk.shusek.krwa.component/CanonicalStreamIntrinsics|null[0]
+    abstract fun streamCancelRead(kotlin/Long): kotlin/Long // uk.shusek.krwa.component/CanonicalStreamIntrinsics.streamCancelRead|streamCancelRead(kotlin.Long){}[0]
+    abstract fun streamCancelWrite(kotlin/Long): kotlin/Long // uk.shusek.krwa.component/CanonicalStreamIntrinsics.streamCancelWrite|streamCancelWrite(kotlin.Long){}[0]
+    abstract fun streamDropReadable(kotlin/Long) // uk.shusek.krwa.component/CanonicalStreamIntrinsics.streamDropReadable|streamDropReadable(kotlin.Long){}[0]
+    abstract fun streamDropWritable(kotlin/Long) // uk.shusek.krwa.component/CanonicalStreamIntrinsics.streamDropWritable|streamDropWritable(kotlin.Long){}[0]
+    abstract fun streamNew(uk.shusek.krwa.component/WitPackage.TypeRef): kotlin/Long // uk.shusek.krwa.component/CanonicalStreamIntrinsics.streamNew|streamNew(uk.shusek.krwa.component.WitPackage.TypeRef){}[0]
+    abstract fun streamRead(uk.shusek.krwa.runtime/Instance, kotlin/Long, kotlin/Int, kotlin/Int, uk.shusek.krwa.component/CanonicalAbi, uk.shusek.krwa.component/WitPackage.TypeRef): kotlin/Long // uk.shusek.krwa.component/CanonicalStreamIntrinsics.streamRead|streamRead(uk.shusek.krwa.runtime.Instance;kotlin.Long;kotlin.Int;kotlin.Int;uk.shusek.krwa.component.CanonicalAbi;uk.shusek.krwa.component.WitPackage.TypeRef){}[0]
+    abstract fun streamWrite(uk.shusek.krwa.runtime/Instance, kotlin/Long, kotlin/Int, kotlin/Int, uk.shusek.krwa.component/CanonicalAbi, uk.shusek.krwa.component/WitPackage.TypeRef): kotlin/Long // uk.shusek.krwa.component/CanonicalStreamIntrinsics.streamWrite|streamWrite(uk.shusek.krwa.runtime.Instance;kotlin.Long;kotlin.Int;kotlin.Int;uk.shusek.krwa.component.CanonicalAbi;uk.shusek.krwa.component.WitPackage.TypeRef){}[0]
+}
+
+abstract interface uk.shusek.krwa.component/WasiComponentInvoker { // uk.shusek.krwa.component/WasiComponentInvoker|null[0]
+    abstract fun call(kotlin/String, kotlin/Array<out kotlin/Any?>...): kotlin/Any? // uk.shusek.krwa.component/WasiComponentInvoker.call|call(kotlin.String;kotlin.Array<out|kotlin.Any?>...){}[0]
+}
+
+abstract interface uk.shusek.krwa.component/WasiHostImportBuilder { // uk.shusek.krwa.component/WasiHostImportBuilder|null[0]
+    abstract fun withHostImport(kotlin/String, uk.shusek.krwa.component/HostHandler): uk.shusek.krwa.component/WasiHostImportBuilder // uk.shusek.krwa.component/WasiHostImportBuilder.withHostImport|withHostImport(kotlin.String;uk.shusek.krwa.component.HostHandler){}[0]
+    abstract fun withHostImport(kotlin/String?, kotlin/String?, uk.shusek.krwa.component/HostHandler): uk.shusek.krwa.component/WasiHostImportBuilder // uk.shusek.krwa.component/WasiHostImportBuilder.withHostImport|withHostImport(kotlin.String?;kotlin.String?;uk.shusek.krwa.component.HostHandler){}[0]
+    open fun withWasiPreview3CanonicalIntrinsics(uk.shusek.krwa.component/WasiPreview3CanonicalIntrinsics): uk.shusek.krwa.component/WasiHostImportBuilder // uk.shusek.krwa.component/WasiHostImportBuilder.withWasiPreview3CanonicalIntrinsics|withWasiPreview3CanonicalIntrinsics(uk.shusek.krwa.component.WasiPreview3CanonicalIntrinsics){}[0]
+}
+
+abstract interface uk.shusek.krwa.component/WasiHttpClient { // uk.shusek.krwa.component/WasiHttpClient|null[0]
+    abstract fun send(uk.shusek.krwa.component/WasiHttpRequest): uk.shusek.krwa.component/WasiHttpResponse // uk.shusek.krwa.component/WasiHttpClient.send|send(uk.shusek.krwa.component.WasiHttpRequest){}[0]
+    open suspend fun sendSuspending(uk.shusek.krwa.component/WasiHttpRequest): uk.shusek.krwa.component/WasiHttpResponse // uk.shusek.krwa.component/WasiHttpClient.sendSuspending|sendSuspending(uk.shusek.krwa.component.WasiHttpRequest){}[0]
+}
+
+abstract interface uk.shusek.krwa.component/WasiMemoryRawSource : kotlinx.io/RawSource { // uk.shusek.krwa.component/WasiMemoryRawSource|null[0]
+    abstract fun readAtMostToMemory(uk.shusek.krwa.component/WasiPreview3CanonicalContext, kotlin/Int, kotlin/Int): kotlin/Int // uk.shusek.krwa.component/WasiMemoryRawSource.readAtMostToMemory|readAtMostToMemory(uk.shusek.krwa.component.WasiPreview3CanonicalContext;kotlin.Int;kotlin.Int){}[0]
+}
+
+abstract interface uk.shusek.krwa.component/WasiPreview3CanonicalContext { // uk.shusek.krwa.component/WasiPreview3CanonicalContext|null[0]
+    abstract fun loadFutureValue(kotlin/Int, uk.shusek.krwa.component/WitPackage.TypeRef): kotlin/Any? // uk.shusek.krwa.component/WasiPreview3CanonicalContext.loadFutureValue|loadFutureValue(kotlin.Int;uk.shusek.krwa.component.WitPackage.TypeRef){}[0]
+    abstract fun loadListElements(kotlin/Int, kotlin/Int, uk.shusek.krwa.component/WitPackage.TypeRef): kotlin.collections/List<kotlin/Any?> // uk.shusek.krwa.component/WasiPreview3CanonicalContext.loadListElements|loadListElements(kotlin.Int;kotlin.Int;uk.shusek.krwa.component.WitPackage.TypeRef){}[0]
+    abstract fun readMemory(kotlin/Int, kotlin/Int): kotlin/ByteArray // uk.shusek.krwa.component/WasiPreview3CanonicalContext.readMemory|readMemory(kotlin.Int;kotlin.Int){}[0]
+    abstract fun storeFutureValue(kotlin/Int, uk.shusek.krwa.component/WitPackage.TypeRef, kotlin/Any?) // uk.shusek.krwa.component/WasiPreview3CanonicalContext.storeFutureValue|storeFutureValue(kotlin.Int;uk.shusek.krwa.component.WitPackage.TypeRef;kotlin.Any?){}[0]
+    abstract fun storeListElements(kotlin/Int, uk.shusek.krwa.component/WitPackage.TypeRef, kotlin.collections/List<kotlin/Any?>) // uk.shusek.krwa.component/WasiPreview3CanonicalContext.storeListElements|storeListElements(kotlin.Int;uk.shusek.krwa.component.WitPackage.TypeRef;kotlin.collections.List<kotlin.Any?>){}[0]
+    abstract fun writeMemory(kotlin/Int, kotlin/ByteArray) // uk.shusek.krwa.component/WasiPreview3CanonicalContext.writeMemory|writeMemory(kotlin.Int;kotlin.ByteArray){}[0]
+    open fun readMemory(kotlin/Int, kotlin/ByteArray, kotlin/Int, kotlin/Int) // uk.shusek.krwa.component/WasiPreview3CanonicalContext.readMemory|readMemory(kotlin.Int;kotlin.ByteArray;kotlin.Int;kotlin.Int){}[0]
+    open fun writeMemory(kotlin/Int, kotlin/ByteArray, kotlin/Int, kotlin/Int) // uk.shusek.krwa.component/WasiPreview3CanonicalContext.writeMemory|writeMemory(kotlin.Int;kotlin.ByteArray;kotlin.Int;kotlin.Int){}[0]
+}
+
+abstract interface uk.shusek.krwa.component/WasiPreview3CanonicalIntrinsics { // uk.shusek.krwa.component/WasiPreview3CanonicalIntrinsics|null[0]
+    abstract fun futureCancelRead(kotlin/Long): kotlin/Long // uk.shusek.krwa.component/WasiPreview3CanonicalIntrinsics.futureCancelRead|futureCancelRead(kotlin.Long){}[0]
+    abstract fun futureCancelWrite(kotlin/Long): kotlin/Long // uk.shusek.krwa.component/WasiPreview3CanonicalIntrinsics.futureCancelWrite|futureCancelWrite(kotlin.Long){}[0]
+    abstract fun futureDropReadable(kotlin/Long) // uk.shusek.krwa.component/WasiPreview3CanonicalIntrinsics.futureDropReadable|futureDropReadable(kotlin.Long){}[0]
+    abstract fun futureDropWritable(kotlin/Long) // uk.shusek.krwa.component/WasiPreview3CanonicalIntrinsics.futureDropWritable|futureDropWritable(kotlin.Long){}[0]
+    abstract fun futureNew(): kotlin/Long // uk.shusek.krwa.component/WasiPreview3CanonicalIntrinsics.futureNew|futureNew(){}[0]
+    abstract fun futureRead(uk.shusek.krwa.component/WasiPreview3CanonicalContext, kotlin/Long, kotlin/Int, uk.shusek.krwa.component/WitPackage.TypeRef): kotlin/Long // uk.shusek.krwa.component/WasiPreview3CanonicalIntrinsics.futureRead|futureRead(uk.shusek.krwa.component.WasiPreview3CanonicalContext;kotlin.Long;kotlin.Int;uk.shusek.krwa.component.WitPackage.TypeRef){}[0]
+    abstract fun futureWrite(uk.shusek.krwa.component/WasiPreview3CanonicalContext, kotlin/Long, kotlin/Int, uk.shusek.krwa.component/WitPackage.TypeRef): kotlin/Long // uk.shusek.krwa.component/WasiPreview3CanonicalIntrinsics.futureWrite|futureWrite(uk.shusek.krwa.component.WasiPreview3CanonicalContext;kotlin.Long;kotlin.Int;uk.shusek.krwa.component.WitPackage.TypeRef){}[0]
+    abstract fun streamCancelRead(kotlin/Long): kotlin/Long // uk.shusek.krwa.component/WasiPreview3CanonicalIntrinsics.streamCancelRead|streamCancelRead(kotlin.Long){}[0]
+    abstract fun streamCancelWrite(kotlin/Long): kotlin/Long // uk.shusek.krwa.component/WasiPreview3CanonicalIntrinsics.streamCancelWrite|streamCancelWrite(kotlin.Long){}[0]
+    abstract fun streamDropReadable(kotlin/Long) // uk.shusek.krwa.component/WasiPreview3CanonicalIntrinsics.streamDropReadable|streamDropReadable(kotlin.Long){}[0]
+    abstract fun streamDropWritable(kotlin/Long) // uk.shusek.krwa.component/WasiPreview3CanonicalIntrinsics.streamDropWritable|streamDropWritable(kotlin.Long){}[0]
+    abstract fun streamNew(uk.shusek.krwa.component/WitPackage.TypeRef): kotlin/Long // uk.shusek.krwa.component/WasiPreview3CanonicalIntrinsics.streamNew|streamNew(uk.shusek.krwa.component.WitPackage.TypeRef){}[0]
+    abstract fun streamRead(uk.shusek.krwa.component/WasiPreview3CanonicalContext, kotlin/Long, kotlin/Int, kotlin/Int, uk.shusek.krwa.component/WitPackage.TypeRef): kotlin/Long // uk.shusek.krwa.component/WasiPreview3CanonicalIntrinsics.streamRead|streamRead(uk.shusek.krwa.component.WasiPreview3CanonicalContext;kotlin.Long;kotlin.Int;kotlin.Int;uk.shusek.krwa.component.WitPackage.TypeRef){}[0]
+    abstract fun streamWrite(uk.shusek.krwa.component/WasiPreview3CanonicalContext, kotlin/Long, kotlin/Int, kotlin/Int, uk.shusek.krwa.component/WitPackage.TypeRef): kotlin/Long // uk.shusek.krwa.component/WasiPreview3CanonicalIntrinsics.streamWrite|streamWrite(uk.shusek.krwa.component.WasiPreview3CanonicalContext;kotlin.Long;kotlin.Int;kotlin.Int;uk.shusek.krwa.component.WitPackage.TypeRef){}[0]
+    open fun completedFutureHandle(kotlin/Any?): kotlin/Long // uk.shusek.krwa.component/WasiPreview3CanonicalIntrinsics.completedFutureHandle|completedFutureHandle(kotlin.Any?){}[0]
+    open suspend fun awaitFutureValue(kotlin/Long): kotlin/Any? // uk.shusek.krwa.component/WasiPreview3CanonicalIntrinsics.awaitFutureValue|awaitFutureValue(kotlin.Long){}[0]
+    open suspend fun awaitStreamReadable(kotlin/Long) // uk.shusek.krwa.component/WasiPreview3CanonicalIntrinsics.awaitStreamReadable|awaitStreamReadable(kotlin.Long){}[0]
+    open suspend fun awaitStreamWritable(kotlin/Long) // uk.shusek.krwa.component/WasiPreview3CanonicalIntrinsics.awaitStreamWritable|awaitStreamWritable(kotlin.Long){}[0]
+}
+
+abstract interface uk.shusek.krwa.component/WasiSuspendingHttpClient : uk.shusek.krwa.component/WasiHttpClient { // uk.shusek.krwa.component/WasiSuspendingHttpClient|null[0]
+    abstract suspend fun sendSuspending(uk.shusek.krwa.component/WasiHttpRequest): uk.shusek.krwa.component/WasiHttpResponse // uk.shusek.krwa.component/WasiSuspendingHttpClient.sendSuspending|sendSuspending(uk.shusek.krwa.component.WasiHttpRequest){}[0]
+}
+
+sealed interface <#A: out kotlin/Any?, #B: out kotlin/Any?> uk.shusek.krwa.component/WitResult { // uk.shusek.krwa.component/WitResult|null[0]
+    final class <#A1: out kotlin/Any?, #B1: out kotlin/Any?> Err : uk.shusek.krwa.component/WitResult<#A1, #B1> { // uk.shusek.krwa.component/WitResult.Err|null[0]
+        constructor <init>(#B1) // uk.shusek.krwa.component/WitResult.Err.<init>|<init>(1:1){}[0]
+
+        final val value // uk.shusek.krwa.component/WitResult.Err.value|{}value[0]
+            final fun <get-value>(): #B1 // uk.shusek.krwa.component/WitResult.Err.value.<get-value>|<get-value>(){}[0]
+
+        final fun component1(): #B1 // uk.shusek.krwa.component/WitResult.Err.component1|component1(){}[0]
+        final fun copy(#B1 = ...): uk.shusek.krwa.component/WitResult.Err<#A1, #B1> // uk.shusek.krwa.component/WitResult.Err.copy|copy(1:1){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // uk.shusek.krwa.component/WitResult.Err.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // uk.shusek.krwa.component/WitResult.Err.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // uk.shusek.krwa.component/WitResult.Err.toString|toString(){}[0]
+        final fun value(): #B1 // uk.shusek.krwa.component/WitResult.Err.value|value(){}[0]
+    }
+
+    final class <#A1: out kotlin/Any?, #B1: out kotlin/Any?> Ok : uk.shusek.krwa.component/WitResult<#A1, #B1> { // uk.shusek.krwa.component/WitResult.Ok|null[0]
+        constructor <init>(#A1) // uk.shusek.krwa.component/WitResult.Ok.<init>|<init>(1:0){}[0]
+
+        final val value // uk.shusek.krwa.component/WitResult.Ok.value|{}value[0]
+            final fun <get-value>(): #A1 // uk.shusek.krwa.component/WitResult.Ok.value.<get-value>|<get-value>(){}[0]
+
+        final fun component1(): #A1 // uk.shusek.krwa.component/WitResult.Ok.component1|component1(){}[0]
+        final fun copy(#A1 = ...): uk.shusek.krwa.component/WitResult.Ok<#A1, #B1> // uk.shusek.krwa.component/WitResult.Ok.copy|copy(1:0){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // uk.shusek.krwa.component/WitResult.Ok.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // uk.shusek.krwa.component/WitResult.Ok.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // uk.shusek.krwa.component/WitResult.Ok.toString|toString(){}[0]
+        final fun value(): #A1 // uk.shusek.krwa.component/WitResult.Ok.value|value(){}[0]
+    }
+
+    final object Companion { // uk.shusek.krwa.component/WitResult.Companion|null[0]
+        final fun <#A2: kotlin/Any?> err(#A2): uk.shusek.krwa.component/WitResult.Err<kotlin/Nothing, #A2> // uk.shusek.krwa.component/WitResult.Companion.err|err(0:0){0§<kotlin.Any?>}[0]
+        final fun <#A2: kotlin/Any?> ok(#A2): uk.shusek.krwa.component/WitResult.Ok<#A2, kotlin/Nothing> // uk.shusek.krwa.component/WitResult.Companion.ok|ok(0:0){0§<kotlin.Any?>}[0]
+    }
+}
+
+final class <#A: kotlin/Any> uk.shusek.krwa.component/ComponentModelJvmClass { // uk.shusek.krwa.component/ComponentModelJvmClass|null[0]
+    constructor <init>() // uk.shusek.krwa.component/ComponentModelJvmClass.<init>|<init>(){}[0]
+}
+
+final class <#A: kotlin/Any?> uk.shusek.krwa.component/WitResourceTable { // uk.shusek.krwa.component/WitResourceTable|null[0]
+    constructor <init>() // uk.shusek.krwa.component/WitResourceTable.<init>|<init>(){}[0]
+
+    final fun clear() // uk.shusek.krwa.component/WitResourceTable.clear|clear(){}[0]
+    final fun contains(kotlin/Long): kotlin/Boolean // uk.shusek.krwa.component/WitResourceTable.contains|contains(kotlin.Long){}[0]
+    final fun contains(uk.shusek.krwa.component/WitResource<*>): kotlin/Boolean // uk.shusek.krwa.component/WitResourceTable.contains|contains(uk.shusek.krwa.component.WitResource<*>){}[0]
+    final fun get(kotlin/Long): #A // uk.shusek.krwa.component/WitResourceTable.get|get(kotlin.Long){}[0]
+    final fun get(uk.shusek.krwa.component/WitResource<*>): #A // uk.shusek.krwa.component/WitResourceTable.get|get(uk.shusek.krwa.component.WitResource<*>){}[0]
+    final fun insert(#A): uk.shusek.krwa.component/WitResource<#A> // uk.shusek.krwa.component/WitResourceTable.insert|insert(1:0){}[0]
+    final fun insertResource(#A): uk.shusek.krwa.component/WitResource<kotlin/Nothing> // uk.shusek.krwa.component/WitResourceTable.insertResource|insertResource(1:0){}[0]
+    final fun remove(kotlin/Long): #A // uk.shusek.krwa.component/WitResourceTable.remove|remove(kotlin.Long){}[0]
+    final fun remove(uk.shusek.krwa.component/WitResource<*>): #A // uk.shusek.krwa.component/WitResourceTable.remove|remove(uk.shusek.krwa.component.WitResource<*>){}[0]
+    final fun size(): kotlin/Int // uk.shusek.krwa.component/WitResourceTable.size|size(){}[0]
+    final fun snapshot(): kotlin.collections/List<#A> // uk.shusek.krwa.component/WitResourceTable.snapshot|snapshot(){}[0]
+}
+
+final class <#A: out kotlin/Any?, #B: out kotlin/Any?, #C: out kotlin/Any?, #D: out kotlin/Any?, #E: out kotlin/Any?, #F: out kotlin/Any?, #G: out kotlin/Any?, #H: out kotlin/Any?> uk.shusek.krwa.component/WitTuple8 { // uk.shusek.krwa.component/WitTuple8|null[0]
+    constructor <init>(#A, #B, #C, #D, #E, #F, #G, #H) // uk.shusek.krwa.component/WitTuple8.<init>|<init>(1:0;1:1;1:2;1:3;1:4;1:5;1:6;1:7){}[0]
+
+    final val eighth // uk.shusek.krwa.component/WitTuple8.eighth|{}eighth[0]
+        final fun <get-eighth>(): #H // uk.shusek.krwa.component/WitTuple8.eighth.<get-eighth>|<get-eighth>(){}[0]
+    final val fifth // uk.shusek.krwa.component/WitTuple8.fifth|{}fifth[0]
+        final fun <get-fifth>(): #E // uk.shusek.krwa.component/WitTuple8.fifth.<get-fifth>|<get-fifth>(){}[0]
+    final val first // uk.shusek.krwa.component/WitTuple8.first|{}first[0]
+        final fun <get-first>(): #A // uk.shusek.krwa.component/WitTuple8.first.<get-first>|<get-first>(){}[0]
+    final val fourth // uk.shusek.krwa.component/WitTuple8.fourth|{}fourth[0]
+        final fun <get-fourth>(): #D // uk.shusek.krwa.component/WitTuple8.fourth.<get-fourth>|<get-fourth>(){}[0]
+    final val second // uk.shusek.krwa.component/WitTuple8.second|{}second[0]
+        final fun <get-second>(): #B // uk.shusek.krwa.component/WitTuple8.second.<get-second>|<get-second>(){}[0]
+    final val seventh // uk.shusek.krwa.component/WitTuple8.seventh|{}seventh[0]
+        final fun <get-seventh>(): #G // uk.shusek.krwa.component/WitTuple8.seventh.<get-seventh>|<get-seventh>(){}[0]
+    final val sixth // uk.shusek.krwa.component/WitTuple8.sixth|{}sixth[0]
+        final fun <get-sixth>(): #F // uk.shusek.krwa.component/WitTuple8.sixth.<get-sixth>|<get-sixth>(){}[0]
+    final val third // uk.shusek.krwa.component/WitTuple8.third|{}third[0]
+        final fun <get-third>(): #C // uk.shusek.krwa.component/WitTuple8.third.<get-third>|<get-third>(){}[0]
+
+    final fun component1(): #A // uk.shusek.krwa.component/WitTuple8.component1|component1(){}[0]
+    final fun component2(): #B // uk.shusek.krwa.component/WitTuple8.component2|component2(){}[0]
+    final fun component3(): #C // uk.shusek.krwa.component/WitTuple8.component3|component3(){}[0]
+    final fun component4(): #D // uk.shusek.krwa.component/WitTuple8.component4|component4(){}[0]
+    final fun component5(): #E // uk.shusek.krwa.component/WitTuple8.component5|component5(){}[0]
+    final fun component6(): #F // uk.shusek.krwa.component/WitTuple8.component6|component6(){}[0]
+    final fun component7(): #G // uk.shusek.krwa.component/WitTuple8.component7|component7(){}[0]
+    final fun component8(): #H // uk.shusek.krwa.component/WitTuple8.component8|component8(){}[0]
+    final fun copy(#A = ..., #B = ..., #C = ..., #D = ..., #E = ..., #F = ..., #G = ..., #H = ...): uk.shusek.krwa.component/WitTuple8<#A, #B, #C, #D, #E, #F, #G, #H> // uk.shusek.krwa.component/WitTuple8.copy|copy(1:0;1:1;1:2;1:3;1:4;1:5;1:6;1:7){}[0]
+    final fun eighth(): #H // uk.shusek.krwa.component/WitTuple8.eighth|eighth(){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // uk.shusek.krwa.component/WitTuple8.equals|equals(kotlin.Any?){}[0]
+    final fun fifth(): #E // uk.shusek.krwa.component/WitTuple8.fifth|fifth(){}[0]
+    final fun first(): #A // uk.shusek.krwa.component/WitTuple8.first|first(){}[0]
+    final fun fourth(): #D // uk.shusek.krwa.component/WitTuple8.fourth|fourth(){}[0]
+    final fun hashCode(): kotlin/Int // uk.shusek.krwa.component/WitTuple8.hashCode|hashCode(){}[0]
+    final fun second(): #B // uk.shusek.krwa.component/WitTuple8.second|second(){}[0]
+    final fun seventh(): #G // uk.shusek.krwa.component/WitTuple8.seventh|seventh(){}[0]
+    final fun sixth(): #F // uk.shusek.krwa.component/WitTuple8.sixth|sixth(){}[0]
+    final fun third(): #C // uk.shusek.krwa.component/WitTuple8.third|third(){}[0]
+    final fun toString(): kotlin/String // uk.shusek.krwa.component/WitTuple8.toString|toString(){}[0]
+}
+
+final class <#A: out kotlin/Any?, #B: out kotlin/Any?, #C: out kotlin/Any?, #D: out kotlin/Any?, #E: out kotlin/Any?, #F: out kotlin/Any?, #G: out kotlin/Any?> uk.shusek.krwa.component/WitTuple7 { // uk.shusek.krwa.component/WitTuple7|null[0]
+    constructor <init>(#A, #B, #C, #D, #E, #F, #G) // uk.shusek.krwa.component/WitTuple7.<init>|<init>(1:0;1:1;1:2;1:3;1:4;1:5;1:6){}[0]
+
+    final val fifth // uk.shusek.krwa.component/WitTuple7.fifth|{}fifth[0]
+        final fun <get-fifth>(): #E // uk.shusek.krwa.component/WitTuple7.fifth.<get-fifth>|<get-fifth>(){}[0]
+    final val first // uk.shusek.krwa.component/WitTuple7.first|{}first[0]
+        final fun <get-first>(): #A // uk.shusek.krwa.component/WitTuple7.first.<get-first>|<get-first>(){}[0]
+    final val fourth // uk.shusek.krwa.component/WitTuple7.fourth|{}fourth[0]
+        final fun <get-fourth>(): #D // uk.shusek.krwa.component/WitTuple7.fourth.<get-fourth>|<get-fourth>(){}[0]
+    final val second // uk.shusek.krwa.component/WitTuple7.second|{}second[0]
+        final fun <get-second>(): #B // uk.shusek.krwa.component/WitTuple7.second.<get-second>|<get-second>(){}[0]
+    final val seventh // uk.shusek.krwa.component/WitTuple7.seventh|{}seventh[0]
+        final fun <get-seventh>(): #G // uk.shusek.krwa.component/WitTuple7.seventh.<get-seventh>|<get-seventh>(){}[0]
+    final val sixth // uk.shusek.krwa.component/WitTuple7.sixth|{}sixth[0]
+        final fun <get-sixth>(): #F // uk.shusek.krwa.component/WitTuple7.sixth.<get-sixth>|<get-sixth>(){}[0]
+    final val third // uk.shusek.krwa.component/WitTuple7.third|{}third[0]
+        final fun <get-third>(): #C // uk.shusek.krwa.component/WitTuple7.third.<get-third>|<get-third>(){}[0]
+
+    final fun component1(): #A // uk.shusek.krwa.component/WitTuple7.component1|component1(){}[0]
+    final fun component2(): #B // uk.shusek.krwa.component/WitTuple7.component2|component2(){}[0]
+    final fun component3(): #C // uk.shusek.krwa.component/WitTuple7.component3|component3(){}[0]
+    final fun component4(): #D // uk.shusek.krwa.component/WitTuple7.component4|component4(){}[0]
+    final fun component5(): #E // uk.shusek.krwa.component/WitTuple7.component5|component5(){}[0]
+    final fun component6(): #F // uk.shusek.krwa.component/WitTuple7.component6|component6(){}[0]
+    final fun component7(): #G // uk.shusek.krwa.component/WitTuple7.component7|component7(){}[0]
+    final fun copy(#A = ..., #B = ..., #C = ..., #D = ..., #E = ..., #F = ..., #G = ...): uk.shusek.krwa.component/WitTuple7<#A, #B, #C, #D, #E, #F, #G> // uk.shusek.krwa.component/WitTuple7.copy|copy(1:0;1:1;1:2;1:3;1:4;1:5;1:6){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // uk.shusek.krwa.component/WitTuple7.equals|equals(kotlin.Any?){}[0]
+    final fun fifth(): #E // uk.shusek.krwa.component/WitTuple7.fifth|fifth(){}[0]
+    final fun first(): #A // uk.shusek.krwa.component/WitTuple7.first|first(){}[0]
+    final fun fourth(): #D // uk.shusek.krwa.component/WitTuple7.fourth|fourth(){}[0]
+    final fun hashCode(): kotlin/Int // uk.shusek.krwa.component/WitTuple7.hashCode|hashCode(){}[0]
+    final fun second(): #B // uk.shusek.krwa.component/WitTuple7.second|second(){}[0]
+    final fun seventh(): #G // uk.shusek.krwa.component/WitTuple7.seventh|seventh(){}[0]
+    final fun sixth(): #F // uk.shusek.krwa.component/WitTuple7.sixth|sixth(){}[0]
+    final fun third(): #C // uk.shusek.krwa.component/WitTuple7.third|third(){}[0]
+    final fun toString(): kotlin/String // uk.shusek.krwa.component/WitTuple7.toString|toString(){}[0]
+}
+
+final class <#A: out kotlin/Any?, #B: out kotlin/Any?, #C: out kotlin/Any?, #D: out kotlin/Any?, #E: out kotlin/Any?, #F: out kotlin/Any?> uk.shusek.krwa.component/WitTuple6 { // uk.shusek.krwa.component/WitTuple6|null[0]
+    constructor <init>(#A, #B, #C, #D, #E, #F) // uk.shusek.krwa.component/WitTuple6.<init>|<init>(1:0;1:1;1:2;1:3;1:4;1:5){}[0]
+
+    final val fifth // uk.shusek.krwa.component/WitTuple6.fifth|{}fifth[0]
+        final fun <get-fifth>(): #E // uk.shusek.krwa.component/WitTuple6.fifth.<get-fifth>|<get-fifth>(){}[0]
+    final val first // uk.shusek.krwa.component/WitTuple6.first|{}first[0]
+        final fun <get-first>(): #A // uk.shusek.krwa.component/WitTuple6.first.<get-first>|<get-first>(){}[0]
+    final val fourth // uk.shusek.krwa.component/WitTuple6.fourth|{}fourth[0]
+        final fun <get-fourth>(): #D // uk.shusek.krwa.component/WitTuple6.fourth.<get-fourth>|<get-fourth>(){}[0]
+    final val second // uk.shusek.krwa.component/WitTuple6.second|{}second[0]
+        final fun <get-second>(): #B // uk.shusek.krwa.component/WitTuple6.second.<get-second>|<get-second>(){}[0]
+    final val sixth // uk.shusek.krwa.component/WitTuple6.sixth|{}sixth[0]
+        final fun <get-sixth>(): #F // uk.shusek.krwa.component/WitTuple6.sixth.<get-sixth>|<get-sixth>(){}[0]
+    final val third // uk.shusek.krwa.component/WitTuple6.third|{}third[0]
+        final fun <get-third>(): #C // uk.shusek.krwa.component/WitTuple6.third.<get-third>|<get-third>(){}[0]
+
+    final fun component1(): #A // uk.shusek.krwa.component/WitTuple6.component1|component1(){}[0]
+    final fun component2(): #B // uk.shusek.krwa.component/WitTuple6.component2|component2(){}[0]
+    final fun component3(): #C // uk.shusek.krwa.component/WitTuple6.component3|component3(){}[0]
+    final fun component4(): #D // uk.shusek.krwa.component/WitTuple6.component4|component4(){}[0]
+    final fun component5(): #E // uk.shusek.krwa.component/WitTuple6.component5|component5(){}[0]
+    final fun component6(): #F // uk.shusek.krwa.component/WitTuple6.component6|component6(){}[0]
+    final fun copy(#A = ..., #B = ..., #C = ..., #D = ..., #E = ..., #F = ...): uk.shusek.krwa.component/WitTuple6<#A, #B, #C, #D, #E, #F> // uk.shusek.krwa.component/WitTuple6.copy|copy(1:0;1:1;1:2;1:3;1:4;1:5){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // uk.shusek.krwa.component/WitTuple6.equals|equals(kotlin.Any?){}[0]
+    final fun fifth(): #E // uk.shusek.krwa.component/WitTuple6.fifth|fifth(){}[0]
+    final fun first(): #A // uk.shusek.krwa.component/WitTuple6.first|first(){}[0]
+    final fun fourth(): #D // uk.shusek.krwa.component/WitTuple6.fourth|fourth(){}[0]
+    final fun hashCode(): kotlin/Int // uk.shusek.krwa.component/WitTuple6.hashCode|hashCode(){}[0]
+    final fun second(): #B // uk.shusek.krwa.component/WitTuple6.second|second(){}[0]
+    final fun sixth(): #F // uk.shusek.krwa.component/WitTuple6.sixth|sixth(){}[0]
+    final fun third(): #C // uk.shusek.krwa.component/WitTuple6.third|third(){}[0]
+    final fun toString(): kotlin/String // uk.shusek.krwa.component/WitTuple6.toString|toString(){}[0]
+}
+
+final class <#A: out kotlin/Any?, #B: out kotlin/Any?, #C: out kotlin/Any?, #D: out kotlin/Any?, #E: out kotlin/Any?> uk.shusek.krwa.component/WitTuple5 { // uk.shusek.krwa.component/WitTuple5|null[0]
+    constructor <init>(#A, #B, #C, #D, #E) // uk.shusek.krwa.component/WitTuple5.<init>|<init>(1:0;1:1;1:2;1:3;1:4){}[0]
+
+    final val fifth // uk.shusek.krwa.component/WitTuple5.fifth|{}fifth[0]
+        final fun <get-fifth>(): #E // uk.shusek.krwa.component/WitTuple5.fifth.<get-fifth>|<get-fifth>(){}[0]
+    final val first // uk.shusek.krwa.component/WitTuple5.first|{}first[0]
+        final fun <get-first>(): #A // uk.shusek.krwa.component/WitTuple5.first.<get-first>|<get-first>(){}[0]
+    final val fourth // uk.shusek.krwa.component/WitTuple5.fourth|{}fourth[0]
+        final fun <get-fourth>(): #D // uk.shusek.krwa.component/WitTuple5.fourth.<get-fourth>|<get-fourth>(){}[0]
+    final val second // uk.shusek.krwa.component/WitTuple5.second|{}second[0]
+        final fun <get-second>(): #B // uk.shusek.krwa.component/WitTuple5.second.<get-second>|<get-second>(){}[0]
+    final val third // uk.shusek.krwa.component/WitTuple5.third|{}third[0]
+        final fun <get-third>(): #C // uk.shusek.krwa.component/WitTuple5.third.<get-third>|<get-third>(){}[0]
+
+    final fun component1(): #A // uk.shusek.krwa.component/WitTuple5.component1|component1(){}[0]
+    final fun component2(): #B // uk.shusek.krwa.component/WitTuple5.component2|component2(){}[0]
+    final fun component3(): #C // uk.shusek.krwa.component/WitTuple5.component3|component3(){}[0]
+    final fun component4(): #D // uk.shusek.krwa.component/WitTuple5.component4|component4(){}[0]
+    final fun component5(): #E // uk.shusek.krwa.component/WitTuple5.component5|component5(){}[0]
+    final fun copy(#A = ..., #B = ..., #C = ..., #D = ..., #E = ...): uk.shusek.krwa.component/WitTuple5<#A, #B, #C, #D, #E> // uk.shusek.krwa.component/WitTuple5.copy|copy(1:0;1:1;1:2;1:3;1:4){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // uk.shusek.krwa.component/WitTuple5.equals|equals(kotlin.Any?){}[0]
+    final fun fifth(): #E // uk.shusek.krwa.component/WitTuple5.fifth|fifth(){}[0]
+    final fun first(): #A // uk.shusek.krwa.component/WitTuple5.first|first(){}[0]
+    final fun fourth(): #D // uk.shusek.krwa.component/WitTuple5.fourth|fourth(){}[0]
+    final fun hashCode(): kotlin/Int // uk.shusek.krwa.component/WitTuple5.hashCode|hashCode(){}[0]
+    final fun second(): #B // uk.shusek.krwa.component/WitTuple5.second|second(){}[0]
+    final fun third(): #C // uk.shusek.krwa.component/WitTuple5.third|third(){}[0]
+    final fun toString(): kotlin/String // uk.shusek.krwa.component/WitTuple5.toString|toString(){}[0]
+}
+
+final class <#A: out kotlin/Any?, #B: out kotlin/Any?, #C: out kotlin/Any?, #D: out kotlin/Any?> uk.shusek.krwa.component/WitTuple4 { // uk.shusek.krwa.component/WitTuple4|null[0]
+    constructor <init>(#A, #B, #C, #D) // uk.shusek.krwa.component/WitTuple4.<init>|<init>(1:0;1:1;1:2;1:3){}[0]
+
+    final val first // uk.shusek.krwa.component/WitTuple4.first|{}first[0]
+        final fun <get-first>(): #A // uk.shusek.krwa.component/WitTuple4.first.<get-first>|<get-first>(){}[0]
+    final val fourth // uk.shusek.krwa.component/WitTuple4.fourth|{}fourth[0]
+        final fun <get-fourth>(): #D // uk.shusek.krwa.component/WitTuple4.fourth.<get-fourth>|<get-fourth>(){}[0]
+    final val second // uk.shusek.krwa.component/WitTuple4.second|{}second[0]
+        final fun <get-second>(): #B // uk.shusek.krwa.component/WitTuple4.second.<get-second>|<get-second>(){}[0]
+    final val third // uk.shusek.krwa.component/WitTuple4.third|{}third[0]
+        final fun <get-third>(): #C // uk.shusek.krwa.component/WitTuple4.third.<get-third>|<get-third>(){}[0]
+
+    final fun component1(): #A // uk.shusek.krwa.component/WitTuple4.component1|component1(){}[0]
+    final fun component2(): #B // uk.shusek.krwa.component/WitTuple4.component2|component2(){}[0]
+    final fun component3(): #C // uk.shusek.krwa.component/WitTuple4.component3|component3(){}[0]
+    final fun component4(): #D // uk.shusek.krwa.component/WitTuple4.component4|component4(){}[0]
+    final fun copy(#A = ..., #B = ..., #C = ..., #D = ...): uk.shusek.krwa.component/WitTuple4<#A, #B, #C, #D> // uk.shusek.krwa.component/WitTuple4.copy|copy(1:0;1:1;1:2;1:3){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // uk.shusek.krwa.component/WitTuple4.equals|equals(kotlin.Any?){}[0]
+    final fun first(): #A // uk.shusek.krwa.component/WitTuple4.first|first(){}[0]
+    final fun fourth(): #D // uk.shusek.krwa.component/WitTuple4.fourth|fourth(){}[0]
+    final fun hashCode(): kotlin/Int // uk.shusek.krwa.component/WitTuple4.hashCode|hashCode(){}[0]
+    final fun second(): #B // uk.shusek.krwa.component/WitTuple4.second|second(){}[0]
+    final fun third(): #C // uk.shusek.krwa.component/WitTuple4.third|third(){}[0]
+    final fun toString(): kotlin/String // uk.shusek.krwa.component/WitTuple4.toString|toString(){}[0]
+}
+
+final class <#A: out kotlin/Any?> uk.shusek.krwa.component/WitResource { // uk.shusek.krwa.component/WitResource|null[0]
+    constructor <init>(kotlin/Long) // uk.shusek.krwa.component/WitResource.<init>|<init>(kotlin.Long){}[0]
+
+    final val handle // uk.shusek.krwa.component/WitResource.handle|{}handle[0]
+        final fun <get-handle>(): kotlin/Long // uk.shusek.krwa.component/WitResource.handle.<get-handle>|<get-handle>(){}[0]
+
+    final fun component1(): kotlin/Long // uk.shusek.krwa.component/WitResource.component1|component1(){}[0]
+    final fun copy(kotlin/Long = ...): uk.shusek.krwa.component/WitResource<#A> // uk.shusek.krwa.component/WitResource.copy|copy(kotlin.Long){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // uk.shusek.krwa.component/WitResource.equals|equals(kotlin.Any?){}[0]
+    final fun handle(): kotlin/Long // uk.shusek.krwa.component/WitResource.handle|handle(){}[0]
+    final fun hashCode(): kotlin/Int // uk.shusek.krwa.component/WitResource.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // uk.shusek.krwa.component/WitResource.toString|toString(){}[0]
+}
+
+final class <#A: out kotlin/Any?> uk.shusek.krwa.component/WitTuple1 { // uk.shusek.krwa.component/WitTuple1|null[0]
+    constructor <init>(#A) // uk.shusek.krwa.component/WitTuple1.<init>|<init>(1:0){}[0]
+
+    final val first // uk.shusek.krwa.component/WitTuple1.first|{}first[0]
+        final fun <get-first>(): #A // uk.shusek.krwa.component/WitTuple1.first.<get-first>|<get-first>(){}[0]
+
+    final fun component1(): #A // uk.shusek.krwa.component/WitTuple1.component1|component1(){}[0]
+    final fun copy(#A = ...): uk.shusek.krwa.component/WitTuple1<#A> // uk.shusek.krwa.component/WitTuple1.copy|copy(1:0){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // uk.shusek.krwa.component/WitTuple1.equals|equals(kotlin.Any?){}[0]
+    final fun first(): #A // uk.shusek.krwa.component/WitTuple1.first|first(){}[0]
+    final fun hashCode(): kotlin/Int // uk.shusek.krwa.component/WitTuple1.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // uk.shusek.krwa.component/WitTuple1.toString|toString(){}[0]
+}
+
+final class uk.shusek.krwa.component/CanonicalAbi { // uk.shusek.krwa.component/CanonicalAbi|null[0]
+    final fun alignment(uk.shusek.krwa.component/WitPackage.TypeRef): kotlin/Int // uk.shusek.krwa.component/CanonicalAbi.alignment|alignment(uk.shusek.krwa.component.WitPackage.TypeRef){}[0]
+    final fun asyncLiftedExportFunctionType(uk.shusek.krwa.component/WitPackage.Function): uk.shusek.krwa.wasm.types/FunctionType // uk.shusek.krwa.component/CanonicalAbi.asyncLiftedExportFunctionType|asyncLiftedExportFunctionType(uk.shusek.krwa.component.WitPackage.Function){}[0]
+    final fun asyncLoweredHostFunction(kotlin/String, kotlin/String, uk.shusek.krwa.wasm.types/FunctionType, uk.shusek.krwa.component/WitPackage.Function, uk.shusek.krwa.component/HostHandler): uk.shusek.krwa.runtime/HostFunction // uk.shusek.krwa.component/CanonicalAbi.asyncLoweredHostFunction|asyncLoweredHostFunction(kotlin.String;kotlin.String;uk.shusek.krwa.wasm.types.FunctionType;uk.shusek.krwa.component.WitPackage.Function;uk.shusek.krwa.component.HostHandler){}[0]
+    final fun asyncLoweredHostFunction(kotlin/String, kotlin/String, uk.shusek.krwa.wasm.types/FunctionType, uk.shusek.krwa.component/WitPackage.Function, uk.shusek.krwa.component/HostHandler, uk.shusek.krwa.component/CanonicalFutureIntrinsics?): uk.shusek.krwa.runtime/HostFunction // uk.shusek.krwa.component/CanonicalAbi.asyncLoweredHostFunction|asyncLoweredHostFunction(kotlin.String;kotlin.String;uk.shusek.krwa.wasm.types.FunctionType;uk.shusek.krwa.component.WitPackage.Function;uk.shusek.krwa.component.HostHandler;uk.shusek.krwa.component.CanonicalFutureIntrinsics?){}[0]
+    final fun asyncTaskReturnFunctionType(uk.shusek.krwa.component/WitPackage.Function): uk.shusek.krwa.wasm.types/FunctionType // uk.shusek.krwa.component/CanonicalAbi.asyncTaskReturnFunctionType|asyncTaskReturnFunctionType(uk.shusek.krwa.component.WitPackage.Function){}[0]
+    final fun bind(uk.shusek.krwa.runtime/Instance, kotlin/String, uk.shusek.krwa.component/WitPackage.Function, uk.shusek.krwa.component/CanonicalAbi.AsyncTaskReturn? = ..., kotlin/String? = ...): uk.shusek.krwa.component/CanonicalAbi.BoundFunction // uk.shusek.krwa.component/CanonicalAbi.bind|bind(uk.shusek.krwa.runtime.Instance;kotlin.String;uk.shusek.krwa.component.WitPackage.Function;uk.shusek.krwa.component.CanonicalAbi.AsyncTaskReturn?;kotlin.String?){}[0]
+    final fun call(uk.shusek.krwa.runtime/Instance, kotlin/String, uk.shusek.krwa.component/WitPackage.Function, kotlin/Array<out kotlin/Any?>...): kotlin/Any? // uk.shusek.krwa.component/CanonicalAbi.call|call(uk.shusek.krwa.runtime.Instance;kotlin.String;uk.shusek.krwa.component.WitPackage.Function;kotlin.Array<out|kotlin.Any?>...){}[0]
+    final fun coreFunctionType(uk.shusek.krwa.component/WitPackage.Function, uk.shusek.krwa.component/CanonicalAbi.Direction): uk.shusek.krwa.wasm.types/FunctionType // uk.shusek.krwa.component/CanonicalAbi.coreFunctionType|coreFunctionType(uk.shusek.krwa.component.WitPackage.Function;uk.shusek.krwa.component.CanonicalAbi.Direction){}[0]
+    final fun elementSize(uk.shusek.krwa.component/WitPackage.TypeRef): kotlin/Int // uk.shusek.krwa.component/CanonicalAbi.elementSize|elementSize(uk.shusek.krwa.component.WitPackage.TypeRef){}[0]
+    final fun flattenType(uk.shusek.krwa.component/WitPackage.TypeRef): kotlin.collections/List<uk.shusek.krwa.component/CanonicalAbi.CoreValType> // uk.shusek.krwa.component/CanonicalAbi.flattenType|flattenType(uk.shusek.krwa.component.WitPackage.TypeRef){}[0]
+    final fun hostFunction(kotlin/String, kotlin/String, uk.shusek.krwa.component/WitPackage.Function, uk.shusek.krwa.component/HostHandler): uk.shusek.krwa.runtime/HostFunction // uk.shusek.krwa.component/CanonicalAbi.hostFunction|hostFunction(kotlin.String;kotlin.String;uk.shusek.krwa.component.WitPackage.Function;uk.shusek.krwa.component.HostHandler){}[0]
+    final fun hostFunction(kotlin/String, kotlin/String, uk.shusek.krwa.component/WitPackage.Function, uk.shusek.krwa.component/HostHandler, uk.shusek.krwa.component/CanonicalFutureIntrinsics?): uk.shusek.krwa.runtime/HostFunction // uk.shusek.krwa.component/CanonicalAbi.hostFunction|hostFunction(kotlin.String;kotlin.String;uk.shusek.krwa.component.WitPackage.Function;uk.shusek.krwa.component.HostHandler;uk.shusek.krwa.component.CanonicalFutureIntrinsics?){}[0]
+    final fun liftFlatValues(uk.shusek.krwa.component/CanonicalAbi.Context, kotlin.collections/List<uk.shusek.krwa.component/WitPackage.Field>, kotlin/LongArray, kotlin/Int): kotlin.collections/List<kotlin/Any?> // uk.shusek.krwa.component/CanonicalAbi.liftFlatValues|liftFlatValues(uk.shusek.krwa.component.CanonicalAbi.Context;kotlin.collections.List<uk.shusek.krwa.component.WitPackage.Field>;kotlin.LongArray;kotlin.Int){}[0]
+    final fun listElementStride(uk.shusek.krwa.component/WitPackage.TypeRef): kotlin/Int // uk.shusek.krwa.component/CanonicalAbi.listElementStride|listElementStride(uk.shusek.krwa.component.WitPackage.TypeRef){}[0]
+    final fun loadListElements(uk.shusek.krwa.component/CanonicalAbi.Context, kotlin/Int, kotlin/Int, uk.shusek.krwa.component/WitPackage.TypeRef): kotlin.collections/List<kotlin/Any?> // uk.shusek.krwa.component/CanonicalAbi.loadListElements|loadListElements(uk.shusek.krwa.component.CanonicalAbi.Context;kotlin.Int;kotlin.Int;uk.shusek.krwa.component.WitPackage.TypeRef){}[0]
+    final fun loadValues(uk.shusek.krwa.component/CanonicalAbi.Context, kotlin/Int, kotlin.collections/List<uk.shusek.krwa.component/WitPackage.Field>): kotlin.collections/List<kotlin/Any?> // uk.shusek.krwa.component/CanonicalAbi.loadValues|loadValues(uk.shusek.krwa.component.CanonicalAbi.Context;kotlin.Int;kotlin.collections.List<uk.shusek.krwa.component.WitPackage.Field>){}[0]
+    final fun lowerFlatValues(uk.shusek.krwa.component/CanonicalAbi.Context, kotlin.collections/List<uk.shusek.krwa.component/WitPackage.Field>, kotlin.collections/List<*>, kotlin/Int): kotlin/LongArray // uk.shusek.krwa.component/CanonicalAbi.lowerFlatValues|lowerFlatValues(uk.shusek.krwa.component.CanonicalAbi.Context;kotlin.collections.List<uk.shusek.krwa.component.WitPackage.Field>;kotlin.collections.List<*>;kotlin.Int){}[0]
+    final fun storeListElements(uk.shusek.krwa.component/CanonicalAbi.Context, kotlin/Int, uk.shusek.krwa.component/WitPackage.TypeRef, kotlin.collections/List<*>) // uk.shusek.krwa.component/CanonicalAbi.storeListElements|storeListElements(uk.shusek.krwa.component.CanonicalAbi.Context;kotlin.Int;uk.shusek.krwa.component.WitPackage.TypeRef;kotlin.collections.List<*>){}[0]
+    final fun storeValues(uk.shusek.krwa.component/CanonicalAbi.Context, kotlin/Int, kotlin.collections/List<uk.shusek.krwa.component/WitPackage.Field>, kotlin.collections/List<*>) // uk.shusek.krwa.component/CanonicalAbi.storeValues|storeValues(uk.shusek.krwa.component.CanonicalAbi.Context;kotlin.Int;kotlin.collections.List<uk.shusek.krwa.component.WitPackage.Field>;kotlin.collections.List<*>){}[0]
+    final fun witPackage(): uk.shusek.krwa.component/WitPackage // uk.shusek.krwa.component/CanonicalAbi.witPackage|witPackage(){}[0]
+
+    final enum class CoreValType : kotlin/Enum<uk.shusek.krwa.component/CanonicalAbi.CoreValType> { // uk.shusek.krwa.component/CanonicalAbi.CoreValType|null[0]
+        enum entry F32 // uk.shusek.krwa.component/CanonicalAbi.CoreValType.F32|null[0]
+        enum entry F64 // uk.shusek.krwa.component/CanonicalAbi.CoreValType.F64|null[0]
+        enum entry I32 // uk.shusek.krwa.component/CanonicalAbi.CoreValType.I32|null[0]
+        enum entry I64 // uk.shusek.krwa.component/CanonicalAbi.CoreValType.I64|null[0]
+
+        final val entries // uk.shusek.krwa.component/CanonicalAbi.CoreValType.entries|#static{}entries[0]
+            final fun <get-entries>(): kotlin.enums/EnumEntries<uk.shusek.krwa.component/CanonicalAbi.CoreValType> // uk.shusek.krwa.component/CanonicalAbi.CoreValType.entries.<get-entries>|<get-entries>#static(){}[0]
+
+        final fun valType(): uk.shusek.krwa.wasm.types/ValType // uk.shusek.krwa.component/CanonicalAbi.CoreValType.valType|valType(){}[0]
+        final fun valueOf(kotlin/String): uk.shusek.krwa.component/CanonicalAbi.CoreValType // uk.shusek.krwa.component/CanonicalAbi.CoreValType.valueOf|valueOf#static(kotlin.String){}[0]
+        final fun values(): kotlin/Array<uk.shusek.krwa.component/CanonicalAbi.CoreValType> // uk.shusek.krwa.component/CanonicalAbi.CoreValType.values|values#static(){}[0]
+    }
+
+    final enum class Direction : kotlin/Enum<uk.shusek.krwa.component/CanonicalAbi.Direction> { // uk.shusek.krwa.component/CanonicalAbi.Direction|null[0]
+        enum entry LIFTED_EXPORT // uk.shusek.krwa.component/CanonicalAbi.Direction.LIFTED_EXPORT|null[0]
+        enum entry LOWERED_IMPORT // uk.shusek.krwa.component/CanonicalAbi.Direction.LOWERED_IMPORT|null[0]
+
+        final val entries // uk.shusek.krwa.component/CanonicalAbi.Direction.entries|#static{}entries[0]
+            final fun <get-entries>(): kotlin.enums/EnumEntries<uk.shusek.krwa.component/CanonicalAbi.Direction> // uk.shusek.krwa.component/CanonicalAbi.Direction.entries.<get-entries>|<get-entries>#static(){}[0]
+
+        final fun valueOf(kotlin/String): uk.shusek.krwa.component/CanonicalAbi.Direction // uk.shusek.krwa.component/CanonicalAbi.Direction.valueOf|valueOf#static(kotlin.String){}[0]
+        final fun values(): kotlin/Array<uk.shusek.krwa.component/CanonicalAbi.Direction> // uk.shusek.krwa.component/CanonicalAbi.Direction.values|values#static(){}[0]
+    }
+
+    abstract fun interface Reallocator { // uk.shusek.krwa.component/CanonicalAbi.Reallocator|null[0]
+        abstract fun realloc(kotlin/Int, kotlin/Int, kotlin/Int, kotlin/Int): kotlin/Int // uk.shusek.krwa.component/CanonicalAbi.Reallocator.realloc|realloc(kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int){}[0]
+    }
+
+    abstract interface AsyncTaskReturn { // uk.shusek.krwa.component/CanonicalAbi.AsyncTaskReturn|null[0]
+        abstract fun reset() // uk.shusek.krwa.component/CanonicalAbi.AsyncTaskReturn.reset|reset(){}[0]
+        abstract fun takeRawResults(): kotlin/LongArray? // uk.shusek.krwa.component/CanonicalAbi.AsyncTaskReturn.takeRawResults|takeRawResults(){}[0]
+    }
+
+    final class BoundFunction { // uk.shusek.krwa.component/CanonicalAbi.BoundFunction|null[0]
+        final fun call(kotlin/Array<out kotlin/Any?>...): kotlin/Any? // uk.shusek.krwa.component/CanonicalAbi.BoundFunction.call|call(kotlin.Array<out|kotlin.Any?>...){}[0]
+        final fun coreFunctionType(): uk.shusek.krwa.wasm.types/FunctionType // uk.shusek.krwa.component/CanonicalAbi.BoundFunction.coreFunctionType|coreFunctionType(){}[0]
+    }
+
+    final class Context { // uk.shusek.krwa.component/CanonicalAbi.Context|null[0]
+        final fun memory(): uk.shusek.krwa.runtime/Memory // uk.shusek.krwa.component/CanonicalAbi.Context.memory|memory(){}[0]
+        final fun reallocate(kotlin/Int, kotlin/Int, kotlin/Int, kotlin/Int): kotlin/Int // uk.shusek.krwa.component/CanonicalAbi.Context.reallocate|reallocate(kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int){}[0]
+
+        final object Companion { // uk.shusek.krwa.component/CanonicalAbi.Context.Companion|null[0]
+            final fun forInstance(uk.shusek.krwa.runtime/Instance): uk.shusek.krwa.component/CanonicalAbi.Context // uk.shusek.krwa.component/CanonicalAbi.Context.Companion.forInstance|forInstance(uk.shusek.krwa.runtime.Instance){}[0]
+            final fun of(uk.shusek.krwa.runtime/Memory, uk.shusek.krwa.component/CanonicalAbi.Reallocator): uk.shusek.krwa.component/CanonicalAbi.Context // uk.shusek.krwa.component/CanonicalAbi.Context.Companion.of|of(uk.shusek.krwa.runtime.Memory;uk.shusek.krwa.component.CanonicalAbi.Reallocator){}[0]
+        }
+    }
+
+    final object Companion { // uk.shusek.krwa.component/CanonicalAbi.Companion|null[0]
+        final const val MAX_FLAT_PARAMS // uk.shusek.krwa.component/CanonicalAbi.Companion.MAX_FLAT_PARAMS|{}MAX_FLAT_PARAMS[0]
+            final fun <get-MAX_FLAT_PARAMS>(): kotlin/Int // uk.shusek.krwa.component/CanonicalAbi.Companion.MAX_FLAT_PARAMS.<get-MAX_FLAT_PARAMS>|<get-MAX_FLAT_PARAMS>(){}[0]
+        final const val MAX_FLAT_RESULTS // uk.shusek.krwa.component/CanonicalAbi.Companion.MAX_FLAT_RESULTS|{}MAX_FLAT_RESULTS[0]
+            final fun <get-MAX_FLAT_RESULTS>(): kotlin/Int // uk.shusek.krwa.component/CanonicalAbi.Companion.MAX_FLAT_RESULTS.<get-MAX_FLAT_RESULTS>|<get-MAX_FLAT_RESULTS>(){}[0]
+        final const val REALLOC_EXPORT // uk.shusek.krwa.component/CanonicalAbi.Companion.REALLOC_EXPORT|{}REALLOC_EXPORT[0]
+            final fun <get-REALLOC_EXPORT>(): kotlin/String // uk.shusek.krwa.component/CanonicalAbi.Companion.REALLOC_EXPORT.<get-REALLOC_EXPORT>|<get-REALLOC_EXPORT>(){}[0]
+
+        final fun of(uk.shusek.krwa.component/WitPackage): uk.shusek.krwa.component/CanonicalAbi // uk.shusek.krwa.component/CanonicalAbi.Companion.of|of(uk.shusek.krwa.component.WitPackage){}[0]
+    }
+}
+
+final class uk.shusek.krwa.component/WasiHttpHeader { // uk.shusek.krwa.component/WasiHttpHeader|null[0]
+    constructor <init>(kotlin/String, kotlin/String) // uk.shusek.krwa.component/WasiHttpHeader.<init>|<init>(kotlin.String;kotlin.String){}[0]
+
+    final val name // uk.shusek.krwa.component/WasiHttpHeader.name|{}name[0]
+        final fun <get-name>(): kotlin/String // uk.shusek.krwa.component/WasiHttpHeader.name.<get-name>|<get-name>(){}[0]
+    final val value // uk.shusek.krwa.component/WasiHttpHeader.value|{}value[0]
+        final fun <get-value>(): kotlin/String // uk.shusek.krwa.component/WasiHttpHeader.value.<get-value>|<get-value>(){}[0]
+}
+
+final class uk.shusek.krwa.component/WasiHttpRequest { // uk.shusek.krwa.component/WasiHttpRequest|null[0]
+    constructor <init>(kotlin/String, kotlin/String, kotlin.collections/List<uk.shusek.krwa.component/WasiHttpHeader>, kotlin/ByteArray, kotlin.time/Duration?) // uk.shusek.krwa.component/WasiHttpRequest.<init>|<init>(kotlin.String;kotlin.String;kotlin.collections.List<uk.shusek.krwa.component.WasiHttpHeader>;kotlin.ByteArray;kotlin.time.Duration?){}[0]
+
+    final val body // uk.shusek.krwa.component/WasiHttpRequest.body|{}body[0]
+        final fun <get-body>(): kotlin/ByteArray // uk.shusek.krwa.component/WasiHttpRequest.body.<get-body>|<get-body>(){}[0]
+    final val headers // uk.shusek.krwa.component/WasiHttpRequest.headers|{}headers[0]
+        final fun <get-headers>(): kotlin.collections/List<uk.shusek.krwa.component/WasiHttpHeader> // uk.shusek.krwa.component/WasiHttpRequest.headers.<get-headers>|<get-headers>(){}[0]
+    final val method // uk.shusek.krwa.component/WasiHttpRequest.method|{}method[0]
+        final fun <get-method>(): kotlin/String // uk.shusek.krwa.component/WasiHttpRequest.method.<get-method>|<get-method>(){}[0]
+    final val timeout // uk.shusek.krwa.component/WasiHttpRequest.timeout|{}timeout[0]
+        final fun <get-timeout>(): kotlin.time/Duration? // uk.shusek.krwa.component/WasiHttpRequest.timeout.<get-timeout>|<get-timeout>(){}[0]
+    final val uri // uk.shusek.krwa.component/WasiHttpRequest.uri|{}uri[0]
+        final fun <get-uri>(): kotlin/String // uk.shusek.krwa.component/WasiHttpRequest.uri.<get-uri>|<get-uri>(){}[0]
+}
+
+final class uk.shusek.krwa.component/WasiHttpResponse { // uk.shusek.krwa.component/WasiHttpResponse|null[0]
+    constructor <init>(kotlin/Int, kotlin.collections/Map<kotlin/String, kotlin.collections/List<kotlin/String>>, kotlin/ByteArray) // uk.shusek.krwa.component/WasiHttpResponse.<init>|<init>(kotlin.Int;kotlin.collections.Map<kotlin.String,kotlin.collections.List<kotlin.String>>;kotlin.ByteArray){}[0]
+    constructor <init>(kotlin/Int, kotlin.collections/Map<kotlin/String, kotlin.collections/List<kotlin/String>>, kotlinx.io/RawSource) // uk.shusek.krwa.component/WasiHttpResponse.<init>|<init>(kotlin.Int;kotlin.collections.Map<kotlin.String,kotlin.collections.List<kotlin.String>>;kotlinx.io.RawSource){}[0]
+
+    final val body // uk.shusek.krwa.component/WasiHttpResponse.body|{}body[0]
+        final fun <get-body>(): kotlin/ByteArray // uk.shusek.krwa.component/WasiHttpResponse.body.<get-body>|<get-body>(){}[0]
+    final val headers // uk.shusek.krwa.component/WasiHttpResponse.headers|{}headers[0]
+        final fun <get-headers>(): kotlin.collections/Map<kotlin/String, kotlin.collections/List<kotlin/String>> // uk.shusek.krwa.component/WasiHttpResponse.headers.<get-headers>|<get-headers>(){}[0]
+    final val status // uk.shusek.krwa.component/WasiHttpResponse.status|{}status[0]
+        final fun <get-status>(): kotlin/Int // uk.shusek.krwa.component/WasiHttpResponse.status.<get-status>|<get-status>(){}[0]
+
+    final fun consumeBodySource(): kotlinx.io/RawSource // uk.shusek.krwa.component/WasiHttpResponse.consumeBodySource|consumeBodySource(){}[0]
+}
+
+final class uk.shusek.krwa.component/WasiPreview2 { // uk.shusek.krwa.component/WasiPreview2|null[0]
+    final fun <#A1: uk.shusek.krwa.component/WasiHostImportBuilder> install(#A1): #A1 // uk.shusek.krwa.component/WasiPreview2.install|install(0:0){0§<uk.shusek.krwa.component.WasiHostImportBuilder>}[0]
+    final fun arguments(): kotlin.collections/List<kotlin/String> // uk.shusek.krwa.component/WasiPreview2.arguments|arguments(){}[0]
+    final fun environment(): kotlin.collections/Map<kotlin/String, kotlin/String> // uk.shusek.krwa.component/WasiPreview2.environment|environment(){}[0]
+    final fun handleHttpRequest(uk.shusek.krwa.component/WasiComponentInvoker, kotlin/String, kotlin/String, kotlin/String, kotlin/String, kotlin.collections/Map<kotlin/String, kotlin.collections/List<kotlin/ByteArray>>, kotlin/ByteArray): uk.shusek.krwa.component/WasiPreview2.HttpResponseSnapshot // uk.shusek.krwa.component/WasiPreview2.handleHttpRequest|handleHttpRequest(uk.shusek.krwa.component.WasiComponentInvoker;kotlin.String;kotlin.String;kotlin.String;kotlin.String;kotlin.collections.Map<kotlin.String,kotlin.collections.List<kotlin.ByteArray>>;kotlin.ByteArray){}[0]
+    final fun handleHttpRequest(uk.shusek.krwa.component/WasiComponentInvoker, uk.shusek.krwa.component/WasiPreview2.HttpRequestSnapshot): uk.shusek.krwa.component/WasiPreview2.HttpResponseSnapshot // uk.shusek.krwa.component/WasiPreview2.handleHttpRequest|handleHttpRequest(uk.shusek.krwa.component.WasiComponentInvoker;uk.shusek.krwa.component.WasiPreview2.HttpRequestSnapshot){}[0]
+    final fun initialCwd(): kotlin/String? // uk.shusek.krwa.component/WasiPreview2.initialCwd|initialCwd(){}[0]
+    final fun inputStreams(): uk.shusek.krwa.component/WitResourceTable<uk.shusek.krwa.component/WasiPreview2.WasiInputStream> // uk.shusek.krwa.component/WasiPreview2.inputStreams|inputStreams(){}[0]
+    final fun newIncomingRequest(kotlin/String, kotlin/String, kotlin/String, kotlin/String, kotlin.collections/Map<kotlin/String, kotlin.collections/List<kotlin/ByteArray>>, kotlin/ByteArray): uk.shusek.krwa.component/WitResource<uk.shusek.krwa.component/WasiPreview2.IncomingRequestTag> // uk.shusek.krwa.component/WasiPreview2.newIncomingRequest|newIncomingRequest(kotlin.String;kotlin.String;kotlin.String;kotlin.String;kotlin.collections.Map<kotlin.String,kotlin.collections.List<kotlin.ByteArray>>;kotlin.ByteArray){}[0]
+    final fun newResponseOutparam(): uk.shusek.krwa.component/WitResource<uk.shusek.krwa.component/WasiPreview2.ResponseOutparamTag> // uk.shusek.krwa.component/WasiPreview2.newResponseOutparam|newResponseOutparam(){}[0]
+    final fun outputStreams(): uk.shusek.krwa.component/WitResourceTable<uk.shusek.krwa.component/WasiPreview2.WasiOutputStream> // uk.shusek.krwa.component/WasiPreview2.outputStreams|outputStreams(){}[0]
+    final fun responseOutparamHttpResponse(uk.shusek.krwa.component/WitResource<uk.shusek.krwa.component/WasiPreview2.ResponseOutparamTag>): uk.shusek.krwa.component/WasiPreview2.HttpResponseSnapshot // uk.shusek.krwa.component/WasiPreview2.responseOutparamHttpResponse|responseOutparamHttpResponse(uk.shusek.krwa.component.WitResource<uk.shusek.krwa.component.WasiPreview2.ResponseOutparamTag>){}[0]
+    final fun responseOutparamIsSet(uk.shusek.krwa.component/WitResource<uk.shusek.krwa.component/WasiPreview2.ResponseOutparamTag>): kotlin/Boolean // uk.shusek.krwa.component/WasiPreview2.responseOutparamIsSet|responseOutparamIsSet(uk.shusek.krwa.component.WitResource<uk.shusek.krwa.component.WasiPreview2.ResponseOutparamTag>){}[0]
+    final fun responseOutparamResponse(uk.shusek.krwa.component/WitResource<uk.shusek.krwa.component/WasiPreview2.ResponseOutparamTag>): kotlin/Any? // uk.shusek.krwa.component/WasiPreview2.responseOutparamResponse|responseOutparamResponse(uk.shusek.krwa.component.WitResource<uk.shusek.krwa.component.WasiPreview2.ResponseOutparamTag>){}[0]
+    final fun version(): kotlin/String // uk.shusek.krwa.component/WasiPreview2.version|version(){}[0]
+
+    final class Builder { // uk.shusek.krwa.component/WasiPreview2.Builder|null[0]
+        constructor <init>() // uk.shusek.krwa.component/WasiPreview2.Builder.<init>|<init>(){}[0]
+
+        final val arguments // uk.shusek.krwa.component/WasiPreview2.Builder.arguments|{}arguments[0]
+            final fun <get-arguments>(): kotlin.collections/MutableList<kotlin/String> // uk.shusek.krwa.component/WasiPreview2.Builder.arguments.<get-arguments>|<get-arguments>(){}[0]
+        final val environment // uk.shusek.krwa.component/WasiPreview2.Builder.environment|{}environment[0]
+            final fun <get-environment>(): kotlin.collections/MutableMap<kotlin/String, kotlin/String> // uk.shusek.krwa.component/WasiPreview2.Builder.environment.<get-environment>|<get-environment>(){}[0]
+
+        final var fileSystem // uk.shusek.krwa.component/WasiPreview2.Builder.fileSystem|{}fileSystem[0]
+            final fun <get-fileSystem>(): okio/FileSystem // uk.shusek.krwa.component/WasiPreview2.Builder.fileSystem.<get-fileSystem>|<get-fileSystem>(){}[0]
+            final fun <set-fileSystem>(okio/FileSystem) // uk.shusek.krwa.component/WasiPreview2.Builder.fileSystem.<set-fileSystem>|<set-fileSystem>(okio.FileSystem){}[0]
+        final var httpClient // uk.shusek.krwa.component/WasiPreview2.Builder.httpClient|{}httpClient[0]
+            final fun <get-httpClient>(): uk.shusek.krwa.component/WasiHttpClient // uk.shusek.krwa.component/WasiPreview2.Builder.httpClient.<get-httpClient>|<get-httpClient>(){}[0]
+            final fun <set-httpClient>(uk.shusek.krwa.component/WasiHttpClient) // uk.shusek.krwa.component/WasiPreview2.Builder.httpClient.<set-httpClient>|<set-httpClient>(uk.shusek.krwa.component.WasiHttpClient){}[0]
+        final var initialCwd // uk.shusek.krwa.component/WasiPreview2.Builder.initialCwd|{}initialCwd[0]
+            final fun <get-initialCwd>(): kotlin/String? // uk.shusek.krwa.component/WasiPreview2.Builder.initialCwd.<get-initialCwd>|<get-initialCwd>(){}[0]
+            final fun <set-initialCwd>(kotlin/String?) // uk.shusek.krwa.component/WasiPreview2.Builder.initialCwd.<set-initialCwd>|<set-initialCwd>(kotlin.String?){}[0]
+        final var insecureRandom // uk.shusek.krwa.component/WasiPreview2.Builder.insecureRandom|{}insecureRandom[0]
+            final fun <get-insecureRandom>(): kotlin.random/Random // uk.shusek.krwa.component/WasiPreview2.Builder.insecureRandom.<get-insecureRandom>|<get-insecureRandom>(){}[0]
+            final fun <set-insecureRandom>(kotlin.random/Random) // uk.shusek.krwa.component/WasiPreview2.Builder.insecureRandom.<set-insecureRandom>|<set-insecureRandom>(kotlin.random.Random){}[0]
+        final var insecureSeedLower // uk.shusek.krwa.component/WasiPreview2.Builder.insecureSeedLower|{}insecureSeedLower[0]
+            final fun <get-insecureSeedLower>(): kotlin/Long // uk.shusek.krwa.component/WasiPreview2.Builder.insecureSeedLower.<get-insecureSeedLower>|<get-insecureSeedLower>(){}[0]
+            final fun <set-insecureSeedLower>(kotlin/Long) // uk.shusek.krwa.component/WasiPreview2.Builder.insecureSeedLower.<set-insecureSeedLower>|<set-insecureSeedLower>(kotlin.Long){}[0]
+        final var insecureSeedUpper // uk.shusek.krwa.component/WasiPreview2.Builder.insecureSeedUpper|{}insecureSeedUpper[0]
+            final fun <get-insecureSeedUpper>(): kotlin/Long // uk.shusek.krwa.component/WasiPreview2.Builder.insecureSeedUpper.<get-insecureSeedUpper>|<get-insecureSeedUpper>(){}[0]
+            final fun <set-insecureSeedUpper>(kotlin/Long) // uk.shusek.krwa.component/WasiPreview2.Builder.insecureSeedUpper.<set-insecureSeedUpper>|<set-insecureSeedUpper>(kotlin.Long){}[0]
+        final var monotonicClock // uk.shusek.krwa.component/WasiPreview2.Builder.monotonicClock|{}monotonicClock[0]
+            final fun <get-monotonicClock>(): kotlin/Function0<kotlin/Long> // uk.shusek.krwa.component/WasiPreview2.Builder.monotonicClock.<get-monotonicClock>|<get-monotonicClock>(){}[0]
+            final fun <set-monotonicClock>(kotlin/Function0<kotlin/Long>) // uk.shusek.krwa.component/WasiPreview2.Builder.monotonicClock.<set-monotonicClock>|<set-monotonicClock>(kotlin.Function0<kotlin.Long>){}[0]
+        final var monotonicResolutionNanos // uk.shusek.krwa.component/WasiPreview2.Builder.monotonicResolutionNanos|{}monotonicResolutionNanos[0]
+            final fun <get-monotonicResolutionNanos>(): kotlin/Long // uk.shusek.krwa.component/WasiPreview2.Builder.monotonicResolutionNanos.<get-monotonicResolutionNanos>|<get-monotonicResolutionNanos>(){}[0]
+            final fun <set-monotonicResolutionNanos>(kotlin/Long) // uk.shusek.krwa.component/WasiPreview2.Builder.monotonicResolutionNanos.<set-monotonicResolutionNanos>|<set-monotonicResolutionNanos>(kotlin.Long){}[0]
+        final var networkingEnabled // uk.shusek.krwa.component/WasiPreview2.Builder.networkingEnabled|{}networkingEnabled[0]
+            final fun <get-networkingEnabled>(): kotlin/Boolean // uk.shusek.krwa.component/WasiPreview2.Builder.networkingEnabled.<get-networkingEnabled>|<get-networkingEnabled>(){}[0]
+            final fun <set-networkingEnabled>(kotlin/Boolean) // uk.shusek.krwa.component/WasiPreview2.Builder.networkingEnabled.<set-networkingEnabled>|<set-networkingEnabled>(kotlin.Boolean){}[0]
+        final var secureRandom // uk.shusek.krwa.component/WasiPreview2.Builder.secureRandom|{}secureRandom[0]
+            final fun <get-secureRandom>(): org.kotlincrypto.random/CryptoRand // uk.shusek.krwa.component/WasiPreview2.Builder.secureRandom.<get-secureRandom>|<get-secureRandom>(){}[0]
+            final fun <set-secureRandom>(org.kotlincrypto.random/CryptoRand) // uk.shusek.krwa.component/WasiPreview2.Builder.secureRandom.<set-secureRandom>|<set-secureRandom>(org.kotlincrypto.random.CryptoRand){}[0]
+        final var stderr // uk.shusek.krwa.component/WasiPreview2.Builder.stderr|{}stderr[0]
+            final fun <get-stderr>(): uk.shusek.krwa.component/WasiPreview2.WasiOutputStream // uk.shusek.krwa.component/WasiPreview2.Builder.stderr.<get-stderr>|<get-stderr>(){}[0]
+            final fun <set-stderr>(uk.shusek.krwa.component/WasiPreview2.WasiOutputStream) // uk.shusek.krwa.component/WasiPreview2.Builder.stderr.<set-stderr>|<set-stderr>(uk.shusek.krwa.component.WasiPreview2.WasiOutputStream){}[0]
+        final var stdin // uk.shusek.krwa.component/WasiPreview2.Builder.stdin|{}stdin[0]
+            final fun <get-stdin>(): uk.shusek.krwa.component/WasiPreview2.WasiInputStream // uk.shusek.krwa.component/WasiPreview2.Builder.stdin.<get-stdin>|<get-stdin>(){}[0]
+            final fun <set-stdin>(uk.shusek.krwa.component/WasiPreview2.WasiInputStream) // uk.shusek.krwa.component/WasiPreview2.Builder.stdin.<set-stdin>|<set-stdin>(uk.shusek.krwa.component.WasiPreview2.WasiInputStream){}[0]
+        final var stdout // uk.shusek.krwa.component/WasiPreview2.Builder.stdout|{}stdout[0]
+            final fun <get-stdout>(): uk.shusek.krwa.component/WasiPreview2.WasiOutputStream // uk.shusek.krwa.component/WasiPreview2.Builder.stdout.<get-stdout>|<get-stdout>(){}[0]
+            final fun <set-stdout>(uk.shusek.krwa.component/WasiPreview2.WasiOutputStream) // uk.shusek.krwa.component/WasiPreview2.Builder.stdout.<set-stdout>|<set-stdout>(uk.shusek.krwa.component.WasiPreview2.WasiOutputStream){}[0]
+        final var terminalStderr // uk.shusek.krwa.component/WasiPreview2.Builder.terminalStderr|{}terminalStderr[0]
+            final fun <get-terminalStderr>(): kotlin/Boolean // uk.shusek.krwa.component/WasiPreview2.Builder.terminalStderr.<get-terminalStderr>|<get-terminalStderr>(){}[0]
+            final fun <set-terminalStderr>(kotlin/Boolean) // uk.shusek.krwa.component/WasiPreview2.Builder.terminalStderr.<set-terminalStderr>|<set-terminalStderr>(kotlin.Boolean){}[0]
+        final var terminalStdin // uk.shusek.krwa.component/WasiPreview2.Builder.terminalStdin|{}terminalStdin[0]
+            final fun <get-terminalStdin>(): kotlin/Boolean // uk.shusek.krwa.component/WasiPreview2.Builder.terminalStdin.<get-terminalStdin>|<get-terminalStdin>(){}[0]
+            final fun <set-terminalStdin>(kotlin/Boolean) // uk.shusek.krwa.component/WasiPreview2.Builder.terminalStdin.<set-terminalStdin>|<set-terminalStdin>(kotlin.Boolean){}[0]
+        final var terminalStdout // uk.shusek.krwa.component/WasiPreview2.Builder.terminalStdout|{}terminalStdout[0]
+            final fun <get-terminalStdout>(): kotlin/Boolean // uk.shusek.krwa.component/WasiPreview2.Builder.terminalStdout.<get-terminalStdout>|<get-terminalStdout>(){}[0]
+            final fun <set-terminalStdout>(kotlin/Boolean) // uk.shusek.krwa.component/WasiPreview2.Builder.terminalStdout.<set-terminalStdout>|<set-terminalStdout>(kotlin.Boolean){}[0]
+        final var version // uk.shusek.krwa.component/WasiPreview2.Builder.version|{}version[0]
+            final fun <get-version>(): kotlin/String // uk.shusek.krwa.component/WasiPreview2.Builder.version.<get-version>|<get-version>(){}[0]
+            final fun <set-version>(kotlin/String) // uk.shusek.krwa.component/WasiPreview2.Builder.version.<set-version>|<set-version>(kotlin.String){}[0]
+        final var wallClock // uk.shusek.krwa.component/WasiPreview2.Builder.wallClock|{}wallClock[0]
+            final fun <get-wallClock>(): kotlin.time/Clock // uk.shusek.krwa.component/WasiPreview2.Builder.wallClock.<get-wallClock>|<get-wallClock>(){}[0]
+            final fun <set-wallClock>(kotlin.time/Clock) // uk.shusek.krwa.component/WasiPreview2.Builder.wallClock.<set-wallClock>|<set-wallClock>(kotlin.time.Clock){}[0]
+        final var wallClockResolutionNanos // uk.shusek.krwa.component/WasiPreview2.Builder.wallClockResolutionNanos|{}wallClockResolutionNanos[0]
+            final fun <get-wallClockResolutionNanos>(): kotlin/Long // uk.shusek.krwa.component/WasiPreview2.Builder.wallClockResolutionNanos.<get-wallClockResolutionNanos>|<get-wallClockResolutionNanos>(){}[0]
+            final fun <set-wallClockResolutionNanos>(kotlin/Long) // uk.shusek.krwa.component/WasiPreview2.Builder.wallClockResolutionNanos.<set-wallClockResolutionNanos>|<set-wallClockResolutionNanos>(kotlin.Long){}[0]
+        final var wallClockTimeZone // uk.shusek.krwa.component/WasiPreview2.Builder.wallClockTimeZone|{}wallClockTimeZone[0]
+            final fun <get-wallClockTimeZone>(): kotlinx.datetime/TimeZone // uk.shusek.krwa.component/WasiPreview2.Builder.wallClockTimeZone.<get-wallClockTimeZone>|<get-wallClockTimeZone>(){}[0]
+            final fun <set-wallClockTimeZone>(kotlinx.datetime/TimeZone) // uk.shusek.krwa.component/WasiPreview2.Builder.wallClockTimeZone.<set-wallClockTimeZone>|<set-wallClockTimeZone>(kotlinx.datetime.TimeZone){}[0]
+
+        final fun build(): uk.shusek.krwa.component/WasiPreview2 // uk.shusek.krwa.component/WasiPreview2.Builder.build|build(){}[0]
+        final fun withArguments(kotlin.collections/List<kotlin/String>): uk.shusek.krwa.component/WasiPreview2.Builder // uk.shusek.krwa.component/WasiPreview2.Builder.withArguments|withArguments(kotlin.collections.List<kotlin.String>){}[0]
+        final fun withArguments(kotlin/Array<out kotlin/String>...): uk.shusek.krwa.component/WasiPreview2.Builder // uk.shusek.krwa.component/WasiPreview2.Builder.withArguments|withArguments(kotlin.Array<out|kotlin.String>...){}[0]
+        final fun withEnvironment(kotlin.collections/Map<kotlin/String, kotlin/String>): uk.shusek.krwa.component/WasiPreview2.Builder // uk.shusek.krwa.component/WasiPreview2.Builder.withEnvironment|withEnvironment(kotlin.collections.Map<kotlin.String,kotlin.String>){}[0]
+        final fun withEnvironment(kotlin/String, kotlin/String): uk.shusek.krwa.component/WasiPreview2.Builder // uk.shusek.krwa.component/WasiPreview2.Builder.withEnvironment|withEnvironment(kotlin.String;kotlin.String){}[0]
+        final fun withFileSystem(okio/FileSystem): uk.shusek.krwa.component/WasiPreview2.Builder // uk.shusek.krwa.component/WasiPreview2.Builder.withFileSystem|withFileSystem(okio.FileSystem){}[0]
+        final fun withFixedWallClock(kotlin.time/Instant, kotlin/String = ...): uk.shusek.krwa.component/WasiPreview2.Builder // uk.shusek.krwa.component/WasiPreview2.Builder.withFixedWallClock|withFixedWallClock(kotlin.time.Instant;kotlin.String){}[0]
+        final fun withHttpClient(io.ktor.client/HttpClient): uk.shusek.krwa.component/WasiPreview2.Builder // uk.shusek.krwa.component/WasiPreview2.Builder.withHttpClient|withHttpClient(io.ktor.client.HttpClient){}[0]
+        final fun withHttpClient(uk.shusek.krwa.component/WasiHttpClient): uk.shusek.krwa.component/WasiPreview2.Builder // uk.shusek.krwa.component/WasiPreview2.Builder.withHttpClient|withHttpClient(uk.shusek.krwa.component.WasiHttpClient){}[0]
+        final fun withInitialCwd(kotlin/String): uk.shusek.krwa.component/WasiPreview2.Builder // uk.shusek.krwa.component/WasiPreview2.Builder.withInitialCwd|withInitialCwd(kotlin.String){}[0]
+        final fun withInitialCwd(okio/Path): uk.shusek.krwa.component/WasiPreview2.Builder // uk.shusek.krwa.component/WasiPreview2.Builder.withInitialCwd|withInitialCwd(okio.Path){}[0]
+        final fun withInsecureRandom(kotlin.random/Random): uk.shusek.krwa.component/WasiPreview2.Builder // uk.shusek.krwa.component/WasiPreview2.Builder.withInsecureRandom|withInsecureRandom(kotlin.random.Random){}[0]
+        final fun withInsecureSeed(kotlin/Long, kotlin/Long): uk.shusek.krwa.component/WasiPreview2.Builder // uk.shusek.krwa.component/WasiPreview2.Builder.withInsecureSeed|withInsecureSeed(kotlin.Long;kotlin.Long){}[0]
+        final fun withMonotonicClock(kotlin/Function0<kotlin/Long>): uk.shusek.krwa.component/WasiPreview2.Builder // uk.shusek.krwa.component/WasiPreview2.Builder.withMonotonicClock|withMonotonicClock(kotlin.Function0<kotlin.Long>){}[0]
+        final fun withMonotonicResolutionNanos(kotlin/Long): uk.shusek.krwa.component/WasiPreview2.Builder // uk.shusek.krwa.component/WasiPreview2.Builder.withMonotonicResolutionNanos|withMonotonicResolutionNanos(kotlin.Long){}[0]
+        final fun withNetworking(): uk.shusek.krwa.component/WasiPreview2.Builder // uk.shusek.krwa.component/WasiPreview2.Builder.withNetworking|withNetworking(){}[0]
+        final fun withNetworking(kotlin/Boolean): uk.shusek.krwa.component/WasiPreview2.Builder // uk.shusek.krwa.component/WasiPreview2.Builder.withNetworking|withNetworking(kotlin.Boolean){}[0]
+        final fun withPreopenedDirectory(kotlin/String, kotlin/String): uk.shusek.krwa.component/WasiPreview2.Builder // uk.shusek.krwa.component/WasiPreview2.Builder.withPreopenedDirectory|withPreopenedDirectory(kotlin.String;kotlin.String){}[0]
+        final fun withPreopenedDirectory(kotlin/String, okio/Path): uk.shusek.krwa.component/WasiPreview2.Builder // uk.shusek.krwa.component/WasiPreview2.Builder.withPreopenedDirectory|withPreopenedDirectory(kotlin.String;okio.Path){}[0]
+        final fun withPreopenedDirectory(kotlin/String, okio/Path, kotlin/Boolean): uk.shusek.krwa.component/WasiPreview2.Builder // uk.shusek.krwa.component/WasiPreview2.Builder.withPreopenedDirectory|withPreopenedDirectory(kotlin.String;okio.Path;kotlin.Boolean){}[0]
+        final fun withReadOnlyPreopenedDirectory(kotlin/String, kotlin/String): uk.shusek.krwa.component/WasiPreview2.Builder // uk.shusek.krwa.component/WasiPreview2.Builder.withReadOnlyPreopenedDirectory|withReadOnlyPreopenedDirectory(kotlin.String;kotlin.String){}[0]
+        final fun withReadOnlyPreopenedDirectory(kotlin/String, okio/Path): uk.shusek.krwa.component/WasiPreview2.Builder // uk.shusek.krwa.component/WasiPreview2.Builder.withReadOnlyPreopenedDirectory|withReadOnlyPreopenedDirectory(kotlin.String;okio.Path){}[0]
+        final fun withSecureRandom(kotlin.random/Random): uk.shusek.krwa.component/WasiPreview2.Builder // uk.shusek.krwa.component/WasiPreview2.Builder.withSecureRandom|withSecureRandom(kotlin.random.Random){}[0]
+        final fun withSecureRandom(org.kotlincrypto.random/CryptoRand): uk.shusek.krwa.component/WasiPreview2.Builder // uk.shusek.krwa.component/WasiPreview2.Builder.withSecureRandom|withSecureRandom(org.kotlincrypto.random.CryptoRand){}[0]
+        final fun withStderr(kotlinx.io/RawSink): uk.shusek.krwa.component/WasiPreview2.Builder // uk.shusek.krwa.component/WasiPreview2.Builder.withStderr|withStderr(kotlinx.io.RawSink){}[0]
+        final fun withStdin(kotlinx.io/RawSource): uk.shusek.krwa.component/WasiPreview2.Builder // uk.shusek.krwa.component/WasiPreview2.Builder.withStdin|withStdin(kotlinx.io.RawSource){}[0]
+        final fun withStdin(kotlinx.io/RawSource, kotlin/Function0<kotlin/Int>): uk.shusek.krwa.component/WasiPreview2.Builder // uk.shusek.krwa.component/WasiPreview2.Builder.withStdin|withStdin(kotlinx.io.RawSource;kotlin.Function0<kotlin.Int>){}[0]
+        final fun withStdout(kotlinx.io/RawSink): uk.shusek.krwa.component/WasiPreview2.Builder // uk.shusek.krwa.component/WasiPreview2.Builder.withStdout|withStdout(kotlinx.io.RawSink){}[0]
+        final fun withSystemEnvironment(): uk.shusek.krwa.component/WasiPreview2.Builder // uk.shusek.krwa.component/WasiPreview2.Builder.withSystemEnvironment|withSystemEnvironment(){}[0]
+        final fun withTerminal(kotlin/Boolean): uk.shusek.krwa.component/WasiPreview2.Builder // uk.shusek.krwa.component/WasiPreview2.Builder.withTerminal|withTerminal(kotlin.Boolean){}[0]
+        final fun withTerminalStderr(kotlin/Boolean): uk.shusek.krwa.component/WasiPreview2.Builder // uk.shusek.krwa.component/WasiPreview2.Builder.withTerminalStderr|withTerminalStderr(kotlin.Boolean){}[0]
+        final fun withTerminalStdin(kotlin/Boolean): uk.shusek.krwa.component/WasiPreview2.Builder // uk.shusek.krwa.component/WasiPreview2.Builder.withTerminalStdin|withTerminalStdin(kotlin.Boolean){}[0]
+        final fun withTerminalStdout(kotlin/Boolean): uk.shusek.krwa.component/WasiPreview2.Builder // uk.shusek.krwa.component/WasiPreview2.Builder.withTerminalStdout|withTerminalStdout(kotlin.Boolean){}[0]
+        final fun withVersion(kotlin/String): uk.shusek.krwa.component/WasiPreview2.Builder // uk.shusek.krwa.component/WasiPreview2.Builder.withVersion|withVersion(kotlin.String){}[0]
+        final fun withWallClock(kotlin.time/Clock, kotlin/String = ...): uk.shusek.krwa.component/WasiPreview2.Builder // uk.shusek.krwa.component/WasiPreview2.Builder.withWallClock|withWallClock(kotlin.time.Clock;kotlin.String){}[0]
+        final fun withWallClock(kotlin.time/Clock, kotlinx.datetime/TimeZone): uk.shusek.krwa.component/WasiPreview2.Builder // uk.shusek.krwa.component/WasiPreview2.Builder.withWallClock|withWallClock(kotlin.time.Clock;kotlinx.datetime.TimeZone){}[0]
+        final fun withWallClock(kotlin/Function0<kotlin.time/Instant>, kotlin/String = ...): uk.shusek.krwa.component/WasiPreview2.Builder // uk.shusek.krwa.component/WasiPreview2.Builder.withWallClock|withWallClock(kotlin.Function0<kotlin.time.Instant>;kotlin.String){}[0]
+        final fun withWallClockResolutionNanos(kotlin/Long): uk.shusek.krwa.component/WasiPreview2.Builder // uk.shusek.krwa.component/WasiPreview2.Builder.withWallClockResolutionNanos|withWallClockResolutionNanos(kotlin.Long){}[0]
+        final fun withoutNetworking(): uk.shusek.krwa.component/WasiPreview2.Builder // uk.shusek.krwa.component/WasiPreview2.Builder.withoutNetworking|withoutNetworking(){}[0]
+    }
+
+    final class DescriptorTag // uk.shusek.krwa.component/WasiPreview2.DescriptorTag|null[0]
+
+    final class DirectoryEntryStreamTag // uk.shusek.krwa.component/WasiPreview2.DirectoryEntryStreamTag|null[0]
+
+    final class ErrorTag // uk.shusek.krwa.component/WasiPreview2.ErrorTag|null[0]
+
+    final class ExitException : kotlin/RuntimeException { // uk.shusek.krwa.component/WasiPreview2.ExitException|null[0]
+        constructor <init>(kotlin/Int) // uk.shusek.krwa.component/WasiPreview2.ExitException.<init>|<init>(kotlin.Int){}[0]
+
+        final fun getStatusCode(): kotlin/Int // uk.shusek.krwa.component/WasiPreview2.ExitException.getStatusCode|getStatusCode(){}[0]
+        final fun statusCode(): kotlin/Int // uk.shusek.krwa.component/WasiPreview2.ExitException.statusCode|statusCode(){}[0]
+    }
+
+    final class FutureIncomingResponseTag // uk.shusek.krwa.component/WasiPreview2.FutureIncomingResponseTag|null[0]
+
+    final class FutureTrailersTag // uk.shusek.krwa.component/WasiPreview2.FutureTrailersTag|null[0]
+
+    final class HttpFieldsTag // uk.shusek.krwa.component/WasiPreview2.HttpFieldsTag|null[0]
+
+    final class HttpRequestSnapshot { // uk.shusek.krwa.component/WasiPreview2.HttpRequestSnapshot|null[0]
+        constructor <init>(kotlin/String, kotlin/String, kotlin/String, kotlin/String, kotlin.collections/Map<kotlin/String, kotlin.collections/List<kotlin/ByteArray>>, kotlin/ByteArray) // uk.shusek.krwa.component/WasiPreview2.HttpRequestSnapshot.<init>|<init>(kotlin.String;kotlin.String;kotlin.String;kotlin.String;kotlin.collections.Map<kotlin.String,kotlin.collections.List<kotlin.ByteArray>>;kotlin.ByteArray){}[0]
+
+        final fun authority(): kotlin/String // uk.shusek.krwa.component/WasiPreview2.HttpRequestSnapshot.authority|authority(){}[0]
+        final fun body(): kotlin/ByteArray // uk.shusek.krwa.component/WasiPreview2.HttpRequestSnapshot.body|body(){}[0]
+        final fun getAuthority(): kotlin/String // uk.shusek.krwa.component/WasiPreview2.HttpRequestSnapshot.getAuthority|getAuthority(){}[0]
+        final fun getBody(): kotlin/ByteArray // uk.shusek.krwa.component/WasiPreview2.HttpRequestSnapshot.getBody|getBody(){}[0]
+        final fun getHeaders(): kotlin.collections/Map<kotlin/String, kotlin.collections/List<kotlin/ByteArray>> // uk.shusek.krwa.component/WasiPreview2.HttpRequestSnapshot.getHeaders|getHeaders(){}[0]
+        final fun getMethod(): kotlin/String // uk.shusek.krwa.component/WasiPreview2.HttpRequestSnapshot.getMethod|getMethod(){}[0]
+        final fun getPathWithQuery(): kotlin/String // uk.shusek.krwa.component/WasiPreview2.HttpRequestSnapshot.getPathWithQuery|getPathWithQuery(){}[0]
+        final fun getScheme(): kotlin/String // uk.shusek.krwa.component/WasiPreview2.HttpRequestSnapshot.getScheme|getScheme(){}[0]
+        final fun headers(): kotlin.collections/Map<kotlin/String, kotlin.collections/List<kotlin/ByteArray>> // uk.shusek.krwa.component/WasiPreview2.HttpRequestSnapshot.headers|headers(){}[0]
+        final fun method(): kotlin/String // uk.shusek.krwa.component/WasiPreview2.HttpRequestSnapshot.method|method(){}[0]
+        final fun pathWithQuery(): kotlin/String // uk.shusek.krwa.component/WasiPreview2.HttpRequestSnapshot.pathWithQuery|pathWithQuery(){}[0]
+        final fun scheme(): kotlin/String // uk.shusek.krwa.component/WasiPreview2.HttpRequestSnapshot.scheme|scheme(){}[0]
+    }
+
+    final class HttpResponseSnapshot { // uk.shusek.krwa.component/WasiPreview2.HttpResponseSnapshot|null[0]
+        constructor <init>(kotlin/Int, kotlin.collections/Map<kotlin/String, kotlin.collections/List<kotlin/ByteArray>>, kotlin/ByteArray, kotlin/Boolean) // uk.shusek.krwa.component/WasiPreview2.HttpResponseSnapshot.<init>|<init>(kotlin.Int;kotlin.collections.Map<kotlin.String,kotlin.collections.List<kotlin.ByteArray>>;kotlin.ByteArray;kotlin.Boolean){}[0]
+
+        final fun body(): kotlin/ByteArray // uk.shusek.krwa.component/WasiPreview2.HttpResponseSnapshot.body|body(){}[0]
+        final fun bodyFinished(): kotlin/Boolean // uk.shusek.krwa.component/WasiPreview2.HttpResponseSnapshot.bodyFinished|bodyFinished(){}[0]
+        final fun getBody(): kotlin/ByteArray // uk.shusek.krwa.component/WasiPreview2.HttpResponseSnapshot.getBody|getBody(){}[0]
+        final fun getHeaders(): kotlin.collections/Map<kotlin/String, kotlin.collections/List<kotlin/ByteArray>> // uk.shusek.krwa.component/WasiPreview2.HttpResponseSnapshot.getHeaders|getHeaders(){}[0]
+        final fun getStatusCode(): kotlin/Int // uk.shusek.krwa.component/WasiPreview2.HttpResponseSnapshot.getStatusCode|getStatusCode(){}[0]
+        final fun headers(): kotlin.collections/Map<kotlin/String, kotlin.collections/List<kotlin/ByteArray>> // uk.shusek.krwa.component/WasiPreview2.HttpResponseSnapshot.headers|headers(){}[0]
+        final fun isBodyFinished(): kotlin/Boolean // uk.shusek.krwa.component/WasiPreview2.HttpResponseSnapshot.isBodyFinished|isBodyFinished(){}[0]
+        final fun statusCode(): kotlin/Int // uk.shusek.krwa.component/WasiPreview2.HttpResponseSnapshot.statusCode|statusCode(){}[0]
+    }
+
+    final class IncomingBodyTag // uk.shusek.krwa.component/WasiPreview2.IncomingBodyTag|null[0]
+
+    final class IncomingDatagramStreamTag // uk.shusek.krwa.component/WasiPreview2.IncomingDatagramStreamTag|null[0]
+
+    final class IncomingRequestTag // uk.shusek.krwa.component/WasiPreview2.IncomingRequestTag|null[0]
+
+    final class IncomingResponseTag // uk.shusek.krwa.component/WasiPreview2.IncomingResponseTag|null[0]
+
+    final class InputStreamTag // uk.shusek.krwa.component/WasiPreview2.InputStreamTag|null[0]
+
+    final class NetworkTag // uk.shusek.krwa.component/WasiPreview2.NetworkTag|null[0]
+
+    final class OutgoingBodyTag // uk.shusek.krwa.component/WasiPreview2.OutgoingBodyTag|null[0]
+
+    final class OutgoingDatagramStreamTag // uk.shusek.krwa.component/WasiPreview2.OutgoingDatagramStreamTag|null[0]
+
+    final class OutgoingRequestTag // uk.shusek.krwa.component/WasiPreview2.OutgoingRequestTag|null[0]
+
+    final class OutgoingResponseTag // uk.shusek.krwa.component/WasiPreview2.OutgoingResponseTag|null[0]
+
+    final class OutputStreamTag // uk.shusek.krwa.component/WasiPreview2.OutputStreamTag|null[0]
+
+    final class PollableTag // uk.shusek.krwa.component/WasiPreview2.PollableTag|null[0]
+
+    final class RequestOptionsTag // uk.shusek.krwa.component/WasiPreview2.RequestOptionsTag|null[0]
+
+    final class ResolveAddressStreamTag // uk.shusek.krwa.component/WasiPreview2.ResolveAddressStreamTag|null[0]
+
+    final class ResponseOutparamTag // uk.shusek.krwa.component/WasiPreview2.ResponseOutparamTag|null[0]
+
+    final class TcpSocketTag // uk.shusek.krwa.component/WasiPreview2.TcpSocketTag|null[0]
+
+    final class TerminalInputTag // uk.shusek.krwa.component/WasiPreview2.TerminalInputTag|null[0]
+
+    final class TerminalOutputTag // uk.shusek.krwa.component/WasiPreview2.TerminalOutputTag|null[0]
+
+    final class UdpSocketTag // uk.shusek.krwa.component/WasiPreview2.UdpSocketTag|null[0]
+
+    final class WasiInputStream // uk.shusek.krwa.component/WasiPreview2.WasiInputStream|null[0]
+
+    final class WasiOutputStream // uk.shusek.krwa.component/WasiPreview2.WasiOutputStream|null[0]
+
+    final object Companion { // uk.shusek.krwa.component/WasiPreview2.Companion|null[0]
+        final const val DEFAULT_VERSION // uk.shusek.krwa.component/WasiPreview2.Companion.DEFAULT_VERSION|{}DEFAULT_VERSION[0]
+            final fun <get-DEFAULT_VERSION>(): kotlin/String // uk.shusek.krwa.component/WasiPreview2.Companion.DEFAULT_VERSION.<get-DEFAULT_VERSION>|<get-DEFAULT_VERSION>(){}[0]
+        final const val KOTLIN_COMPONENT_MODEL_VERSION // uk.shusek.krwa.component/WasiPreview2.Companion.KOTLIN_COMPONENT_MODEL_VERSION|{}KOTLIN_COMPONENT_MODEL_VERSION[0]
+            final fun <get-KOTLIN_COMPONENT_MODEL_VERSION>(): kotlin/String // uk.shusek.krwa.component/WasiPreview2.Companion.KOTLIN_COMPONENT_MODEL_VERSION.<get-KOTLIN_COMPONENT_MODEL_VERSION>|<get-KOTLIN_COMPONENT_MODEL_VERSION>(){}[0]
+
+        final fun builder(): uk.shusek.krwa.component/WasiPreview2.Builder // uk.shusek.krwa.component/WasiPreview2.Companion.builder|builder(){}[0]
+    }
+}
+
+final class uk.shusek.krwa.component/WasiPreview3 : uk.shusek.krwa.component/WasiPreview3CanonicalIntrinsics { // uk.shusek.krwa.component/WasiPreview3|null[0]
+    final fun <#A1: kotlin/Any?> completedFutureOf(#A1): uk.shusek.krwa.component/WitFuture<#A1> // uk.shusek.krwa.component/WasiPreview3.completedFutureOf|completedFutureOf(0:0){0§<kotlin.Any?>}[0]
+    final fun <#A1: kotlin/Any?> pendingFuture(): uk.shusek.krwa.component/WitFuture<#A1> // uk.shusek.krwa.component/WasiPreview3.pendingFuture|pendingFuture(){0§<kotlin.Any?>}[0]
+    final fun <#A1: kotlin/Any?> streamOf(kotlin.collections/Iterable<#A1>): uk.shusek.krwa.component/WitStream<#A1> // uk.shusek.krwa.component/WasiPreview3.streamOf|streamOf(kotlin.collections.Iterable<0:0>){0§<kotlin.Any?>}[0]
+    final fun <#A1: kotlin/Any?> streamValues(kotlin/Long): kotlin.collections/List<#A1> // uk.shusek.krwa.component/WasiPreview3.streamValues|streamValues(kotlin.Long){0§<kotlin.Any?>}[0]
+    final fun <#A1: kotlin/Any?> streamValues(uk.shusek.krwa.component/WitStream<#A1>): kotlin.collections/List<#A1> // uk.shusek.krwa.component/WasiPreview3.streamValues|streamValues(uk.shusek.krwa.component.WitStream<0:0>){0§<kotlin.Any?>}[0]
+    final fun <#A1: uk.shusek.krwa.component/WasiHostImportBuilder> install(#A1): #A1 // uk.shusek.krwa.component/WasiPreview3.install|install(0:0){0§<uk.shusek.krwa.component.WasiHostImportBuilder>}[0]
+    final fun acceptTcpConnection(kotlin/Long): uk.shusek.krwa.component/WitResult<uk.shusek.krwa.component/WitResource<*>, kotlin/Any?> // uk.shusek.krwa.component/WasiPreview3.acceptTcpConnection|acceptTcpConnection(kotlin.Long){}[0]
+    final fun acceptTcpConnection(uk.shusek.krwa.component/WitStream<*>): uk.shusek.krwa.component/WitResult<uk.shusek.krwa.component/WitResource<*>, kotlin/Any?> // uk.shusek.krwa.component/WasiPreview3.acceptTcpConnection|acceptTcpConnection(uk.shusek.krwa.component.WitStream<*>){}[0]
+    final fun byteStream(kotlin/ByteArray): uk.shusek.krwa.component/WitStream<kotlin/UByte> // uk.shusek.krwa.component/WasiPreview3.byteStream|byteStream(kotlin.ByteArray){}[0]
+    final fun byteStream(kotlinx.coroutines.flow/Flow<kotlin/ByteArray>): uk.shusek.krwa.component/WitStream<kotlin/UByte> // uk.shusek.krwa.component/WasiPreview3.byteStream|byteStream(kotlinx.coroutines.flow.Flow<kotlin.ByteArray>){}[0]
+    final fun cancel() // uk.shusek.krwa.component/WasiPreview3.cancel|cancel(){}[0]
+    final fun close() // uk.shusek.krwa.component/WasiPreview3.close|close(){}[0]
+    final fun completeFuture(kotlin/Long, kotlin/Any?) // uk.shusek.krwa.component/WasiPreview3.completeFuture|completeFuture(kotlin.Long;kotlin.Any?){}[0]
+    final fun completeFuture(uk.shusek.krwa.component/WitFuture<*>, kotlin/Any?) // uk.shusek.krwa.component/WasiPreview3.completeFuture|completeFuture(uk.shusek.krwa.component.WitFuture<*>;kotlin.Any?){}[0]
+    final fun completedFuture(kotlin/Any?): uk.shusek.krwa.component/WitFuture<kotlin/Any?> // uk.shusek.krwa.component/WasiPreview3.completedFuture|completedFuture(kotlin.Any?){}[0]
+    final fun completedFutureHandle(kotlin/Any?): kotlin/Long // uk.shusek.krwa.component/WasiPreview3.completedFutureHandle|completedFutureHandle(kotlin.Any?){}[0]
+    final fun futureCancelRead(kotlin/Long): kotlin/Long // uk.shusek.krwa.component/WasiPreview3.futureCancelRead|futureCancelRead(kotlin.Long){}[0]
+    final fun futureCancelWrite(kotlin/Long): kotlin/Long // uk.shusek.krwa.component/WasiPreview3.futureCancelWrite|futureCancelWrite(kotlin.Long){}[0]
+    final fun futureCompleted(kotlin/Long): kotlin/Boolean // uk.shusek.krwa.component/WasiPreview3.futureCompleted|futureCompleted(kotlin.Long){}[0]
+    final fun futureCompleted(uk.shusek.krwa.component/WitFuture<*>): kotlin/Boolean // uk.shusek.krwa.component/WasiPreview3.futureCompleted|futureCompleted(uk.shusek.krwa.component.WitFuture<*>){}[0]
+    final fun futureDropReadable(kotlin/Long) // uk.shusek.krwa.component/WasiPreview3.futureDropReadable|futureDropReadable(kotlin.Long){}[0]
+    final fun futureDropWritable(kotlin/Long) // uk.shusek.krwa.component/WasiPreview3.futureDropWritable|futureDropWritable(kotlin.Long){}[0]
+    final fun futureNew(): kotlin/Long // uk.shusek.krwa.component/WasiPreview3.futureNew|futureNew(){}[0]
+    final fun futureRead(uk.shusek.krwa.component/WasiPreview3CanonicalContext, kotlin/Long, kotlin/Int, uk.shusek.krwa.component/WitPackage.TypeRef): kotlin/Long // uk.shusek.krwa.component/WasiPreview3.futureRead|futureRead(uk.shusek.krwa.component.WasiPreview3CanonicalContext;kotlin.Long;kotlin.Int;uk.shusek.krwa.component.WitPackage.TypeRef){}[0]
+    final fun futureValue(kotlin/Long): kotlin/Any? // uk.shusek.krwa.component/WasiPreview3.futureValue|futureValue(kotlin.Long){}[0]
+    final fun futureValue(uk.shusek.krwa.component/WitFuture<*>): kotlin/Any? // uk.shusek.krwa.component/WasiPreview3.futureValue|futureValue(uk.shusek.krwa.component.WitFuture<*>){}[0]
+    final fun futureWrite(uk.shusek.krwa.component/WasiPreview3CanonicalContext, kotlin/Long, kotlin/Int, uk.shusek.krwa.component/WitPackage.TypeRef): kotlin/Long // uk.shusek.krwa.component/WasiPreview3.futureWrite|futureWrite(uk.shusek.krwa.component.WasiPreview3CanonicalContext;kotlin.Long;kotlin.Int;uk.shusek.krwa.component.WitPackage.TypeRef){}[0]
+    final fun handleHttpRequest(uk.shusek.krwa.component/WasiComponentInvoker, kotlin/String, kotlin/String, kotlin/String, kotlin/String, kotlin.collections/Map<kotlin/String, kotlin.collections/List<kotlin/ByteArray>>, kotlin/ByteArray): uk.shusek.krwa.component/WasiPreview2.HttpResponseSnapshot // uk.shusek.krwa.component/WasiPreview3.handleHttpRequest|handleHttpRequest(uk.shusek.krwa.component.WasiComponentInvoker;kotlin.String;kotlin.String;kotlin.String;kotlin.String;kotlin.collections.Map<kotlin.String,kotlin.collections.List<kotlin.ByteArray>>;kotlin.ByteArray){}[0]
+    final fun handleHttpRequest(uk.shusek.krwa.component/WasiComponentInvoker, uk.shusek.krwa.component/WasiPreview2.HttpRequestSnapshot): uk.shusek.krwa.component/WasiPreview2.HttpResponseSnapshot // uk.shusek.krwa.component/WasiPreview3.handleHttpRequest|handleHttpRequest(uk.shusek.krwa.component.WasiComponentInvoker;uk.shusek.krwa.component.WasiPreview2.HttpRequestSnapshot){}[0]
+    final fun httpFields(kotlin.collections/Map<kotlin/String, kotlin.collections/List<kotlin/ByteArray>>): uk.shusek.krwa.component/WitResource<*> // uk.shusek.krwa.component/WasiPreview3.httpFields|httpFields(kotlin.collections.Map<kotlin.String,kotlin.collections.List<kotlin.ByteArray>>){}[0]
+    final fun httpFieldsSnapshot(kotlin/Long): kotlin.collections/Map<kotlin/String, kotlin.collections/List<kotlin/ByteArray>> // uk.shusek.krwa.component/WasiPreview3.httpFieldsSnapshot|httpFieldsSnapshot(kotlin.Long){}[0]
+    final fun httpFieldsSnapshot(uk.shusek.krwa.component/WitResource<*>): kotlin.collections/Map<kotlin/String, kotlin.collections/List<kotlin/ByteArray>> // uk.shusek.krwa.component/WasiPreview3.httpFieldsSnapshot|httpFieldsSnapshot(uk.shusek.krwa.component.WitResource<*>){}[0]
+    final fun httpRequestTrailers(kotlin/Long): uk.shusek.krwa.component/WitResult<kotlin.collections/Map<kotlin/String, kotlin.collections/List<kotlin/ByteArray>>?, kotlin/Any?> // uk.shusek.krwa.component/WasiPreview3.httpRequestTrailers|httpRequestTrailers(kotlin.Long){}[0]
+    final fun httpRequestTrailers(uk.shusek.krwa.component/WitResource<*>): uk.shusek.krwa.component/WitResult<kotlin.collections/Map<kotlin/String, kotlin.collections/List<kotlin/ByteArray>>?, kotlin/Any?> // uk.shusek.krwa.component/WasiPreview3.httpRequestTrailers|httpRequestTrailers(uk.shusek.krwa.component.WitResource<*>){}[0]
+    final fun httpResponseTrailers(kotlin/Long): uk.shusek.krwa.component/WitResult<kotlin.collections/Map<kotlin/String, kotlin.collections/List<kotlin/ByteArray>>?, kotlin/Any?> // uk.shusek.krwa.component/WasiPreview3.httpResponseTrailers|httpResponseTrailers(kotlin.Long){}[0]
+    final fun httpResponseTrailers(uk.shusek.krwa.component/WitResource<*>): uk.shusek.krwa.component/WitResult<kotlin.collections/Map<kotlin/String, kotlin.collections/List<kotlin/ByteArray>>?, kotlin/Any?> // uk.shusek.krwa.component/WasiPreview3.httpResponseTrailers|httpResponseTrailers(uk.shusek.krwa.component.WitResource<*>){}[0]
+    final fun streamBytes(kotlin/Long): kotlin/ByteArray // uk.shusek.krwa.component/WasiPreview3.streamBytes|streamBytes(kotlin.Long){}[0]
+    final fun streamBytes(uk.shusek.krwa.component/WitStream<*>): kotlin/ByteArray // uk.shusek.krwa.component/WasiPreview3.streamBytes|streamBytes(uk.shusek.krwa.component.WitStream<*>){}[0]
+    final fun streamCancelRead(kotlin/Long): kotlin/Long // uk.shusek.krwa.component/WasiPreview3.streamCancelRead|streamCancelRead(kotlin.Long){}[0]
+    final fun streamCancelWrite(kotlin/Long): kotlin/Long // uk.shusek.krwa.component/WasiPreview3.streamCancelWrite|streamCancelWrite(kotlin.Long){}[0]
+    final fun streamDirectoryEntries(kotlin/Long): kotlin.collections/List<kotlin.collections/Map<kotlin/String, kotlin/Any?>> // uk.shusek.krwa.component/WasiPreview3.streamDirectoryEntries|streamDirectoryEntries(kotlin.Long){}[0]
+    final fun streamDirectoryEntries(uk.shusek.krwa.component/WitStream<*>): kotlin.collections/List<kotlin.collections/Map<kotlin/String, kotlin/Any?>> // uk.shusek.krwa.component/WasiPreview3.streamDirectoryEntries|streamDirectoryEntries(uk.shusek.krwa.component.WitStream<*>){}[0]
+    final fun streamDropReadable(kotlin/Long) // uk.shusek.krwa.component/WasiPreview3.streamDropReadable|streamDropReadable(kotlin.Long){}[0]
+    final fun streamDropWritable(kotlin/Long) // uk.shusek.krwa.component/WasiPreview3.streamDropWritable|streamDropWritable(kotlin.Long){}[0]
+    final fun streamNew(uk.shusek.krwa.component/WitPackage.TypeRef): kotlin/Long // uk.shusek.krwa.component/WasiPreview3.streamNew|streamNew(uk.shusek.krwa.component.WitPackage.TypeRef){}[0]
+    final fun streamRead(uk.shusek.krwa.component/WasiPreview3CanonicalContext, kotlin/Long, kotlin/Int, kotlin/Int, uk.shusek.krwa.component/WitPackage.TypeRef): kotlin/Long // uk.shusek.krwa.component/WasiPreview3.streamRead|streamRead(uk.shusek.krwa.component.WasiPreview3CanonicalContext;kotlin.Long;kotlin.Int;kotlin.Int;uk.shusek.krwa.component.WitPackage.TypeRef){}[0]
+    final fun streamWrite(uk.shusek.krwa.component/WasiPreview3CanonicalContext, kotlin/Long, kotlin/Int, kotlin/Int, uk.shusek.krwa.component/WitPackage.TypeRef): kotlin/Long // uk.shusek.krwa.component/WasiPreview3.streamWrite|streamWrite(uk.shusek.krwa.component.WasiPreview3CanonicalContext;kotlin.Long;kotlin.Int;kotlin.Int;uk.shusek.krwa.component.WitPackage.TypeRef){}[0]
+    final fun tcpLocalAddress(kotlin/Long): uk.shusek.krwa.component/WitResult<kotlin/Any, kotlin/Any?> // uk.shusek.krwa.component/WasiPreview3.tcpLocalAddress|tcpLocalAddress(kotlin.Long){}[0]
+    final fun tcpLocalAddress(uk.shusek.krwa.component/WitResource<*>): uk.shusek.krwa.component/WitResult<kotlin/Any, kotlin/Any?> // uk.shusek.krwa.component/WasiPreview3.tcpLocalAddress|tcpLocalAddress(uk.shusek.krwa.component.WitResource<*>){}[0]
+    final fun tcpRemoteAddress(kotlin/Long): uk.shusek.krwa.component/WitResult<kotlin/Any, kotlin/Any?> // uk.shusek.krwa.component/WasiPreview3.tcpRemoteAddress|tcpRemoteAddress(kotlin.Long){}[0]
+    final fun tcpRemoteAddress(uk.shusek.krwa.component/WitResource<*>): uk.shusek.krwa.component/WitResult<kotlin/Any, kotlin/Any?> // uk.shusek.krwa.component/WasiPreview3.tcpRemoteAddress|tcpRemoteAddress(uk.shusek.krwa.component.WitResource<*>){}[0]
+    final fun version(): kotlin/String // uk.shusek.krwa.component/WasiPreview3.version|version(){}[0]
+    final suspend fun <#A1: kotlin/Any?> awaitFuture(uk.shusek.krwa.component/WitFuture<#A1>): #A1 // uk.shusek.krwa.component/WasiPreview3.awaitFuture|awaitFuture(uk.shusek.krwa.component.WitFuture<0:0>){0§<kotlin.Any?>}[0]
+    final suspend fun awaitFutureValue(kotlin/Long): kotlin/Any? // uk.shusek.krwa.component/WasiPreview3.awaitFutureValue|awaitFutureValue(kotlin.Long){}[0]
+    final suspend fun awaitStreamReadable(kotlin/Long) // uk.shusek.krwa.component/WasiPreview3.awaitStreamReadable|awaitStreamReadable(kotlin.Long){}[0]
+    final suspend fun awaitStreamReadable(uk.shusek.krwa.component/WitStream<*>) // uk.shusek.krwa.component/WasiPreview3.awaitStreamReadable|awaitStreamReadable(uk.shusek.krwa.component.WitStream<*>){}[0]
+    final suspend fun awaitStreamWritable(kotlin/Long) // uk.shusek.krwa.component/WasiPreview3.awaitStreamWritable|awaitStreamWritable(kotlin.Long){}[0]
+    final suspend fun awaitStreamWritable(uk.shusek.krwa.component/WitStream<*>) // uk.shusek.krwa.component/WasiPreview3.awaitStreamWritable|awaitStreamWritable(uk.shusek.krwa.component.WitStream<*>){}[0]
+    final suspend fun readByteStreamChunk(kotlin/Long, kotlin/Int = ...): kotlin/ByteArray? // uk.shusek.krwa.component/WasiPreview3.readByteStreamChunk|readByteStreamChunk(kotlin.Long;kotlin.Int){}[0]
+    final suspend fun readByteStreamChunk(uk.shusek.krwa.component/WitStream<*>, kotlin/Int = ...): kotlin/ByteArray? // uk.shusek.krwa.component/WasiPreview3.readByteStreamChunk|readByteStreamChunk(uk.shusek.krwa.component.WitStream<*>;kotlin.Int){}[0]
+
+    final class Builder { // uk.shusek.krwa.component/WasiPreview3.Builder|null[0]
+        constructor <init>() // uk.shusek.krwa.component/WasiPreview3.Builder.<init>|<init>(){}[0]
+
+        final val arguments // uk.shusek.krwa.component/WasiPreview3.Builder.arguments|{}arguments[0]
+            final fun <get-arguments>(): kotlin.collections/MutableList<kotlin/String> // uk.shusek.krwa.component/WasiPreview3.Builder.arguments.<get-arguments>|<get-arguments>(){}[0]
+        final val environment // uk.shusek.krwa.component/WasiPreview3.Builder.environment|{}environment[0]
+            final fun <get-environment>(): kotlin.collections/MutableMap<kotlin/String, kotlin/String> // uk.shusek.krwa.component/WasiPreview3.Builder.environment.<get-environment>|<get-environment>(){}[0]
+
+        final var fileSystem // uk.shusek.krwa.component/WasiPreview3.Builder.fileSystem|{}fileSystem[0]
+            final fun <get-fileSystem>(): okio/FileSystem // uk.shusek.krwa.component/WasiPreview3.Builder.fileSystem.<get-fileSystem>|<get-fileSystem>(){}[0]
+            final fun <set-fileSystem>(okio/FileSystem) // uk.shusek.krwa.component/WasiPreview3.Builder.fileSystem.<set-fileSystem>|<set-fileSystem>(okio.FileSystem){}[0]
+        final var httpClient // uk.shusek.krwa.component/WasiPreview3.Builder.httpClient|{}httpClient[0]
+            final fun <get-httpClient>(): uk.shusek.krwa.component/WasiHttpClient // uk.shusek.krwa.component/WasiPreview3.Builder.httpClient.<get-httpClient>|<get-httpClient>(){}[0]
+            final fun <set-httpClient>(uk.shusek.krwa.component/WasiHttpClient) // uk.shusek.krwa.component/WasiPreview3.Builder.httpClient.<set-httpClient>|<set-httpClient>(uk.shusek.krwa.component.WasiHttpClient){}[0]
+        final var httpHandler // uk.shusek.krwa.component/WasiPreview3.Builder.httpHandler|{}httpHandler[0]
+            final fun <get-httpHandler>(): uk.shusek.krwa.component/WasiHttpHandler // uk.shusek.krwa.component/WasiPreview3.Builder.httpHandler.<get-httpHandler>|<get-httpHandler>(){}[0]
+            final fun <set-httpHandler>(uk.shusek.krwa.component/WasiHttpHandler) // uk.shusek.krwa.component/WasiPreview3.Builder.httpHandler.<set-httpHandler>|<set-httpHandler>(uk.shusek.krwa.component.WasiHttpHandler){}[0]
+        final var initialCwd // uk.shusek.krwa.component/WasiPreview3.Builder.initialCwd|{}initialCwd[0]
+            final fun <get-initialCwd>(): kotlin/String? // uk.shusek.krwa.component/WasiPreview3.Builder.initialCwd.<get-initialCwd>|<get-initialCwd>(){}[0]
+            final fun <set-initialCwd>(kotlin/String?) // uk.shusek.krwa.component/WasiPreview3.Builder.initialCwd.<set-initialCwd>|<set-initialCwd>(kotlin.String?){}[0]
+        final var insecureRandom // uk.shusek.krwa.component/WasiPreview3.Builder.insecureRandom|{}insecureRandom[0]
+            final fun <get-insecureRandom>(): kotlin.random/Random // uk.shusek.krwa.component/WasiPreview3.Builder.insecureRandom.<get-insecureRandom>|<get-insecureRandom>(){}[0]
+            final fun <set-insecureRandom>(kotlin.random/Random) // uk.shusek.krwa.component/WasiPreview3.Builder.insecureRandom.<set-insecureRandom>|<set-insecureRandom>(kotlin.random.Random){}[0]
+        final var insecureSeedLower // uk.shusek.krwa.component/WasiPreview3.Builder.insecureSeedLower|{}insecureSeedLower[0]
+            final fun <get-insecureSeedLower>(): kotlin/Long // uk.shusek.krwa.component/WasiPreview3.Builder.insecureSeedLower.<get-insecureSeedLower>|<get-insecureSeedLower>(){}[0]
+            final fun <set-insecureSeedLower>(kotlin/Long) // uk.shusek.krwa.component/WasiPreview3.Builder.insecureSeedLower.<set-insecureSeedLower>|<set-insecureSeedLower>(kotlin.Long){}[0]
+        final var insecureSeedUpper // uk.shusek.krwa.component/WasiPreview3.Builder.insecureSeedUpper|{}insecureSeedUpper[0]
+            final fun <get-insecureSeedUpper>(): kotlin/Long // uk.shusek.krwa.component/WasiPreview3.Builder.insecureSeedUpper.<get-insecureSeedUpper>|<get-insecureSeedUpper>(){}[0]
+            final fun <set-insecureSeedUpper>(kotlin/Long) // uk.shusek.krwa.component/WasiPreview3.Builder.insecureSeedUpper.<set-insecureSeedUpper>|<set-insecureSeedUpper>(kotlin.Long){}[0]
+        final var maxCanonicalThreads // uk.shusek.krwa.component/WasiPreview3.Builder.maxCanonicalThreads|{}maxCanonicalThreads[0]
+            final fun <get-maxCanonicalThreads>(): kotlin/Int // uk.shusek.krwa.component/WasiPreview3.Builder.maxCanonicalThreads.<get-maxCanonicalThreads>|<get-maxCanonicalThreads>(){}[0]
+            final fun <set-maxCanonicalThreads>(kotlin/Int) // uk.shusek.krwa.component/WasiPreview3.Builder.maxCanonicalThreads.<set-maxCanonicalThreads>|<set-maxCanonicalThreads>(kotlin.Int){}[0]
+        final var maxInFlightHostTasks // uk.shusek.krwa.component/WasiPreview3.Builder.maxInFlightHostTasks|{}maxInFlightHostTasks[0]
+            final fun <get-maxInFlightHostTasks>(): kotlin/Int // uk.shusek.krwa.component/WasiPreview3.Builder.maxInFlightHostTasks.<get-maxInFlightHostTasks>|<get-maxInFlightHostTasks>(){}[0]
+            final fun <set-maxInFlightHostTasks>(kotlin/Int) // uk.shusek.krwa.component/WasiPreview3.Builder.maxInFlightHostTasks.<set-maxInFlightHostTasks>|<set-maxInFlightHostTasks>(kotlin.Int){}[0]
+        final var maxPendingFutures // uk.shusek.krwa.component/WasiPreview3.Builder.maxPendingFutures|{}maxPendingFutures[0]
+            final fun <get-maxPendingFutures>(): kotlin/Int // uk.shusek.krwa.component/WasiPreview3.Builder.maxPendingFutures.<get-maxPendingFutures>|<get-maxPendingFutures>(){}[0]
+            final fun <set-maxPendingFutures>(kotlin/Int) // uk.shusek.krwa.component/WasiPreview3.Builder.maxPendingFutures.<set-maxPendingFutures>|<set-maxPendingFutures>(kotlin.Int){}[0]
+        final var maxPendingStreams // uk.shusek.krwa.component/WasiPreview3.Builder.maxPendingStreams|{}maxPendingStreams[0]
+            final fun <get-maxPendingStreams>(): kotlin/Int // uk.shusek.krwa.component/WasiPreview3.Builder.maxPendingStreams.<get-maxPendingStreams>|<get-maxPendingStreams>(){}[0]
+            final fun <set-maxPendingStreams>(kotlin/Int) // uk.shusek.krwa.component/WasiPreview3.Builder.maxPendingStreams.<set-maxPendingStreams>|<set-maxPendingStreams>(kotlin.Int){}[0]
+        final var maxWaitables // uk.shusek.krwa.component/WasiPreview3.Builder.maxWaitables|{}maxWaitables[0]
+            final fun <get-maxWaitables>(): kotlin/Int // uk.shusek.krwa.component/WasiPreview3.Builder.maxWaitables.<get-maxWaitables>|<get-maxWaitables>(){}[0]
+            final fun <set-maxWaitables>(kotlin/Int) // uk.shusek.krwa.component/WasiPreview3.Builder.maxWaitables.<set-maxWaitables>|<set-maxWaitables>(kotlin.Int){}[0]
+        final var monotonicClock // uk.shusek.krwa.component/WasiPreview3.Builder.monotonicClock|{}monotonicClock[0]
+            final fun <get-monotonicClock>(): kotlin/Function0<kotlin/Long> // uk.shusek.krwa.component/WasiPreview3.Builder.monotonicClock.<get-monotonicClock>|<get-monotonicClock>(){}[0]
+            final fun <set-monotonicClock>(kotlin/Function0<kotlin/Long>) // uk.shusek.krwa.component/WasiPreview3.Builder.monotonicClock.<set-monotonicClock>|<set-monotonicClock>(kotlin.Function0<kotlin.Long>){}[0]
+        final var monotonicResolutionNanos // uk.shusek.krwa.component/WasiPreview3.Builder.monotonicResolutionNanos|{}monotonicResolutionNanos[0]
+            final fun <get-monotonicResolutionNanos>(): kotlin/Long // uk.shusek.krwa.component/WasiPreview3.Builder.monotonicResolutionNanos.<get-monotonicResolutionNanos>|<get-monotonicResolutionNanos>(){}[0]
+            final fun <set-monotonicResolutionNanos>(kotlin/Long) // uk.shusek.krwa.component/WasiPreview3.Builder.monotonicResolutionNanos.<set-monotonicResolutionNanos>|<set-monotonicResolutionNanos>(kotlin.Long){}[0]
+        final var networkingEnabled // uk.shusek.krwa.component/WasiPreview3.Builder.networkingEnabled|{}networkingEnabled[0]
+            final fun <get-networkingEnabled>(): kotlin/Boolean // uk.shusek.krwa.component/WasiPreview3.Builder.networkingEnabled.<get-networkingEnabled>|<get-networkingEnabled>(){}[0]
+            final fun <set-networkingEnabled>(kotlin/Boolean) // uk.shusek.krwa.component/WasiPreview3.Builder.networkingEnabled.<set-networkingEnabled>|<set-networkingEnabled>(kotlin.Boolean){}[0]
+        final var secureRandom // uk.shusek.krwa.component/WasiPreview3.Builder.secureRandom|{}secureRandom[0]
+            final fun <get-secureRandom>(): org.kotlincrypto.random/CryptoRand // uk.shusek.krwa.component/WasiPreview3.Builder.secureRandom.<get-secureRandom>|<get-secureRandom>(){}[0]
+            final fun <set-secureRandom>(org.kotlincrypto.random/CryptoRand) // uk.shusek.krwa.component/WasiPreview3.Builder.secureRandom.<set-secureRandom>|<set-secureRandom>(org.kotlincrypto.random.CryptoRand){}[0]
+        final var stderr // uk.shusek.krwa.component/WasiPreview3.Builder.stderr|{}stderr[0]
+            final fun <get-stderr>(): kotlinx.io/RawSink // uk.shusek.krwa.component/WasiPreview3.Builder.stderr.<get-stderr>|<get-stderr>(){}[0]
+            final fun <set-stderr>(kotlinx.io/RawSink) // uk.shusek.krwa.component/WasiPreview3.Builder.stderr.<set-stderr>|<set-stderr>(kotlinx.io.RawSink){}[0]
+        final var stdin // uk.shusek.krwa.component/WasiPreview3.Builder.stdin|{}stdin[0]
+            final fun <get-stdin>(): kotlinx.io/RawSource // uk.shusek.krwa.component/WasiPreview3.Builder.stdin.<get-stdin>|<get-stdin>(){}[0]
+            final fun <set-stdin>(kotlinx.io/RawSource) // uk.shusek.krwa.component/WasiPreview3.Builder.stdin.<set-stdin>|<set-stdin>(kotlinx.io.RawSource){}[0]
+        final var stdout // uk.shusek.krwa.component/WasiPreview3.Builder.stdout|{}stdout[0]
+            final fun <get-stdout>(): kotlinx.io/RawSink // uk.shusek.krwa.component/WasiPreview3.Builder.stdout.<get-stdout>|<get-stdout>(){}[0]
+            final fun <set-stdout>(kotlinx.io/RawSink) // uk.shusek.krwa.component/WasiPreview3.Builder.stdout.<set-stdout>|<set-stdout>(kotlinx.io.RawSink){}[0]
+        final var streamBufferCapacity // uk.shusek.krwa.component/WasiPreview3.Builder.streamBufferCapacity|{}streamBufferCapacity[0]
+            final fun <get-streamBufferCapacity>(): kotlin/Int // uk.shusek.krwa.component/WasiPreview3.Builder.streamBufferCapacity.<get-streamBufferCapacity>|<get-streamBufferCapacity>(){}[0]
+            final fun <set-streamBufferCapacity>(kotlin/Int) // uk.shusek.krwa.component/WasiPreview3.Builder.streamBufferCapacity.<set-streamBufferCapacity>|<set-streamBufferCapacity>(kotlin.Int){}[0]
+        final var terminalStderr // uk.shusek.krwa.component/WasiPreview3.Builder.terminalStderr|{}terminalStderr[0]
+            final fun <get-terminalStderr>(): kotlin/Boolean // uk.shusek.krwa.component/WasiPreview3.Builder.terminalStderr.<get-terminalStderr>|<get-terminalStderr>(){}[0]
+            final fun <set-terminalStderr>(kotlin/Boolean) // uk.shusek.krwa.component/WasiPreview3.Builder.terminalStderr.<set-terminalStderr>|<set-terminalStderr>(kotlin.Boolean){}[0]
+        final var terminalStdin // uk.shusek.krwa.component/WasiPreview3.Builder.terminalStdin|{}terminalStdin[0]
+            final fun <get-terminalStdin>(): kotlin/Boolean // uk.shusek.krwa.component/WasiPreview3.Builder.terminalStdin.<get-terminalStdin>|<get-terminalStdin>(){}[0]
+            final fun <set-terminalStdin>(kotlin/Boolean) // uk.shusek.krwa.component/WasiPreview3.Builder.terminalStdin.<set-terminalStdin>|<set-terminalStdin>(kotlin.Boolean){}[0]
+        final var terminalStdout // uk.shusek.krwa.component/WasiPreview3.Builder.terminalStdout|{}terminalStdout[0]
+            final fun <get-terminalStdout>(): kotlin/Boolean // uk.shusek.krwa.component/WasiPreview3.Builder.terminalStdout.<get-terminalStdout>|<get-terminalStdout>(){}[0]
+            final fun <set-terminalStdout>(kotlin/Boolean) // uk.shusek.krwa.component/WasiPreview3.Builder.terminalStdout.<set-terminalStdout>|<set-terminalStdout>(kotlin.Boolean){}[0]
+        final var version // uk.shusek.krwa.component/WasiPreview3.Builder.version|{}version[0]
+            final fun <get-version>(): kotlin/String // uk.shusek.krwa.component/WasiPreview3.Builder.version.<get-version>|<get-version>(){}[0]
+            final fun <set-version>(kotlin/String) // uk.shusek.krwa.component/WasiPreview3.Builder.version.<set-version>|<set-version>(kotlin.String){}[0]
+        final var wallClock // uk.shusek.krwa.component/WasiPreview3.Builder.wallClock|{}wallClock[0]
+            final fun <get-wallClock>(): kotlin.time/Clock // uk.shusek.krwa.component/WasiPreview3.Builder.wallClock.<get-wallClock>|<get-wallClock>(){}[0]
+            final fun <set-wallClock>(kotlin.time/Clock) // uk.shusek.krwa.component/WasiPreview3.Builder.wallClock.<set-wallClock>|<set-wallClock>(kotlin.time.Clock){}[0]
+        final var wallClockResolutionNanos // uk.shusek.krwa.component/WasiPreview3.Builder.wallClockResolutionNanos|{}wallClockResolutionNanos[0]
+            final fun <get-wallClockResolutionNanos>(): kotlin/Long // uk.shusek.krwa.component/WasiPreview3.Builder.wallClockResolutionNanos.<get-wallClockResolutionNanos>|<get-wallClockResolutionNanos>(){}[0]
+            final fun <set-wallClockResolutionNanos>(kotlin/Long) // uk.shusek.krwa.component/WasiPreview3.Builder.wallClockResolutionNanos.<set-wallClockResolutionNanos>|<set-wallClockResolutionNanos>(kotlin.Long){}[0]
+        final var wallClockTimeZone // uk.shusek.krwa.component/WasiPreview3.Builder.wallClockTimeZone|{}wallClockTimeZone[0]
+            final fun <get-wallClockTimeZone>(): kotlinx.datetime/TimeZone // uk.shusek.krwa.component/WasiPreview3.Builder.wallClockTimeZone.<get-wallClockTimeZone>|<get-wallClockTimeZone>(){}[0]
+            final fun <set-wallClockTimeZone>(kotlinx.datetime/TimeZone) // uk.shusek.krwa.component/WasiPreview3.Builder.wallClockTimeZone.<set-wallClockTimeZone>|<set-wallClockTimeZone>(kotlinx.datetime.TimeZone){}[0]
+
+        final fun build(): uk.shusek.krwa.component/WasiPreview3 // uk.shusek.krwa.component/WasiPreview3.Builder.build|build(){}[0]
+        final fun withArguments(kotlin.collections/List<kotlin/String>): uk.shusek.krwa.component/WasiPreview3.Builder // uk.shusek.krwa.component/WasiPreview3.Builder.withArguments|withArguments(kotlin.collections.List<kotlin.String>){}[0]
+        final fun withArguments(kotlin/Array<out kotlin/String>...): uk.shusek.krwa.component/WasiPreview3.Builder // uk.shusek.krwa.component/WasiPreview3.Builder.withArguments|withArguments(kotlin.Array<out|kotlin.String>...){}[0]
+        final fun withCoroutineDispatcher(kotlinx.coroutines/CoroutineDispatcher): uk.shusek.krwa.component/WasiPreview3.Builder // uk.shusek.krwa.component/WasiPreview3.Builder.withCoroutineDispatcher|withCoroutineDispatcher(kotlinx.coroutines.CoroutineDispatcher){}[0]
+        final fun withCoroutineScope(kotlinx.coroutines/CoroutineScope): uk.shusek.krwa.component/WasiPreview3.Builder // uk.shusek.krwa.component/WasiPreview3.Builder.withCoroutineScope|withCoroutineScope(kotlinx.coroutines.CoroutineScope){}[0]
+        final fun withEnvironment(kotlin.collections/Map<kotlin/String, kotlin/String>): uk.shusek.krwa.component/WasiPreview3.Builder // uk.shusek.krwa.component/WasiPreview3.Builder.withEnvironment|withEnvironment(kotlin.collections.Map<kotlin.String,kotlin.String>){}[0]
+        final fun withEnvironment(kotlin/String, kotlin/String): uk.shusek.krwa.component/WasiPreview3.Builder // uk.shusek.krwa.component/WasiPreview3.Builder.withEnvironment|withEnvironment(kotlin.String;kotlin.String){}[0]
+        final fun withFileSystem(okio/FileSystem): uk.shusek.krwa.component/WasiPreview3.Builder // uk.shusek.krwa.component/WasiPreview3.Builder.withFileSystem|withFileSystem(okio.FileSystem){}[0]
+        final fun withFixedWallClock(kotlin.time/Instant, kotlin/String = ...): uk.shusek.krwa.component/WasiPreview3.Builder // uk.shusek.krwa.component/WasiPreview3.Builder.withFixedWallClock|withFixedWallClock(kotlin.time.Instant;kotlin.String){}[0]
+        final fun withHttpClient(io.ktor.client/HttpClient): uk.shusek.krwa.component/WasiPreview3.Builder // uk.shusek.krwa.component/WasiPreview3.Builder.withHttpClient|withHttpClient(io.ktor.client.HttpClient){}[0]
+        final fun withHttpClient(uk.shusek.krwa.component/WasiHttpClient): uk.shusek.krwa.component/WasiPreview3.Builder // uk.shusek.krwa.component/WasiPreview3.Builder.withHttpClient|withHttpClient(uk.shusek.krwa.component.WasiHttpClient){}[0]
+        final fun withHttpHandler(uk.shusek.krwa.component/WasiHttpHandler): uk.shusek.krwa.component/WasiPreview3.Builder // uk.shusek.krwa.component/WasiPreview3.Builder.withHttpHandler|withHttpHandler(uk.shusek.krwa.component.WasiHttpHandler){}[0]
+        final fun withInitialCwd(kotlin/String?): uk.shusek.krwa.component/WasiPreview3.Builder // uk.shusek.krwa.component/WasiPreview3.Builder.withInitialCwd|withInitialCwd(kotlin.String?){}[0]
+        final fun withInsecureRandom(kotlin.random/Random): uk.shusek.krwa.component/WasiPreview3.Builder // uk.shusek.krwa.component/WasiPreview3.Builder.withInsecureRandom|withInsecureRandom(kotlin.random.Random){}[0]
+        final fun withInsecureSeed(kotlin/Long, kotlin/Long): uk.shusek.krwa.component/WasiPreview3.Builder // uk.shusek.krwa.component/WasiPreview3.Builder.withInsecureSeed|withInsecureSeed(kotlin.Long;kotlin.Long){}[0]
+        final fun withMonotonicClock(kotlin/Function0<kotlin/Long>): uk.shusek.krwa.component/WasiPreview3.Builder // uk.shusek.krwa.component/WasiPreview3.Builder.withMonotonicClock|withMonotonicClock(kotlin.Function0<kotlin.Long>){}[0]
+        final fun withMonotonicResolutionNanos(kotlin/Long): uk.shusek.krwa.component/WasiPreview3.Builder // uk.shusek.krwa.component/WasiPreview3.Builder.withMonotonicResolutionNanos|withMonotonicResolutionNanos(kotlin.Long){}[0]
+        final fun withNetworking(): uk.shusek.krwa.component/WasiPreview3.Builder // uk.shusek.krwa.component/WasiPreview3.Builder.withNetworking|withNetworking(){}[0]
+        final fun withNetworking(kotlin/Boolean): uk.shusek.krwa.component/WasiPreview3.Builder // uk.shusek.krwa.component/WasiPreview3.Builder.withNetworking|withNetworking(kotlin.Boolean){}[0]
+        final fun withPreopenedDirectory(kotlin/String, kotlin/String): uk.shusek.krwa.component/WasiPreview3.Builder // uk.shusek.krwa.component/WasiPreview3.Builder.withPreopenedDirectory|withPreopenedDirectory(kotlin.String;kotlin.String){}[0]
+        final fun withPreopenedDirectory(kotlin/String, okio/Path): uk.shusek.krwa.component/WasiPreview3.Builder // uk.shusek.krwa.component/WasiPreview3.Builder.withPreopenedDirectory|withPreopenedDirectory(kotlin.String;okio.Path){}[0]
+        final fun withPreopenedDirectory(kotlin/String, okio/Path, kotlin/Boolean): uk.shusek.krwa.component/WasiPreview3.Builder // uk.shusek.krwa.component/WasiPreview3.Builder.withPreopenedDirectory|withPreopenedDirectory(kotlin.String;okio.Path;kotlin.Boolean){}[0]
+        final fun withReadOnlyPreopenedDirectory(kotlin/String, kotlin/String): uk.shusek.krwa.component/WasiPreview3.Builder // uk.shusek.krwa.component/WasiPreview3.Builder.withReadOnlyPreopenedDirectory|withReadOnlyPreopenedDirectory(kotlin.String;kotlin.String){}[0]
+        final fun withReadOnlyPreopenedDirectory(kotlin/String, okio/Path): uk.shusek.krwa.component/WasiPreview3.Builder // uk.shusek.krwa.component/WasiPreview3.Builder.withReadOnlyPreopenedDirectory|withReadOnlyPreopenedDirectory(kotlin.String;okio.Path){}[0]
+        final fun withResourceBudget(kotlin/Int, kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlinx.coroutines/CoroutineDispatcher = ...): uk.shusek.krwa.component/WasiPreview3.Builder // uk.shusek.krwa.component/WasiPreview3.Builder.withResourceBudget|withResourceBudget(kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlinx.coroutines.CoroutineDispatcher){}[0]
+        final fun withSecureRandom(kotlin.random/Random): uk.shusek.krwa.component/WasiPreview3.Builder // uk.shusek.krwa.component/WasiPreview3.Builder.withSecureRandom|withSecureRandom(kotlin.random.Random){}[0]
+        final fun withSecureRandom(org.kotlincrypto.random/CryptoRand): uk.shusek.krwa.component/WasiPreview3.Builder // uk.shusek.krwa.component/WasiPreview3.Builder.withSecureRandom|withSecureRandom(org.kotlincrypto.random.CryptoRand){}[0]
+        final fun withStderr(kotlinx.io/RawSink): uk.shusek.krwa.component/WasiPreview3.Builder // uk.shusek.krwa.component/WasiPreview3.Builder.withStderr|withStderr(kotlinx.io.RawSink){}[0]
+        final fun withStdin(kotlinx.io/RawSource): uk.shusek.krwa.component/WasiPreview3.Builder // uk.shusek.krwa.component/WasiPreview3.Builder.withStdin|withStdin(kotlinx.io.RawSource){}[0]
+        final fun withStdout(kotlinx.io/RawSink): uk.shusek.krwa.component/WasiPreview3.Builder // uk.shusek.krwa.component/WasiPreview3.Builder.withStdout|withStdout(kotlinx.io.RawSink){}[0]
+        final fun withTerminalStderr(kotlin/Boolean): uk.shusek.krwa.component/WasiPreview3.Builder // uk.shusek.krwa.component/WasiPreview3.Builder.withTerminalStderr|withTerminalStderr(kotlin.Boolean){}[0]
+        final fun withTerminalStdin(kotlin/Boolean): uk.shusek.krwa.component/WasiPreview3.Builder // uk.shusek.krwa.component/WasiPreview3.Builder.withTerminalStdin|withTerminalStdin(kotlin.Boolean){}[0]
+        final fun withTerminalStdout(kotlin/Boolean): uk.shusek.krwa.component/WasiPreview3.Builder // uk.shusek.krwa.component/WasiPreview3.Builder.withTerminalStdout|withTerminalStdout(kotlin.Boolean){}[0]
+        final fun withUdpWebSocketProxy(kotlin/String): uk.shusek.krwa.component/WasiPreview3.Builder // uk.shusek.krwa.component/WasiPreview3.Builder.withUdpWebSocketProxy|withUdpWebSocketProxy(kotlin.String){}[0]
+        final fun withVersion(kotlin/String): uk.shusek.krwa.component/WasiPreview3.Builder // uk.shusek.krwa.component/WasiPreview3.Builder.withVersion|withVersion(kotlin.String){}[0]
+        final fun withWallClock(kotlin.time/Clock, kotlin/String = ...): uk.shusek.krwa.component/WasiPreview3.Builder // uk.shusek.krwa.component/WasiPreview3.Builder.withWallClock|withWallClock(kotlin.time.Clock;kotlin.String){}[0]
+        final fun withWallClock(kotlin.time/Clock, kotlinx.datetime/TimeZone): uk.shusek.krwa.component/WasiPreview3.Builder // uk.shusek.krwa.component/WasiPreview3.Builder.withWallClock|withWallClock(kotlin.time.Clock;kotlinx.datetime.TimeZone){}[0]
+        final fun withWallClock(kotlin/Function0<kotlin.time/Instant>, kotlin/String = ...): uk.shusek.krwa.component/WasiPreview3.Builder // uk.shusek.krwa.component/WasiPreview3.Builder.withWallClock|withWallClock(kotlin.Function0<kotlin.time.Instant>;kotlin.String){}[0]
+        final fun withWallClockResolutionNanos(kotlin/Long): uk.shusek.krwa.component/WasiPreview3.Builder // uk.shusek.krwa.component/WasiPreview3.Builder.withWallClockResolutionNanos|withWallClockResolutionNanos(kotlin.Long){}[0]
+        final fun withoutNetworking(): uk.shusek.krwa.component/WasiPreview3.Builder // uk.shusek.krwa.component/WasiPreview3.Builder.withoutNetworking|withoutNetworking(){}[0]
+    }
+
+    final class ExitException : kotlin/RuntimeException { // uk.shusek.krwa.component/WasiPreview3.ExitException|null[0]
+        constructor <init>(kotlin/Int) // uk.shusek.krwa.component/WasiPreview3.ExitException.<init>|<init>(kotlin.Int){}[0]
+
+        final fun statusCode(): kotlin/Int // uk.shusek.krwa.component/WasiPreview3.ExitException.statusCode|statusCode(){}[0]
+    }
+
+    final object Companion { // uk.shusek.krwa.component/WasiPreview3.Companion|null[0]
+        final const val DEFAULT_VERSION // uk.shusek.krwa.component/WasiPreview3.Companion.DEFAULT_VERSION|{}DEFAULT_VERSION[0]
+            final fun <get-DEFAULT_VERSION>(): kotlin/String // uk.shusek.krwa.component/WasiPreview3.Companion.DEFAULT_VERSION.<get-DEFAULT_VERSION>|<get-DEFAULT_VERSION>(){}[0]
+
+        final fun builder(): uk.shusek.krwa.component/WasiPreview3.Builder // uk.shusek.krwa.component/WasiPreview3.Companion.builder|builder(){}[0]
+    }
+}
+
+final class uk.shusek.krwa.component/WasmPlugin : kotlin/AutoCloseable, uk.shusek.krwa.component/WasiComponentInvoker { // uk.shusek.krwa.component/WasmPlugin|null[0]
+    final fun <#A1: kotlin/Any> exports(uk.shusek.krwa.component/ComponentModelJvmClass<#A1>): #A1 // uk.shusek.krwa.component/WasmPlugin.exports|exports(uk.shusek.krwa.component.ComponentModelJvmClass<0:0>){0§<kotlin.Any>}[0]
+    final fun call(kotlin/String, kotlin/Array<out kotlin/Any?>...): kotlin/Any? // uk.shusek.krwa.component/WasmPlugin.call|call(kotlin.String;kotlin.Array<out|kotlin.Any?>...){}[0]
+    final fun close() // uk.shusek.krwa.component/WasmPlugin.close|close(){}[0]
+    final fun exports(): kotlin.collections/Map<kotlin/String, uk.shusek.krwa.component/CanonicalAbi.BoundFunction> // uk.shusek.krwa.component/WasmPlugin.exports|exports(){}[0]
+    final fun instance(): uk.shusek.krwa.runtime/Instance // uk.shusek.krwa.component/WasmPlugin.instance|instance(){}[0]
+    final fun isClosed(): kotlin/Boolean // uk.shusek.krwa.component/WasmPlugin.isClosed|isClosed(){}[0]
+    final fun witPackage(): uk.shusek.krwa.component/WitPackage // uk.shusek.krwa.component/WasmPlugin.witPackage|witPackage(){}[0]
+    final fun world(): uk.shusek.krwa.component/WitPackage.WorldDeclaration // uk.shusek.krwa.component/WasmPlugin.world|world(){}[0]
+
+    final class Builder : uk.shusek.krwa.component/WasiHostImportBuilder { // uk.shusek.krwa.component/WasmPlugin.Builder|null[0]
+        final fun build(): uk.shusek.krwa.component/WasmPlugin // uk.shusek.krwa.component/WasmPlugin.Builder.build|build(){}[0]
+        final fun withCanonicalFutureIntrinsics(uk.shusek.krwa.component/CanonicalFutureIntrinsics?): uk.shusek.krwa.component/WasmPlugin.Builder // uk.shusek.krwa.component/WasmPlugin.Builder.withCanonicalFutureIntrinsics|withCanonicalFutureIntrinsics(uk.shusek.krwa.component.CanonicalFutureIntrinsics?){}[0]
+        final fun withCanonicalStreamIntrinsics(uk.shusek.krwa.component/CanonicalStreamIntrinsics?): uk.shusek.krwa.component/WasmPlugin.Builder // uk.shusek.krwa.component/WasmPlugin.Builder.withCanonicalStreamIntrinsics|withCanonicalStreamIntrinsics(uk.shusek.krwa.component.CanonicalStreamIntrinsics?){}[0]
+        final fun withComponent(kotlin/ByteArray): uk.shusek.krwa.component/WasmPlugin.Builder // uk.shusek.krwa.component/WasmPlugin.Builder.withComponent|withComponent(kotlin.ByteArray){}[0]
+        final fun withComponent(okio/Path): uk.shusek.krwa.component/WasmPlugin.Builder // uk.shusek.krwa.component/WasmPlugin.Builder.withComponent|withComponent(okio.Path){}[0]
+        final fun withComponentModule(kotlin/ByteArray, kotlin/String): uk.shusek.krwa.component/WasmPlugin.Builder // uk.shusek.krwa.component/WasmPlugin.Builder.withComponentModule|withComponentModule(kotlin.ByteArray;kotlin.String){}[0]
+        final fun withComponentModule(okio/Path, kotlin/String): uk.shusek.krwa.component/WasmPlugin.Builder // uk.shusek.krwa.component/WasmPlugin.Builder.withComponentModule|withComponentModule(okio.Path;kotlin.String){}[0]
+        final fun withExecutionBackend(uk.shusek.krwa.runtime/ExecutionBackend?): uk.shusek.krwa.component/WasmPlugin.Builder // uk.shusek.krwa.component/WasmPlugin.Builder.withExecutionBackend|withExecutionBackend(uk.shusek.krwa.runtime.ExecutionBackend?){}[0]
+        final fun withExecutionPolicy(uk.shusek.krwa.runtime/WasmExecutionPolicy): uk.shusek.krwa.component/WasmPlugin.Builder // uk.shusek.krwa.component/WasmPlugin.Builder.withExecutionPolicy|withExecutionPolicy(uk.shusek.krwa.runtime.WasmExecutionPolicy){}[0]
+        final fun withHost(kotlin/Any): uk.shusek.krwa.component/WasmPlugin.Builder // uk.shusek.krwa.component/WasmPlugin.Builder.withHost|withHost(kotlin.Any){}[0]
+        final fun withHostImport(kotlin/String, uk.shusek.krwa.component/HostHandler): uk.shusek.krwa.component/WasmPlugin.Builder // uk.shusek.krwa.component/WasmPlugin.Builder.withHostImport|withHostImport(kotlin.String;uk.shusek.krwa.component.HostHandler){}[0]
+        final fun withHostImport(kotlin/String?, kotlin/String?, uk.shusek.krwa.component/HostHandler): uk.shusek.krwa.component/WasmPlugin.Builder // uk.shusek.krwa.component/WasmPlugin.Builder.withHostImport|withHostImport(kotlin.String?;kotlin.String?;uk.shusek.krwa.component.HostHandler){}[0]
+        final fun withMaxMemoryPages(kotlin/Int?): uk.shusek.krwa.component/WasmPlugin.Builder // uk.shusek.krwa.component/WasmPlugin.Builder.withMaxMemoryPages|withMaxMemoryPages(kotlin.Int?){}[0]
+        final fun withModule(kotlin/ByteArray): uk.shusek.krwa.component/WasmPlugin.Builder // uk.shusek.krwa.component/WasmPlugin.Builder.withModule|withModule(kotlin.ByteArray){}[0]
+        final fun withModule(okio/Path): uk.shusek.krwa.component/WasmPlugin.Builder // uk.shusek.krwa.component/WasmPlugin.Builder.withModule|withModule(okio.Path){}[0]
+        final fun withModule(uk.shusek.krwa.wasm/WasmModule?): uk.shusek.krwa.component/WasmPlugin.Builder // uk.shusek.krwa.component/WasmPlugin.Builder.withModule|withModule(uk.shusek.krwa.wasm.WasmModule?){}[0]
+        final fun withResourceBudget(kotlin/Int, kotlin/Int = ...): uk.shusek.krwa.component/WasmPlugin.Builder // uk.shusek.krwa.component/WasmPlugin.Builder.withResourceBudget|withResourceBudget(kotlin.Int;kotlin.Int){}[0]
+        final fun withWasiPreview1(uk.shusek.krwa.wasi/WasiPreview1): uk.shusek.krwa.component/WasmPlugin.Builder // uk.shusek.krwa.component/WasmPlugin.Builder.withWasiPreview1|withWasiPreview1(uk.shusek.krwa.wasi.WasiPreview1){}[0]
+        final fun withWasiPreview2(uk.shusek.krwa.component/WasiPreview2): uk.shusek.krwa.component/WasmPlugin.Builder // uk.shusek.krwa.component/WasmPlugin.Builder.withWasiPreview2|withWasiPreview2(uk.shusek.krwa.component.WasiPreview2){}[0]
+        final fun withWasiPreview3(uk.shusek.krwa.component/WasiPreview3): uk.shusek.krwa.component/WasmPlugin.Builder // uk.shusek.krwa.component/WasmPlugin.Builder.withWasiPreview3|withWasiPreview3(uk.shusek.krwa.component.WasiPreview3){}[0]
+        final fun withWasiPreview3CanonicalIntrinsics(uk.shusek.krwa.component/WasiPreview3CanonicalIntrinsics): uk.shusek.krwa.component/WasmPlugin.Builder // uk.shusek.krwa.component/WasmPlugin.Builder.withWasiPreview3CanonicalIntrinsics|withWasiPreview3CanonicalIntrinsics(uk.shusek.krwa.component.WasiPreview3CanonicalIntrinsics){}[0]
+        final fun withWasmtimeExecutionConfig(uk.shusek.krwa.runtime/WasmtimeExecutionConfig?): uk.shusek.krwa.component/WasmPlugin.Builder // uk.shusek.krwa.component/WasmPlugin.Builder.withWasmtimeExecutionConfig|withWasmtimeExecutionConfig(uk.shusek.krwa.runtime.WasmtimeExecutionConfig?){}[0]
+        final fun withWorld(kotlin/String?): uk.shusek.krwa.component/WasmPlugin.Builder // uk.shusek.krwa.component/WasmPlugin.Builder.withWorld|withWorld(kotlin.String?){}[0]
+
+        final object Companion // uk.shusek.krwa.component/WasmPlugin.Builder.Companion|null[0]
+    }
+
+    final object Companion { // uk.shusek.krwa.component/WasmPlugin.Companion|null[0]
+        final fun builder(uk.shusek.krwa.component/WitPackage): uk.shusek.krwa.component/WasmPlugin.Builder // uk.shusek.krwa.component/WasmPlugin.Companion.builder|builder(uk.shusek.krwa.component.WitPackage){}[0]
+        final fun builderFromComponent(kotlin/ByteArray): uk.shusek.krwa.component/WasmPlugin.Builder // uk.shusek.krwa.component/WasmPlugin.Companion.builderFromComponent|builderFromComponent(kotlin.ByteArray){}[0]
+        final fun builderFromComponent(okio/Path): uk.shusek.krwa.component/WasmPlugin.Builder // uk.shusek.krwa.component/WasmPlugin.Companion.builderFromComponent|builderFromComponent(okio.Path){}[0]
+    }
+}
+
+final class uk.shusek.krwa.component/WitPackage { // uk.shusek.krwa.component/WitPackage|null[0]
+    final fun declarations(): kotlin.collections/List<uk.shusek.krwa.component/WitPackage.Declaration> // uk.shusek.krwa.component/WitPackage.declarations|declarations(){}[0]
+    final fun interfaces(): kotlin.collections/List<uk.shusek.krwa.component/WitPackage.InterfaceDeclaration> // uk.shusek.krwa.component/WitPackage.interfaces|interfaces(){}[0]
+    final fun packageName(): kotlin/String? // uk.shusek.krwa.component/WitPackage.packageName|packageName(){}[0]
+    final fun worlds(): kotlin.collections/List<uk.shusek.krwa.component/WitPackage.WorldDeclaration> // uk.shusek.krwa.component/WitPackage.worlds|worlds(){}[0]
+
+    final enum class Direction : kotlin/Enum<uk.shusek.krwa.component/WitPackage.Direction> { // uk.shusek.krwa.component/WitPackage.Direction|null[0]
+        enum entry EXPORT // uk.shusek.krwa.component/WitPackage.Direction.EXPORT|null[0]
+        enum entry IMPORT // uk.shusek.krwa.component/WitPackage.Direction.IMPORT|null[0]
+
+        final val entries // uk.shusek.krwa.component/WitPackage.Direction.entries|#static{}entries[0]
+            final fun <get-entries>(): kotlin.enums/EnumEntries<uk.shusek.krwa.component/WitPackage.Direction> // uk.shusek.krwa.component/WitPackage.Direction.entries.<get-entries>|<get-entries>#static(){}[0]
+
+        final fun valueOf(kotlin/String): uk.shusek.krwa.component/WitPackage.Direction // uk.shusek.krwa.component/WitPackage.Direction.valueOf|valueOf#static(kotlin.String){}[0]
+        final fun values(): kotlin/Array<uk.shusek.krwa.component/WitPackage.Direction> // uk.shusek.krwa.component/WitPackage.Direction.values|values#static(){}[0]
+    }
+
+    abstract interface Declaration { // uk.shusek.krwa.component/WitPackage.Declaration|null[0]
+        abstract fun name(): kotlin/String // uk.shusek.krwa.component/WitPackage.Declaration.name|name(){}[0]
+        open fun packageName(): kotlin/String? // uk.shusek.krwa.component/WitPackage.Declaration.packageName|packageName(){}[0]
+        open fun qualifiedName(): kotlin/String // uk.shusek.krwa.component/WitPackage.Declaration.qualifiedName|qualifiedName(){}[0]
+    }
+
+    abstract interface InterfaceMember : uk.shusek.krwa.component/WitPackage.Declaration // uk.shusek.krwa.component/WitPackage.InterfaceMember|null[0]
+
+    final class Case { // uk.shusek.krwa.component/WitPackage.Case|null[0]
+        constructor <init>(kotlin/String, uk.shusek.krwa.component/WitPackage.TypeRef?) // uk.shusek.krwa.component/WitPackage.Case.<init>|<init>(kotlin.String;uk.shusek.krwa.component.WitPackage.TypeRef?){}[0]
+
+        final fun name(): kotlin/String // uk.shusek.krwa.component/WitPackage.Case.name|name(){}[0]
+        final fun type(): uk.shusek.krwa.component/WitPackage.TypeRef? // uk.shusek.krwa.component/WitPackage.Case.type|type(){}[0]
+    }
+
+    final class Field { // uk.shusek.krwa.component/WitPackage.Field|null[0]
+        constructor <init>(kotlin/String, uk.shusek.krwa.component/WitPackage.TypeRef) // uk.shusek.krwa.component/WitPackage.Field.<init>|<init>(kotlin.String;uk.shusek.krwa.component.WitPackage.TypeRef){}[0]
+
+        final fun name(): kotlin/String // uk.shusek.krwa.component/WitPackage.Field.name|name(){}[0]
+        final fun type(): uk.shusek.krwa.component/WitPackage.TypeRef // uk.shusek.krwa.component/WitPackage.Field.type|type(){}[0]
+    }
+
+    final class Function : uk.shusek.krwa.component/WitPackage.InterfaceMember { // uk.shusek.krwa.component/WitPackage.Function|null[0]
+        constructor <init>(kotlin/String, kotlin.collections/List<uk.shusek.krwa.component/WitPackage.Field>, kotlin.collections/List<uk.shusek.krwa.component/WitPackage.Field>, kotlin/Boolean = ..., kotlin/Boolean = ..., kotlin/Boolean = ...) // uk.shusek.krwa.component/WitPackage.Function.<init>|<init>(kotlin.String;kotlin.collections.List<uk.shusek.krwa.component.WitPackage.Field>;kotlin.collections.List<uk.shusek.krwa.component.WitPackage.Field>;kotlin.Boolean;kotlin.Boolean;kotlin.Boolean){}[0]
+
+        final val isAsync // uk.shusek.krwa.component/WitPackage.Function.isAsync|{}isAsync[0]
+            final fun <get-isAsync>(): kotlin/Boolean // uk.shusek.krwa.component/WitPackage.Function.isAsync.<get-isAsync>|<get-isAsync>(){}[0]
+        final val isConstructor // uk.shusek.krwa.component/WitPackage.Function.isConstructor|{}isConstructor[0]
+            final fun <get-isConstructor>(): kotlin/Boolean // uk.shusek.krwa.component/WitPackage.Function.isConstructor.<get-isConstructor>|<get-isConstructor>(){}[0]
+        final val isStatic // uk.shusek.krwa.component/WitPackage.Function.isStatic|{}isStatic[0]
+            final fun <get-isStatic>(): kotlin/Boolean // uk.shusek.krwa.component/WitPackage.Function.isStatic.<get-isStatic>|<get-isStatic>(){}[0]
+
+        final fun name(): kotlin/String // uk.shusek.krwa.component/WitPackage.Function.name|name(){}[0]
+        final fun parameters(): kotlin.collections/List<uk.shusek.krwa.component/WitPackage.Field> // uk.shusek.krwa.component/WitPackage.Function.parameters|parameters(){}[0]
+        final fun results(): kotlin.collections/List<uk.shusek.krwa.component/WitPackage.Field> // uk.shusek.krwa.component/WitPackage.Function.results|results(){}[0]
+    }
+
+    final class IncludeDeclaration { // uk.shusek.krwa.component/WitPackage.IncludeDeclaration|null[0]
+        constructor <init>(kotlin/String, kotlin.collections/List<uk.shusek.krwa.component/WitPackage.IncludeItem>) // uk.shusek.krwa.component/WitPackage.IncludeDeclaration.<init>|<init>(kotlin.String;kotlin.collections.List<uk.shusek.krwa.component.WitPackage.IncludeItem>){}[0]
+
+        final fun aliasFor(kotlin/String): kotlin/String? // uk.shusek.krwa.component/WitPackage.IncludeDeclaration.aliasFor|aliasFor(kotlin.String){}[0]
+        final fun items(): kotlin.collections/List<uk.shusek.krwa.component/WitPackage.IncludeItem> // uk.shusek.krwa.component/WitPackage.IncludeDeclaration.items|items(){}[0]
+        final fun path(): kotlin/String // uk.shusek.krwa.component/WitPackage.IncludeDeclaration.path|path(){}[0]
+    }
+
+    final class IncludeItem { // uk.shusek.krwa.component/WitPackage.IncludeItem|null[0]
+        constructor <init>(kotlin/String, kotlin/String) // uk.shusek.krwa.component/WitPackage.IncludeItem.<init>|<init>(kotlin.String;kotlin.String){}[0]
+
+        final fun alias(): kotlin/String // uk.shusek.krwa.component/WitPackage.IncludeItem.alias|alias(){}[0]
+        final fun name(): kotlin/String // uk.shusek.krwa.component/WitPackage.IncludeItem.name|name(){}[0]
+    }
+
+    final class InterfaceDeclaration : uk.shusek.krwa.component/WitPackage.Declaration { // uk.shusek.krwa.component/WitPackage.InterfaceDeclaration|null[0]
+        constructor <init>(kotlin/String?, kotlin/String, kotlin.collections/List<uk.shusek.krwa.component/WitPackage.InterfaceMember>) // uk.shusek.krwa.component/WitPackage.InterfaceDeclaration.<init>|<init>(kotlin.String?;kotlin.String;kotlin.collections.List<uk.shusek.krwa.component.WitPackage.InterfaceMember>){}[0]
+
+        final fun functions(): kotlin.collections/List<uk.shusek.krwa.component/WitPackage.Function> // uk.shusek.krwa.component/WitPackage.InterfaceDeclaration.functions|functions(){}[0]
+        final fun members(): kotlin.collections/List<uk.shusek.krwa.component/WitPackage.InterfaceMember> // uk.shusek.krwa.component/WitPackage.InterfaceDeclaration.members|members(){}[0]
+        final fun name(): kotlin/String // uk.shusek.krwa.component/WitPackage.InterfaceDeclaration.name|name(){}[0]
+        final fun packageName(): kotlin/String? // uk.shusek.krwa.component/WitPackage.InterfaceDeclaration.packageName|packageName(){}[0]
+    }
+
+    final class TypeDeclaration : uk.shusek.krwa.component/WitPackage.InterfaceMember { // uk.shusek.krwa.component/WitPackage.TypeDeclaration|null[0]
+        constructor <init>(uk.shusek.krwa.component/WitPackage.TypeDeclaration.Kind, kotlin/String, kotlin.collections/List<uk.shusek.krwa.component/WitPackage.Field>, kotlin.collections/List<uk.shusek.krwa.component/WitPackage.Case>, uk.shusek.krwa.component/WitPackage.TypeRef?, kotlin.collections/List<uk.shusek.krwa.component/WitPackage.Function> = ...) // uk.shusek.krwa.component/WitPackage.TypeDeclaration.<init>|<init>(uk.shusek.krwa.component.WitPackage.TypeDeclaration.Kind;kotlin.String;kotlin.collections.List<uk.shusek.krwa.component.WitPackage.Field>;kotlin.collections.List<uk.shusek.krwa.component.WitPackage.Case>;uk.shusek.krwa.component.WitPackage.TypeRef?;kotlin.collections.List<uk.shusek.krwa.component.WitPackage.Function>){}[0]
+
+        final fun cases(): kotlin.collections/List<uk.shusek.krwa.component/WitPackage.Case> // uk.shusek.krwa.component/WitPackage.TypeDeclaration.cases|cases(){}[0]
+        final fun fields(): kotlin.collections/List<uk.shusek.krwa.component/WitPackage.Field> // uk.shusek.krwa.component/WitPackage.TypeDeclaration.fields|fields(){}[0]
+        final fun functions(): kotlin.collections/List<uk.shusek.krwa.component/WitPackage.Function> // uk.shusek.krwa.component/WitPackage.TypeDeclaration.functions|functions(){}[0]
+        final fun kind(): uk.shusek.krwa.component/WitPackage.TypeDeclaration.Kind // uk.shusek.krwa.component/WitPackage.TypeDeclaration.kind|kind(){}[0]
+        final fun name(): kotlin/String // uk.shusek.krwa.component/WitPackage.TypeDeclaration.name|name(){}[0]
+        final fun target(): uk.shusek.krwa.component/WitPackage.TypeRef? // uk.shusek.krwa.component/WitPackage.TypeDeclaration.target|target(){}[0]
+
+        final enum class Kind : kotlin/Enum<uk.shusek.krwa.component/WitPackage.TypeDeclaration.Kind> { // uk.shusek.krwa.component/WitPackage.TypeDeclaration.Kind|null[0]
+            enum entry ALIAS // uk.shusek.krwa.component/WitPackage.TypeDeclaration.Kind.ALIAS|null[0]
+            enum entry ENUM // uk.shusek.krwa.component/WitPackage.TypeDeclaration.Kind.ENUM|null[0]
+            enum entry FLAGS // uk.shusek.krwa.component/WitPackage.TypeDeclaration.Kind.FLAGS|null[0]
+            enum entry RECORD // uk.shusek.krwa.component/WitPackage.TypeDeclaration.Kind.RECORD|null[0]
+            enum entry RESOURCE // uk.shusek.krwa.component/WitPackage.TypeDeclaration.Kind.RESOURCE|null[0]
+            enum entry VARIANT // uk.shusek.krwa.component/WitPackage.TypeDeclaration.Kind.VARIANT|null[0]
+
+            final val entries // uk.shusek.krwa.component/WitPackage.TypeDeclaration.Kind.entries|#static{}entries[0]
+                final fun <get-entries>(): kotlin.enums/EnumEntries<uk.shusek.krwa.component/WitPackage.TypeDeclaration.Kind> // uk.shusek.krwa.component/WitPackage.TypeDeclaration.Kind.entries.<get-entries>|<get-entries>#static(){}[0]
+
+            final fun valueOf(kotlin/String): uk.shusek.krwa.component/WitPackage.TypeDeclaration.Kind // uk.shusek.krwa.component/WitPackage.TypeDeclaration.Kind.valueOf|valueOf#static(kotlin.String){}[0]
+            final fun values(): kotlin/Array<uk.shusek.krwa.component/WitPackage.TypeDeclaration.Kind> // uk.shusek.krwa.component/WitPackage.TypeDeclaration.Kind.values|values#static(){}[0]
+        }
+    }
+
+    final class TypeRef { // uk.shusek.krwa.component/WitPackage.TypeRef|null[0]
+        final fun arguments(): kotlin.collections/List<uk.shusek.krwa.component/WitPackage.TypeRef> // uk.shusek.krwa.component/WitPackage.TypeRef.arguments|arguments(){}[0]
+        final fun kind(): uk.shusek.krwa.component/WitPackage.TypeRef.TypeKind // uk.shusek.krwa.component/WitPackage.TypeRef.kind|kind(){}[0]
+        final fun name(): kotlin/String? // uk.shusek.krwa.component/WitPackage.TypeRef.name|name(){}[0]
+        final fun toString(): kotlin/String // uk.shusek.krwa.component/WitPackage.TypeRef.toString|toString(){}[0]
+
+        final enum class TypeKind : kotlin/Enum<uk.shusek.krwa.component/WitPackage.TypeRef.TypeKind> { // uk.shusek.krwa.component/WitPackage.TypeRef.TypeKind|null[0]
+            enum entry BORROW // uk.shusek.krwa.component/WitPackage.TypeRef.TypeKind.BORROW|null[0]
+            enum entry FUTURE // uk.shusek.krwa.component/WitPackage.TypeRef.TypeKind.FUTURE|null[0]
+            enum entry LIST // uk.shusek.krwa.component/WitPackage.TypeRef.TypeKind.LIST|null[0]
+            enum entry NAMED // uk.shusek.krwa.component/WitPackage.TypeRef.TypeKind.NAMED|null[0]
+            enum entry OPTION // uk.shusek.krwa.component/WitPackage.TypeRef.TypeKind.OPTION|null[0]
+            enum entry OWN // uk.shusek.krwa.component/WitPackage.TypeRef.TypeKind.OWN|null[0]
+            enum entry PRIMITIVE // uk.shusek.krwa.component/WitPackage.TypeRef.TypeKind.PRIMITIVE|null[0]
+            enum entry RESULT // uk.shusek.krwa.component/WitPackage.TypeRef.TypeKind.RESULT|null[0]
+            enum entry STREAM // uk.shusek.krwa.component/WitPackage.TypeRef.TypeKind.STREAM|null[0]
+            enum entry TUPLE // uk.shusek.krwa.component/WitPackage.TypeRef.TypeKind.TUPLE|null[0]
+
+            final val entries // uk.shusek.krwa.component/WitPackage.TypeRef.TypeKind.entries|#static{}entries[0]
+                final fun <get-entries>(): kotlin.enums/EnumEntries<uk.shusek.krwa.component/WitPackage.TypeRef.TypeKind> // uk.shusek.krwa.component/WitPackage.TypeRef.TypeKind.entries.<get-entries>|<get-entries>#static(){}[0]
+
+            final fun valueOf(kotlin/String): uk.shusek.krwa.component/WitPackage.TypeRef.TypeKind // uk.shusek.krwa.component/WitPackage.TypeRef.TypeKind.valueOf|valueOf#static(kotlin.String){}[0]
+            final fun values(): kotlin/Array<uk.shusek.krwa.component/WitPackage.TypeRef.TypeKind> // uk.shusek.krwa.component/WitPackage.TypeRef.TypeKind.values|values#static(){}[0]
+        }
+
+        final object Companion { // uk.shusek.krwa.component/WitPackage.TypeRef.Companion|null[0]
+            final fun constructed(uk.shusek.krwa.component/WitPackage.TypeRef.TypeKind, kotlin.collections/List<uk.shusek.krwa.component/WitPackage.TypeRef>): uk.shusek.krwa.component/WitPackage.TypeRef // uk.shusek.krwa.component/WitPackage.TypeRef.Companion.constructed|constructed(uk.shusek.krwa.component.WitPackage.TypeRef.TypeKind;kotlin.collections.List<uk.shusek.krwa.component.WitPackage.TypeRef>){}[0]
+            final fun named(kotlin/String): uk.shusek.krwa.component/WitPackage.TypeRef // uk.shusek.krwa.component/WitPackage.TypeRef.Companion.named|named(kotlin.String){}[0]
+            final fun primitive(kotlin/String): uk.shusek.krwa.component/WitPackage.TypeRef // uk.shusek.krwa.component/WitPackage.TypeRef.Companion.primitive|primitive(kotlin.String){}[0]
+        }
+    }
+
+    final class UseDeclaration : uk.shusek.krwa.component/WitPackage.Declaration, uk.shusek.krwa.component/WitPackage.InterfaceMember { // uk.shusek.krwa.component/WitPackage.UseDeclaration|null[0]
+        constructor <init>(kotlin/String, kotlin.collections/List<uk.shusek.krwa.component/WitPackage.UseItem>) // uk.shusek.krwa.component/WitPackage.UseDeclaration.<init>|<init>(kotlin.String;kotlin.collections.List<uk.shusek.krwa.component.WitPackage.UseItem>){}[0]
+
+        final fun items(): kotlin.collections/List<uk.shusek.krwa.component/WitPackage.UseItem> // uk.shusek.krwa.component/WitPackage.UseDeclaration.items|items(){}[0]
+        final fun name(): kotlin/String // uk.shusek.krwa.component/WitPackage.UseDeclaration.name|name(){}[0]
+        final fun path(): kotlin/String // uk.shusek.krwa.component/WitPackage.UseDeclaration.path|path(){}[0]
+    }
+
+    final class UseItem { // uk.shusek.krwa.component/WitPackage.UseItem|null[0]
+        constructor <init>(kotlin/String, kotlin/String?) // uk.shusek.krwa.component/WitPackage.UseItem.<init>|<init>(kotlin.String;kotlin.String?){}[0]
+
+        final fun alias(): kotlin/String? // uk.shusek.krwa.component/WitPackage.UseItem.alias|alias(){}[0]
+        final fun localName(): kotlin/String // uk.shusek.krwa.component/WitPackage.UseItem.localName|localName(){}[0]
+        final fun name(): kotlin/String // uk.shusek.krwa.component/WitPackage.UseItem.name|name(){}[0]
+    }
+
+    final class WorldDeclaration : uk.shusek.krwa.component/WitPackage.Declaration { // uk.shusek.krwa.component/WitPackage.WorldDeclaration|null[0]
+        constructor <init>(kotlin/String?, kotlin/String, kotlin.collections/List<uk.shusek.krwa.component/WitPackage.IncludeDeclaration>, kotlin.collections/List<uk.shusek.krwa.component/WitPackage.Declaration>, kotlin.collections/List<uk.shusek.krwa.component/WitPackage.WorldItem>, kotlin.collections/List<uk.shusek.krwa.component/WitPackage.WorldItem>) // uk.shusek.krwa.component/WitPackage.WorldDeclaration.<init>|<init>(kotlin.String?;kotlin.String;kotlin.collections.List<uk.shusek.krwa.component.WitPackage.IncludeDeclaration>;kotlin.collections.List<uk.shusek.krwa.component.WitPackage.Declaration>;kotlin.collections.List<uk.shusek.krwa.component.WitPackage.WorldItem>;kotlin.collections.List<uk.shusek.krwa.component.WitPackage.WorldItem>){}[0]
+        constructor <init>(kotlin/String?, kotlin/String, kotlin.collections/List<uk.shusek.krwa.component/WitPackage.IncludeDeclaration>, kotlin.collections/List<uk.shusek.krwa.component/WitPackage.WorldItem>, kotlin.collections/List<uk.shusek.krwa.component/WitPackage.WorldItem>) // uk.shusek.krwa.component/WitPackage.WorldDeclaration.<init>|<init>(kotlin.String?;kotlin.String;kotlin.collections.List<uk.shusek.krwa.component.WitPackage.IncludeDeclaration>;kotlin.collections.List<uk.shusek.krwa.component.WitPackage.WorldItem>;kotlin.collections.List<uk.shusek.krwa.component.WitPackage.WorldItem>){}[0]
+        constructor <init>(kotlin/String?, kotlin/String, kotlin.collections/List<uk.shusek.krwa.component/WitPackage.WorldItem>, kotlin.collections/List<uk.shusek.krwa.component/WitPackage.WorldItem>) // uk.shusek.krwa.component/WitPackage.WorldDeclaration.<init>|<init>(kotlin.String?;kotlin.String;kotlin.collections.List<uk.shusek.krwa.component.WitPackage.WorldItem>;kotlin.collections.List<uk.shusek.krwa.component.WitPackage.WorldItem>){}[0]
+
+        final fun declarations(): kotlin.collections/List<uk.shusek.krwa.component/WitPackage.Declaration> // uk.shusek.krwa.component/WitPackage.WorldDeclaration.declarations|declarations(){}[0]
+        final fun exports(): kotlin.collections/List<uk.shusek.krwa.component/WitPackage.WorldItem> // uk.shusek.krwa.component/WitPackage.WorldDeclaration.exports|exports(){}[0]
+        final fun imports(): kotlin.collections/List<uk.shusek.krwa.component/WitPackage.WorldItem> // uk.shusek.krwa.component/WitPackage.WorldDeclaration.imports|imports(){}[0]
+        final fun includeDeclarations(): kotlin.collections/List<uk.shusek.krwa.component/WitPackage.IncludeDeclaration> // uk.shusek.krwa.component/WitPackage.WorldDeclaration.includeDeclarations|includeDeclarations(){}[0]
+        final fun includes(): kotlin.collections/List<kotlin/String> // uk.shusek.krwa.component/WitPackage.WorldDeclaration.includes|includes(){}[0]
+        final fun name(): kotlin/String // uk.shusek.krwa.component/WitPackage.WorldDeclaration.name|name(){}[0]
+        final fun packageName(): kotlin/String? // uk.shusek.krwa.component/WitPackage.WorldDeclaration.packageName|packageName(){}[0]
+    }
+
+    final class WorldItem { // uk.shusek.krwa.component/WitPackage.WorldItem|null[0]
+        constructor <init>(uk.shusek.krwa.component/WitPackage.Direction, kotlin/String, uk.shusek.krwa.component/WitPackage.Function?, uk.shusek.krwa.component/WitPackage.TypeRef?) // uk.shusek.krwa.component/WitPackage.WorldItem.<init>|<init>(uk.shusek.krwa.component.WitPackage.Direction;kotlin.String;uk.shusek.krwa.component.WitPackage.Function?;uk.shusek.krwa.component.WitPackage.TypeRef?){}[0]
+
+        final val isFunction // uk.shusek.krwa.component/WitPackage.WorldItem.isFunction|{}isFunction[0]
+            final fun <get-isFunction>(): kotlin/Boolean // uk.shusek.krwa.component/WitPackage.WorldItem.isFunction.<get-isFunction>|<get-isFunction>(){}[0]
+
+        final fun direction(): uk.shusek.krwa.component/WitPackage.Direction // uk.shusek.krwa.component/WitPackage.WorldItem.direction|direction(){}[0]
+        final fun function(): uk.shusek.krwa.component/WitPackage.Function? // uk.shusek.krwa.component/WitPackage.WorldItem.function|function(){}[0]
+        final fun name(): kotlin/String // uk.shusek.krwa.component/WitPackage.WorldItem.name|name(){}[0]
+        final fun type(): uk.shusek.krwa.component/WitPackage.TypeRef? // uk.shusek.krwa.component/WitPackage.WorldItem.type|type(){}[0]
+    }
+
+    final object Companion { // uk.shusek.krwa.component/WitPackage.Companion|null[0]
+        final fun parse(kotlin/String): uk.shusek.krwa.component/WitPackage // uk.shusek.krwa.component/WitPackage.Companion.parse|parse(kotlin.String){}[0]
+    }
+}
+
+final class uk.shusek.krwa.component/WitParseException : uk.shusek.krwa.component/ComponentModelException { // uk.shusek.krwa.component/WitParseException|null[0]
+    constructor <init>(kotlin/String?) // uk.shusek.krwa.component/WitParseException.<init>|<init>(kotlin.String?){}[0]
+    constructor <init>(kotlin/String?, kotlin/Throwable?) // uk.shusek.krwa.component/WitParseException.<init>|<init>(kotlin.String?;kotlin.Throwable?){}[0]
+}
+
+final class uk.shusek.krwa.component/WitValue { // uk.shusek.krwa.component/WitValue|null[0]
+    final class Variant { // uk.shusek.krwa.component/WitValue.Variant|null[0]
+        final val hasValue // uk.shusek.krwa.component/WitValue.Variant.hasValue|{}hasValue[0]
+            final fun <get-hasValue>(): kotlin/Boolean // uk.shusek.krwa.component/WitValue.Variant.hasValue.<get-hasValue>|<get-hasValue>(){}[0]
+        final val label // uk.shusek.krwa.component/WitValue.Variant.label|{}label[0]
+            final fun <get-label>(): kotlin/String // uk.shusek.krwa.component/WitValue.Variant.label.<get-label>|<get-label>(){}[0]
+        final val value // uk.shusek.krwa.component/WitValue.Variant.value|{}value[0]
+            final fun <get-value>(): kotlin/Any? // uk.shusek.krwa.component/WitValue.Variant.value.<get-value>|<get-value>(){}[0]
+
+        final fun hasValue(): kotlin/Boolean // uk.shusek.krwa.component/WitValue.Variant.hasValue|hasValue(){}[0]
+        final fun label(): kotlin/String // uk.shusek.krwa.component/WitValue.Variant.label|label(){}[0]
+        final fun toString(): kotlin/String // uk.shusek.krwa.component/WitValue.Variant.toString|toString(){}[0]
+        final fun value(): kotlin/Any? // uk.shusek.krwa.component/WitValue.Variant.value|value(){}[0]
+    }
+
+    final object Companion { // uk.shusek.krwa.component/WitValue.Companion|null[0]
+        final fun err(kotlin/Any?): uk.shusek.krwa.component/WitValue.Variant // uk.shusek.krwa.component/WitValue.Companion.err|err(kotlin.Any?){}[0]
+        final fun flags(kotlin/Array<out kotlin/String>...): kotlin.collections/Map<kotlin/String, kotlin/Boolean> // uk.shusek.krwa.component/WitValue.Companion.flags|flags(kotlin.Array<out|kotlin.String>...){}[0]
+        final fun none(): uk.shusek.krwa.component/WitValue.Variant // uk.shusek.krwa.component/WitValue.Companion.none|none(){}[0]
+        final fun ok(kotlin/Any?): uk.shusek.krwa.component/WitValue.Variant // uk.shusek.krwa.component/WitValue.Companion.ok|ok(kotlin.Any?){}[0]
+        final fun record(kotlin/Array<out kotlin/Any?>...): kotlin.collections/Map<kotlin/String, kotlin/Any?> // uk.shusek.krwa.component/WitValue.Companion.record|record(kotlin.Array<out|kotlin.Any?>...){}[0]
+        final fun some(kotlin/Any?): uk.shusek.krwa.component/WitValue.Variant // uk.shusek.krwa.component/WitValue.Companion.some|some(kotlin.Any?){}[0]
+        final fun variant(kotlin/String): uk.shusek.krwa.component/WitValue.Variant // uk.shusek.krwa.component/WitValue.Companion.variant|variant(kotlin.String){}[0]
+        final fun variant(kotlin/String, kotlin/Any?): uk.shusek.krwa.component/WitValue.Variant // uk.shusek.krwa.component/WitValue.Companion.variant|variant(kotlin.String;kotlin.Any?){}[0]
+    }
+}
+
+open class uk.shusek.krwa.component/ComponentModelException : kotlin/RuntimeException { // uk.shusek.krwa.component/ComponentModelException|null[0]
+    constructor <init>(kotlin/String?) // uk.shusek.krwa.component/ComponentModelException.<init>|<init>(kotlin.String?){}[0]
+    constructor <init>(kotlin/String?, kotlin/Throwable?) // uk.shusek.krwa.component/ComponentModelException.<init>|<init>(kotlin.String?;kotlin.Throwable?){}[0]
+}
+
+final object uk.shusek.krwa.component/WitNames { // uk.shusek.krwa.component/WitNames|null[0]
+    final fun enumName(kotlin/String): kotlin/String // uk.shusek.krwa.component/WitNames.enumName|enumName(kotlin.String){}[0]
+    final fun lastSegment(kotlin/String): kotlin/String // uk.shusek.krwa.component/WitNames.lastSegment|lastSegment(kotlin.String){}[0]
+    final fun matchesMemberName(kotlin/String, kotlin/String): kotlin/Boolean // uk.shusek.krwa.component/WitNames.matchesMemberName|matchesMemberName(kotlin.String;kotlin.String){}[0]
+    final fun memberName(kotlin/String): kotlin/String // uk.shusek.krwa.component/WitNames.memberName|memberName(kotlin.String){}[0]
+    final fun qualifiedInterfaceName(kotlin/String?, kotlin/String): kotlin/String // uk.shusek.krwa.component/WitNames.qualifiedInterfaceName|qualifiedInterfaceName(kotlin.String?;kotlin.String){}[0]
+    final fun stripIdentifierEscape(kotlin/String): kotlin/String // uk.shusek.krwa.component/WitNames.stripIdentifierEscape|stripIdentifierEscape(kotlin.String){}[0]
+    final fun typeName(kotlin/String): kotlin/String // uk.shusek.krwa.component/WitNames.typeName|typeName(kotlin.String){}[0]
+    final fun withoutVersion(kotlin/String): kotlin/String // uk.shusek.krwa.component/WitNames.withoutVersion|withoutVersion(kotlin.String){}[0]
+}
+
+final inline fun <#A: reified kotlin/Any> uk.shusek.krwa.component/componentModelJvmClass(): uk.shusek.krwa.component/ComponentModelJvmClass<#A> // uk.shusek.krwa.component/componentModelJvmClass|componentModelJvmClass(){0§<kotlin.Any>}[0]
+
+// Targets: [ios]
+final class uk.shusek.krwa.component/KtorWasiHttpClient : uk.shusek.krwa.component/WasiSuspendingHttpClient { // uk.shusek.krwa.component/KtorWasiHttpClient|null[0]
+    constructor <init>(io.ktor.client/HttpClient) // uk.shusek.krwa.component/KtorWasiHttpClient.<init>|<init>(io.ktor.client.HttpClient){}[0]
+
+    final fun send(uk.shusek.krwa.component/WasiHttpRequest): uk.shusek.krwa.component/WasiHttpResponse // uk.shusek.krwa.component/KtorWasiHttpClient.send|send(uk.shusek.krwa.component.WasiHttpRequest){}[0]
+    final suspend fun sendSuspending(uk.shusek.krwa.component/WasiHttpRequest): uk.shusek.krwa.component/WasiHttpResponse // uk.shusek.krwa.component/KtorWasiHttpClient.sendSuspending|sendSuspending(uk.shusek.krwa.component.WasiHttpRequest){}[0]
+}

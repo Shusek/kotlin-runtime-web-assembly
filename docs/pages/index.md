@@ -11,7 +11,7 @@ Node WebAssembly engine. JVM artifacts are compiled for Java 25.
 ## Project Status
 
 This project is experimental and under active development. Every push to
-`main` publishes `0.3.0-SNAPSHOT` artifacts for evaluation and integration
+`main` publishes immutable `0.3.0-dev.<12-character-commit>` artifacts for evaluation and integration
 work. Production use should wait for reviewed releases and pinned versions.
 Public APIs in experimental modules may change while the Kotlin Multiplatform
 and Component Model surfaces settle.
@@ -32,10 +32,10 @@ the solid foundations this project builds on.
 
 ## Start Here
 
-Add the snapshot Maven repository, then depend on the modules you need:
+Add the development Maven repository, then depend on the modules you need:
 
 ```kotlin
-val runtimeVersion = "0.3.0-SNAPSHOT"
+val runtimeVersion = "0.3.0-dev.<12-character-commit>"
 
 dependencies {
     implementation(platform("uk.shusek.krwa:bom:$runtimeVersion"))

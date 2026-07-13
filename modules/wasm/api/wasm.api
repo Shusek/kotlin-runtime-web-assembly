@@ -1,0 +1,1908 @@
+public final class uk/shusek/krwa/wasm/ControlTree {
+	public fun <init> ()V
+	public final fun addCallback (Lkotlin/jvm/functions/Function1;)V
+	public final fun addNested (Luk/shusek/krwa/wasm/ControlTree;)V
+	public final fun instruction ()Luk/shusek/krwa/wasm/types/AnnotatedInstruction$Builder;
+	public final fun instructionNumber ()I
+	public final fun parent ()Luk/shusek/krwa/wasm/ControlTree;
+	public final fun setFinalInstructionNumber (ILuk/shusek/krwa/wasm/types/AnnotatedInstruction$Builder;)V
+	public final fun spawn (ILuk/shusek/krwa/wasm/types/AnnotatedInstruction$Builder;)Luk/shusek/krwa/wasm/ControlTree;
+}
+
+public final class uk/shusek/krwa/wasm/Encoding {
+	public static final field Companion Luk/shusek/krwa/wasm/Encoding$Companion;
+	public static final field MAX_SIGNED_INT J
+	public static final field MAX_UNSIGNED_INT J
+	public static final field MAX_VARINT_LEN_32 I
+	public static final field MAX_VARINT_LEN_64 I
+	public static final field MIN_SIGNED_INT J
+	public static final fun readByte (Ljava/nio/ByteBuffer;)B
+	public static final fun readBytes (Ljava/nio/ByteBuffer;[B)V
+	public static final fun readFloat32 (Ljava/nio/ByteBuffer;)J
+	public static final fun readFloat64 (Ljava/nio/ByteBuffer;)J
+	public static final fun readInt (Ljava/nio/ByteBuffer;)I
+	public static final fun readName (Ljava/nio/ByteBuffer;)Ljava/lang/String;
+	public static final fun readName (Ljava/nio/ByteBuffer;Z)Ljava/lang/String;
+	public static final fun readSigned32Leb128 (Ljava/nio/ByteBuffer;)J
+	public static final fun readSigned64Leb128 (Ljava/nio/ByteBuffer;)J
+	public static final fun readUnsignedLeb128 (Ljava/nio/ByteBuffer;I)J
+	public static final fun readVarSInt32 (Ljava/nio/ByteBuffer;)J
+	public static final fun readVarSInt64 (Ljava/nio/ByteBuffer;)J
+	public static final fun readVarUInt32 (Ljava/nio/ByteBuffer;)J
+}
+
+public final class uk/shusek/krwa/wasm/Encoding$Companion {
+	public final fun readByte (Ljava/nio/ByteBuffer;)B
+	public final fun readBytes (Ljava/nio/ByteBuffer;[B)V
+	public final fun readFloat32 (Ljava/nio/ByteBuffer;)J
+	public final fun readFloat64 (Ljava/nio/ByteBuffer;)J
+	public final fun readInt (Ljava/nio/ByteBuffer;)I
+	public final fun readName (Ljava/nio/ByteBuffer;)Ljava/lang/String;
+	public final fun readName (Ljava/nio/ByteBuffer;Z)Ljava/lang/String;
+	public final fun readSigned32Leb128 (Ljava/nio/ByteBuffer;)J
+	public final fun readSigned64Leb128 (Ljava/nio/ByteBuffer;)J
+	public final fun readUnsignedLeb128 (Ljava/nio/ByteBuffer;I)J
+	public final fun readVarSInt32 (Ljava/nio/ByteBuffer;)J
+	public final fun readVarSInt64 (Ljava/nio/ByteBuffer;)J
+	public final fun readVarUInt32 (Ljava/nio/ByteBuffer;)J
+}
+
+public class uk/shusek/krwa/wasm/InvalidException : uk/shusek/krwa/wasm/WasmEngineException {
+	public fun <init> (Ljava/lang/String;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/Throwable;)V
+	public fun <init> (Ljava/lang/Throwable;)V
+}
+
+public class uk/shusek/krwa/wasm/MalformedException : uk/shusek/krwa/wasm/WasmEngineException {
+	public fun <init> (Ljava/lang/String;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/Throwable;)V
+	public fun <init> (Ljava/lang/Throwable;)V
+}
+
+public final class uk/shusek/krwa/wasm/Parser {
+	public static final field Companion Luk/shusek/krwa/wasm/Parser$Companion;
+	public static final field MAGIC_BYTES [B
+	public static final field VERSION_BYTES [B
+	public static final fun builder ()Luk/shusek/krwa/wasm/Parser$Builder;
+	public static final fun parse (Ljava/io/File;)Luk/shusek/krwa/wasm/WasmModule;
+	public static final fun parse (Ljava/io/InputStream;)Luk/shusek/krwa/wasm/WasmModule;
+	public final fun parse (Ljava/io/InputStream;Luk/shusek/krwa/wasm/ParserListener;)V
+	public static final fun parse (Ljava/nio/file/Path;)Luk/shusek/krwa/wasm/WasmModule;
+	public final fun parse (Lkotlin/jvm/functions/Function0;)Luk/shusek/krwa/wasm/WasmModule;
+	public final fun parse (Lkotlinx/io/RawSource;)Luk/shusek/krwa/wasm/WasmModule;
+	public final fun parse (Lkotlinx/io/RawSource;Luk/shusek/krwa/wasm/ParserListener;)V
+	public static final fun parse ([B)Luk/shusek/krwa/wasm/WasmModule;
+	public final fun parseBytes ([B)Luk/shusek/krwa/wasm/WasmModule;
+	public final fun parseWithoutDecoding (Ljava/io/InputStream;Luk/shusek/krwa/wasm/ParserListener;)V
+	public static final fun parseWithoutDecoding (Lkotlinx/io/RawSource;Luk/shusek/krwa/wasm/ParserListener;)V
+	public static final fun parseWithoutDecoding ([BLuk/shusek/krwa/wasm/ParserListener;)V
+}
+
+public final class uk/shusek/krwa/wasm/Parser$Builder {
+	public static final field Companion Luk/shusek/krwa/wasm/Parser$Builder$Companion;
+	public final fun build ()Luk/shusek/krwa/wasm/Parser;
+	public final fun includeSectionId (I)Luk/shusek/krwa/wasm/Parser$Builder;
+	public final fun withCustomParsers (Ljava/util/Map;)Luk/shusek/krwa/wasm/Parser$Builder;
+	public final fun withForwardTypeReferences (Z)Luk/shusek/krwa/wasm/Parser$Builder;
+	public final fun withLocalGlobalReferencesInConstantExpressions (Z)Luk/shusek/krwa/wasm/Parser$Builder;
+	public final fun withMultiMemory (Z)Luk/shusek/krwa/wasm/Parser$Builder;
+	public final fun withMultiTable (Z)Luk/shusek/krwa/wasm/Parser$Builder;
+	public final fun withThreadsMemory (Z)Luk/shusek/krwa/wasm/Parser$Builder;
+	public final fun withValidation (Z)Luk/shusek/krwa/wasm/Parser$Builder;
+}
+
+public final class uk/shusek/krwa/wasm/Parser$Builder$Companion {
+}
+
+public final class uk/shusek/krwa/wasm/Parser$Companion {
+	public final fun builder ()Luk/shusek/krwa/wasm/Parser$Builder;
+	public final fun parse (Ljava/io/File;)Luk/shusek/krwa/wasm/WasmModule;
+	public final fun parse (Ljava/io/InputStream;)Luk/shusek/krwa/wasm/WasmModule;
+	public final fun parse (Ljava/nio/file/Path;)Luk/shusek/krwa/wasm/WasmModule;
+	public final fun parse (Lkotlinx/io/RawSource;)Luk/shusek/krwa/wasm/WasmModule;
+	public final fun parse ([B)Luk/shusek/krwa/wasm/WasmModule;
+	public final fun parseWithoutDecoding (Lkotlinx/io/RawSource;Luk/shusek/krwa/wasm/ParserListener;)V
+	public final fun parseWithoutDecoding ([BLuk/shusek/krwa/wasm/ParserListener;)V
+}
+
+public abstract interface class uk/shusek/krwa/wasm/ParserListener {
+	public abstract fun onSection (Luk/shusek/krwa/wasm/types/Section;)V
+}
+
+public class uk/shusek/krwa/wasm/UninstantiableException : uk/shusek/krwa/wasm/WasmEngineException {
+	public fun <init> (Ljava/lang/String;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/Throwable;)V
+	public fun <init> (Ljava/lang/Throwable;)V
+}
+
+public class uk/shusek/krwa/wasm/UnlinkableException : uk/shusek/krwa/wasm/WasmEngineException {
+	public fun <init> (Ljava/lang/String;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/Throwable;)V
+	public fun <init> (Ljava/lang/Throwable;)V
+}
+
+public final class uk/shusek/krwa/wasm/Version {
+	public static final field INSTANCE Luk/shusek/krwa/wasm/Version;
+	public static final fun version ()Ljava/lang/String;
+}
+
+public class uk/shusek/krwa/wasm/WasmEngineException : java/lang/RuntimeException {
+	public fun <init> (Ljava/lang/String;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/Throwable;)V
+	public fun <init> (Ljava/lang/Throwable;)V
+}
+
+public final class uk/shusek/krwa/wasm/WasmLimits {
+	public static final field INSTANCE Luk/shusek/krwa/wasm/WasmLimits;
+	public static final field MAX_ARRAY_NEW_FIXED_ARGS I
+	public static final field MAX_DATA_SEGMENTS I
+	public static final field MAX_EXCEPTIONS I
+	public static final field MAX_EXPORTS I
+	public static final field MAX_FUNCTIONS I
+	public static final field MAX_FUNCTION_LOCALS I
+	public static final field MAX_FUNCTION_PARAMS I
+	public static final field MAX_FUNCTION_RETURNS I
+	public static final field MAX_FUNCTION_SIZE I
+	public static final field MAX_GLOBALS I
+	public static final field MAX_IMPORTS I
+	public static final field MAX_MODULE_SIZE I
+	public static final field MAX_NUMBER_OF_RECURSION_GROUPS I
+	public static final field MAX_RECURSION_GROUP_COUNT I
+	public static final field MAX_STRING_SIZE I
+	public static final field MAX_STRUCT_FIELD_COUNT I
+	public static final field MAX_SUBTYPE_DEPTH I
+	public static final field MAX_SUBTYPE_SUPERTYPE_COUNT I
+	public static final field MAX_TABLES I
+	public static final field MAX_TABLE_ENTRIES I
+	public static final field MAX_TYPES I
+}
+
+public final class uk/shusek/krwa/wasm/WasmModule {
+	public static final field Companion Luk/shusek/krwa/wasm/WasmModule$Companion;
+	public final fun codeSection ()Luk/shusek/krwa/wasm/types/CodeSection;
+	public final fun customSection (Ljava/lang/String;)Luk/shusek/krwa/wasm/types/CustomSection;
+	public final fun customSections ()Ljava/util/List;
+	public final fun dataCountSection ()Luk/shusek/krwa/wasm/types/DataCountSection;
+	public final fun dataSection ()Luk/shusek/krwa/wasm/types/DataSection;
+	public final fun digest ()Ljava/lang/String;
+	public final fun elementSection ()Luk/shusek/krwa/wasm/types/ElementSection;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun exportSection ()Luk/shusek/krwa/wasm/types/ExportSection;
+	public final fun functionSection ()Luk/shusek/krwa/wasm/types/FunctionSection;
+	public final fun globalSection ()Luk/shusek/krwa/wasm/types/GlobalSection;
+	public fun hashCode ()I
+	public final fun ignoredSections ()Ljava/util/List;
+	public final fun importSection ()Luk/shusek/krwa/wasm/types/ImportSection;
+	public final fun memorySection ()Luk/shusek/krwa/wasm/types/MemorySection;
+	public final fun nameSection ()Luk/shusek/krwa/wasm/types/NameCustomSection;
+	public final fun originalBytes ()[B
+	public final fun startSection ()Luk/shusek/krwa/wasm/types/StartSection;
+	public final fun tableSection ()Luk/shusek/krwa/wasm/types/TableSection;
+	public final fun tagSection ()Luk/shusek/krwa/wasm/types/TagSection;
+	public final fun typeSection ()Luk/shusek/krwa/wasm/types/TypeSection;
+}
+
+public final class uk/shusek/krwa/wasm/WasmModule$Builder {
+	public static final field Companion Luk/shusek/krwa/wasm/WasmModule$Builder$Companion;
+	public final fun addCustomSection (Ljava/lang/String;Luk/shusek/krwa/wasm/types/CustomSection;)Luk/shusek/krwa/wasm/WasmModule$Builder;
+	public final fun addIgnoredSection (I)Luk/shusek/krwa/wasm/WasmModule$Builder;
+	public final fun build ()Luk/shusek/krwa/wasm/WasmModule;
+	public final fun setCodeSection (Luk/shusek/krwa/wasm/types/CodeSection;)Luk/shusek/krwa/wasm/WasmModule$Builder;
+	public final fun setDataCountSection (Luk/shusek/krwa/wasm/types/DataCountSection;)Luk/shusek/krwa/wasm/WasmModule$Builder;
+	public final fun setDataSection (Luk/shusek/krwa/wasm/types/DataSection;)Luk/shusek/krwa/wasm/WasmModule$Builder;
+	public final fun setElementSection (Luk/shusek/krwa/wasm/types/ElementSection;)Luk/shusek/krwa/wasm/WasmModule$Builder;
+	public final fun setExportSection (Luk/shusek/krwa/wasm/types/ExportSection;)Luk/shusek/krwa/wasm/WasmModule$Builder;
+	public final fun setFunctionSection (Luk/shusek/krwa/wasm/types/FunctionSection;)Luk/shusek/krwa/wasm/WasmModule$Builder;
+	public final fun setGlobalSection (Luk/shusek/krwa/wasm/types/GlobalSection;)Luk/shusek/krwa/wasm/WasmModule$Builder;
+	public final fun setImportSection (Luk/shusek/krwa/wasm/types/ImportSection;)Luk/shusek/krwa/wasm/WasmModule$Builder;
+	public final fun setMemorySection (Luk/shusek/krwa/wasm/types/MemorySection;)Luk/shusek/krwa/wasm/WasmModule$Builder;
+	public final fun setStartSection (Luk/shusek/krwa/wasm/types/StartSection;)Luk/shusek/krwa/wasm/WasmModule$Builder;
+	public final fun setTableSection (Luk/shusek/krwa/wasm/types/TableSection;)Luk/shusek/krwa/wasm/WasmModule$Builder;
+	public final fun setTagSection (Luk/shusek/krwa/wasm/types/TagSection;)Luk/shusek/krwa/wasm/WasmModule$Builder;
+	public final fun setTypeSection (Luk/shusek/krwa/wasm/types/TypeSection;)Luk/shusek/krwa/wasm/WasmModule$Builder;
+	public final fun withDigest (Ljava/lang/String;)Luk/shusek/krwa/wasm/WasmModule$Builder;
+	public final fun withLocalGlobalReferencesInConstantExpressions (Z)Luk/shusek/krwa/wasm/WasmModule$Builder;
+	public final fun withMultiMemory (Z)Luk/shusek/krwa/wasm/WasmModule$Builder;
+	public final fun withMultiTable (Z)Luk/shusek/krwa/wasm/WasmModule$Builder;
+	public final fun withOriginalBytes ([B)Luk/shusek/krwa/wasm/WasmModule$Builder;
+	public final fun withValidation (Z)Luk/shusek/krwa/wasm/WasmModule$Builder;
+}
+
+public final class uk/shusek/krwa/wasm/WasmModule$Builder$Companion {
+	public final fun create ()Luk/shusek/krwa/wasm/WasmModule$Builder;
+}
+
+public final class uk/shusek/krwa/wasm/WasmModule$Companion {
+	public final fun builder ()Luk/shusek/krwa/wasm/WasmModule$Builder;
+}
+
+public final class uk/shusek/krwa/wasm/WasmParser {
+	public static final field Companion Luk/shusek/krwa/wasm/WasmParser$Companion;
+	public final fun parse (Lkotlinx/io/RawSource;)Luk/shusek/krwa/wasm/WasmModule;
+	public final fun parse (Lkotlinx/io/RawSource;Luk/shusek/krwa/wasm/ParserListener;)V
+	public final fun parseBytes ([B)Luk/shusek/krwa/wasm/WasmModule;
+	public final fun parseBytes ([BLuk/shusek/krwa/wasm/ParserListener;)V
+	public final fun parseWithoutDecoding (Lkotlinx/io/RawSource;Luk/shusek/krwa/wasm/ParserListener;)V
+	public final fun parseWithoutDecoding ([BLuk/shusek/krwa/wasm/ParserListener;)V
+}
+
+public final class uk/shusek/krwa/wasm/WasmParser$Builder {
+	public static final field Companion Luk/shusek/krwa/wasm/WasmParser$Builder$Companion;
+	public final fun build ()Luk/shusek/krwa/wasm/WasmParser;
+	public final fun includeSectionId (I)Luk/shusek/krwa/wasm/WasmParser$Builder;
+	public final fun withCustomParsers (Ljava/util/Map;)Luk/shusek/krwa/wasm/WasmParser$Builder;
+	public final fun withForwardTypeReferences (Z)Luk/shusek/krwa/wasm/WasmParser$Builder;
+	public final fun withLocalGlobalReferencesInConstantExpressions (Z)Luk/shusek/krwa/wasm/WasmParser$Builder;
+	public final fun withMultiMemory (Z)Luk/shusek/krwa/wasm/WasmParser$Builder;
+	public final fun withMultiTable (Z)Luk/shusek/krwa/wasm/WasmParser$Builder;
+	public final fun withThreadsMemory (Z)Luk/shusek/krwa/wasm/WasmParser$Builder;
+	public final fun withValidation (Z)Luk/shusek/krwa/wasm/WasmParser$Builder;
+}
+
+public final class uk/shusek/krwa/wasm/WasmParser$Builder$Companion {
+}
+
+public final class uk/shusek/krwa/wasm/WasmParser$Companion {
+	public final fun builder ()Luk/shusek/krwa/wasm/WasmParser$Builder;
+	public final fun getMAGIC_BYTES ()[B
+	public final fun getVERSION_BYTES ()[B
+	public final fun parse (Lkotlinx/io/RawSource;)Luk/shusek/krwa/wasm/WasmModule;
+	public final fun parse ([B)Luk/shusek/krwa/wasm/WasmModule;
+	public final fun parseWithoutDecoding (Lkotlinx/io/RawSource;Luk/shusek/krwa/wasm/ParserListener;)V
+	public final fun parseWithoutDecoding ([BLuk/shusek/krwa/wasm/ParserListener;)V
+}
+
+public final class uk/shusek/krwa/wasm/WasmWriter {
+	public static final field Companion Luk/shusek/krwa/wasm/WasmWriter$Companion;
+	public fun <init> ()V
+	public final fun bytes ()[B
+	public final fun writeSection (I[B)V
+	public final fun writeSection (Luk/shusek/krwa/wasm/types/RawSection;)V
+	public static final fun writeVarUInt32 (Lkotlinx/io/Sink;I)V
+}
+
+public final class uk/shusek/krwa/wasm/WasmWriter$Companion {
+	public final fun writeVarUInt32 (Lkotlinx/io/Sink;I)V
+}
+
+public final class uk/shusek/krwa/wasm/io/InputStreams {
+	public static final field INSTANCE Luk/shusek/krwa/wasm/io/InputStreams;
+	public static final fun readAllBytes (Ljava/io/InputStream;)[B
+}
+
+public final class uk/shusek/krwa/wasm/types/ActiveDataSegment : uk/shusek/krwa/wasm/types/DataSegment {
+	public fun <init> (JLjava/util/List;[B)V
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public final fun index ()J
+	public final fun offsetInstructions ()Ljava/util/List;
+}
+
+public final class uk/shusek/krwa/wasm/types/ActiveElement : uk/shusek/krwa/wasm/types/Element {
+	public fun <init> (Luk/shusek/krwa/wasm/types/ValType;Ljava/util/List;ILjava/util/List;)V
+	public final fun offset ()Ljava/util/List;
+	public final fun tableIndex ()I
+}
+
+public final class uk/shusek/krwa/wasm/types/AnnotatedInstruction : uk/shusek/krwa/wasm/types/Instruction {
+	public static final field Companion Luk/shusek/krwa/wasm/types/AnnotatedInstruction$Companion;
+	public static final field UNDEFINED_LABEL I
+	public final fun catches ()Ljava/util/List;
+	public final fun depth ()I
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public final fun labelFalse ()I
+	public final fun labelTable ()Ljava/util/List;
+	public final fun labelTrue ()I
+	public final fun scope ()Luk/shusek/krwa/wasm/types/Instruction;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/wasm/types/AnnotatedInstruction$Builder {
+	public fun <init> ()V
+	public final fun build ()Luk/shusek/krwa/wasm/types/AnnotatedInstruction;
+	public final fun from (Luk/shusek/krwa/wasm/types/Instruction;)Luk/shusek/krwa/wasm/types/AnnotatedInstruction$Builder;
+	public final fun opcode ()Luk/shusek/krwa/wasm/types/OpCode;
+	public final fun scope ()Luk/shusek/krwa/wasm/types/Instruction;
+	public final fun updateLabelFalse (I)Luk/shusek/krwa/wasm/types/AnnotatedInstruction$Builder;
+	public final fun withCatches (Ljava/util/List;)Luk/shusek/krwa/wasm/types/AnnotatedInstruction$Builder;
+	public final fun withDepth (I)Luk/shusek/krwa/wasm/types/AnnotatedInstruction$Builder;
+	public final fun withLabelFalse (I)Luk/shusek/krwa/wasm/types/AnnotatedInstruction$Builder;
+	public final fun withLabelTable (Ljava/util/List;)Luk/shusek/krwa/wasm/types/AnnotatedInstruction$Builder;
+	public final fun withLabelTrue (I)Luk/shusek/krwa/wasm/types/AnnotatedInstruction$Builder;
+	public final fun withScope (Luk/shusek/krwa/wasm/types/Instruction;)Luk/shusek/krwa/wasm/types/AnnotatedInstruction$Builder;
+}
+
+public final class uk/shusek/krwa/wasm/types/AnnotatedInstruction$Companion {
+	public final fun builder ()Luk/shusek/krwa/wasm/types/AnnotatedInstruction$Builder;
+}
+
+public final class uk/shusek/krwa/wasm/types/ArrayType {
+	public static final field Companion Luk/shusek/krwa/wasm/types/ArrayType$Companion;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun fieldType ()Luk/shusek/krwa/wasm/types/FieldType;
+	public fun hashCode ()I
+}
+
+public final class uk/shusek/krwa/wasm/types/ArrayType$Builder {
+	public fun <init> ()V
+	public final fun build ()Luk/shusek/krwa/wasm/types/ArrayType;
+	public final fun withFieldType (Luk/shusek/krwa/wasm/types/FieldType;)Luk/shusek/krwa/wasm/types/ArrayType$Builder;
+}
+
+public final class uk/shusek/krwa/wasm/types/ArrayType$Companion {
+	public final fun builder ()Luk/shusek/krwa/wasm/types/ArrayType$Builder;
+}
+
+public final class uk/shusek/krwa/wasm/types/CatchOpCode : java/lang/Enum {
+	public static final field CATCH Luk/shusek/krwa/wasm/types/CatchOpCode;
+	public static final field CATCH_ALL Luk/shusek/krwa/wasm/types/CatchOpCode;
+	public static final field CATCH_ALL_REF Luk/shusek/krwa/wasm/types/CatchOpCode;
+	public static final field CATCH_REF Luk/shusek/krwa/wasm/types/CatchOpCode;
+	public static final field Companion Luk/shusek/krwa/wasm/types/CatchOpCode$Companion;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public final fun opcode ()I
+	public static fun valueOf (Ljava/lang/String;)Luk/shusek/krwa/wasm/types/CatchOpCode;
+	public static fun values ()[Luk/shusek/krwa/wasm/types/CatchOpCode;
+}
+
+public final class uk/shusek/krwa/wasm/types/CatchOpCode$Catch {
+	public static final field Companion Luk/shusek/krwa/wasm/types/CatchOpCode$Catch$Companion;
+	public final fun label ()I
+	public final fun opcode ()Luk/shusek/krwa/wasm/types/CatchOpCode;
+	public final fun resolvedLabel ()I
+	public final fun resolvedLabel (I)V
+	public final fun tag ()I
+}
+
+public final class uk/shusek/krwa/wasm/types/CatchOpCode$Catch$Companion {
+	public final fun forAll (Luk/shusek/krwa/wasm/types/CatchOpCode;I)Luk/shusek/krwa/wasm/types/CatchOpCode$Catch;
+	public final fun forTag (Luk/shusek/krwa/wasm/types/CatchOpCode;II)Luk/shusek/krwa/wasm/types/CatchOpCode$Catch;
+}
+
+public final class uk/shusek/krwa/wasm/types/CatchOpCode$Companion {
+	public final fun allLabels ([J)Ljava/util/List;
+	public final fun byOpCode (I)Luk/shusek/krwa/wasm/types/CatchOpCode;
+	public final fun decode ([J)Ljava/util/List;
+}
+
+public final class uk/shusek/krwa/wasm/types/CodeSection : uk/shusek/krwa/wasm/types/Section {
+	public static final field Companion Luk/shusek/krwa/wasm/types/CodeSection$Companion;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun functionBodies ()[Luk/shusek/krwa/wasm/types/FunctionBody;
+	public final fun functionBodyCount ()I
+	public final fun getFunctionBody (I)Luk/shusek/krwa/wasm/types/FunctionBody;
+	public fun hashCode ()I
+	public final fun isRequiresDataCount ()Z
+}
+
+public final class uk/shusek/krwa/wasm/types/CodeSection$Builder {
+	public fun <init> ()V
+	public final fun addFunctionBody (Luk/shusek/krwa/wasm/types/FunctionBody;)Luk/shusek/krwa/wasm/types/CodeSection$Builder;
+	public final fun build ()Luk/shusek/krwa/wasm/types/CodeSection;
+	public final fun setRequiresDataCount (Z)Luk/shusek/krwa/wasm/types/CodeSection$Builder;
+}
+
+public final class uk/shusek/krwa/wasm/types/CodeSection$Companion {
+	public final fun builder ()Luk/shusek/krwa/wasm/types/CodeSection$Builder;
+}
+
+public final class uk/shusek/krwa/wasm/types/CompType {
+	public static final field Companion Luk/shusek/krwa/wasm/types/CompType$Companion;
+	public final fun arrayType ()Luk/shusek/krwa/wasm/types/ArrayType;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun funcType ()Luk/shusek/krwa/wasm/types/FunctionType;
+	public fun hashCode ()I
+	public final fun structType ()Luk/shusek/krwa/wasm/types/StructType;
+}
+
+public final class uk/shusek/krwa/wasm/types/CompType$Builder {
+	public fun <init> ()V
+	public final fun build ()Luk/shusek/krwa/wasm/types/CompType;
+	public final fun withArrayType (Luk/shusek/krwa/wasm/types/ArrayType;)Luk/shusek/krwa/wasm/types/CompType$Builder;
+	public final fun withFuncType (Luk/shusek/krwa/wasm/types/FunctionType;)Luk/shusek/krwa/wasm/types/CompType$Builder;
+	public final fun withStructType (Luk/shusek/krwa/wasm/types/StructType;)Luk/shusek/krwa/wasm/types/CompType$Builder;
+}
+
+public final class uk/shusek/krwa/wasm/types/CompType$Companion {
+	public final fun builder ()Luk/shusek/krwa/wasm/types/CompType$Builder;
+}
+
+public abstract class uk/shusek/krwa/wasm/types/CustomSection : uk/shusek/krwa/wasm/types/Section {
+	public fun <init> ()V
+	public abstract fun name ()Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/wasm/types/DataCountSection : uk/shusek/krwa/wasm/types/Section {
+	public static final field Companion Luk/shusek/krwa/wasm/types/DataCountSection$Companion;
+	public final fun dataCount ()I
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+}
+
+public final class uk/shusek/krwa/wasm/types/DataCountSection$Builder {
+	public fun <init> ()V
+	public final fun build ()Luk/shusek/krwa/wasm/types/DataCountSection;
+	public final fun withDataCount (I)Luk/shusek/krwa/wasm/types/DataCountSection$Builder;
+}
+
+public final class uk/shusek/krwa/wasm/types/DataCountSection$Companion {
+	public final fun builder ()Luk/shusek/krwa/wasm/types/DataCountSection$Builder;
+}
+
+public final class uk/shusek/krwa/wasm/types/DataSection : uk/shusek/krwa/wasm/types/Section {
+	public static final field Companion Luk/shusek/krwa/wasm/types/DataSection$Companion;
+	public final fun dataSegmentCount ()I
+	public final fun dataSegments ()[Luk/shusek/krwa/wasm/types/DataSegment;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDataSegment (I)Luk/shusek/krwa/wasm/types/DataSegment;
+	public fun hashCode ()I
+}
+
+public final class uk/shusek/krwa/wasm/types/DataSection$Builder {
+	public fun <init> ()V
+	public final fun addDataSegment (Luk/shusek/krwa/wasm/types/DataSegment;)Luk/shusek/krwa/wasm/types/DataSection$Builder;
+	public final fun build ()Luk/shusek/krwa/wasm/types/DataSection;
+}
+
+public final class uk/shusek/krwa/wasm/types/DataSection$Companion {
+	public final fun builder ()Luk/shusek/krwa/wasm/types/DataSection$Builder;
+}
+
+public abstract class uk/shusek/krwa/wasm/types/DataSegment {
+	public fun <init> ([B)V
+	public final fun data ()[B
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+}
+
+public final class uk/shusek/krwa/wasm/types/DeclarativeElement : uk/shusek/krwa/wasm/types/Element {
+	public fun <init> (Luk/shusek/krwa/wasm/types/ValType;Ljava/util/List;)V
+}
+
+public abstract class uk/shusek/krwa/wasm/types/Element {
+	public fun <init> (Luk/shusek/krwa/wasm/types/ValType;Ljava/util/List;)V
+	public final fun elementCount ()I
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public final fun initializers ()Ljava/util/List;
+	public final fun type ()Luk/shusek/krwa/wasm/types/ValType;
+}
+
+public final class uk/shusek/krwa/wasm/types/ElementSection : uk/shusek/krwa/wasm/types/Section {
+	public static final field Companion Luk/shusek/krwa/wasm/types/ElementSection$Companion;
+	public final fun elementCount ()I
+	public final fun elements ()[Luk/shusek/krwa/wasm/types/Element;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getElement (I)Luk/shusek/krwa/wasm/types/Element;
+	public fun hashCode ()I
+}
+
+public final class uk/shusek/krwa/wasm/types/ElementSection$Builder {
+	public fun <init> ()V
+	public final fun addElement (Luk/shusek/krwa/wasm/types/Element;)Luk/shusek/krwa/wasm/types/ElementSection$Builder;
+	public final fun build ()Luk/shusek/krwa/wasm/types/ElementSection;
+}
+
+public final class uk/shusek/krwa/wasm/types/ElementSection$Companion {
+	public final fun builder ()Luk/shusek/krwa/wasm/types/ElementSection$Builder;
+}
+
+public class uk/shusek/krwa/wasm/types/Export {
+	public fun <init> (Ljava/lang/String;ILuk/shusek/krwa/wasm/types/ExternalType;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun equals (Luk/shusek/krwa/wasm/types/Export;)Z
+	public final fun exportType ()Luk/shusek/krwa/wasm/types/ExternalType;
+	public fun hashCode ()I
+	public final fun index ()I
+	public final fun name ()Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/wasm/types/ExportSection : uk/shusek/krwa/wasm/types/Section {
+	public static final field Companion Luk/shusek/krwa/wasm/types/ExportSection$Companion;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun exportCount ()I
+	public final fun getExport (I)Luk/shusek/krwa/wasm/types/Export;
+	public fun hashCode ()I
+}
+
+public final class uk/shusek/krwa/wasm/types/ExportSection$Builder {
+	public fun <init> ()V
+	public final fun addExport (Luk/shusek/krwa/wasm/types/Export;)Luk/shusek/krwa/wasm/types/ExportSection$Builder;
+	public final fun build ()Luk/shusek/krwa/wasm/types/ExportSection;
+}
+
+public final class uk/shusek/krwa/wasm/types/ExportSection$Companion {
+	public final fun builder ()Luk/shusek/krwa/wasm/types/ExportSection$Builder;
+}
+
+public final class uk/shusek/krwa/wasm/types/ExternalType : java/lang/Enum {
+	public static final field Companion Luk/shusek/krwa/wasm/types/ExternalType$Companion;
+	public static final field FUNCTION Luk/shusek/krwa/wasm/types/ExternalType;
+	public static final field GLOBAL Luk/shusek/krwa/wasm/types/ExternalType;
+	public static final field MEMORY Luk/shusek/krwa/wasm/types/ExternalType;
+	public static final field TABLE Luk/shusek/krwa/wasm/types/ExternalType;
+	public static final field TAG Luk/shusek/krwa/wasm/types/ExternalType;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public final fun id ()I
+	public static fun valueOf (Ljava/lang/String;)Luk/shusek/krwa/wasm/types/ExternalType;
+	public static fun values ()[Luk/shusek/krwa/wasm/types/ExternalType;
+}
+
+public final class uk/shusek/krwa/wasm/types/ExternalType$Companion {
+	public final fun byId (I)Luk/shusek/krwa/wasm/types/ExternalType;
+}
+
+public final class uk/shusek/krwa/wasm/types/FieldType {
+	public static final field Companion Luk/shusek/krwa/wasm/types/FieldType$Companion;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public final fun mut ()Luk/shusek/krwa/wasm/types/MutabilityType;
+	public final fun storageType ()Luk/shusek/krwa/wasm/types/StorageType;
+}
+
+public final class uk/shusek/krwa/wasm/types/FieldType$Builder {
+	public fun <init> ()V
+	public final fun build ()Luk/shusek/krwa/wasm/types/FieldType;
+	public final fun withMutability (Luk/shusek/krwa/wasm/types/MutabilityType;)Luk/shusek/krwa/wasm/types/FieldType$Builder;
+	public final fun withStorageType (Luk/shusek/krwa/wasm/types/StorageType;)Luk/shusek/krwa/wasm/types/FieldType$Builder;
+}
+
+public final class uk/shusek/krwa/wasm/types/FieldType$Companion {
+	public final fun builder ()Luk/shusek/krwa/wasm/types/FieldType$Builder;
+}
+
+public final class uk/shusek/krwa/wasm/types/FunctionBody {
+	public fun <init> (Ljava/util/List;Ljava/util/List;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public final fun instructions ()Ljava/util/List;
+	public final fun localTypes ()Ljava/util/List;
+}
+
+public final class uk/shusek/krwa/wasm/types/FunctionImport : uk/shusek/krwa/wasm/types/Import {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;I)V
+	public final fun equals (Luk/shusek/krwa/wasm/types/FunctionImport;)Z
+	public fun equals (Luk/shusek/krwa/wasm/types/Import;)Z
+	public fun hashCode ()I
+	public fun importType ()Luk/shusek/krwa/wasm/types/ExternalType;
+	public fun toString (Ljava/lang/StringBuilder;)Ljava/lang/StringBuilder;
+	public final fun typeIndex ()I
+}
+
+public final class uk/shusek/krwa/wasm/types/FunctionSection : uk/shusek/krwa/wasm/types/Section {
+	public static final field Companion Luk/shusek/krwa/wasm/types/FunctionSection$Companion;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun functionCount ()I
+	public final fun getFunctionType (I)I
+	public final fun getFunctionType (ILuk/shusek/krwa/wasm/types/TypeSection;)Luk/shusek/krwa/wasm/types/FunctionType;
+	public fun hashCode ()I
+}
+
+public final class uk/shusek/krwa/wasm/types/FunctionSection$Builder {
+	public fun <init> ()V
+	public final fun addFunctionType (I)Luk/shusek/krwa/wasm/types/FunctionSection$Builder;
+	public final fun build ()Luk/shusek/krwa/wasm/types/FunctionSection;
+}
+
+public final class uk/shusek/krwa/wasm/types/FunctionSection$Companion {
+	public final fun builder ()Luk/shusek/krwa/wasm/types/FunctionSection$Builder;
+}
+
+public final class uk/shusek/krwa/wasm/types/FunctionType {
+	public static final field Companion Luk/shusek/krwa/wasm/types/FunctionType$Companion;
+	public static final fun accepting (Luk/shusek/krwa/wasm/types/ValType;)Luk/shusek/krwa/wasm/types/FunctionType;
+	public static final fun empty ()Luk/shusek/krwa/wasm/types/FunctionType;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun equals (Luk/shusek/krwa/wasm/types/FunctionType;)Z
+	public fun hashCode ()I
+	public static final fun of (Ljava/util/List;Ljava/util/List;)Luk/shusek/krwa/wasm/types/FunctionType;
+	public static final fun of ([Luk/shusek/krwa/wasm/types/ValType;[Luk/shusek/krwa/wasm/types/ValType;)Luk/shusek/krwa/wasm/types/FunctionType;
+	public final fun paramSlotCount ()I
+	public final fun params ()Ljava/util/List;
+	public final fun paramsMatch (Luk/shusek/krwa/wasm/types/FunctionType;)Z
+	public final fun returnSlotCount ()I
+	public static final fun returning (Luk/shusek/krwa/wasm/types/ValType;)Luk/shusek/krwa/wasm/types/FunctionType;
+	public final fun returns ()Ljava/util/List;
+	public final fun returnsMatch (Luk/shusek/krwa/wasm/types/FunctionType;)Z
+	public fun toString ()Ljava/lang/String;
+	public final fun typesMatch (Luk/shusek/krwa/wasm/types/FunctionType;)Z
+}
+
+public final class uk/shusek/krwa/wasm/types/FunctionType$Companion {
+	public final fun accepting (Luk/shusek/krwa/wasm/types/ValType;)Luk/shusek/krwa/wasm/types/FunctionType;
+	public final fun empty ()Luk/shusek/krwa/wasm/types/FunctionType;
+	public final fun of (Ljava/util/List;Ljava/util/List;)Luk/shusek/krwa/wasm/types/FunctionType;
+	public final fun of ([Luk/shusek/krwa/wasm/types/ValType;[Luk/shusek/krwa/wasm/types/ValType;)Luk/shusek/krwa/wasm/types/FunctionType;
+	public final fun returning (Luk/shusek/krwa/wasm/types/ValType;)Luk/shusek/krwa/wasm/types/FunctionType;
+}
+
+public final class uk/shusek/krwa/wasm/types/Global {
+	public fun <init> (Luk/shusek/krwa/wasm/types/ValType;Luk/shusek/krwa/wasm/types/MutabilityType;Ljava/util/List;)V
+	public fun <init> (Luk/shusek/krwa/wasm/types/ValueType;Luk/shusek/krwa/wasm/types/MutabilityType;Ljava/util/List;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public final fun initInstructions ()Ljava/util/List;
+	public final fun mutabilityType ()Luk/shusek/krwa/wasm/types/MutabilityType;
+	public final fun valueType ()Luk/shusek/krwa/wasm/types/ValType;
+}
+
+public final class uk/shusek/krwa/wasm/types/GlobalImport : uk/shusek/krwa/wasm/types/Import {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Luk/shusek/krwa/wasm/types/MutabilityType;Luk/shusek/krwa/wasm/types/ValType;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Luk/shusek/krwa/wasm/types/MutabilityType;Luk/shusek/krwa/wasm/types/ValueType;)V
+	public final fun equals (Luk/shusek/krwa/wasm/types/GlobalImport;)Z
+	public fun equals (Luk/shusek/krwa/wasm/types/Import;)Z
+	public fun hashCode ()I
+	public fun importType ()Luk/shusek/krwa/wasm/types/ExternalType;
+	public final fun mutabilityType ()Luk/shusek/krwa/wasm/types/MutabilityType;
+	public fun toString (Ljava/lang/StringBuilder;)Ljava/lang/StringBuilder;
+	public final fun type ()Luk/shusek/krwa/wasm/types/ValType;
+}
+
+public final class uk/shusek/krwa/wasm/types/GlobalSection : uk/shusek/krwa/wasm/types/Section {
+	public static final field Companion Luk/shusek/krwa/wasm/types/GlobalSection$Companion;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getGlobal (I)Luk/shusek/krwa/wasm/types/Global;
+	public final fun globalCount ()I
+	public final fun globals ()[Luk/shusek/krwa/wasm/types/Global;
+	public fun hashCode ()I
+}
+
+public final class uk/shusek/krwa/wasm/types/GlobalSection$Builder {
+	public fun <init> ()V
+	public final fun addGlobal (Luk/shusek/krwa/wasm/types/Global;)Luk/shusek/krwa/wasm/types/GlobalSection$Builder;
+	public final fun build ()Luk/shusek/krwa/wasm/types/GlobalSection;
+}
+
+public final class uk/shusek/krwa/wasm/types/GlobalSection$Companion {
+	public final fun builder ()Luk/shusek/krwa/wasm/types/GlobalSection$Builder;
+}
+
+public abstract class uk/shusek/krwa/wasm/types/Import {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public fun equals (Luk/shusek/krwa/wasm/types/Import;)Z
+	public fun hashCode ()I
+	public abstract fun importType ()Luk/shusek/krwa/wasm/types/ExternalType;
+	public final fun module ()Ljava/lang/String;
+	public final fun name ()Ljava/lang/String;
+	public fun toString ()Ljava/lang/String;
+	public fun toString (Ljava/lang/StringBuilder;)Ljava/lang/StringBuilder;
+}
+
+public final class uk/shusek/krwa/wasm/types/ImportSection : uk/shusek/krwa/wasm/types/Section {
+	public static final field Companion Luk/shusek/krwa/wasm/types/ImportSection$Companion;
+	public final fun count (Luk/shusek/krwa/wasm/types/ExternalType;)I
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getImport (I)Luk/shusek/krwa/wasm/types/Import;
+	public fun hashCode ()I
+	public final fun importCount ()I
+	public final fun imports ()[Luk/shusek/krwa/wasm/types/Import;
+}
+
+public final class uk/shusek/krwa/wasm/types/ImportSection$Builder {
+	public fun <init> ()V
+	public final fun addImport (Luk/shusek/krwa/wasm/types/Import;)Luk/shusek/krwa/wasm/types/ImportSection$Builder;
+	public final fun build ()Luk/shusek/krwa/wasm/types/ImportSection;
+}
+
+public final class uk/shusek/krwa/wasm/types/ImportSection$Companion {
+	public final fun builder ()Luk/shusek/krwa/wasm/types/ImportSection$Builder;
+}
+
+public class uk/shusek/krwa/wasm/types/Instruction {
+	public static final field Companion Luk/shusek/krwa/wasm/types/Instruction$Companion;
+	public fun <init> (ILuk/shusek/krwa/wasm/types/OpCode;[J)V
+	public final fun address ()I
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public final fun opcode ()Luk/shusek/krwa/wasm/types/OpCode;
+	public final fun operand (I)J
+	public final fun operandCount ()I
+	public final fun operands ()[J
+	public final fun setOperand (IJ)V
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/wasm/types/Instruction$Companion {
+	public final fun getEMPTY_OPERANDS ()[J
+}
+
+public final class uk/shusek/krwa/wasm/types/Memory {
+	public fun <init> (Luk/shusek/krwa/wasm/types/MemoryLimits;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public final fun limits ()Luk/shusek/krwa/wasm/types/MemoryLimits;
+}
+
+public final class uk/shusek/krwa/wasm/types/MemoryImport : uk/shusek/krwa/wasm/types/Import {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Luk/shusek/krwa/wasm/types/MemoryLimits;)V
+	public fun equals (Luk/shusek/krwa/wasm/types/Import;)Z
+	public final fun equals (Luk/shusek/krwa/wasm/types/MemoryImport;)Z
+	public fun hashCode ()I
+	public fun importType ()Luk/shusek/krwa/wasm/types/ExternalType;
+	public final fun limits ()Luk/shusek/krwa/wasm/types/MemoryLimits;
+	public fun toString (Ljava/lang/StringBuilder;)Ljava/lang/StringBuilder;
+}
+
+public final class uk/shusek/krwa/wasm/types/MemoryLimits {
+	public static final field Companion Luk/shusek/krwa/wasm/types/MemoryLimits$Companion;
+	public static final field MAX_PAGES I
+	public fun <init> (IIZ)V
+	public synthetic fun <init> (IIZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun equals (Luk/shusek/krwa/wasm/types/MemoryLimits;)Z
+	public fun hashCode ()I
+	public final fun initialPages ()I
+	public final fun maximumPages ()I
+	public final fun shared ()Z
+	public fun toString ()Ljava/lang/String;
+	public final fun toString (Ljava/lang/StringBuilder;)Ljava/lang/StringBuilder;
+}
+
+public final class uk/shusek/krwa/wasm/types/MemoryLimits$Companion {
+	public final fun defaultLimits ()Luk/shusek/krwa/wasm/types/MemoryLimits;
+}
+
+public final class uk/shusek/krwa/wasm/types/MemorySection : uk/shusek/krwa/wasm/types/Section {
+	public static final field Companion Luk/shusek/krwa/wasm/types/MemorySection$Companion;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getMemory (I)Luk/shusek/krwa/wasm/types/Memory;
+	public fun hashCode ()I
+	public final fun memoryCount ()I
+}
+
+public final class uk/shusek/krwa/wasm/types/MemorySection$Builder {
+	public fun <init> ()V
+	public final fun addMemory (Luk/shusek/krwa/wasm/types/Memory;)Luk/shusek/krwa/wasm/types/MemorySection$Builder;
+	public final fun build ()Luk/shusek/krwa/wasm/types/MemorySection;
+}
+
+public final class uk/shusek/krwa/wasm/types/MemorySection$Companion {
+	public final fun builder ()Luk/shusek/krwa/wasm/types/MemorySection$Builder;
+}
+
+public final class uk/shusek/krwa/wasm/types/MutabilityType : java/lang/Enum {
+	public static final field Companion Luk/shusek/krwa/wasm/types/MutabilityType$Companion;
+	public static final field Const Luk/shusek/krwa/wasm/types/MutabilityType;
+	public static final field Var Luk/shusek/krwa/wasm/types/MutabilityType;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public final fun id ()I
+	public static fun valueOf (Ljava/lang/String;)Luk/shusek/krwa/wasm/types/MutabilityType;
+	public static fun values ()[Luk/shusek/krwa/wasm/types/MutabilityType;
+}
+
+public final class uk/shusek/krwa/wasm/types/MutabilityType$Companion {
+	public final fun forId (I)Luk/shusek/krwa/wasm/types/MutabilityType;
+}
+
+public final class uk/shusek/krwa/wasm/types/MutabilityType$ID {
+	public static final field Companion Luk/shusek/krwa/wasm/types/MutabilityType$ID$Companion;
+	public static final field Const I
+	public static final field Var I
+}
+
+public final class uk/shusek/krwa/wasm/types/MutabilityType$ID$Companion {
+}
+
+public final class uk/shusek/krwa/wasm/types/NameCustomSection : uk/shusek/krwa/wasm/types/CustomSection {
+	public static final field Companion Luk/shusek/krwa/wasm/types/NameCustomSection$Companion;
+	public final fun functionNameCount ()I
+	public final fun moduleName ()Ljava/lang/String;
+	public fun name ()Ljava/lang/String;
+	public final fun nameOfData (I)Ljava/lang/String;
+	public final fun nameOfElement (I)Ljava/lang/String;
+	public final fun nameOfFunction (I)Ljava/lang/String;
+	public final fun nameOfGlobal (I)Ljava/lang/String;
+	public final fun nameOfLabel (II)Ljava/lang/String;
+	public final fun nameOfLocal (II)Ljava/lang/String;
+	public final fun nameOfMemory (I)Ljava/lang/String;
+	public final fun nameOfTable (I)Ljava/lang/String;
+	public final fun nameOfTag (I)Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/wasm/types/NameCustomSection$Companion {
+	public final fun parse ([B)Luk/shusek/krwa/wasm/types/NameCustomSection;
+}
+
+public final class uk/shusek/krwa/wasm/types/OpCode : java/lang/Enum {
+	public static final field ANY_CONVERT_EXTERN Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field ARRAY_COPY Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field ARRAY_FILL Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field ARRAY_GET Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field ARRAY_GET_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field ARRAY_GET_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field ARRAY_INIT_DATA Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field ARRAY_INIT_ELEM Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field ARRAY_LEN Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field ARRAY_NEW Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field ARRAY_NEW_DATA Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field ARRAY_NEW_DEFAULT Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field ARRAY_NEW_ELEM Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field ARRAY_NEW_FIXED Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field ARRAY_SET Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field ATOMIC_FENCE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field BLOCK Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field BR Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field BR_IF Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field BR_ON_CAST Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field BR_ON_CAST_FAIL Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field BR_ON_NON_NULL Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field BR_ON_NULL Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field BR_TABLE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field CALL Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field CALL_INDIRECT Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field CALL_REF Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field CAST_TEST Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field CAST_TEST_NULL Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field Companion Luk/shusek/krwa/wasm/types/OpCode$Companion;
+	public static final field DATA_DROP Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field DROP Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field ELEM_DROP Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field ELSE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field END Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field EXTERN_CONVERT_ANY Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F32_ABS Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F32_ADD Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F32_CEIL Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F32_CONST Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F32_CONVERT_I32_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F32_CONVERT_I32_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F32_CONVERT_I64_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F32_CONVERT_I64_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F32_COPYSIGN Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F32_DEMOTE_F64 Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F32_DIV Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F32_EQ Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F32_FLOOR Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F32_GE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F32_GT Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F32_LE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F32_LOAD Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F32_LT Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F32_MAX Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F32_MIN Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F32_MUL Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F32_NE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F32_NEAREST Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F32_NEG Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F32_REINTERPRET_I32 Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F32_SQRT Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F32_STORE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F32_SUB Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F32_TRUNC Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F32x4_ABS Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F32x4_ADD Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F32x4_CEIL Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F32x4_CONVERT_I32x4_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F32x4_CONVERT_I32x4_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F32x4_DEMOTE_LOW_F64x2_ZERO Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F32x4_DIV Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F32x4_EQ Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F32x4_EXTRACT_LANE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F32x4_FLOOR Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F32x4_GE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F32x4_GT Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F32x4_LE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F32x4_LT Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F32x4_MAX Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F32x4_MIN Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F32x4_MUL Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F32x4_NE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F32x4_NEAREST Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F32x4_NEG Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F32x4_PMAX Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F32x4_PMIN Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F32x4_REPLACE_LANE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F32x4_SPLAT Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F32x4_SQRT Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F32x4_SUB Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F32x4_TRUNC Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F64_ABS Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F64_ADD Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F64_CEIL Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F64_CONST Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F64_CONVERT_I32_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F64_CONVERT_I32_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F64_CONVERT_I64_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F64_CONVERT_I64_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F64_COPYSIGN Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F64_DIV Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F64_EQ Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F64_FLOOR Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F64_GE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F64_GT Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F64_LE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F64_LOAD Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F64_LT Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F64_MAX Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F64_MIN Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F64_MUL Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F64_NE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F64_NEAREST Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F64_NEG Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F64_PROMOTE_F32 Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F64_REINTERPRET_I64 Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F64_SQRT Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F64_STORE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F64_SUB Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F64_TRUNC Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F64x2_ABS Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F64x2_ADD Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F64x2_CEIL Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F64x2_CONVERT_LOW_I32x4_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F64x2_CONVERT_LOW_I32x4_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F64x2_DIV Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F64x2_EQ Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F64x2_EXTRACT_LANE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F64x2_FLOOR Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F64x2_GE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F64x2_GT Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F64x2_LE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F64x2_LT Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F64x2_MAX Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F64x2_MIN Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F64x2_MUL Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F64x2_NE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F64x2_NEAREST Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F64x2_NEG Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F64x2_PMAX Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F64x2_PMIN Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F64x2_PROMOTE_LOW_F32x4 Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F64x2_REPLACE_LANE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F64x2_SPLAT Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F64x2_SQRT Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F64x2_SUB Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field F64x2_TRUNC Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field GLOBAL_GET Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field GLOBAL_SET Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I16x8_ABS Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I16x8_ADD Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I16x8_ADD_SAT_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I16x8_ADD_SAT_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I16x8_ALL_TRUE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I16x8_AVGR_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I16x8_BITMASK Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I16x8_EQ Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I16x8_EXTADD_PAIRWISE_I8x16_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I16x8_EXTADD_PAIRWISE_I8x16_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I16x8_EXTEND_HIGH_I8x16_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I16x8_EXTEND_HIGH_I8x16_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I16x8_EXTEND_LOW_I8x16_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I16x8_EXTEND_LOW_I8x16_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I16x8_EXTMUL_HIGH_I8x16_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I16x8_EXTMUL_HIGH_I8x16_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I16x8_EXTMUL_LOW_I8x16_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I16x8_EXTMUL_LOW_I8x16_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I16x8_EXTRACT_LANE_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I16x8_EXTRACT_LANE_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I16x8_GE_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I16x8_GE_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I16x8_GT_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I16x8_GT_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I16x8_LE_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I16x8_LE_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I16x8_LT_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I16x8_LT_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I16x8_MAX_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I16x8_MAX_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I16x8_MIN_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I16x8_MIN_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I16x8_MUL Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I16x8_NARROW_I32x4_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I16x8_NARROW_I32x4_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I16x8_NE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I16x8_NEG Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I16x8_Q15MULR_SAT_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I16x8_REPLACE_LANE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I16x8_SHL Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I16x8_SHR_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I16x8_SHR_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I16x8_SPLAT Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I16x8_SUB Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I16x8_SUB_SAT_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I16x8_SUB_SAT_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I31_GET_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I31_GET_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_ADD Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_AND Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_ATOMIC_LOAD Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_ATOMIC_LOAD16_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_ATOMIC_LOAD8_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_ATOMIC_RMW16_ADD_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_ATOMIC_RMW16_AND_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_ATOMIC_RMW16_CMPXCHG_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_ATOMIC_RMW16_OR_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_ATOMIC_RMW16_SUB_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_ATOMIC_RMW16_XCHG_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_ATOMIC_RMW16_XOR_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_ATOMIC_RMW8_ADD_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_ATOMIC_RMW8_AND_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_ATOMIC_RMW8_CMPXCHG_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_ATOMIC_RMW8_OR_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_ATOMIC_RMW8_SUB_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_ATOMIC_RMW8_XCHG_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_ATOMIC_RMW8_XOR_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_ATOMIC_RMW_ADD Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_ATOMIC_RMW_AND Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_ATOMIC_RMW_CMPXCHG Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_ATOMIC_RMW_OR Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_ATOMIC_RMW_SUB Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_ATOMIC_RMW_XCHG Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_ATOMIC_RMW_XOR Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_ATOMIC_STORE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_ATOMIC_STORE16 Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_ATOMIC_STORE8 Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_CLZ Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_CONST Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_CTZ Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_DIV_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_DIV_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_EQ Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_EQZ Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_EXTEND_16_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_EXTEND_8_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_GE_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_GE_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_GT_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_GT_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_LE_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_LE_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_LOAD Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_LOAD16_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_LOAD16_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_LOAD8_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_LOAD8_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_LT_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_LT_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_MUL Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_NE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_OR Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_POPCNT Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_REINTERPRET_F32 Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_REM_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_REM_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_ROTL Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_ROTR Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_SHL Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_SHR_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_SHR_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_STORE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_STORE16 Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_STORE8 Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_SUB Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_TRUNC_F32_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_TRUNC_F32_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_TRUNC_F64_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_TRUNC_F64_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_TRUNC_SAT_F32_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_TRUNC_SAT_F32_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_TRUNC_SAT_F64_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_TRUNC_SAT_F64_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_WRAP_I64 Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32_XOR Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32x4_ABS Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32x4_ADD Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32x4_ALL_TRUE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32x4_BITMASK Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32x4_DOT_I16x8_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32x4_EQ Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32x4_EXTADD_PAIRWISE_I16x8_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32x4_EXTADD_PAIRWISE_I16x8_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32x4_EXTEND_HIGH_I16x8_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32x4_EXTEND_HIGH_I16x8_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32x4_EXTEND_LOW_I16x8_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32x4_EXTEND_LOW_I16x8_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32x4_EXTMUL_HIGH_I16x8_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32x4_EXTMUL_HIGH_I16x8_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32x4_EXTMUL_LOW_I16x8_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32x4_EXTMUL_LOW_I16x8_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32x4_EXTRACT_LANE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32x4_GE_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32x4_GE_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32x4_GT_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32x4_GT_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32x4_LE_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32x4_LE_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32x4_LT_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32x4_LT_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32x4_MAX_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32x4_MAX_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32x4_MIN_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32x4_MIN_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32x4_MUL Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32x4_NE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32x4_NEG Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32x4_REPLACE_LANE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32x4_SHL Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32x4_SHR_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32x4_SHR_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32x4_SPLAT Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32x4_SUB Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32x4_TRUNC_SAT_F32X4_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32x4_TRUNC_SAT_F32X4_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32x4_TRUNC_SAT_F64x2_S_ZERO Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I32x4_TRUNC_SAT_F64x2_U_ZERO Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_ADD Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_AND Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_ATOMIC_LOAD Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_ATOMIC_LOAD16_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_ATOMIC_LOAD32_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_ATOMIC_LOAD8_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_ATOMIC_RMW16_ADD_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_ATOMIC_RMW16_AND_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_ATOMIC_RMW16_CMPXCHG_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_ATOMIC_RMW16_OR_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_ATOMIC_RMW16_SUB_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_ATOMIC_RMW16_XCHG_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_ATOMIC_RMW16_XOR_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_ATOMIC_RMW32_ADD_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_ATOMIC_RMW32_AND_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_ATOMIC_RMW32_CMPXCHG_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_ATOMIC_RMW32_OR_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_ATOMIC_RMW32_SUB_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_ATOMIC_RMW32_XCHG_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_ATOMIC_RMW32_XOR_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_ATOMIC_RMW8_ADD_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_ATOMIC_RMW8_AND_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_ATOMIC_RMW8_CMPXCHG_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_ATOMIC_RMW8_OR_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_ATOMIC_RMW8_SUB_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_ATOMIC_RMW8_XCHG_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_ATOMIC_RMW8_XOR_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_ATOMIC_RMW_ADD Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_ATOMIC_RMW_AND Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_ATOMIC_RMW_CMPXCHG Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_ATOMIC_RMW_OR Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_ATOMIC_RMW_SUB Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_ATOMIC_RMW_XCHG Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_ATOMIC_RMW_XOR Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_ATOMIC_STORE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_ATOMIC_STORE16 Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_ATOMIC_STORE32 Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_ATOMIC_STORE8 Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_CLZ Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_CONST Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_CTZ Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_DIV_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_DIV_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_EQ Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_EQZ Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_EXTEND_16_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_EXTEND_32_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_EXTEND_8_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_EXTEND_I32_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_EXTEND_I32_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_GE_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_GE_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_GT_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_GT_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_LE_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_LE_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_LOAD Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_LOAD16_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_LOAD16_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_LOAD32_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_LOAD32_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_LOAD8_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_LOAD8_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_LT_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_LT_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_MUL Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_NE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_OR Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_POPCNT Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_REINTERPRET_F64 Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_REM_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_REM_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_ROTL Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_ROTR Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_SHL Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_SHR_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_SHR_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_STORE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_STORE16 Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_STORE32 Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_STORE8 Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_SUB Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_TRUNC_F32_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_TRUNC_F32_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_TRUNC_F64_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_TRUNC_F64_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_TRUNC_SAT_F32_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_TRUNC_SAT_F32_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_TRUNC_SAT_F64_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_TRUNC_SAT_F64_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_XOR Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64x2_ABS Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64x2_ADD Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64x2_ALL_TRUE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64x2_BITMASK Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64x2_EQ Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64x2_EXTEND_HIGH_I32x4_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64x2_EXTEND_HIGH_I32x4_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64x2_EXTEND_LOW_I32x4_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64x2_EXTEND_LOW_I32x4_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64x2_EXTMUL_HIGH_I32x4_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64x2_EXTMUL_HIGH_I32x4_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64x2_EXTMUL_LOW_I32x4_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64x2_EXTMUL_LOW_I32x4_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64x2_EXTRACT_LANE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64x2_GE_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64x2_GT_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64x2_LE_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64x2_LT_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64x2_MUL Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64x2_NE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64x2_NEG Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64x2_REPLACE_LANE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64x2_SHL Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64x2_SHR_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64x2_SHR_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64x2_SPLAT Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64x2_SUB Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I8x16_ABS Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I8x16_ADD Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I8x16_ADD_SAT_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I8x16_ADD_SAT_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I8x16_ALL_TRUE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I8x16_AVGR_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I8x16_BITMASK Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I8x16_EQ Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I8x16_EXTRACT_LANE_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I8x16_EXTRACT_LANE_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I8x16_GE_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I8x16_GE_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I8x16_GT_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I8x16_GT_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I8x16_LE_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I8x16_LE_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I8x16_LT_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I8x16_LT_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I8x16_MAX_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I8x16_MAX_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I8x16_MIN_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I8x16_MIN_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I8x16_NARROW_I16x8_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I8x16_NARROW_I16x8_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I8x16_NE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I8x16_NEG Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I8x16_POPCNT Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I8x16_REPLACE_LANE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I8x16_SHL Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I8x16_SHR_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I8x16_SHR_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I8x16_SHUFFLE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I8x16_SPLAT Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I8x16_SUB Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I8x16_SUB_SAT_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I8x16_SUB_SAT_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I8x16_SWIZZLE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field IF Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field LOCAL_GET Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field LOCAL_SET Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field LOCAL_TEE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field LOOP Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field MEMORY_COPY Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field MEMORY_FILL Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field MEMORY_GROW Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field MEMORY_INIT Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field MEMORY_SIZE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field MEM_ATOMIC_NOTIFY Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field MEM_ATOMIC_WAIT32 Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field MEM_ATOMIC_WAIT64 Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field NOP Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field REF_AS_NON_NULL Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field REF_EQ Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field REF_FUNC Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field REF_I31 Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field REF_IS_NULL Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field REF_NULL Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field REF_TEST Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field REF_TEST_NULL Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field RETURN Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field RETURN_CALL Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field RETURN_CALL_INDIRECT Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field RETURN_CALL_REF Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field SELECT Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field SELECT_T Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field STRUCT_GET Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field STRUCT_GET_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field STRUCT_GET_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field STRUCT_NEW Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field STRUCT_NEW_DEFAULT Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field STRUCT_SET Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field TABLE_COPY Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field TABLE_FILL Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field TABLE_GET Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field TABLE_GROW Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field TABLE_INIT Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field TABLE_SET Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field TABLE_SIZE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field THROW Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field THROW_REF Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field TRY_TABLE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field UNREACHABLE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field V128_AND Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field V128_ANDNOT Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field V128_ANY_TRUE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field V128_BITSELECT Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field V128_CONST Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field V128_LOAD Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field V128_LOAD16_LANE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field V128_LOAD16_SPLAT Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field V128_LOAD16x4_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field V128_LOAD16x4_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field V128_LOAD32_LANE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field V128_LOAD32_SPLAT Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field V128_LOAD32_ZERO Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field V128_LOAD32x2_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field V128_LOAD32x2_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field V128_LOAD64_LANE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field V128_LOAD64_SPLAT Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field V128_LOAD64_ZERO Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field V128_LOAD8_LANE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field V128_LOAD8_SPLAT Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field V128_LOAD8x8_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field V128_LOAD8x8_U Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field V128_NOT Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field V128_OR Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field V128_STORE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field V128_STORE16_LANE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field V128_STORE32_LANE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field V128_STORE64_LANE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field V128_STORE8_LANE Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field V128_XOR Luk/shusek/krwa/wasm/types/OpCode;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public final fun opcode ()I
+	public static fun valueOf (Ljava/lang/String;)Luk/shusek/krwa/wasm/types/OpCode;
+	public static fun values ()[Luk/shusek/krwa/wasm/types/OpCode;
+}
+
+public final class uk/shusek/krwa/wasm/types/OpCode$Companion {
+	public final fun byOpCode (I)Luk/shusek/krwa/wasm/types/OpCode;
+	public final fun signature (Luk/shusek/krwa/wasm/types/OpCode;)Ljava/util/List;
+}
+
+public final class uk/shusek/krwa/wasm/types/PackedType : java/lang/Enum {
+	public static final field Companion Luk/shusek/krwa/wasm/types/PackedType$Companion;
+	public static final field I16 Luk/shusek/krwa/wasm/types/PackedType;
+	public static final field I8 Luk/shusek/krwa/wasm/types/PackedType;
+	public final fun ID ()I
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public final fun mask ()J
+	public final fun signExtend (J)J
+	public static fun valueOf (Ljava/lang/String;)Luk/shusek/krwa/wasm/types/PackedType;
+	public static fun values ()[Luk/shusek/krwa/wasm/types/PackedType;
+}
+
+public final class uk/shusek/krwa/wasm/types/PackedType$Companion {
+	public final fun fromId (I)Luk/shusek/krwa/wasm/types/PackedType;
+}
+
+public final class uk/shusek/krwa/wasm/types/PassiveDataSegment : uk/shusek/krwa/wasm/types/DataSegment {
+	public static final field Companion Luk/shusek/krwa/wasm/types/PassiveDataSegment$Companion;
+	public fun <init> ([B)V
+}
+
+public final class uk/shusek/krwa/wasm/types/PassiveDataSegment$Companion {
+	public final fun getEMPTY ()Luk/shusek/krwa/wasm/types/PassiveDataSegment;
+}
+
+public final class uk/shusek/krwa/wasm/types/PassiveElement : uk/shusek/krwa/wasm/types/Element {
+	public fun <init> (Luk/shusek/krwa/wasm/types/ValType;Ljava/util/List;)V
+}
+
+public final class uk/shusek/krwa/wasm/types/RawSection : uk/shusek/krwa/wasm/types/Section {
+	public fun <init> (J[B)V
+	public final fun contents ()[B
+}
+
+public final class uk/shusek/krwa/wasm/types/RecType {
+	public static final field Companion Luk/shusek/krwa/wasm/types/RecType$Companion;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public final fun isLegacy ()Z
+	public final fun legacy ()Luk/shusek/krwa/wasm/types/FunctionType;
+	public final fun subTypes ()[Luk/shusek/krwa/wasm/types/SubType;
+}
+
+public final class uk/shusek/krwa/wasm/types/RecType$Builder {
+	public fun <init> ()V
+	public final fun build ()Luk/shusek/krwa/wasm/types/RecType;
+	public final fun withSubTypes ([Luk/shusek/krwa/wasm/types/SubType;)Luk/shusek/krwa/wasm/types/RecType$Builder;
+}
+
+public final class uk/shusek/krwa/wasm/types/RecType$Companion {
+	public final fun builder ()Luk/shusek/krwa/wasm/types/RecType$Builder;
+}
+
+public abstract class uk/shusek/krwa/wasm/types/Section {
+	public fun <init> (J)V
+	public final fun sectionId ()I
+}
+
+public final class uk/shusek/krwa/wasm/types/SectionId {
+	public static final field CODE I
+	public static final field CUSTOM I
+	public static final field Companion Luk/shusek/krwa/wasm/types/SectionId$Companion;
+	public static final field DATA I
+	public static final field DATA_COUNT I
+	public static final field ELEMENT I
+	public static final field EXPORT I
+	public static final field FUNCTION I
+	public static final field GLOBAL I
+	public static final field IMPORT I
+	public static final field MEMORY I
+	public static final field START I
+	public static final field TABLE I
+	public static final field TAG I
+	public static final field TYPE I
+}
+
+public final class uk/shusek/krwa/wasm/types/SectionId$Companion {
+}
+
+public final class uk/shusek/krwa/wasm/types/StartSection : uk/shusek/krwa/wasm/types/Section {
+	public static final field Companion Luk/shusek/krwa/wasm/types/StartSection$Companion;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public final fun startIndex ()J
+}
+
+public final class uk/shusek/krwa/wasm/types/StartSection$Builder {
+	public fun <init> ()V
+	public final fun build ()Luk/shusek/krwa/wasm/types/StartSection;
+	public final fun setStartIndex (J)Luk/shusek/krwa/wasm/types/StartSection$Builder;
+}
+
+public final class uk/shusek/krwa/wasm/types/StartSection$Companion {
+	public final fun builder ()Luk/shusek/krwa/wasm/types/StartSection$Builder;
+}
+
+public final class uk/shusek/krwa/wasm/types/StorageType {
+	public static final field Companion Luk/shusek/krwa/wasm/types/StorageType$Companion;
+	public final fun byteSize ()I
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public final fun packedType ()Luk/shusek/krwa/wasm/types/PackedType;
+	public final fun valType ()Luk/shusek/krwa/wasm/types/ValType;
+}
+
+public final class uk/shusek/krwa/wasm/types/StorageType$Builder {
+	public fun <init> ()V
+	public final fun build ()Luk/shusek/krwa/wasm/types/StorageType;
+	public final fun withPackedType (Luk/shusek/krwa/wasm/types/PackedType;)Luk/shusek/krwa/wasm/types/StorageType$Builder;
+	public final fun withValType (Luk/shusek/krwa/wasm/types/ValType;)Luk/shusek/krwa/wasm/types/StorageType$Builder;
+}
+
+public final class uk/shusek/krwa/wasm/types/StorageType$Companion {
+	public final fun builder ()Luk/shusek/krwa/wasm/types/StorageType$Builder;
+}
+
+public final class uk/shusek/krwa/wasm/types/StructType {
+	public static final field Companion Luk/shusek/krwa/wasm/types/StructType$Companion;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun fieldTypes ()[Luk/shusek/krwa/wasm/types/FieldType;
+	public fun hashCode ()I
+}
+
+public final class uk/shusek/krwa/wasm/types/StructType$Builder {
+	public fun <init> ()V
+	public final fun addFieldType (Luk/shusek/krwa/wasm/types/FieldType;)Luk/shusek/krwa/wasm/types/StructType$Builder;
+	public final fun build ()Luk/shusek/krwa/wasm/types/StructType;
+}
+
+public final class uk/shusek/krwa/wasm/types/StructType$Companion {
+	public final fun builder ()Luk/shusek/krwa/wasm/types/StructType$Builder;
+}
+
+public final class uk/shusek/krwa/wasm/types/SubType {
+	public static final field Companion Luk/shusek/krwa/wasm/types/SubType$Companion;
+	public final fun compType ()Luk/shusek/krwa/wasm/types/CompType;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public final fun isFinal ()Z
+	public final fun typeIdx ()[I
+}
+
+public final class uk/shusek/krwa/wasm/types/SubType$Builder {
+	public fun <init> ()V
+	public final fun build ()Luk/shusek/krwa/wasm/types/SubType;
+	public final fun withCompType (Luk/shusek/krwa/wasm/types/CompType;)Luk/shusek/krwa/wasm/types/SubType$Builder;
+	public final fun withFinal (Z)Luk/shusek/krwa/wasm/types/SubType$Builder;
+	public final fun withTypeIdx ([I)Luk/shusek/krwa/wasm/types/SubType$Builder;
+}
+
+public final class uk/shusek/krwa/wasm/types/SubType$Companion {
+	public final fun builder ()Luk/shusek/krwa/wasm/types/SubType$Builder;
+}
+
+public class uk/shusek/krwa/wasm/types/Table {
+	public fun <init> (Luk/shusek/krwa/wasm/types/ValType;Luk/shusek/krwa/wasm/types/TableLimits;)V
+	public fun <init> (Luk/shusek/krwa/wasm/types/ValType;Luk/shusek/krwa/wasm/types/TableLimits;Ljava/util/List;)V
+	public fun <init> (Luk/shusek/krwa/wasm/types/ValueType;Luk/shusek/krwa/wasm/types/TableLimits;)V
+	public final fun elementType ()Luk/shusek/krwa/wasm/types/ValType;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public final fun initialize ()Ljava/util/List;
+	public final fun limits ()Luk/shusek/krwa/wasm/types/TableLimits;
+}
+
+public final class uk/shusek/krwa/wasm/types/TableImport : uk/shusek/krwa/wasm/types/Import {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Luk/shusek/krwa/wasm/types/ValType;Luk/shusek/krwa/wasm/types/TableLimits;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Luk/shusek/krwa/wasm/types/ValueType;Luk/shusek/krwa/wasm/types/TableLimits;)V
+	public final fun entryType ()Luk/shusek/krwa/wasm/types/ValType;
+	public fun equals (Luk/shusek/krwa/wasm/types/Import;)Z
+	public final fun equals (Luk/shusek/krwa/wasm/types/TableImport;)Z
+	public fun hashCode ()I
+	public fun importType ()Luk/shusek/krwa/wasm/types/ExternalType;
+	public final fun limits ()Luk/shusek/krwa/wasm/types/TableLimits;
+	public fun toString (Ljava/lang/StringBuilder;)Ljava/lang/StringBuilder;
+}
+
+public class uk/shusek/krwa/wasm/types/TableLimits {
+	public static final field Companion Luk/shusek/krwa/wasm/types/TableLimits$Companion;
+	public fun <init> (JJZ)V
+	public synthetic fun <init> (JJZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun equals (Luk/shusek/krwa/wasm/types/TableLimits;)Z
+	public final fun grow (I)V
+	public fun hashCode ()I
+	public final fun max ()J
+	public final fun min ()J
+	public final fun shared ()Z
+	public fun toString ()Ljava/lang/String;
+	public final fun toString (Ljava/lang/StringBuilder;)Ljava/lang/StringBuilder;
+}
+
+public final class uk/shusek/krwa/wasm/types/TableLimits$Companion {
+	public final fun getLIMIT_MAX ()J
+	public final fun unbounded ()Luk/shusek/krwa/wasm/types/TableLimits;
+}
+
+public final class uk/shusek/krwa/wasm/types/TableSection : uk/shusek/krwa/wasm/types/Section {
+	public static final field Companion Luk/shusek/krwa/wasm/types/TableSection$Companion;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getTable (I)Luk/shusek/krwa/wasm/types/Table;
+	public fun hashCode ()I
+	public final fun tableCount ()I
+}
+
+public final class uk/shusek/krwa/wasm/types/TableSection$Builder {
+	public fun <init> ()V
+	public final fun addTable (Luk/shusek/krwa/wasm/types/Table;)Luk/shusek/krwa/wasm/types/TableSection$Builder;
+	public final fun build ()Luk/shusek/krwa/wasm/types/TableSection;
+}
+
+public final class uk/shusek/krwa/wasm/types/TableSection$Companion {
+	public final fun builder ()Luk/shusek/krwa/wasm/types/TableSection$Builder;
+}
+
+public final class uk/shusek/krwa/wasm/types/TagImport : uk/shusek/krwa/wasm/types/Import {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;BI)V
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun importType ()Luk/shusek/krwa/wasm/types/ExternalType;
+	public final fun tagType ()Luk/shusek/krwa/wasm/types/TagType;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/wasm/types/TagSection : uk/shusek/krwa/wasm/types/Section {
+	public static final field Companion Luk/shusek/krwa/wasm/types/TagSection$Companion;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getTag (I)Luk/shusek/krwa/wasm/types/TagType;
+	public fun hashCode ()I
+	public final fun tagCount ()I
+	public final fun types ()[Luk/shusek/krwa/wasm/types/TagType;
+}
+
+public final class uk/shusek/krwa/wasm/types/TagSection$Builder {
+	public fun <init> ()V
+	public final fun addTagType (Luk/shusek/krwa/wasm/types/TagType;)Luk/shusek/krwa/wasm/types/TagSection$Builder;
+	public final fun build ()Luk/shusek/krwa/wasm/types/TagSection;
+}
+
+public final class uk/shusek/krwa/wasm/types/TagSection$Companion {
+	public final fun builder ()Luk/shusek/krwa/wasm/types/TagSection$Builder;
+}
+
+public class uk/shusek/krwa/wasm/types/TagType {
+	public fun <init> (BI)V
+	public final fun attribute ()B
+	public final fun typeIdx ()I
+}
+
+public final class uk/shusek/krwa/wasm/types/TypeSection : uk/shusek/krwa/wasm/types/Section {
+	public static final field Companion Luk/shusek/krwa/wasm/types/TypeSection$Companion;
+	public final fun canonicallyEquivalent (II)Z
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getRecType (I)Luk/shusek/krwa/wasm/types/RecType;
+	public final fun getSubType (I)Luk/shusek/krwa/wasm/types/SubType;
+	public final fun getType (I)Luk/shusek/krwa/wasm/types/FunctionType;
+	public fun hashCode ()I
+	public final fun subTypeCount ()I
+	public final fun typeCount ()I
+	public final fun types ()[Luk/shusek/krwa/wasm/types/FunctionType;
+}
+
+public final class uk/shusek/krwa/wasm/types/TypeSection$Builder {
+	public fun <init> ()V
+	public final fun addFunctionType (Luk/shusek/krwa/wasm/types/FunctionType;)Luk/shusek/krwa/wasm/types/TypeSection$Builder;
+	public final fun addRecType (Luk/shusek/krwa/wasm/types/RecType;)Luk/shusek/krwa/wasm/types/TypeSection$Builder;
+	public final fun build ()Luk/shusek/krwa/wasm/types/TypeSection;
+	public final fun getTypes ()Ljava/util/List;
+}
+
+public final class uk/shusek/krwa/wasm/types/TypeSection$Companion {
+	public final fun builder ()Luk/shusek/krwa/wasm/types/TypeSection$Builder;
+	public final fun crossModuleCanonicallyEquivalent (Luk/shusek/krwa/wasm/types/TypeSection;ILuk/shusek/krwa/wasm/types/TypeSection;I)Z
+}
+
+public final class uk/shusek/krwa/wasm/types/UnknownCustomSection : uk/shusek/krwa/wasm/types/CustomSection {
+	public static final field Companion Luk/shusek/krwa/wasm/types/UnknownCustomSection$Companion;
+	public final fun bytes ()[B
+	public fun name ()Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/wasm/types/UnknownCustomSection$Builder {
+	public fun <init> ()V
+	public final fun build ()Luk/shusek/krwa/wasm/types/UnknownCustomSection;
+	public final fun withBytes ([B)Luk/shusek/krwa/wasm/types/UnknownCustomSection$Builder;
+	public final fun withName (Ljava/lang/String;)Luk/shusek/krwa/wasm/types/UnknownCustomSection$Builder;
+}
+
+public final class uk/shusek/krwa/wasm/types/UnknownCustomSection$Companion {
+	public final fun builder ()Luk/shusek/krwa/wasm/types/UnknownCustomSection$Builder;
+}
+
+public final class uk/shusek/krwa/wasm/types/ValType {
+	public static final field Companion Luk/shusek/krwa/wasm/types/ValType$Companion;
+	public fun equals (Ljava/lang/Object;)Z
+	public static final fun getAnyRef ()Luk/shusek/krwa/wasm/types/ValType;
+	public static final fun getArrayRef ()Luk/shusek/krwa/wasm/types/ValType;
+	public static final fun getBOT ()Luk/shusek/krwa/wasm/types/ValType;
+	public static final fun getEqRef ()Luk/shusek/krwa/wasm/types/ValType;
+	public static final fun getExnRef ()Luk/shusek/krwa/wasm/types/ValType;
+	public static final fun getExternRef ()Luk/shusek/krwa/wasm/types/ValType;
+	public static final fun getF32 ()Luk/shusek/krwa/wasm/types/ValType;
+	public static final fun getF64 ()Luk/shusek/krwa/wasm/types/ValType;
+	public static final fun getFuncRef ()Luk/shusek/krwa/wasm/types/ValType;
+	public static final fun getI31Ref ()Luk/shusek/krwa/wasm/types/ValType;
+	public static final fun getI32 ()Luk/shusek/krwa/wasm/types/ValType;
+	public static final fun getI64 ()Luk/shusek/krwa/wasm/types/ValType;
+	public static final fun getNoExternRef ()Luk/shusek/krwa/wasm/types/ValType;
+	public static final fun getNoFuncRef ()Luk/shusek/krwa/wasm/types/ValType;
+	public static final fun getNoneRef ()Luk/shusek/krwa/wasm/types/ValType;
+	public static final fun getRefBot ()Luk/shusek/krwa/wasm/types/ValType;
+	public static final fun getStructRef ()Luk/shusek/krwa/wasm/types/ValType;
+	public static final fun getV128 ()Luk/shusek/krwa/wasm/types/ValType;
+	public fun hashCode ()I
+	public final fun id ()J
+	public final fun isFloatingPoint ()Z
+	public final fun isInteger ()Z
+	public final fun isNullable ()Z
+	public final fun isNumeric ()Z
+	public final fun isReference ()Z
+	public final fun name ()Ljava/lang/String;
+	public final fun opcode ()I
+	public final fun resolve (Luk/shusek/krwa/wasm/types/TypeSection;)Luk/shusek/krwa/wasm/types/ValType;
+	public final fun resolvedFunctionTypeId ()I
+	public final fun size ()I
+	public fun toString ()Ljava/lang/String;
+	public final fun typeIdx ()I
+	public final fun withNullability (Z)Luk/shusek/krwa/wasm/types/ValType;
+}
+
+public final class uk/shusek/krwa/wasm/types/ValType$Builder {
+	public static final field Companion Luk/shusek/krwa/wasm/types/ValType$Builder$Companion;
+	public final fun build ()Luk/shusek/krwa/wasm/types/ValType;
+	public final fun build (Lkotlin/jvm/functions/Function1;)Luk/shusek/krwa/wasm/types/ValType;
+	public final fun fromId (J)Luk/shusek/krwa/wasm/types/ValType$Builder;
+	public final fun id ()J
+	public final fun isReference ()Z
+	public final fun substitute (IILkotlin/jvm/functions/Function1;)Luk/shusek/krwa/wasm/types/FunctionType;
+	public final fun typeIdx ()I
+	public final fun withOpcode (I)Luk/shusek/krwa/wasm/types/ValType$Builder;
+	public final fun withTypeIdx (I)Luk/shusek/krwa/wasm/types/ValType$Builder;
+}
+
+public final class uk/shusek/krwa/wasm/types/ValType$Builder$Companion {
+	public final fun create ()Luk/shusek/krwa/wasm/types/ValType$Builder;
+}
+
+public final class uk/shusek/krwa/wasm/types/ValType$Companion {
+	public final fun builder ()Luk/shusek/krwa/wasm/types/ValType$Builder;
+	public final fun getAnyRef ()Luk/shusek/krwa/wasm/types/ValType;
+	public final fun getArrayRef ()Luk/shusek/krwa/wasm/types/ValType;
+	public final fun getBOT ()Luk/shusek/krwa/wasm/types/ValType;
+	public final fun getEqRef ()Luk/shusek/krwa/wasm/types/ValType;
+	public final fun getExnRef ()Luk/shusek/krwa/wasm/types/ValType;
+	public final fun getExternRef ()Luk/shusek/krwa/wasm/types/ValType;
+	public final fun getF32 ()Luk/shusek/krwa/wasm/types/ValType;
+	public final fun getF64 ()Luk/shusek/krwa/wasm/types/ValType;
+	public final fun getFuncRef ()Luk/shusek/krwa/wasm/types/ValType;
+	public final fun getI31Ref ()Luk/shusek/krwa/wasm/types/ValType;
+	public final fun getI32 ()Luk/shusek/krwa/wasm/types/ValType;
+	public final fun getI64 ()Luk/shusek/krwa/wasm/types/ValType;
+	public final fun getNoExternRef ()Luk/shusek/krwa/wasm/types/ValType;
+	public final fun getNoFuncRef ()Luk/shusek/krwa/wasm/types/ValType;
+	public final fun getNoneRef ()Luk/shusek/krwa/wasm/types/ValType;
+	public final fun getRefBot ()Luk/shusek/krwa/wasm/types/ValType;
+	public final fun getStructRef ()Luk/shusek/krwa/wasm/types/ValType;
+	public final fun getV128 ()Luk/shusek/krwa/wasm/types/ValType;
+	public final fun heapTypeSubtype (IILuk/shusek/krwa/wasm/types/TypeSection;)Z
+	public final fun isAbsHeapType (I)Z
+	public final fun isAbsHeapTypeIdx (I)Z
+	public final fun isValid (J)Z
+	public final fun matches (Luk/shusek/krwa/wasm/types/ValType;Luk/shusek/krwa/wasm/types/ValType;)Z
+	public final fun matches (Luk/shusek/krwa/wasm/types/ValType;Luk/shusek/krwa/wasm/types/ValType;Luk/shusek/krwa/wasm/types/TypeSection;)Z
+	public final fun matchesRef (Luk/shusek/krwa/wasm/types/ValType;Luk/shusek/krwa/wasm/types/ValType;)Z
+	public final fun matchesRef (Luk/shusek/krwa/wasm/types/ValType;Luk/shusek/krwa/wasm/types/ValType;Luk/shusek/krwa/wasm/types/TypeSection;)Z
+	public final fun sizeOf (Ljava/util/List;)I
+}
+
+public final class uk/shusek/krwa/wasm/types/ValType$ID {
+	public static final field AnyRef I
+	public static final field ArrayRef I
+	public static final field BOT I
+	public static final field EqRef I
+	public static final field ExnRef I
+	public static final field ExternRef I
+	public static final field F32 I
+	public static final field F64 I
+	public static final field FuncRef I
+	public static final field I32 I
+	public static final field I64 I
+	public static final field INSTANCE Luk/shusek/krwa/wasm/types/ValType$ID;
+	public static final field NoExternRef I
+	public static final field NoFuncRef I
+	public static final field NoneRef I
+	public static final field Ref I
+	public static final field RefNull I
+	public static final field StructRef I
+	public static final field V128 I
+	public static final field i31 I
+	public final fun isValidOpcode (I)Z
+	public final fun toName (I)Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/wasm/types/ValType$TypeIdxCode : java/lang/Enum {
+	public static final field ANY Luk/shusek/krwa/wasm/types/ValType$TypeIdxCode;
+	public static final field ARRAY Luk/shusek/krwa/wasm/types/ValType$TypeIdxCode;
+	public static final field BOT Luk/shusek/krwa/wasm/types/ValType$TypeIdxCode;
+	public static final field EQ Luk/shusek/krwa/wasm/types/ValType$TypeIdxCode;
+	public static final field EXN Luk/shusek/krwa/wasm/types/ValType$TypeIdxCode;
+	public static final field EXTERN Luk/shusek/krwa/wasm/types/ValType$TypeIdxCode;
+	public static final field FUNC Luk/shusek/krwa/wasm/types/ValType$TypeIdxCode;
+	public static final field I31 Luk/shusek/krwa/wasm/types/ValType$TypeIdxCode;
+	public static final field NOEXTERN Luk/shusek/krwa/wasm/types/ValType$TypeIdxCode;
+	public static final field NOFUNC Luk/shusek/krwa/wasm/types/ValType$TypeIdxCode;
+	public static final field NONE Luk/shusek/krwa/wasm/types/ValType$TypeIdxCode;
+	public static final field STRUCT Luk/shusek/krwa/wasm/types/ValType$TypeIdxCode;
+	public final fun code ()I
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Luk/shusek/krwa/wasm/types/ValType$TypeIdxCode;
+	public static fun values ()[Luk/shusek/krwa/wasm/types/ValType$TypeIdxCode;
+}
+
+public class uk/shusek/krwa/wasm/types/Value {
+	public static final field Companion Luk/shusek/krwa/wasm/types/Value$Companion;
+	public fun <init> (Luk/shusek/krwa/wasm/types/ValType;J)V
+	public fun <init> (Luk/shusek/krwa/wasm/types/ValueType;J)V
+	public final fun asDouble ()D
+	public final fun asFloat ()F
+	public final fun asInt ()I
+	public final fun asLong ()J
+	public final fun equals (Ljava/lang/Object;)Z
+	public final fun hashCode ()I
+	public final fun raw ()J
+	public fun toString ()Ljava/lang/String;
+	public final fun type ()Luk/shusek/krwa/wasm/types/ValType;
+}
+
+public final class uk/shusek/krwa/wasm/types/Value$Companion {
+	public final fun bytesToVec ([B)[J
+	public final fun decodeI31S (J)I
+	public final fun decodeI31U (J)I
+	public final fun doubleToLong (D)J
+	public final fun encodeI31 (I)J
+	public final fun externRef (J)Luk/shusek/krwa/wasm/types/Value;
+	public final fun f32 (J)Luk/shusek/krwa/wasm/types/Value;
+	public final fun f32ToVec ([[J)[J
+	public final fun f64 (J)Luk/shusek/krwa/wasm/types/Value;
+	public final fun f64ToVec ([[J)[J
+	public final fun floatToLong (F)J
+	public final fun fromDouble (D)Luk/shusek/krwa/wasm/types/Value;
+	public final fun fromFloat (F)Luk/shusek/krwa/wasm/types/Value;
+	public final fun funcRef (J)Luk/shusek/krwa/wasm/types/Value;
+	public final fun getEMPTY_VALUES ()[J
+	public final fun getFALSE ()J
+	public final fun getREF_NULL_VALUE ()I
+	public final fun getTRUE ()J
+	public final fun i16ToVec ([[J)[J
+	public final fun i32 (I)Luk/shusek/krwa/wasm/types/Value;
+	public final fun i32 (J)Luk/shusek/krwa/wasm/types/Value;
+	public final fun i32ToVec ([[J)[J
+	public final fun i64 (J)Luk/shusek/krwa/wasm/types/Value;
+	public final fun i64ToVec ([[J)[J
+	public final fun i8ToVec ([[J)[J
+	public final fun isI31 (J)Z
+	public final fun longToDouble (J)D
+	public final fun longToFloat (J)F
+	public final fun vecTo16 ([J)[I
+	public final fun vecTo32 ([J)[J
+	public final fun vecTo8 ([J)[B
+	public final fun vecToF32 ([J)[F
+	public final fun vecToF64 ([J)[D
+	public final fun zero (Luk/shusek/krwa/wasm/types/ValType;)J
+}
+
+public final class uk/shusek/krwa/wasm/types/ValueJvm {
+	public static final field INSTANCE Luk/shusek/krwa/wasm/types/ValueJvm;
+	public static final fun doubleToLong (D)J
+	public static final fun floatToLong (F)J
+	public static final fun longToDouble (J)D
+	public static final fun longToFloat (J)F
+}
+
+public final class uk/shusek/krwa/wasm/types/ValueType : java/lang/Enum {
+	public static final field Companion Luk/shusek/krwa/wasm/types/ValueType$Companion;
+	public static final field ExnRef Luk/shusek/krwa/wasm/types/ValueType;
+	public static final field ExternRef Luk/shusek/krwa/wasm/types/ValueType;
+	public static final field F32 Luk/shusek/krwa/wasm/types/ValueType;
+	public static final field F64 Luk/shusek/krwa/wasm/types/ValueType;
+	public static final field FuncRef Luk/shusek/krwa/wasm/types/ValueType;
+	public static final field I32 Luk/shusek/krwa/wasm/types/ValueType;
+	public static final field I64 Luk/shusek/krwa/wasm/types/ValueType;
+	public static final field UNKNOWN Luk/shusek/krwa/wasm/types/ValueType;
+	public static final field V128 Luk/shusek/krwa/wasm/types/ValueType;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public final fun id ()I
+	public final fun isFloatingPoint ()Z
+	public final fun isInteger ()Z
+	public final fun isNumeric ()Z
+	public final fun isReference ()Z
+	public final fun size ()I
+	public final fun toValType ()Luk/shusek/krwa/wasm/types/ValType;
+	public static fun valueOf (Ljava/lang/String;)Luk/shusek/krwa/wasm/types/ValueType;
+	public static fun values ()[Luk/shusek/krwa/wasm/types/ValueType;
+}
+
+public final class uk/shusek/krwa/wasm/types/ValueType$Companion {
+	public final fun forId (I)Luk/shusek/krwa/wasm/types/ValueType;
+	public final fun isValid (I)Z
+	public final fun refTypeForId (I)Luk/shusek/krwa/wasm/types/ValueType;
+	public final fun sizeOf (Ljava/util/List;)I
+}
+
+public final class uk/shusek/krwa/wasm/types/ValueType$ID {
+	public static final field ExnRef I
+	public static final field ExternRef I
+	public static final field F32 I
+	public static final field F64 I
+	public static final field FuncRef I
+	public static final field I32 I
+	public static final field I64 I
+	public static final field INSTANCE Luk/shusek/krwa/wasm/types/ValueType$ID;
+	public static final field V128 I
+}
+
+public final class uk/shusek/krwa/wasm/types/WasmEncoding : java/lang/Enum {
+	public static final field BLOCK_TYPE Luk/shusek/krwa/wasm/types/WasmEncoding;
+	public static final field BYTE Luk/shusek/krwa/wasm/types/WasmEncoding;
+	public static final field FLOAT32 Luk/shusek/krwa/wasm/types/WasmEncoding;
+	public static final field FLOAT64 Luk/shusek/krwa/wasm/types/WasmEncoding;
+	public static final field MEMARG Luk/shusek/krwa/wasm/types/WasmEncoding;
+	public static final field V128 Luk/shusek/krwa/wasm/types/WasmEncoding;
+	public static final field VARSINT32 Luk/shusek/krwa/wasm/types/WasmEncoding;
+	public static final field VARSINT64 Luk/shusek/krwa/wasm/types/WasmEncoding;
+	public static final field VARUINT Luk/shusek/krwa/wasm/types/WasmEncoding;
+	public static final field VEC_CATCH Luk/shusek/krwa/wasm/types/WasmEncoding;
+	public static final field VEC_VALUE_TYPE Luk/shusek/krwa/wasm/types/WasmEncoding;
+	public static final field VEC_VARUINT Luk/shusek/krwa/wasm/types/WasmEncoding;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Luk/shusek/krwa/wasm/types/WasmEncoding;
+	public static fun values ()[Luk/shusek/krwa/wasm/types/WasmEncoding;
+}
+

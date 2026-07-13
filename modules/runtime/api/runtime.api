@@ -1,0 +1,1171 @@
+public final class uk/shusek/krwa/runtime/BitOps {
+	public static final field Companion Luk/shusek/krwa/runtime/BitOps$Companion;
+	public static final field FALSE I
+	public static final field TRUE I
+}
+
+public final class uk/shusek/krwa/runtime/BitOps$Companion {
+}
+
+public final class uk/shusek/krwa/runtime/ByteArrayMemory : uk/shusek/krwa/runtime/Memory {
+	public static final field Companion Luk/shusek/krwa/runtime/ByteArrayMemory$Companion;
+	public fun <init> (Luk/shusek/krwa/wasm/types/MemoryLimits;)V
+	public fun <init> (Luk/shusek/krwa/wasm/types/MemoryLimits;Luk/shusek/krwa/runtime/alloc/MemAllocStrategy;)V
+	public fun atomicAddByte (IB)B
+	public fun atomicAddInt (II)I
+	public fun atomicAddLong (IJ)J
+	public fun atomicAddShort (IS)S
+	public fun atomicAndByte (IB)B
+	public fun atomicAndInt (II)I
+	public fun atomicAndLong (IJ)J
+	public fun atomicAndShort (IS)S
+	public fun atomicCmpxchgByte (IBB)B
+	public fun atomicCmpxchgInt (III)I
+	public fun atomicCmpxchgLong (IJJ)J
+	public fun atomicCmpxchgShort (ISS)S
+	public fun atomicFence ()V
+	public fun atomicNotify (II)I
+	public fun atomicOrByte (IB)B
+	public fun atomicOrInt (II)I
+	public fun atomicOrLong (IJ)J
+	public fun atomicOrShort (IS)S
+	public fun atomicReadByte (I)B
+	public fun atomicReadInt (I)I
+	public fun atomicReadLong (I)J
+	public fun atomicReadShort (I)S
+	public fun atomicWait (IIJ)I
+	public fun atomicWait (IJJ)I
+	public fun atomicWriteByte (IB)V
+	public fun atomicWriteInt (II)V
+	public fun atomicWriteLong (IJ)V
+	public fun atomicWriteShort (IS)V
+	public fun atomicXchgByte (IB)B
+	public fun atomicXchgInt (II)I
+	public fun atomicXchgLong (IJ)J
+	public fun atomicXchgShort (IS)S
+	public fun atomicXorByte (IB)B
+	public fun atomicXorInt (II)I
+	public fun atomicXorLong (IJ)J
+	public fun atomicXorShort (IS)S
+	public fun copy (III)V
+	public fun drop (I)V
+	public fun fill (BII)V
+	public fun grow (I)I
+	public fun initPassiveSegment (IIII)V
+	public fun initialPages ()I
+	public fun initialize (Luk/shusek/krwa/runtime/Instance;[Luk/shusek/krwa/wasm/types/DataSegment;)V
+	public fun initialize (Luk/shusek/krwa/runtime/Instance;[Luk/shusek/krwa/wasm/types/DataSegment;I)V
+	public fun lock (I)Ljava/lang/Object;
+	public fun maximumPages ()I
+	public fun notify (II)I
+	public fun pages ()I
+	public fun read (I)B
+	public fun read (I[BII)V
+	public fun readBytes (II)[B
+	public fun readCString (I)Ljava/lang/String;
+	public fun readDouble (I)D
+	public fun readF32 (I)J
+	public fun readF64 (I)J
+	public fun readFloat (I)F
+	public fun readI16 (I)J
+	public fun readI32 (I)J
+	public fun readI64 (I)J
+	public fun readI8 (I)J
+	public fun readInt (I)I
+	public fun readLong (I)J
+	public fun readShort (I)S
+	public fun readString (II)Ljava/lang/String;
+	public fun readU16 (I)J
+	public fun readU32 (I)J
+	public fun readU8 (I)J
+	public fun readU8Int (I)I
+	public fun readUtf8CString (I)Ljava/lang/String;
+	public fun readUtf8String (II)Ljava/lang/String;
+	public fun shared ()Z
+	public fun waitOn (IIJ)I
+	public fun waitOn (IJJ)I
+	public fun write (I[B)V
+	public fun write (I[BII)V
+	public fun writeByte (IB)V
+	public fun writeCString (ILjava/lang/String;)V
+	public fun writeF32 (IF)V
+	public fun writeF64 (ID)V
+	public fun writeI32 (II)V
+	public fun writeLong (IJ)V
+	public fun writeShort (IS)V
+	public fun writeString (ILjava/lang/String;)V
+	public fun writeUtf8CString (ILjava/lang/String;)V
+	public fun writeUtf8String (ILjava/lang/String;)V
+	public fun zero ()V
+}
+
+public final class uk/shusek/krwa/runtime/ByteArrayMemory$Companion {
+}
+
+public final class uk/shusek/krwa/runtime/ByteBufferMemory : uk/shusek/krwa/runtime/Memory {
+	public static final field ATOMIC_FENCE_IMPL Ljava/lang/Runnable;
+	public static final field Companion Luk/shusek/krwa/runtime/ByteBufferMemory$Companion;
+	public fun <init> (Luk/shusek/krwa/wasm/types/MemoryLimits;)V
+	public fun <init> (Luk/shusek/krwa/wasm/types/MemoryLimits;Luk/shusek/krwa/runtime/alloc/MemAllocStrategy;)V
+	public fun atomicAddByte (IB)B
+	public fun atomicAddInt (II)I
+	public fun atomicAddLong (IJ)J
+	public fun atomicAddShort (IS)S
+	public fun atomicAndByte (IB)B
+	public fun atomicAndInt (II)I
+	public fun atomicAndLong (IJ)J
+	public fun atomicAndShort (IS)S
+	public fun atomicCmpxchgByte (IBB)B
+	public fun atomicCmpxchgInt (III)I
+	public fun atomicCmpxchgLong (IJJ)J
+	public fun atomicCmpxchgShort (ISS)S
+	public fun atomicFence ()V
+	public fun atomicNotify (II)I
+	public fun atomicOrByte (IB)B
+	public fun atomicOrInt (II)I
+	public fun atomicOrLong (IJ)J
+	public fun atomicOrShort (IS)S
+	public fun atomicReadByte (I)B
+	public fun atomicReadInt (I)I
+	public fun atomicReadLong (I)J
+	public fun atomicReadShort (I)S
+	public fun atomicWait (IIJ)I
+	public fun atomicWait (IJJ)I
+	public fun atomicWriteByte (IB)V
+	public fun atomicWriteInt (II)V
+	public fun atomicWriteLong (IJ)V
+	public fun atomicWriteShort (IS)V
+	public fun atomicXchgByte (IB)B
+	public fun atomicXchgInt (II)I
+	public fun atomicXchgLong (IJ)J
+	public fun atomicXchgShort (IS)S
+	public fun atomicXorByte (IB)B
+	public fun atomicXorInt (II)I
+	public fun atomicXorLong (IJ)J
+	public fun atomicXorShort (IS)S
+	public fun copy (III)V
+	public fun drop (I)V
+	public fun fill (BII)V
+	public fun grow (I)I
+	public fun initPassiveSegment (IIII)V
+	public fun initialPages ()I
+	public fun initialize (Luk/shusek/krwa/runtime/Instance;[Luk/shusek/krwa/wasm/types/DataSegment;)V
+	public fun initialize (Luk/shusek/krwa/runtime/Instance;[Luk/shusek/krwa/wasm/types/DataSegment;I)V
+	public fun lock (I)Ljava/lang/Object;
+	public fun maximumPages ()I
+	public fun notify (II)I
+	public fun pages ()I
+	public fun read (I)B
+	public fun read (I[BII)V
+	public fun readBytes (II)[B
+	public fun readCString (I)Ljava/lang/String;
+	public fun readDouble (I)D
+	public fun readF32 (I)J
+	public fun readF64 (I)J
+	public fun readFloat (I)F
+	public fun readI16 (I)J
+	public fun readI32 (I)J
+	public fun readI64 (I)J
+	public fun readI8 (I)J
+	public fun readInt (I)I
+	public fun readLong (I)J
+	public fun readShort (I)S
+	public fun readString (II)Ljava/lang/String;
+	public fun readU16 (I)J
+	public fun readU32 (I)J
+	public fun readU8 (I)J
+	public fun readU8Int (I)I
+	public fun readUtf8CString (I)Ljava/lang/String;
+	public fun readUtf8String (II)Ljava/lang/String;
+	public fun shared ()Z
+	public fun waitOn (IIJ)I
+	public fun waitOn (IJJ)I
+	public fun write (I[B)V
+	public fun write (I[BII)V
+	public fun writeByte (IB)V
+	public fun writeCString (ILjava/lang/String;)V
+	public fun writeF32 (IF)V
+	public fun writeF64 (ID)V
+	public fun writeI32 (II)V
+	public fun writeLong (IJ)V
+	public fun writeShort (IS)V
+	public fun writeString (ILjava/lang/String;)V
+	public fun writeUtf8CString (ILjava/lang/String;)V
+	public fun writeUtf8String (ILjava/lang/String;)V
+	public fun zero ()V
+}
+
+public final class uk/shusek/krwa/runtime/ByteBufferMemory$Companion {
+}
+
+public final class uk/shusek/krwa/runtime/ConstantEvaluators {
+	public static final field INSTANCE Luk/shusek/krwa/runtime/ConstantEvaluators;
+	public final fun computeConstantInstance (Luk/shusek/krwa/runtime/Instance;Ljava/util/List;)Luk/shusek/krwa/runtime/Instance;
+	public final fun computeConstantValue (Luk/shusek/krwa/runtime/Instance;Ljava/util/List;)[J
+	public final fun computeConstantValue (Luk/shusek/krwa/runtime/Instance;[Luk/shusek/krwa/wasm/types/Instruction;)[J
+}
+
+public final class uk/shusek/krwa/runtime/CtrlFrame {
+	public fun <init> (Luk/shusek/krwa/wasm/types/OpCode;IIII)V
+	public synthetic fun <init> (Luk/shusek/krwa/wasm/types/OpCode;IIIIILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getEndValues ()I
+	public final fun getHeight ()I
+	public final fun getOpCode ()Luk/shusek/krwa/wasm/types/OpCode;
+	public final fun getPc ()I
+	public final fun getStartValues ()I
+}
+
+public final class uk/shusek/krwa/runtime/ExecutionBackend : java/lang/Enum {
+	public static final field AUTO Luk/shusek/krwa/runtime/ExecutionBackend;
+	public static final field NATIVE Luk/shusek/krwa/runtime/ExecutionBackend;
+	public static final field PULLEY Luk/shusek/krwa/runtime/ExecutionBackend;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Luk/shusek/krwa/runtime/ExecutionBackend;
+	public static fun values ()[Luk/shusek/krwa/runtime/ExecutionBackend;
+}
+
+public final class uk/shusek/krwa/runtime/ExecutionBackendAvailability {
+	public fun <init> (ZLjava/lang/String;)V
+	public synthetic fun <init> (ZLjava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Z
+	public final fun component2 ()Ljava/lang/String;
+	public final fun copy (ZLjava/lang/String;)Luk/shusek/krwa/runtime/ExecutionBackendAvailability;
+	public static synthetic fun copy$default (Luk/shusek/krwa/runtime/ExecutionBackendAvailability;ZLjava/lang/String;ILjava/lang/Object;)Luk/shusek/krwa/runtime/ExecutionBackendAvailability;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAvailable ()Z
+	public final fun getReason ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/runtime/ExecutionBackendKt {
+	public static final fun availability (Luk/shusek/krwa/runtime/ExecutionBackend;)Luk/shusek/krwa/runtime/ExecutionBackendAvailability;
+	public static final fun isAvailable (Luk/shusek/krwa/runtime/ExecutionBackend;)Z
+}
+
+public class uk/shusek/krwa/runtime/ExecutionCompletedException : uk/shusek/krwa/wasm/WasmEngineException {
+	public fun <init> (Ljava/lang/String;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/Throwable;)V
+	public fun <init> (Ljava/lang/Throwable;)V
+}
+
+public abstract interface class uk/shusek/krwa/runtime/ExportFunction {
+	public abstract fun apply ([J)[J
+}
+
+public class uk/shusek/krwa/runtime/GlobalInstance {
+	public fun <init> (JJLuk/shusek/krwa/wasm/types/ValType;Luk/shusek/krwa/wasm/types/MutabilityType;)V
+	public fun <init> (JJLuk/shusek/krwa/wasm/types/ValueType;Luk/shusek/krwa/wasm/types/MutabilityType;)V
+	public fun <init> (Luk/shusek/krwa/wasm/types/Value;)V
+	public fun <init> (Luk/shusek/krwa/wasm/types/Value;Luk/shusek/krwa/wasm/types/MutabilityType;)V
+	public final fun getInstance ()Luk/shusek/krwa/runtime/Instance;
+	public final fun getMutabilityType ()Luk/shusek/krwa/wasm/types/MutabilityType;
+	public final fun getType ()Luk/shusek/krwa/wasm/types/ValType;
+	public final fun getValue ()J
+	public final fun getValueHigh ()J
+	public final fun getValueLow ()J
+	public final fun setInstance (Luk/shusek/krwa/runtime/Instance;)V
+	public final fun setValue (J)V
+	public final fun setValue (Luk/shusek/krwa/wasm/types/Value;)V
+	public final fun setValueHigh (J)V
+	public final fun setValueLow (J)V
+}
+
+public class uk/shusek/krwa/runtime/HostFunction : uk/shusek/krwa/runtime/ImportFunction {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/util/List;Luk/shusek/krwa/runtime/WasmFunctionHandle;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Luk/shusek/krwa/wasm/types/FunctionType;Luk/shusek/krwa/runtime/WasmFunctionHandle;)V
+}
+
+public class uk/shusek/krwa/runtime/ImportFunction : uk/shusek/krwa/runtime/ImportValue {
+	public static final field Companion Luk/shusek/krwa/runtime/ImportFunction$Companion;
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/util/List;Luk/shusek/krwa/runtime/WasmFunctionHandle;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Luk/shusek/krwa/wasm/types/FunctionType;Luk/shusek/krwa/runtime/WasmFunctionHandle;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Luk/shusek/krwa/wasm/types/FunctionType;Luk/shusek/krwa/runtime/WasmFunctionHandle;Luk/shusek/krwa/runtime/Instance;)V
+	public final fun functionType ()Luk/shusek/krwa/wasm/types/FunctionType;
+	public final fun handle ()Luk/shusek/krwa/runtime/WasmFunctionHandle;
+	public fun module ()Ljava/lang/String;
+	public fun name ()Ljava/lang/String;
+	public final fun paramTypes ()Ljava/util/List;
+	public final fun returnTypes ()Ljava/util/List;
+	public final fun sourceInstance ()Luk/shusek/krwa/runtime/Instance;
+	public fun type ()Luk/shusek/krwa/runtime/ImportValue$Type;
+}
+
+public final class uk/shusek/krwa/runtime/ImportFunction$Companion {
+	public final fun convert (Ljava/util/List;)Ljava/util/List;
+	public final fun exportAsImport (Ljava/lang/String;Ljava/lang/String;Luk/shusek/krwa/runtime/Instance;Ljava/lang/String;)Luk/shusek/krwa/runtime/ImportFunction;
+}
+
+public class uk/shusek/krwa/runtime/ImportGlobal : uk/shusek/krwa/runtime/ImportValue {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Luk/shusek/krwa/runtime/GlobalInstance;)V
+	public final fun instance ()Luk/shusek/krwa/runtime/GlobalInstance;
+	public fun module ()Ljava/lang/String;
+	public fun name ()Ljava/lang/String;
+	public fun type ()Luk/shusek/krwa/runtime/ImportValue$Type;
+}
+
+public class uk/shusek/krwa/runtime/ImportMemory : uk/shusek/krwa/runtime/ImportValue {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Luk/shusek/krwa/runtime/Memory;)V
+	public final fun memory ()Luk/shusek/krwa/runtime/Memory;
+	public fun module ()Ljava/lang/String;
+	public fun name ()Ljava/lang/String;
+	public fun type ()Luk/shusek/krwa/runtime/ImportValue$Type;
+}
+
+public class uk/shusek/krwa/runtime/ImportTable : uk/shusek/krwa/runtime/ImportValue {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Luk/shusek/krwa/runtime/TableInstance;)V
+	public fun module ()Ljava/lang/String;
+	public fun name ()Ljava/lang/String;
+	public final fun table ()Luk/shusek/krwa/runtime/TableInstance;
+	public fun type ()Luk/shusek/krwa/runtime/ImportValue$Type;
+}
+
+public class uk/shusek/krwa/runtime/ImportTag : uk/shusek/krwa/runtime/ImportValue {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Luk/shusek/krwa/runtime/TagInstance;)V
+	public fun module ()Ljava/lang/String;
+	public fun name ()Ljava/lang/String;
+	public final fun tag ()Luk/shusek/krwa/runtime/TagInstance;
+	public fun type ()Luk/shusek/krwa/runtime/ImportValue$Type;
+}
+
+public abstract interface class uk/shusek/krwa/runtime/ImportValue {
+	public abstract fun module ()Ljava/lang/String;
+	public abstract fun name ()Ljava/lang/String;
+	public abstract fun type ()Luk/shusek/krwa/runtime/ImportValue$Type;
+}
+
+public final class uk/shusek/krwa/runtime/ImportValue$Type : java/lang/Enum {
+	public static final field FUNCTION Luk/shusek/krwa/runtime/ImportValue$Type;
+	public static final field GLOBAL Luk/shusek/krwa/runtime/ImportValue$Type;
+	public static final field MEMORY Luk/shusek/krwa/runtime/ImportValue$Type;
+	public static final field TABLE Luk/shusek/krwa/runtime/ImportValue$Type;
+	public static final field TAG Luk/shusek/krwa/runtime/ImportValue$Type;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Luk/shusek/krwa/runtime/ImportValue$Type;
+	public static fun values ()[Luk/shusek/krwa/runtime/ImportValue$Type;
+}
+
+public final class uk/shusek/krwa/runtime/ImportValues {
+	public static final field Companion Luk/shusek/krwa/runtime/ImportValues$Companion;
+	public final fun function (I)Luk/shusek/krwa/runtime/ImportFunction;
+	public final fun functionCount ()I
+	public final fun functions ()[Luk/shusek/krwa/runtime/ImportFunction;
+	public final fun global (I)Luk/shusek/krwa/runtime/ImportGlobal;
+	public final fun globalCount ()I
+	public final fun globals ()[Luk/shusek/krwa/runtime/ImportGlobal;
+	public final fun memories ()[Luk/shusek/krwa/runtime/ImportMemory;
+	public final fun memory (I)Luk/shusek/krwa/runtime/ImportMemory;
+	public final fun memoryCount ()I
+	public final fun table (I)Luk/shusek/krwa/runtime/ImportTable;
+	public final fun tableCount ()I
+	public final fun tables ()[Luk/shusek/krwa/runtime/ImportTable;
+	public final fun tag (I)Luk/shusek/krwa/runtime/ImportTag;
+	public final fun tagCount ()I
+	public final fun tags ()[Luk/shusek/krwa/runtime/ImportTag;
+}
+
+public final class uk/shusek/krwa/runtime/ImportValues$Builder {
+	public final fun addFunction ([Luk/shusek/krwa/runtime/ImportFunction;)Luk/shusek/krwa/runtime/ImportValues$Builder;
+	public final fun addGlobal ([Luk/shusek/krwa/runtime/ImportGlobal;)Luk/shusek/krwa/runtime/ImportValues$Builder;
+	public final fun addMemory ([Luk/shusek/krwa/runtime/ImportMemory;)Luk/shusek/krwa/runtime/ImportValues$Builder;
+	public final fun addTable ([Luk/shusek/krwa/runtime/ImportTable;)Luk/shusek/krwa/runtime/ImportValues$Builder;
+	public final fun addTag ([Luk/shusek/krwa/runtime/ImportTag;)Luk/shusek/krwa/runtime/ImportValues$Builder;
+	public final fun build ()Luk/shusek/krwa/runtime/ImportValues;
+	public final fun withFunctions (Ljava/util/Collection;)Luk/shusek/krwa/runtime/ImportValues$Builder;
+	public final fun withGlobals (Ljava/util/Collection;)Luk/shusek/krwa/runtime/ImportValues$Builder;
+	public final fun withMemories (Ljava/util/Collection;)Luk/shusek/krwa/runtime/ImportValues$Builder;
+	public final fun withTables (Ljava/util/Collection;)Luk/shusek/krwa/runtime/ImportValues$Builder;
+	public final fun withTags (Ljava/util/Collection;)Luk/shusek/krwa/runtime/ImportValues$Builder;
+}
+
+public final class uk/shusek/krwa/runtime/ImportValues$Companion {
+	public final fun builder ()Luk/shusek/krwa/runtime/ImportValues$Builder;
+	public final fun empty ()Luk/shusek/krwa/runtime/ImportValues;
+}
+
+public final class uk/shusek/krwa/runtime/Instance : java/lang/AutoCloseable {
+	public static final field Companion Luk/shusek/krwa/runtime/Instance$Companion;
+	public static final field START_FUNCTION_NAME Ljava/lang/String;
+	public final fun array (I)[J
+	public static final fun builder (Luk/shusek/krwa/wasm/WasmModule;)Luk/shusek/krwa/runtime/Instance$Builder;
+	public final fun clearTailCall ()V
+	public fun close ()V
+	public final fun dataSegmentData (I)[B
+	public final fun dropDataSegment (I)V
+	public final fun element (I)Luk/shusek/krwa/wasm/types/Element;
+	public final fun elementCount ()I
+	public final fun elementOrNull (I)Luk/shusek/krwa/wasm/types/Element;
+	public final fun executionBackend ()Luk/shusek/krwa/runtime/ExecutionBackend;
+	public final fun exn (I)Luk/shusek/krwa/runtime/WasmException;
+	public final fun export (Ljava/lang/String;)Luk/shusek/krwa/runtime/ExportFunction;
+	public final fun exportType (Ljava/lang/String;)Luk/shusek/krwa/wasm/types/FunctionType;
+	public final fun exports ()Luk/shusek/krwa/runtime/Instance$Exports;
+	public final fun function (I)Luk/shusek/krwa/wasm/types/FunctionBody;
+	public final fun functionCount ()I
+	public final fun functionType (I)I
+	public final fun gcRef (I)Luk/shusek/krwa/runtime/WasmGcRef;
+	public final fun gcSafePoint ()V
+	public final fun global (I)Luk/shusek/krwa/runtime/GlobalInstance;
+	public final fun globalCount ()I
+	public final fun heapTypeMatch (JZII)Z
+	public final fun imports ()Luk/shusek/krwa/runtime/ImportValues;
+	public final fun initialize (Z)Luk/shusek/krwa/runtime/Instance;
+	public final fun isClosed ()Z
+	public final fun isTailCallPending ()Z
+	public final fun memory ()Luk/shusek/krwa/runtime/Memory;
+	public final fun memory (I)Luk/shusek/krwa/runtime/Memory;
+	public final fun module ()Luk/shusek/krwa/wasm/WasmModule;
+	public final fun registerException (Luk/shusek/krwa/runtime/WasmException;)I
+	public final fun registerGcRef (Luk/shusek/krwa/runtime/WasmGcRef;)I
+	public final fun setElement (ILuk/shusek/krwa/wasm/types/Element;)V
+	public final fun setTailCall (I[J)V
+	public final fun table (I)Luk/shusek/krwa/runtime/TableInstance;
+	public final fun tableCount ()I
+	public final fun tag (I)Luk/shusek/krwa/runtime/TagInstance;
+	public final fun tagCount ()I
+	public final fun tailCallArgs ()[J
+	public final fun tailCallFuncId ()I
+	public final fun type (I)Luk/shusek/krwa/wasm/types/FunctionType;
+	public final fun wasmtimeExecutionConfig ()Luk/shusek/krwa/runtime/WasmtimeExecutionConfig;
+}
+
+public final class uk/shusek/krwa/runtime/Instance$Builder {
+	public static final field Companion Luk/shusek/krwa/runtime/Instance$Builder$Companion;
+	public final fun build ()Luk/shusek/krwa/runtime/Instance;
+	public final fun withExecutionBackend (Luk/shusek/krwa/runtime/ExecutionBackend;)Luk/shusek/krwa/runtime/Instance$Builder;
+	public final fun withExecutionPolicy (Luk/shusek/krwa/runtime/WasmExecutionPolicy;)Luk/shusek/krwa/runtime/Instance$Builder;
+	public final fun withImportValues (Luk/shusek/krwa/runtime/ImportValues;)Luk/shusek/krwa/runtime/Instance$Builder;
+	public final fun withMemoryLimits (Luk/shusek/krwa/wasm/types/MemoryLimits;)Luk/shusek/krwa/runtime/Instance$Builder;
+	public final fun withWasmtimeExecutionConfig (Luk/shusek/krwa/runtime/WasmtimeExecutionConfig;)Luk/shusek/krwa/runtime/Instance$Builder;
+}
+
+public final class uk/shusek/krwa/runtime/Instance$Builder$Companion {
+}
+
+public final class uk/shusek/krwa/runtime/Instance$Companion {
+	public final fun builder (Luk/shusek/krwa/wasm/WasmModule;)Luk/shusek/krwa/runtime/Instance$Builder;
+}
+
+public final class uk/shusek/krwa/runtime/Instance$Exports {
+	public final fun function (Ljava/lang/String;)Luk/shusek/krwa/runtime/ExportFunction;
+	public final fun global (Ljava/lang/String;)Luk/shusek/krwa/runtime/GlobalInstance;
+	public final fun memory (Ljava/lang/String;)Luk/shusek/krwa/runtime/Memory;
+	public final fun table (Ljava/lang/String;)Luk/shusek/krwa/runtime/TableInstance;
+	public final fun tag (Ljava/lang/String;)Luk/shusek/krwa/runtime/TagInstance;
+}
+
+public abstract interface class uk/shusek/krwa/runtime/Memory {
+	public static final field Companion Luk/shusek/krwa/runtime/Memory$Companion;
+	public static final field PAGE_SIZE I
+	public static final field RUNTIME_MAX_PAGES I
+	public abstract fun atomicAddByte (IB)B
+	public abstract fun atomicAddInt (II)I
+	public abstract fun atomicAddLong (IJ)J
+	public abstract fun atomicAddShort (IS)S
+	public abstract fun atomicAndByte (IB)B
+	public abstract fun atomicAndInt (II)I
+	public abstract fun atomicAndLong (IJ)J
+	public abstract fun atomicAndShort (IS)S
+	public abstract fun atomicCmpxchgByte (IBB)B
+	public abstract fun atomicCmpxchgInt (III)I
+	public abstract fun atomicCmpxchgLong (IJJ)J
+	public abstract fun atomicCmpxchgShort (ISS)S
+	public fun atomicFence ()V
+	public fun atomicNotify (II)I
+	public abstract fun atomicOrByte (IB)B
+	public abstract fun atomicOrInt (II)I
+	public abstract fun atomicOrLong (IJ)J
+	public abstract fun atomicOrShort (IS)S
+	public abstract fun atomicReadByte (I)B
+	public abstract fun atomicReadInt (I)I
+	public abstract fun atomicReadLong (I)J
+	public abstract fun atomicReadShort (I)S
+	public fun atomicWait (IIJ)I
+	public fun atomicWait (IJJ)I
+	public abstract fun atomicWriteByte (IB)V
+	public abstract fun atomicWriteInt (II)V
+	public abstract fun atomicWriteLong (IJ)V
+	public abstract fun atomicWriteShort (IS)V
+	public abstract fun atomicXchgByte (IB)B
+	public abstract fun atomicXchgInt (II)I
+	public abstract fun atomicXchgLong (IJ)J
+	public abstract fun atomicXchgShort (IS)S
+	public abstract fun atomicXorByte (IB)B
+	public abstract fun atomicXorInt (II)I
+	public abstract fun atomicXorLong (IJ)J
+	public abstract fun atomicXorShort (IS)S
+	public fun copy (III)V
+	public abstract fun drop (I)V
+	public abstract fun fill (BII)V
+	public abstract fun grow (I)I
+	public abstract fun initPassiveSegment (IIII)V
+	public abstract fun initialPages ()I
+	public abstract fun initialize (Luk/shusek/krwa/runtime/Instance;[Luk/shusek/krwa/wasm/types/DataSegment;)V
+	public fun initialize (Luk/shusek/krwa/runtime/Instance;[Luk/shusek/krwa/wasm/types/DataSegment;I)V
+	public abstract fun lock (I)Ljava/lang/Object;
+	public abstract fun maximumPages ()I
+	public abstract fun notify (II)I
+	public abstract fun pages ()I
+	public abstract fun read (I)B
+	public fun read (I[BII)V
+	public abstract fun readBytes (II)[B
+	public fun readCString (I)Ljava/lang/String;
+	public abstract fun readDouble (I)D
+	public abstract fun readF32 (I)J
+	public abstract fun readF64 (I)J
+	public abstract fun readFloat (I)F
+	public fun readI16 (I)J
+	public fun readI32 (I)J
+	public fun readI64 (I)J
+	public fun readI8 (I)J
+	public abstract fun readInt (I)I
+	public abstract fun readLong (I)J
+	public abstract fun readShort (I)S
+	public fun readString (II)Ljava/lang/String;
+	public abstract fun readU16 (I)J
+	public fun readU32 (I)J
+	public fun readU8 (I)J
+	public fun readU8Int (I)I
+	public fun readUtf8CString (I)Ljava/lang/String;
+	public fun readUtf8String (II)Ljava/lang/String;
+	public abstract fun shared ()Z
+	public abstract fun waitOn (IIJ)I
+	public abstract fun waitOn (IJJ)I
+	public fun write (I[B)V
+	public abstract fun write (I[BII)V
+	public abstract fun writeByte (IB)V
+	public fun writeCString (ILjava/lang/String;)V
+	public abstract fun writeF32 (IF)V
+	public abstract fun writeF64 (ID)V
+	public abstract fun writeI32 (II)V
+	public abstract fun writeLong (IJ)V
+	public abstract fun writeShort (IS)V
+	public fun writeString (ILjava/lang/String;)V
+	public fun writeUtf8CString (ILjava/lang/String;)V
+	public fun writeUtf8String (ILjava/lang/String;)V
+	public abstract fun zero ()V
+}
+
+public final class uk/shusek/krwa/runtime/Memory$Companion {
+	public static final field PAGE_SIZE I
+	public static final field RUNTIME_MAX_PAGES I
+	public final fun bytes (I)I
+}
+
+public final class uk/shusek/krwa/runtime/Memory$DefaultImpls {
+	public static fun atomicFence (Luk/shusek/krwa/runtime/Memory;)V
+	public static fun atomicNotify (Luk/shusek/krwa/runtime/Memory;II)I
+	public static fun atomicWait (Luk/shusek/krwa/runtime/Memory;IIJ)I
+	public static fun atomicWait (Luk/shusek/krwa/runtime/Memory;IJJ)I
+	public static fun copy (Luk/shusek/krwa/runtime/Memory;III)V
+	public static fun initialize (Luk/shusek/krwa/runtime/Memory;Luk/shusek/krwa/runtime/Instance;[Luk/shusek/krwa/wasm/types/DataSegment;I)V
+	public static fun read (Luk/shusek/krwa/runtime/Memory;I[BII)V
+	public static fun readCString (Luk/shusek/krwa/runtime/Memory;I)Ljava/lang/String;
+	public static fun readI16 (Luk/shusek/krwa/runtime/Memory;I)J
+	public static fun readI32 (Luk/shusek/krwa/runtime/Memory;I)J
+	public static fun readI64 (Luk/shusek/krwa/runtime/Memory;I)J
+	public static fun readI8 (Luk/shusek/krwa/runtime/Memory;I)J
+	public static fun readString (Luk/shusek/krwa/runtime/Memory;II)Ljava/lang/String;
+	public static fun readU32 (Luk/shusek/krwa/runtime/Memory;I)J
+	public static fun readU8 (Luk/shusek/krwa/runtime/Memory;I)J
+	public static fun readU8Int (Luk/shusek/krwa/runtime/Memory;I)I
+	public static fun readUtf8CString (Luk/shusek/krwa/runtime/Memory;I)Ljava/lang/String;
+	public static fun readUtf8String (Luk/shusek/krwa/runtime/Memory;II)Ljava/lang/String;
+	public static fun write (Luk/shusek/krwa/runtime/Memory;I[B)V
+	public static fun writeCString (Luk/shusek/krwa/runtime/Memory;ILjava/lang/String;)V
+	public static fun writeString (Luk/shusek/krwa/runtime/Memory;ILjava/lang/String;)V
+	public static fun writeUtf8CString (Luk/shusek/krwa/runtime/Memory;ILjava/lang/String;)V
+	public static fun writeUtf8String (Luk/shusek/krwa/runtime/Memory;ILjava/lang/String;)V
+}
+
+public final class uk/shusek/krwa/runtime/MemoryJvmStringsKt {
+	public static final fun readCString (Luk/shusek/krwa/runtime/Memory;ILjava/nio/charset/Charset;)Ljava/lang/String;
+	public static final fun readString (Luk/shusek/krwa/runtime/Memory;IILjava/nio/charset/Charset;)Ljava/lang/String;
+	public static final fun writeCString (Luk/shusek/krwa/runtime/Memory;ILjava/lang/String;Ljava/nio/charset/Charset;)V
+	public static final fun writeString (Luk/shusek/krwa/runtime/Memory;ILjava/lang/String;Ljava/nio/charset/Charset;)V
+}
+
+public abstract interface annotation class uk/shusek/krwa/runtime/OpCodeIdentifier : java/lang/annotation/Annotation {
+	public abstract fun value ()Luk/shusek/krwa/wasm/types/OpCode;
+}
+
+public final class uk/shusek/krwa/runtime/OpcodeOps {
+	public static final field INSTANCE Luk/shusek/krwa/runtime/OpcodeOps;
+	public final fun ATOMIC_FENCE ()V
+	public final fun F32_ABS (F)F
+	public final fun F32_CEIL (F)F
+	public final fun F32_CONVERT_I32_S (I)F
+	public final fun F32_CONVERT_I32_U (I)F
+	public final fun F32_CONVERT_I64_S (J)F
+	public final fun F32_CONVERT_I64_U (J)F
+	public final fun F32_COPYSIGN (FF)F
+	public final fun F32_EQ (FF)I
+	public final fun F32_FLOOR (F)F
+	public final fun F32_GE (FF)I
+	public final fun F32_GT (FF)I
+	public final fun F32_LE (FF)I
+	public final fun F32_LT (FF)I
+	public final fun F32_MAX (FF)F
+	public final fun F32_MIN (FF)F
+	public final fun F32_NE (FF)I
+	public final fun F32_NEAREST (F)F
+	public final fun F32_REINTERPRET_I32 (I)F
+	public final fun F32_SQRT (F)F
+	public final fun F32_TRUNC (F)F
+	public final fun F64_ABS (D)D
+	public final fun F64_CEIL (D)D
+	public final fun F64_CONVERT_I32_S (I)D
+	public final fun F64_CONVERT_I32_U (I)D
+	public final fun F64_CONVERT_I64_S (J)D
+	public final fun F64_CONVERT_I64_U (J)D
+	public final fun F64_COPYSIGN (DD)D
+	public final fun F64_EQ (DD)I
+	public final fun F64_FLOOR (D)D
+	public final fun F64_GE (DD)I
+	public final fun F64_GT (DD)I
+	public final fun F64_LE (DD)I
+	public final fun F64_LT (DD)I
+	public final fun F64_MAX (DD)D
+	public final fun F64_MIN (DD)D
+	public final fun F64_NE (DD)I
+	public final fun F64_NEAREST (D)D
+	public final fun F64_REINTERPRET_I64 (J)D
+	public final fun F64_SQRT (D)D
+	public final fun F64_TRUNC (D)D
+	public final fun I32_CLZ (I)I
+	public final fun I32_CTZ (I)I
+	public final fun I32_DIV_S (II)I
+	public final fun I32_DIV_U (II)I
+	public final fun I32_EQ (II)I
+	public final fun I32_EQZ (I)I
+	public final fun I32_EXTEND_16_S (I)I
+	public final fun I32_EXTEND_8_S (I)I
+	public final fun I32_GE_S (II)I
+	public final fun I32_GE_U (II)I
+	public final fun I32_GT_S (II)I
+	public final fun I32_GT_U (II)I
+	public final fun I32_LE_S (II)I
+	public final fun I32_LE_U (II)I
+	public final fun I32_LT_S (II)I
+	public final fun I32_LT_U (II)I
+	public final fun I32_NE (II)I
+	public final fun I32_POPCNT (I)I
+	public final fun I32_REINTERPRET_F32 (F)I
+	public final fun I32_REM_S (II)I
+	public final fun I32_REM_U (II)I
+	public final fun I32_ROTL (II)I
+	public final fun I32_ROTR (II)I
+	public final fun I32_TRUNC_F32_S (F)I
+	public final fun I32_TRUNC_F32_U (F)I
+	public final fun I32_TRUNC_F64_S (D)I
+	public final fun I32_TRUNC_F64_U (D)I
+	public final fun I32_TRUNC_SAT_F32_S (F)I
+	public final fun I32_TRUNC_SAT_F32_U (F)I
+	public final fun I32_TRUNC_SAT_F64_S (D)I
+	public final fun I32_TRUNC_SAT_F64_U (D)I
+	public final fun I64_CLZ (J)J
+	public final fun I64_CTZ (J)J
+	public final fun I64_DIV_S (JJ)J
+	public final fun I64_DIV_U (JJ)J
+	public final fun I64_EQ (JJ)I
+	public final fun I64_EQZ (J)I
+	public final fun I64_EXTEND_16_S (J)J
+	public final fun I64_EXTEND_32_S (J)J
+	public final fun I64_EXTEND_8_S (J)J
+	public final fun I64_EXTEND_I32_U (I)J
+	public final fun I64_GE_S (JJ)I
+	public final fun I64_GE_U (JJ)I
+	public final fun I64_GT_S (JJ)I
+	public final fun I64_GT_U (JJ)I
+	public final fun I64_LE_S (JJ)I
+	public final fun I64_LE_U (JJ)I
+	public final fun I64_LT_S (JJ)I
+	public final fun I64_LT_U (JJ)I
+	public final fun I64_NE (JJ)I
+	public final fun I64_POPCNT (J)J
+	public final fun I64_REINTERPRET_F64 (D)J
+	public final fun I64_REM_S (JJ)J
+	public final fun I64_REM_U (JJ)J
+	public final fun I64_ROTL (JJ)J
+	public final fun I64_ROTR (JJ)J
+	public final fun I64_TRUNC_F32_S (F)J
+	public final fun I64_TRUNC_F32_U (F)J
+	public final fun I64_TRUNC_F64_S (D)J
+	public final fun I64_TRUNC_F64_U (D)J
+	public final fun I64_TRUNC_SAT_F32_S (F)J
+	public final fun I64_TRUNC_SAT_F32_U (F)J
+	public final fun I64_TRUNC_SAT_F64_S (D)J
+	public final fun I64_TRUNC_SAT_F64_U (D)J
+	public final fun TABLE_COPY (Luk/shusek/krwa/runtime/Instance;IIIII)V
+	public final fun TABLE_FILL (Luk/shusek/krwa/runtime/Instance;IIII)V
+	public final fun TABLE_GET (Luk/shusek/krwa/runtime/Instance;II)I
+	public final fun TABLE_INIT (Luk/shusek/krwa/runtime/Instance;IIIII)V
+	public final fun boxForTable (JLuk/shusek/krwa/runtime/Instance;)I
+	public final fun unboxFromTable (ILuk/shusek/krwa/runtime/Instance;Luk/shusek/krwa/wasm/types/ValType;)J
+}
+
+public abstract interface class uk/shusek/krwa/runtime/PlatformInstanceExecution : java/lang/AutoCloseable {
+	public fun close ()V
+	public abstract fun export (Ljava/lang/String;)Luk/shusek/krwa/runtime/ExportFunction;
+	public abstract fun exportType (Ljava/lang/String;)Luk/shusek/krwa/wasm/types/FunctionType;
+	public abstract fun getBackend ()Luk/shusek/krwa/runtime/ExecutionBackend;
+	public abstract fun memory (I)Luk/shusek/krwa/runtime/Memory;
+	public abstract fun memory (Ljava/lang/String;)Luk/shusek/krwa/runtime/Memory;
+}
+
+public final class uk/shusek/krwa/runtime/PlatformInstanceExecution$DefaultImpls {
+	public static fun close (Luk/shusek/krwa/runtime/PlatformInstanceExecution;)V
+}
+
+public final class uk/shusek/krwa/runtime/PortableMemory : uk/shusek/krwa/runtime/Memory {
+	public fun <init> (Luk/shusek/krwa/wasm/types/MemoryLimits;)V
+	public fun atomicAddByte (IB)B
+	public fun atomicAddInt (II)I
+	public fun atomicAddLong (IJ)J
+	public fun atomicAddShort (IS)S
+	public fun atomicAndByte (IB)B
+	public fun atomicAndInt (II)I
+	public fun atomicAndLong (IJ)J
+	public fun atomicAndShort (IS)S
+	public fun atomicCmpxchgByte (IBB)B
+	public fun atomicCmpxchgInt (III)I
+	public fun atomicCmpxchgLong (IJJ)J
+	public fun atomicCmpxchgShort (ISS)S
+	public fun atomicFence ()V
+	public fun atomicNotify (II)I
+	public fun atomicOrByte (IB)B
+	public fun atomicOrInt (II)I
+	public fun atomicOrLong (IJ)J
+	public fun atomicOrShort (IS)S
+	public fun atomicReadByte (I)B
+	public fun atomicReadInt (I)I
+	public fun atomicReadLong (I)J
+	public fun atomicReadShort (I)S
+	public fun atomicWait (IIJ)I
+	public fun atomicWait (IJJ)I
+	public fun atomicWriteByte (IB)V
+	public fun atomicWriteInt (II)V
+	public fun atomicWriteLong (IJ)V
+	public fun atomicWriteShort (IS)V
+	public fun atomicXchgByte (IB)B
+	public fun atomicXchgInt (II)I
+	public fun atomicXchgLong (IJ)J
+	public fun atomicXchgShort (IS)S
+	public fun atomicXorByte (IB)B
+	public fun atomicXorInt (II)I
+	public fun atomicXorLong (IJ)J
+	public fun atomicXorShort (IS)S
+	public fun copy (III)V
+	public fun drop (I)V
+	public fun fill (BII)V
+	public fun grow (I)I
+	public fun initPassiveSegment (IIII)V
+	public fun initialPages ()I
+	public fun initialize (Luk/shusek/krwa/runtime/Instance;[Luk/shusek/krwa/wasm/types/DataSegment;)V
+	public fun initialize (Luk/shusek/krwa/runtime/Instance;[Luk/shusek/krwa/wasm/types/DataSegment;I)V
+	public fun lock (I)Ljava/lang/Object;
+	public fun maximumPages ()I
+	public fun notify (II)I
+	public fun pages ()I
+	public fun read (I)B
+	public fun read (I[BII)V
+	public fun readBytes (II)[B
+	public fun readCString (I)Ljava/lang/String;
+	public fun readDouble (I)D
+	public fun readF32 (I)J
+	public fun readF64 (I)J
+	public fun readFloat (I)F
+	public fun readI16 (I)J
+	public fun readI32 (I)J
+	public fun readI64 (I)J
+	public fun readI8 (I)J
+	public fun readInt (I)I
+	public fun readLong (I)J
+	public fun readShort (I)S
+	public fun readString (II)Ljava/lang/String;
+	public fun readU16 (I)J
+	public fun readU32 (I)J
+	public fun readU8 (I)J
+	public fun readU8Int (I)I
+	public fun readUtf8CString (I)Ljava/lang/String;
+	public fun readUtf8String (II)Ljava/lang/String;
+	public fun shared ()Z
+	public fun waitOn (IIJ)I
+	public fun waitOn (IJJ)I
+	public fun write (I[B)V
+	public fun write (I[BII)V
+	public fun writeByte (IB)V
+	public fun writeCString (ILjava/lang/String;)V
+	public fun writeF32 (IF)V
+	public fun writeF64 (ID)V
+	public fun writeI32 (II)V
+	public fun writeLong (IJ)V
+	public fun writeShort (IS)V
+	public fun writeString (ILjava/lang/String;)V
+	public fun writeUtf8CString (ILjava/lang/String;)V
+	public fun writeUtf8String (ILjava/lang/String;)V
+	public fun zero ()V
+}
+
+public final class uk/shusek/krwa/runtime/PulleyExecutionKt {
+	public static final fun installWasmtimePulleyExecutionProviderIfAvailable ()V
+	public static final fun wasmtimeComponentWasiUnavailableReason ()Ljava/lang/String;
+	public static final fun wasmtimePreview3CommandRunUnavailableReason (Luk/shusek/krwa/runtime/WasmtimePreview3ComponentConfig;)Ljava/lang/String;
+	public static final fun wasmtimePreview3ComponentCall0UnavailableReason (Luk/shusek/krwa/runtime/WasmtimePreview3ComponentConfig;Ljava/lang/String;)Ljava/lang/String;
+	public static final fun wasmtimePreview3ComponentCallS32UnavailableReason (Luk/shusek/krwa/runtime/WasmtimePreview3ComponentConfig;Ljava/lang/String;II)Ljava/lang/String;
+	public static final fun wasmtimePreview3ComponentCallString (Luk/shusek/krwa/runtime/WasmtimePreview3ComponentConfig;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
+	public static final fun wasmtimePreview3ComponentCallString (Luk/shusek/krwa/runtime/WasmtimePreview3ComponentConfig;Ljava/lang/String;Ljava/lang/String;Luk/shusek/krwa/runtime/WasmtimePreview3ExecutionCancellation;)Ljava/lang/String;
+	public static final fun wasmtimePreview3ComponentCallStringUnavailableReason (Luk/shusek/krwa/runtime/WasmtimePreview3ComponentConfig;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
+	public static final fun wasmtimePreview3ComponentUnavailableReason (Luk/shusek/krwa/runtime/WasmtimePreview3ComponentConfig;)Ljava/lang/String;
+	public static final fun wasmtimeTargetUnavailableReason (Ljava/lang/String;)Ljava/lang/String;
+}
+
+public abstract interface class uk/shusek/krwa/runtime/PulleyExecutionProvider {
+	public abstract fun availability ()Luk/shusek/krwa/runtime/ExecutionBackendAvailability;
+	public abstract fun create (Luk/shusek/krwa/wasm/WasmModule;Luk/shusek/krwa/runtime/ImportValues;Luk/shusek/krwa/runtime/Instance;)Luk/shusek/krwa/runtime/PlatformInstanceExecution;
+}
+
+public final class uk/shusek/krwa/runtime/PulleyExecutionProviders {
+	public static final field INSTANCE Luk/shusek/krwa/runtime/PulleyExecutionProviders;
+	public final fun install (Luk/shusek/krwa/runtime/PulleyExecutionProvider;)Luk/shusek/krwa/runtime/PulleyExecutionProvider;
+}
+
+public final class uk/shusek/krwa/runtime/Store {
+	public fun <init> ()V
+	public final fun addFunction ([Luk/shusek/krwa/runtime/ImportFunction;)Luk/shusek/krwa/runtime/Store;
+	public final fun addGlobal ([Luk/shusek/krwa/runtime/ImportGlobal;)Luk/shusek/krwa/runtime/Store;
+	public final fun addImportValues (Luk/shusek/krwa/runtime/ImportValues;)Luk/shusek/krwa/runtime/Store;
+	public final fun addMemory ([Luk/shusek/krwa/runtime/ImportMemory;)Luk/shusek/krwa/runtime/Store;
+	public final fun addTable ([Luk/shusek/krwa/runtime/ImportTable;)Luk/shusek/krwa/runtime/Store;
+	public final fun addTag ([Luk/shusek/krwa/runtime/ImportTag;)Luk/shusek/krwa/runtime/Store;
+	public final fun getFunctions ()Ljava/util/LinkedHashMap;
+	public final fun getGlobals ()Ljava/util/LinkedHashMap;
+	public final fun getMemories ()Ljava/util/LinkedHashMap;
+	public final fun getTables ()Ljava/util/LinkedHashMap;
+	public final fun getTags ()Ljava/util/LinkedHashMap;
+	public final fun instantiate (Ljava/lang/String;Lkotlin/jvm/functions/Function1;)Luk/shusek/krwa/runtime/Instance;
+	public final fun instantiate (Ljava/lang/String;Luk/shusek/krwa/wasm/WasmModule;)Luk/shusek/krwa/runtime/Instance;
+	public final fun register (Ljava/lang/String;Luk/shusek/krwa/runtime/Instance;)Luk/shusek/krwa/runtime/Store;
+	public final fun toImportValues ()Luk/shusek/krwa/runtime/ImportValues;
+}
+
+public final class uk/shusek/krwa/runtime/Store$QualifiedName {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;)Luk/shusek/krwa/runtime/Store$QualifiedName;
+	public static synthetic fun copy$default (Luk/shusek/krwa/runtime/Store$QualifiedName;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Luk/shusek/krwa/runtime/Store$QualifiedName;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public class uk/shusek/krwa/runtime/TableInstance {
+	public fun <init> (Luk/shusek/krwa/wasm/types/Table;I)V
+	public final fun elementType ()Luk/shusek/krwa/wasm/types/ValType;
+	public final fun grow (IILuk/shusek/krwa/runtime/Instance;)I
+	public final fun instance (I)Luk/shusek/krwa/runtime/Instance;
+	public final fun limits ()Luk/shusek/krwa/wasm/types/TableLimits;
+	public final fun ref (I)I
+	public final fun requiredRef (I)I
+	public final fun reset ()V
+	public final fun setRef (IILuk/shusek/krwa/runtime/Instance;)V
+	public final fun size ()I
+}
+
+public class uk/shusek/krwa/runtime/TagInstance {
+	public fun <init> (Luk/shusek/krwa/wasm/types/TagType;)V
+	public fun <init> (Luk/shusek/krwa/wasm/types/TagType;Luk/shusek/krwa/wasm/types/FunctionType;)V
+	public final fun setType (Luk/shusek/krwa/wasm/types/FunctionType;)V
+	public final fun tagType ()Luk/shusek/krwa/wasm/types/TagType;
+	public final fun type ()Luk/shusek/krwa/wasm/types/FunctionType;
+}
+
+public class uk/shusek/krwa/runtime/TrapException : uk/shusek/krwa/wasm/WasmEngineException {
+	public fun <init> (Ljava/lang/String;)V
+}
+
+public final class uk/shusek/krwa/runtime/WasmArray : uk/shusek/krwa/runtime/WasmGcRef {
+	public fun <init> (I[B)V
+	public fun <init> (I[J)V
+	public fun <init> (I[S)V
+	public final fun elements ()[J
+	public final fun get (I)J
+	public final fun length ()I
+	public final fun set (IJ)V
+	public fun typeIdx ()I
+}
+
+public class uk/shusek/krwa/runtime/WasmException : java/lang/RuntimeException {
+	public fun <init> (Luk/shusek/krwa/runtime/Instance;I[J)V
+	public final fun args ()[J
+	public final fun instance ()Luk/shusek/krwa/runtime/Instance;
+	public final fun tagIdx ()I
+}
+
+public abstract interface class uk/shusek/krwa/runtime/WasmExecutionPolicy {
+}
+
+public final class uk/shusek/krwa/runtime/WasmExecutionPolicy$Automatic : uk/shusek/krwa/runtime/WasmExecutionPolicy {
+	public fun <init> ()V
+	public fun <init> (Ljava/lang/Long;)V
+	public synthetic fun <init> (Ljava/lang/Long;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/Long;
+	public final fun copy (Ljava/lang/Long;)Luk/shusek/krwa/runtime/WasmExecutionPolicy$Automatic;
+	public static synthetic fun copy$default (Luk/shusek/krwa/runtime/WasmExecutionPolicy$Automatic;Ljava/lang/Long;ILjava/lang/Object;)Luk/shusek/krwa/runtime/WasmExecutionPolicy$Automatic;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getMaxMemoryBytes ()Ljava/lang/Long;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/runtime/WasmExecutionPolicy$HostWebAssembly : uk/shusek/krwa/runtime/WasmExecutionPolicy {
+	public fun <init> ()V
+	public fun <init> (Ljava/lang/Long;)V
+	public synthetic fun <init> (Ljava/lang/Long;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/Long;
+	public final fun copy (Ljava/lang/Long;)Luk/shusek/krwa/runtime/WasmExecutionPolicy$HostWebAssembly;
+	public static synthetic fun copy$default (Luk/shusek/krwa/runtime/WasmExecutionPolicy$HostWebAssembly;Ljava/lang/Long;ILjava/lang/Object;)Luk/shusek/krwa/runtime/WasmExecutionPolicy$HostWebAssembly;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getMaxMemoryBytes ()Ljava/lang/Long;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/runtime/WasmExecutionPolicy$Wasmtime : uk/shusek/krwa/runtime/WasmExecutionPolicy {
+	public fun <init> (Luk/shusek/krwa/runtime/WasmtimeExecutionConfig;)V
+	public final fun component1 ()Luk/shusek/krwa/runtime/WasmtimeExecutionConfig;
+	public final fun copy (Luk/shusek/krwa/runtime/WasmtimeExecutionConfig;)Luk/shusek/krwa/runtime/WasmExecutionPolicy$Wasmtime;
+	public static synthetic fun copy$default (Luk/shusek/krwa/runtime/WasmExecutionPolicy$Wasmtime;Luk/shusek/krwa/runtime/WasmtimeExecutionConfig;ILjava/lang/Object;)Luk/shusek/krwa/runtime/WasmExecutionPolicy$Wasmtime;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getConfig ()Luk/shusek/krwa/runtime/WasmtimeExecutionConfig;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/runtime/WasmExternRef : uk/shusek/krwa/runtime/WasmGcRef {
+	public fun <init> (J)V
+	public fun typeIdx ()I
+	public final fun value ()J
+}
+
+public abstract interface class uk/shusek/krwa/runtime/WasmFunctionHandle {
+	public abstract fun apply (Luk/shusek/krwa/runtime/Instance;[J)[J
+}
+
+public final class uk/shusek/krwa/runtime/WasmFunctionHandleKt {
+	public static final fun apply (Luk/shusek/krwa/runtime/WasmFunctionHandle;Luk/shusek/krwa/runtime/Instance;[J)[J
+}
+
+public abstract interface class uk/shusek/krwa/runtime/WasmGcRef {
+	public abstract fun typeIdx ()I
+}
+
+public final class uk/shusek/krwa/runtime/WasmI31Ref : uk/shusek/krwa/runtime/WasmGcRef {
+	public fun <init> (I)V
+	public fun typeIdx ()I
+	public final fun value ()I
+}
+
+public class uk/shusek/krwa/runtime/WasmInterruptedException : uk/shusek/krwa/wasm/WasmEngineException {
+	public fun <init> (Ljava/lang/String;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/Throwable;)V
+	public fun <init> (Ljava/lang/Throwable;)V
+}
+
+public class uk/shusek/krwa/runtime/WasmRuntimeException : uk/shusek/krwa/wasm/WasmEngineException {
+	public fun <init> (Ljava/lang/String;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/Throwable;)V
+	public fun <init> (Ljava/lang/Throwable;)V
+}
+
+public final class uk/shusek/krwa/runtime/WasmStruct : uk/shusek/krwa/runtime/WasmGcRef {
+	public fun <init> (I[J)V
+	public final fun field (I)J
+	public final fun fieldCount ()I
+	public final fun setField (IJ)V
+	public fun typeIdx ()I
+}
+
+public final class uk/shusek/krwa/runtime/WasmtimeExecutionConfig {
+	public fun <init> ()V
+	public fun <init> (Ljava/lang/String;[BJJJJJJJ)V
+	public synthetic fun <init> (Ljava/lang/String;[BJJJJJJJILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()[B
+	public final fun component3 ()J
+	public final fun component4 ()J
+	public final fun component5 ()J
+	public final fun component6 ()J
+	public final fun component7 ()J
+	public final fun component8 ()J
+	public final fun component9 ()J
+	public final fun copy (Ljava/lang/String;[BJJJJJJJ)Luk/shusek/krwa/runtime/WasmtimeExecutionConfig;
+	public static synthetic fun copy$default (Luk/shusek/krwa/runtime/WasmtimeExecutionConfig;Ljava/lang/String;[BJJJJJJJILjava/lang/Object;)Luk/shusek/krwa/runtime/WasmtimeExecutionConfig;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getMaxFuel ()J
+	public final fun getMaxInstances ()J
+	public final fun getMaxMemories ()J
+	public final fun getMaxMemoryBytes ()J
+	public final fun getMaxTableElements ()J
+	public final fun getMaxTables ()J
+	public final fun getMaxWasmStackBytes ()J
+	public final fun getPrecompiledModuleBytes ()[B
+	public final fun getTarget ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/runtime/WasmtimeExecutionConfigKt {
+	public static final field DefaultWasmtimeCoreMaxInstances J
+	public static final field DefaultWasmtimeCoreMaxMemories J
+	public static final field DefaultWasmtimeCoreMaxTables J
+	public static final field DefaultWasmtimeMaxMemoryBytes J
+	public static final field DefaultWasmtimeMaxWasmStackBytes J
+	public static final field WasmtimeNativeTarget Ljava/lang/String;
+	public static final field WasmtimePulleyTarget Ljava/lang/String;
+	public static final field WasmtimeUnlimitedResourceLimit J
+}
+
+public final class uk/shusek/krwa/runtime/WasmtimeModuleCompilerBuildIdentityKt {
+	public static final field WasmtimeModuleCompilerBuildIdentity Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/runtime/WasmtimePreview3ComponentConfig {
+	public fun <init> (Ljava/lang/String;[BLjava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/util/Map;Luk/shusek/krwa/runtime/WasmtimePreview3NetworkPolicy;JJJJJJJJ)V
+	public synthetic fun <init> (Ljava/lang/String;[BLjava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/util/Map;Luk/shusek/krwa/runtime/WasmtimePreview3NetworkPolicy;JJJJJJJJILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/lang/String;[BLjava/util/List;Ljava/util/List;Ljava/util/Map;Luk/shusek/krwa/runtime/WasmtimePreview3NetworkPolicy;JJJJJJJJ)V
+	public synthetic fun <init> (Ljava/lang/String;[BLjava/util/List;Ljava/util/List;Ljava/util/Map;Luk/shusek/krwa/runtime/WasmtimePreview3NetworkPolicy;JJJJJJJJILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component10 ()J
+	public final fun component11 ()J
+	public final fun component12 ()J
+	public final fun component13 ()J
+	public final fun component14 ()J
+	public final fun component2 ()[B
+	public final fun component3 ()Ljava/util/List;
+	public final fun component4 ()Ljava/util/List;
+	public final fun component5 ()Ljava/util/Map;
+	public final fun component6 ()Luk/shusek/krwa/runtime/WasmtimePreview3NetworkPolicy;
+	public final fun component7 ()J
+	public final fun component8 ()J
+	public final fun component9 ()J
+	public final fun copy (Ljava/lang/String;[BLjava/util/List;Ljava/util/List;Ljava/util/Map;Luk/shusek/krwa/runtime/WasmtimePreview3NetworkPolicy;JJJJJJJJ)Luk/shusek/krwa/runtime/WasmtimePreview3ComponentConfig;
+	public static synthetic fun copy$default (Luk/shusek/krwa/runtime/WasmtimePreview3ComponentConfig;Ljava/lang/String;[BLjava/util/List;Ljava/util/List;Ljava/util/Map;Luk/shusek/krwa/runtime/WasmtimePreview3NetworkPolicy;JJJJJJJJILjava/lang/Object;)Luk/shusek/krwa/runtime/WasmtimePreview3ComponentConfig;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getArguments ()Ljava/util/List;
+	public final fun getEnvironment ()Ljava/util/Map;
+	public final fun getExecutionTimeoutMillis ()J
+	public final fun getGuestPreopenRoot ()Ljava/lang/String;
+	public final fun getHostPreopenRoot ()Ljava/lang/String;
+	public final fun getMaxFuel ()J
+	public final fun getMaxInstances ()J
+	public final fun getMaxMemories ()J
+	public final fun getMaxMemoryBytes ()J
+	public final fun getMaxTableElements ()J
+	public final fun getMaxTables ()J
+	public final fun getMaxWasmStackBytes ()J
+	public final fun getNetworkPolicy ()Luk/shusek/krwa/runtime/WasmtimePreview3NetworkPolicy;
+	public final fun getPrecompiledComponentBytes ()[B
+	public final fun getPreopens ()Ljava/util/List;
+	public final fun getTarget ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/runtime/WasmtimePreview3ExecutionCancellation : java/lang/AutoCloseable {
+	public fun <init> ()V
+	public final fun cancel ()V
+	public fun close ()V
+	public final fun isCancellationRequested ()Z
+}
+
+public final class uk/shusek/krwa/runtime/WasmtimePreview3NetworkPolicy {
+	public fun <init> ()V
+	public fun <init> (Ljava/util/List;Ljava/util/List;Z)V
+	public synthetic fun <init> (Ljava/util/List;Ljava/util/List;ZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/util/List;
+	public final fun component2 ()Ljava/util/List;
+	public final fun component3 ()Z
+	public final fun copy (Ljava/util/List;Ljava/util/List;Z)Luk/shusek/krwa/runtime/WasmtimePreview3NetworkPolicy;
+	public static synthetic fun copy$default (Luk/shusek/krwa/runtime/WasmtimePreview3NetworkPolicy;Ljava/util/List;Ljava/util/List;ZILjava/lang/Object;)Luk/shusek/krwa/runtime/WasmtimePreview3NetworkPolicy;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAllowPrivateNetwork ()Z
+	public final fun getAllowedHosts ()Ljava/util/List;
+	public final fun getBlockedHosts ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/runtime/WasmtimePreview3Preopen {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Z)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;ZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Z
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Z)Luk/shusek/krwa/runtime/WasmtimePreview3Preopen;
+	public static synthetic fun copy$default (Luk/shusek/krwa/runtime/WasmtimePreview3Preopen;Ljava/lang/String;Ljava/lang/String;ZILjava/lang/Object;)Luk/shusek/krwa/runtime/WasmtimePreview3Preopen;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getGuestRoot ()Ljava/lang/String;
+	public final fun getHostRoot ()Ljava/lang/String;
+	public final fun getWritable ()Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/runtime/WasmtimePulleyExecution : uk/shusek/krwa/runtime/PlatformInstanceExecution {
+	public fun close ()V
+	public static fun componentWasiUnavailableReason ()Ljava/lang/String;
+	public static fun create (Luk/shusek/krwa/wasm/WasmModule;Luk/shusek/krwa/runtime/ImportValues;Luk/shusek/krwa/runtime/Instance;)Luk/shusek/krwa/runtime/PlatformInstanceExecution;
+	public static fun create (Luk/shusek/krwa/wasm/WasmModule;Luk/shusek/krwa/runtime/ImportValues;Luk/shusek/krwa/runtime/Instance;Ljava/lang/String;[B)Luk/shusek/krwa/runtime/PlatformInstanceExecution;
+	public static fun create (Luk/shusek/krwa/wasm/WasmModule;Luk/shusek/krwa/runtime/ImportValues;Luk/shusek/krwa/runtime/Instance;Ljava/lang/String;[BJJJJJJJ)Luk/shusek/krwa/runtime/PlatformInstanceExecution;
+	public fun export (Ljava/lang/String;)Luk/shusek/krwa/runtime/ExportFunction;
+	public fun exportType (Ljava/lang/String;)Luk/shusek/krwa/wasm/types/FunctionType;
+	public fun getBackend ()Luk/shusek/krwa/runtime/ExecutionBackend;
+	public fun memory (I)Luk/shusek/krwa/runtime/Memory;
+	public fun memory (Ljava/lang/String;)Luk/shusek/krwa/runtime/Memory;
+	public static fun preview3CommandRunUnavailableReason ([B[Ljava/lang/String;[Ljava/lang/String;[Z[Ljava/lang/String;[Ljava/lang/String;[Ljava/lang/String;[Ljava/lang/String;[Ljava/lang/String;ZLjava/lang/String;JJJJJJJJ)Ljava/lang/String;
+	public static fun preview3ComponentCall0UnavailableReason ([B[Ljava/lang/String;[Ljava/lang/String;[Z[Ljava/lang/String;[Ljava/lang/String;[Ljava/lang/String;[Ljava/lang/String;[Ljava/lang/String;ZLjava/lang/String;Ljava/lang/String;JJJJJJJ)Ljava/lang/String;
+	public static fun preview3ComponentCallS32UnavailableReason ([B[Ljava/lang/String;[Ljava/lang/String;[Z[Ljava/lang/String;[Ljava/lang/String;[Ljava/lang/String;[Ljava/lang/String;[Ljava/lang/String;ZLjava/lang/String;Ljava/lang/String;IIJJJJJJJ)Ljava/lang/String;
+	public static fun preview3ComponentCallString ([B[Ljava/lang/String;[Ljava/lang/String;[Z[Ljava/lang/String;[Ljava/lang/String;[Ljava/lang/String;[Ljava/lang/String;[Ljava/lang/String;ZLjava/lang/String;Ljava/lang/String;Ljava/lang/String;JJJJJJJJ)Ljava/lang/String;
+	public static fun preview3ComponentCallString ([B[Ljava/lang/String;[Ljava/lang/String;[Z[Ljava/lang/String;[Ljava/lang/String;[Ljava/lang/String;[Ljava/lang/String;[Ljava/lang/String;ZLjava/lang/String;Ljava/lang/String;Ljava/lang/String;JJJJJJJJJ)Ljava/lang/String;
+	public static fun preview3ComponentCallStringUnavailableReason ([B[Ljava/lang/String;[Ljava/lang/String;[Z[Ljava/lang/String;[Ljava/lang/String;[Ljava/lang/String;[Ljava/lang/String;[Ljava/lang/String;ZLjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JJJJJJJ)Ljava/lang/String;
+	public static fun preview3ComponentUnavailableReason ([B[Ljava/lang/String;[Ljava/lang/String;[Z[Ljava/lang/String;[Ljava/lang/String;[Ljava/lang/String;[Ljava/lang/String;[Ljava/lang/String;ZLjava/lang/String;JJJJJJJ)Ljava/lang/String;
+	public static fun preview3ExecutionCancellationCancel (J)V
+	public static fun preview3ExecutionCancellationCreate ()J
+	public static fun preview3ExecutionCancellationFree (J)V
+	public static fun preview3ExecutionCancellationIsCancelled (J)Z
+	public static fun unavailableReason ()Ljava/lang/String;
+	public static fun unavailableReason (Ljava/lang/String;)Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/runtime/alloc/DefaultMemAllocStrategy : uk/shusek/krwa/runtime/alloc/MemAllocStrategy {
+	public fun <init> (I)V
+	public fun initial (I)I
+	public fun next (II)I
+}
+
+public final class uk/shusek/krwa/runtime/alloc/ExactMemAllocStrategy : uk/shusek/krwa/runtime/alloc/MemAllocStrategy {
+	public fun <init> ()V
+	public fun initial (I)I
+	public fun next (II)I
+}
+
+public abstract interface class uk/shusek/krwa/runtime/alloc/MemAllocStrategy {
+	public abstract fun initial (I)I
+	public abstract fun next (II)I
+}
+
+public class uk/shusek/krwa/runtime/internal/GcRefStore {
+	public static final field Companion Luk/shusek/krwa/runtime/internal/GcRefStore$Companion;
+	public static final field ID_OFFSET I
+	public fun <init> (Luk/shusek/krwa/runtime/Instance;)V
+	public final fun get (I)Luk/shusek/krwa/runtime/WasmGcRef;
+	public final fun getUnchecked (I)Luk/shusek/krwa/runtime/WasmGcRef;
+	public final fun put (Luk/shusek/krwa/runtime/WasmGcRef;)I
+	public final fun safePoint ()V
+}
+
+public final class uk/shusek/krwa/runtime/internal/GcRefStore$Companion {
+	public final fun isGcRefId (J)Z
+}
+

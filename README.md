@@ -10,7 +10,7 @@ variants are compiled for Java 25.
 ## Project Status
 
 This project is experimental and under active development. Every push to `main`
-publishes `0.3.0-SNAPSHOT` artifacts for evaluation and integration work;
+publishes immutable `0.3.0-dev.<12-character-commit>` artifacts for evaluation and integration work;
 production use [should wait](https://youtube.com/shorts/xODPOxVDzFE) for
 reviewed releases and pinned versions. Public APIs in experimental modules may
 change while the Kotlin Multiplatform and Component Model surfaces settle. If
@@ -53,7 +53,7 @@ Use the BOM and add the runtime:
 
 ```kotlin
 // build.gradle.kts
-val runtimeVersion = "0.3.0-SNAPSHOT"
+val runtimeVersion = "0.3.0-dev.<12-character-commit>"
 
 dependencies {
     implementation(platform("uk.shusek.krwa:bom:$runtimeVersion"))
