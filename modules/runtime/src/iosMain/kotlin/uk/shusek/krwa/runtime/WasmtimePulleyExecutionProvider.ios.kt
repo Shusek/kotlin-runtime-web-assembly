@@ -83,7 +83,7 @@ private object IosPulleyExecutionProvider : PulleyExecutionProvider {
         } ?: ExecutionBackendAvailability(available = true)
 
     override fun create(module: WasmModule, imports: ImportValues, hostInstance: Instance): PlatformInstanceExecution {
-        val config = WasmtimeExecutionRegistry.configFor(module) ?: WasmtimeExecutionConfig()
+        val config = hostInstance.wasmtimeExecutionConfig() ?: WasmtimeExecutionConfig()
         wasmtimeTargetUnavailableReason(config.target)?.let { reason ->
             throw WasmEngineException(reason)
         }
@@ -188,6 +188,10 @@ private class IosWasmtimePulleyExecution(
     override fun memory(index: Int): Memory? =
         if (index in 0 until memoriesByIndex.size) memoriesByIndex[index] else null
 
+    override fun close() {
+        handleGuard.close()
+    }
+
     private fun bindExportedMemories() {
         for (i in 0 until module.exportSection().exportCount()) {
             val export = module.exportSection().getExport(i)
@@ -266,11 +270,22 @@ private object IosHostCallbacks {
     }
 }
 
-private class IosNativeHandleGuard(private val nativeHandle: Long, private val callbackIds: LongArray) {
-    @Suppress("deprecation")
-    protected fun finalize() {
+private class IosNativeHandleGuard(
+    private val nativeHandle: Long,
+    private val callbackIds: LongArray,
+) : AutoCloseable {
+    private var closed: Boolean = false
+
+    override fun close() {
+        if (closed) return
+        closed = true
         krwa_pulley_destroy(nativeHandle)
         IosHostCallbacks.unregister(callbackIds)
+    }
+
+    @Suppress("deprecation")
+    protected fun finalize() {
+        close()
     }
 }
 

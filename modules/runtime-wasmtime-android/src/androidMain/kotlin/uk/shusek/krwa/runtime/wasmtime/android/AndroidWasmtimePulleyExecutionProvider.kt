@@ -3,6 +3,7 @@
 package uk.shusek.krwa.runtime.wasmtime.android
 
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 import uk.shusek.krwa.runtime.ExecutionBackend
 import uk.shusek.krwa.runtime.ExecutionBackendAvailability
@@ -19,7 +20,6 @@ import uk.shusek.krwa.runtime.WasmFunctionHandle
 import uk.shusek.krwa.runtime.WasmtimeExecutionConfig
 import uk.shusek.krwa.runtime.WasmtimeNativeTarget
 import uk.shusek.krwa.runtime.WasmtimePulleyTarget
-import uk.shusek.krwa.runtime.wasmtimeExecutionConfigFor
 import uk.shusek.krwa.wasm.InvalidException
 import uk.shusek.krwa.wasm.UnlinkableException
 import uk.shusek.krwa.wasm.WasmEngineException
@@ -39,7 +39,7 @@ private object AndroidPulleyExecutionProvider : PulleyExecutionProvider {
         } ?: ExecutionBackendAvailability(available = true)
 
     override fun create(module: WasmModule, imports: ImportValues, hostInstance: Instance): PlatformInstanceExecution {
-        val config = wasmtimeExecutionConfigFor(module) ?: androidWasmtimePropertyConfig()
+        val config = hostInstance.wasmtimeExecutionConfig() ?: androidWasmtimePropertyConfig()
         val unavailableReason = androidWasmtimeTargetUnavailableReason(config.target)
         if (unavailableReason != null) {
             throw WasmEngineException(unavailableReason)
@@ -146,6 +146,10 @@ private class AndroidWasmtimePulleyExecution(
     override fun memory(index: Int): Memory? =
         if (index in 0 until memoriesByIndex.size) memoriesByIndex[index] else null
 
+    override fun close() {
+        handleGuard.close()
+    }
+
     private fun bindExportedMemories() {
         for (i in 0 until module.exportSection().exportCount()) {
             val export = module.exportSection().getExport(i)
@@ -231,11 +235,21 @@ private object AndroidHostCallbacks {
     }
 }
 
-private class AndroidNativeHandleGuard(private val nativeHandle: Long, private val callbackIds: LongArray) {
-    @Suppress("deprecation")
-    protected fun finalize() {
+private class AndroidNativeHandleGuard(
+    private val nativeHandle: Long,
+    private val callbackIds: LongArray,
+) : AutoCloseable {
+    private val closed = AtomicBoolean(false)
+
+    override fun close() {
+        if (!closed.compareAndSet(false, true)) return
         AndroidWasmtimePulleyNative.destroy(nativeHandle)
         AndroidHostCallbacks.unregister(callbackIds)
+    }
+
+    @Suppress("deprecation")
+    protected fun finalize() {
+        close()
     }
 }
 

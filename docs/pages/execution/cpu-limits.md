@@ -36,17 +36,20 @@ instantiation and execution. `maxFuel` enables Wasmtime fuel metering for guest
 Wasm instructions:
 
 ```kotlin
-configureWasmtimeExecution(
-    module,
-    WasmtimeExecutionConfig(
-        maxMemoryBytes = 64L * 1024L * 1024L,
-        maxWasmStackBytes = 256L * 1024L,
-        maxInstances = 1,
-        maxTables = 32,
-        maxMemories = 4,
-        maxFuel = 5_000_000,
-    ),
-)
+val instance =
+    Instance.builder(module)
+        .withExecutionBackend(ExecutionBackend.PULLEY)
+        .withWasmtimeExecutionConfig(
+            WasmtimeExecutionConfig(
+                maxMemoryBytes = 64L * 1024L * 1024L,
+                maxWasmStackBytes = 256L * 1024L,
+                maxInstances = 1,
+                maxTables = 32,
+                maxMemories = 4,
+                maxFuel = 5_000_000,
+            ),
+        )
+        .build()
 ```
 
 Fuel is a store budget, not a wall-clock timer. A module can be instantiated and

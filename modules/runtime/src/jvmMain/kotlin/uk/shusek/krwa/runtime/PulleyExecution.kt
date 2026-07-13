@@ -43,7 +43,7 @@ internal actual object PulleyExecution {
         imports: ImportValues,
         hostInstance: Instance,
     ): PlatformInstanceExecution {
-        val config = WasmtimeExecutionRegistry.configFor(module) ?: WasmtimeExecutionConfig()
+        val config = hostInstance.wasmtimeExecutionConfig() ?: WasmtimeExecutionConfig()
         val type = wasmtimePulleyExecutionClass()
         val method = type.getDeclaredMethod(
             "create",

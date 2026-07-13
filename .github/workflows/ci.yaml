@@ -78,6 +78,24 @@ jobs:
         env:
           GRADLE_OPTS: "-ea"
 
+      - name: Verify Android Wasmtime runtime artifact
+        run: >-
+          ./gradlew --no-daemon
+          :runtime-wasmtime-android:check
+          :runtime-wasmtime-android:bundleAndroidMainAar
+          :runtime-wasmtime-android:verifyAndroidJniLib16KbAlignment
+        env:
+          GRADLE_OPTS: "-ea"
+
+      - name: Inspect Android Wasmtime runtime artifact
+        run: |
+          set -euo pipefail
+          aar=modules/runtime-wasmtime-android/build/outputs/aar/runtime-wasmtime-android.aar
+          unzip -p "$aar" proguard.txt | grep -F AndroidWasmtimePulleyNative
+          unzip -p "$aar" classes.jar > /tmp/runtime-wasmtime-android-classes.jar
+          unzip -l /tmp/runtime-wasmtime-android-classes.jar | grep -F META-INF/LICENSE-WASMTIME
+          unzip -l /tmp/runtime-wasmtime-android-classes.jar | grep -F META-INF/THIRD-PARTY.txt
+
   docs:
     name: Documentation
     runs-on: ubuntu-latest

@@ -485,15 +485,17 @@ kotlin {
         compileSdk = libs.versions.android.compileSdk.get().toInt()
         minSdk = androidMinSdk
 
+        optimization {
+            consumerKeepRules.apply {
+                publish = true
+                file("consumer-rules.pro")
+            }
+        }
+
         withDeviceTest {
             instrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         }
         withHostTest {}
-        packaging {
-            resources {
-                excludes += "/THIRD-PARTY.txt"
-            }
-        }
     }
 
     sourceSets.named("androidMain") {

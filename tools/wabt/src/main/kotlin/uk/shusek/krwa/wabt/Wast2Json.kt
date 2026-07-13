@@ -63,6 +63,7 @@ private constructor(
                                         .build()
 
                                 Instance.builder(RUNTIME.module)
+                                    .withWasmtimeExecutionConfig(RUNTIME.executionConfig)
                                     .withImportValues(imports)
                                     .build()
                             }

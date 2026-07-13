@@ -81,6 +81,7 @@ class Wat2Wasm private constructor() {
                                                     .addFunction(*wasi.toHostFunctions())
                                                     .build()
                                             Instance.builder(RUNTIME.module)
+                                                .withWasmtimeExecutionConfig(RUNTIME.executionConfig)
                                                 .withImportValues(imports)
                                                 .build()
                                         }

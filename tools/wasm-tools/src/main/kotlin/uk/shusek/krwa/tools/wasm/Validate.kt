@@ -137,6 +137,7 @@ class Validate private constructor(private val features: List<String>) {
 
                                     try {
                                         Instance.builder(WasmToolsRuntime.module)
+                                            .withWasmtimeExecutionConfig(WasmToolsRuntime.executionConfig)
                                             .withImportValues(imports)
                                             .build()
                                     } catch (e: WasiExitException) {

@@ -8,8 +8,6 @@ import uk.shusek.krwa.runtime.ImportValues
 import uk.shusek.krwa.runtime.Instance
 import uk.shusek.krwa.runtime.Memory
 import uk.shusek.krwa.runtime.WasmtimeExecutionConfig
-import uk.shusek.krwa.runtime.configureWasmtimeExecution
-import uk.shusek.krwa.runtime.wasmtimeExecutionConfigFor
 import uk.shusek.krwa.wasm.InvalidException
 import uk.shusek.krwa.wasm.WasmModule
 import uk.shusek.krwa.wasm.WasmParser
@@ -27,7 +25,7 @@ private constructor(
     private val world: WitPackage.WorldDeclaration,
     private val instance: Instance,
     exports: Map<String, CanonicalAbi.BoundFunction>,
-) : WasiComponentInvoker {
+) : WasiComponentInvoker, AutoCloseable {
     private val exportsByName: Map<String, CanonicalAbi.BoundFunction> =
         LinkedHashMap(exports).toMap()
 
@@ -36,6 +34,10 @@ private constructor(
     fun world(): WitPackage.WorldDeclaration = world
 
     fun instance(): Instance = instance
+
+    override fun close() {
+        instance.close()
+    }
 
     override fun call(exportName: String, vararg args: Any?): Any? {
         val export =
@@ -67,6 +69,7 @@ private constructor(
         private var component: WasmPluginUnbundledComponent? = null
         private var executionBackend: ExecutionBackend? = null
         private var maxMemoryPages: Int? = null
+        private var wasmtimeExecutionConfig: WasmtimeExecutionConfig? = null
         private val rawHostFunctions = ArrayList<ImportFunction>()
 
         fun withWorld(worldName: String?): Builder {
@@ -101,6 +104,11 @@ private constructor(
                 }
             }
             maxMemoryPages = maxPages
+            return this
+        }
+
+        fun withWasmtimeExecutionConfig(config: WasmtimeExecutionConfig?): Builder {
+            wasmtimeExecutionConfig = config
             return this
         }
 
@@ -219,21 +227,26 @@ private constructor(
             }
             val instanceBuilder = Instance.builder(selectedModule).withImportValues(imports)
             executionBackend?.let { instanceBuilder.withExecutionBackend(it) }
+            var selectedWasmtimeConfig = wasmtimeExecutionConfig
             maxMemoryPages?.let { maxPages ->
                 if (executionBackend == ExecutionBackend.NATIVE) {
                     instanceBuilder.withMemoryLimits(selectedModule.cappedFirstMemoryLimits(maxPages))
                 } else {
-                    val currentConfig = wasmtimeExecutionConfigFor(selectedModule) ?: WasmtimeExecutionConfig()
-                    configureWasmtimeExecution(
-                        selectedModule,
-                        currentConfig.copy(maxMemoryBytes = maxPages.toLong() * Memory.PAGE_SIZE.toLong()),
-                    )
+                    val currentConfig = selectedWasmtimeConfig ?: WasmtimeExecutionConfig()
+                    selectedWasmtimeConfig =
+                        currentConfig.copy(maxMemoryBytes = maxPages.toLong() * Memory.PAGE_SIZE.toLong())
                 }
             }
+            instanceBuilder.withWasmtimeExecutionConfig(selectedWasmtimeConfig)
             val instance = instanceBuilder.build()
-            runGuestInitializers(selectedModule, instance)
-            val exports = bindExports(world, instance)
-            return WasmPlugin(witPackage, world, instance, exports)
+            try {
+                runGuestInitializers(selectedModule, instance)
+                val exports = bindExports(world, instance)
+                return WasmPlugin(witPackage, world, instance, exports)
+            } catch (failure: Throwable) {
+                instance.close()
+                throw failure
+            }
         }
 
         private fun selectWorld(): WitPackage.WorldDeclaration {
