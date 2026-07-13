@@ -116,6 +116,43 @@ class WasmModuleTest {
     }
 
     @Test
+    fun shouldKeepPulleyConfigPerInstanceAndCloseExecutionOnce() {
+        val propertyName = "java.runtime.name"
+        val previousRuntimeName = System.getProperty(propertyName)
+        val provider = MockPulleyProvider()
+        val previousProvider = PulleyExecutionProviders.install(provider)
+        System.setProperty(propertyName, "Android Runtime")
+        try {
+            val firstConfig = WasmtimeExecutionConfig(maxFuel = 11)
+            val secondConfig = WasmtimeExecutionConfig(maxFuel = 22)
+            val module = loadModule("compiled/add.wat.wasm")
+            val first =
+                Instance.builder(module)
+                    .withExecutionBackend(ExecutionBackend.PULLEY)
+                    .withWasmtimeExecutionConfig(firstConfig)
+                    .build()
+            val second =
+                Instance.builder(module)
+                    .withExecutionBackend(ExecutionBackend.PULLEY)
+                    .withWasmtimeExecutionConfig(secondConfig)
+                    .build()
+
+            assertEquals(listOf(firstConfig, secondConfig), provider.configs)
+            first.close()
+            first.close()
+            second.close()
+            assertEquals(2, provider.closeCalls.get())
+        } finally {
+            PulleyExecutionProviders.install(previousProvider)
+            if (previousRuntimeName == null) {
+                System.clearProperty(propertyName)
+            } else {
+                System.setProperty(propertyName, previousRuntimeName)
+            }
+        }
+    }
+
+    @Test
     fun shouldRejectUnavailableInstalledPulleyProviderOnAndroidRuntime() {
         val propertyName = "java.runtime.name"
         val previousRuntimeName = System.getProperty(propertyName)
@@ -397,35 +434,28 @@ class WasmModuleTest {
     @Test
     fun shouldSupportMemoryLimitsOverride() {
         val module = loadModule("compiled/count_vowels.rs.wasm")
-        configureWasmtimeExecution(
-            module,
-            WasmtimeExecutionConfig(maxMemoryBytes = 17L * Memory.PAGE_SIZE),
-        )
-        try {
-            val instance = Instance.builder(module).build()
-            assertThrows(TrapException::class.java) {
-                instance.export("alloc").apply(Memory.PAGE_SIZE.toLong())
+        Instance.builder(module)
+            .withWasmtimeExecutionConfig(
+                WasmtimeExecutionConfig(maxMemoryBytes = 17L * Memory.PAGE_SIZE),
+            )
+            .build()
+            .use { instance ->
+                assertThrows(TrapException::class.java) {
+                    instance.export("alloc").apply(Memory.PAGE_SIZE.toLong())
+                }
             }
-        } finally {
-            clearWasmtimeExecution(module)
-        }
     }
 
     @Test
     fun shouldTrapWhenWasmtimeFuelIsExhausted() {
         val module = loadModule("compiled/infinite-loop.c.wasm")
-        configureWasmtimeExecution(
-            module,
-            WasmtimeExecutionConfig(maxFuel = 10_000),
-        )
-        try {
-            val instance = tryBuildPulley(module) ?: return
+        val instance =
+            tryBuildPulley(module, config = WasmtimeExecutionConfig(maxFuel = 10_000)) ?: return
+        instance.use {
             val exception = assertThrows(TrapException::class.java) {
                 instance.export("run").apply()
             }
             assertTrue(exception.message.orEmpty().contains("fuel", ignoreCase = true))
-        } finally {
-            clearWasmtimeExecution(module)
         }
     }
 
@@ -995,6 +1025,8 @@ class WasmModuleTest {
 
         private class MockPulleyProvider : PulleyExecutionProvider {
             val createCalls = AtomicInteger()
+            val closeCalls = AtomicInteger()
+            val configs = ArrayList<WasmtimeExecutionConfig?>()
 
             override fun availability(): ExecutionBackendAvailability =
                 ExecutionBackendAvailability(available = true)
@@ -1005,6 +1037,7 @@ class WasmModuleTest {
                 hostInstance: Instance,
             ): PlatformInstanceExecution {
                 createCalls.incrementAndGet()
+                configs.add(hostInstance.wasmtimeExecutionConfig())
                 return object : PlatformInstanceExecution {
                     override val backend: ExecutionBackend = ExecutionBackend.PULLEY
 
@@ -1022,6 +1055,10 @@ class WasmModuleTest {
                         throw InvalidException("Unknown export with name $name")
 
                     override fun memory(index: Int): Memory? = null
+
+                    override fun close() {
+                        closeCalls.incrementAndGet()
+                    }
                 }
             }
         }
@@ -1076,11 +1113,13 @@ class WasmModuleTest {
         private fun tryBuildPulley(
             module: WasmModule,
             imports: ImportValues = ImportValues.empty(),
+            config: WasmtimeExecutionConfig? = null,
         ): Instance? =
             try {
                 Instance.builder(module)
                     .withImportValues(imports)
                     .withExecutionBackend(ExecutionBackend.PULLEY)
+                    .withWasmtimeExecutionConfig(config)
                     .build()
             } catch (e: WasmEngineException) {
                 val message = e.message ?: ""

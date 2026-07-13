@@ -39,6 +39,7 @@ import uk.shusek.krwa.wasm.types.Value
 class Instance
 private constructor(
     private val module: WasmModule,
+    private val wasmtimeExecutionConfig: WasmtimeExecutionConfig?,
     globalInitializers: Array<Global>,
     private val memories: Array<Memory>,
     private val dataSegments: Array<DataSegment>,
@@ -52,7 +53,7 @@ private constructor(
     exports: Map<String, Export>,
     initialize: Boolean,
     start: Boolean,
-) {
+) : AutoCloseable {
     private val functions: Array<FunctionBody> = functions.copyOf()
     private val globalInitializers: Array<Global> = globalInitializers.copyOf()
     private val globals: Array<GlobalInstance?> = arrayOfNulls(globalInitializers.size)
@@ -65,11 +66,21 @@ private constructor(
     private val exports: Map<String, Export> = exports
     private val fluentExports = Exports.create(this)
     private var platformExecution: PlatformInstanceExecution? = null
+    private var closed: Boolean = false
     private val exnRefs: MutableMap<Int, WasmException> = HashMap()
     private var nextExnRef: Int = 0
     private val gcRefs = GcRefStore(this)
 
     private var tailCallPending: TailCallPending? = null
+
+    fun wasmtimeExecutionConfig(): WasmtimeExecutionConfig? = wasmtimeExecutionConfig
+
+    override fun close() {
+        if (closed) return
+        closed = true
+        platformExecution?.close()
+        platformExecution = null
+    }
 
     private class TailCallPending(val funcId: Int, val args: LongArray)
 
@@ -436,6 +447,7 @@ private constructor(
         private var memoryLimits: MemoryLimits? = null
         private var importValues: ImportValues? = null
         private var executionBackend: ExecutionBackend = ExecutionBackend.AUTO
+        private var wasmtimeExecutionConfig: WasmtimeExecutionConfig? = null
 
         fun withMemoryLimits(limits: MemoryLimits): Builder {
             memoryLimits = limits
@@ -449,6 +461,11 @@ private constructor(
 
         fun withExecutionBackend(backend: ExecutionBackend): Builder {
             executionBackend = backend
+            return this
+        }
+
+        fun withWasmtimeExecutionConfig(config: WasmtimeExecutionConfig?): Builder {
+            wasmtimeExecutionConfig = config
             return this
         }
 
@@ -876,16 +893,21 @@ private constructor(
                 )
                     ?: throw WasmEngineException("${executionBackend.name.lowercase()} WebAssembly execution is not available")
             hostInstance.platformExecution = platformExecution
-            val startFunction = hostInstance.exports[START_FUNCTION_NAME]
-            if (startFunction != null) {
-                try {
-                    hostInstance.export(START_FUNCTION_NAME).apply()
-                } catch (_: ExecutionCompletedException) {
-                    // return
+            try {
+                val startFunction = hostInstance.exports[START_FUNCTION_NAME]
+                if (startFunction != null) {
+                    try {
+                        hostInstance.export(START_FUNCTION_NAME).apply()
+                    } catch (_: ExecutionCompletedException) {
+                        // return
+                    }
                 }
+                hostInstance.gcSafePoint()
+                return hostInstance
+            } catch (failure: Throwable) {
+                hostInstance.close()
+                throw failure
             }
-            hostInstance.gcSafePoint()
-            return hostInstance
         }
 
         private fun buildHostInstance(
@@ -980,6 +1002,7 @@ private constructor(
 
             return Instance(
                 module,
+                wasmtimeExecutionConfig,
                 globalInitializers,
                 memories,
                 dataSegments,

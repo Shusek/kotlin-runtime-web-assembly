@@ -19,24 +19,19 @@ class IosWasmtimeModuleCompilerTest {
 
         assertNotEquals(0, compiled.size)
 
-        configureWasmtimeExecution(
-            module = module,
-            config = WasmtimeExecutionConfig(
-                target = WasmtimePulleyTarget,
-                precompiledModuleBytes = compiled,
-            ),
-        )
-        try {
-            val instance =
-                Instance.builder(module)
-                    .withExecutionBackend(ExecutionBackend.PULLEY)
-                    .build()
-
-            assertEquals(ExecutionBackend.PULLEY, instance.executionBackend())
-            assertEquals(42, assertNotNull(instance.export("add")).apply(19, 23)[0].toInt())
-        } finally {
-            clearWasmtimeExecution(module)
-        }
+        Instance.builder(module)
+            .withExecutionBackend(ExecutionBackend.PULLEY)
+            .withWasmtimeExecutionConfig(
+                WasmtimeExecutionConfig(
+                    target = WasmtimePulleyTarget,
+                    precompiledModuleBytes = compiled,
+                ),
+            )
+            .build()
+            .use { instance ->
+                assertEquals(ExecutionBackend.PULLEY, instance.executionBackend())
+                assertEquals(42, assertNotNull(instance.export("add")).apply(19, 23)[0].toInt())
+            }
     }
 
     private companion object {

@@ -84,6 +84,7 @@ class WasmSmith private constructor() {
                                                     .build()
 
                                             Instance.builder(WasmToolsRuntime.module)
+                                                .withWasmtimeExecutionConfig(WasmToolsRuntime.executionConfig)
                                                 .withImportValues(imports)
                                                 .build()
                                         }

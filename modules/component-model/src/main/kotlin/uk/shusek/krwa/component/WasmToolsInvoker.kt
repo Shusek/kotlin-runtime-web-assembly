@@ -62,6 +62,7 @@ object WasmToolsInvoker {
                 wasi ->
                 val imports = ImportValues.builder().addFunction(*wasi.toHostFunctions()).build()
                 Instance.builder(MODULE)
+                    .withWasmtimeExecutionConfig(WasmToolsRuntime.executionConfig)
                     .withImportValues(imports)
                     .build()
             }

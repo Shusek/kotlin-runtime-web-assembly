@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import uk.shusek.krwa.wasm.InvalidException;
 import uk.shusek.krwa.wasm.UnlinkableException;
@@ -91,6 +92,7 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
     private final MemorySegment instance;
     private final Map<String, FunctionExport> functionsByName;
     private final List<Long> callbackIds;
+    private final AtomicBoolean closed = new AtomicBoolean(false);
     private final Map<String, Memory> memoriesByName = new HashMap<>();
     private final List<Memory> memoriesByIndex = new ArrayList<>();
 
@@ -1378,6 +1380,26 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
             return null;
         }
         return memoriesByIndex.get(index);
+    }
+
+    @Override
+    public void close() {
+        if (!closed.compareAndSet(false, true)) {
+            return;
+        }
+        for (long callbackId : callbackIds) {
+            HOST_CALLBACKS.remove(callbackId);
+            HOST_CALLBACK_FAILURES.remove(callbackId);
+        }
+        try {
+            api.storeDelete.invokeExact(store);
+            api.moduleDelete.invokeExact(module);
+            api.engineDelete.invokeExact(engine);
+        } catch (Throwable error) {
+            throw new WasmEngineException("failed to close Wasmtime Pulley execution", error);
+        } finally {
+            arena.close();
+        }
     }
 
     private long[] call(FunctionExport export, long[] args) {
@@ -2814,7 +2836,10 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
         private final MethodHandle configConsumeFuelSet;
         private final MethodHandle moduleNew;
         private final MethodHandle moduleDeserialize;
+        private final MethodHandle moduleDelete;
+        private final MethodHandle engineDelete;
         private final MethodHandle storeNew;
+        private final MethodHandle storeDelete;
         private final MethodHandle storeContext;
         private final MethodHandle storeLimiter;
         private final MethodHandle contextSetFuel;
@@ -2854,7 +2879,10 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
             configConsumeFuelSet = downcall(linker, lookup, "wasmtime_config_consume_fuel_set", FunctionDescriptor.ofVoid(ValueLayout.ADDRESS, C_BOOL));
             moduleNew = downcall(linker, lookup, "wasmtime_module_new", FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.JAVA_LONG, ValueLayout.ADDRESS));
             moduleDeserialize = downcall(linker, lookup, "wasmtime_module_deserialize", FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.JAVA_LONG, ValueLayout.ADDRESS));
+            moduleDelete = downcall(linker, lookup, "wasmtime_module_delete", FunctionDescriptor.ofVoid(ValueLayout.ADDRESS));
+            engineDelete = downcall(linker, lookup, "wasm_engine_delete", FunctionDescriptor.ofVoid(ValueLayout.ADDRESS));
             storeNew = downcall(linker, lookup, "wasmtime_store_new", FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.ADDRESS));
+            storeDelete = downcall(linker, lookup, "wasmtime_store_delete", FunctionDescriptor.ofVoid(ValueLayout.ADDRESS));
             storeContext = downcall(linker, lookup, "wasmtime_store_context", FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS));
             storeLimiter = downcall(linker, lookup, "wasmtime_store_limiter", FunctionDescriptor.ofVoid(ValueLayout.ADDRESS, ValueLayout.JAVA_LONG, ValueLayout.JAVA_LONG, ValueLayout.JAVA_LONG, ValueLayout.JAVA_LONG, ValueLayout.JAVA_LONG));
             contextSetFuel = downcall(linker, lookup, "wasmtime_context_set_fuel", FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.JAVA_LONG));

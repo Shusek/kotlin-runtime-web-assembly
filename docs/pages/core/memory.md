@@ -29,10 +29,13 @@ pages.
 For JVM, Android, and iOS, set Wasmtime store limits before instantiation:
 
 ```kotlin
-configureWasmtimeExecution(
-    module,
-    WasmtimeExecutionConfig(maxMemoryBytes = 64L * 1024L * 1024L),
-)
+val instance =
+    Instance.builder(module)
+        .withExecutionBackend(ExecutionBackend.PULLEY)
+        .withWasmtimeExecutionConfig(
+            WasmtimeExecutionConfig(maxMemoryBytes = 64L * 1024L * 1024L),
+        )
+        .build()
 ```
 
 `withMemoryLimits(...)` is still available for targets that can apply a

@@ -31,7 +31,7 @@ fun ExecutionBackend.isAvailable(): Boolean = availability().available
  * callback dispatch. Memory lookup by index should return `null` when the
  * platform engine cannot expose that memory to KRWA.
  */
-interface PlatformInstanceExecution {
+interface PlatformInstanceExecution : AutoCloseable {
     val backend: ExecutionBackend
 
     fun export(name: String): ExportFunction
@@ -41,4 +41,6 @@ interface PlatformInstanceExecution {
     fun memory(name: String): Memory
 
     fun memory(index: Int): Memory?
+
+    override fun close() = Unit
 }

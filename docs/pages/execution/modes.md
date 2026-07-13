@@ -44,25 +44,28 @@ Use `ExecutionBackend.PULLEY.availability()` or `.isAvailable()` before exposing
 Wasmtime as a user-selectable mode. The availability check reports the same
 platform/linking requirements that explicit `PULLEY` execution would enforce.
 
-Wasmtime execution can be configured per module before instantiation.
+Wasmtime execution can be configured per instance during instantiation.
 `WasmtimeExecutionConfig` exposes Wasmtime store and engine limits for maximum
 linear memory bytes, maximum Wasm stack bytes, table elements, instances,
 tables, memories, and guest execution fuel. Optional count limits and `maxFuel`
 use `WasmtimeUnlimitedResourceLimit` (`-1`) for unlimited:
 
 ```kotlin
-configureWasmtimeExecution(
-    module,
-    WasmtimeExecutionConfig(
-        maxMemoryBytes = 64L * 1024L * 1024L,
-        maxWasmStackBytes = 256L * 1024L,
-        maxTableElements = WasmtimeUnlimitedResourceLimit,
-        maxInstances = 1,
-        maxTables = 32,
-        maxMemories = 4,
-        maxFuel = 5_000_000,
-    ),
-)
+val instance =
+    Instance.builder(module)
+        .withExecutionBackend(ExecutionBackend.PULLEY)
+        .withWasmtimeExecutionConfig(
+            WasmtimeExecutionConfig(
+                maxMemoryBytes = 64L * 1024L * 1024L,
+                maxWasmStackBytes = 256L * 1024L,
+                maxTableElements = WasmtimeUnlimitedResourceLimit,
+                maxInstances = 1,
+                maxTables = 32,
+                maxMemories = 4,
+                maxFuel = 5_000_000,
+            ),
+        )
+        .build()
 ```
 
 Fuel is consumed only while Wasmtime executes guest Wasm instructions. Keeping an

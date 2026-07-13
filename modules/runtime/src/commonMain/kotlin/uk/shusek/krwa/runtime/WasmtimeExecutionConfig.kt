@@ -1,6 +1,5 @@
 package uk.shusek.krwa.runtime
 
-import uk.shusek.krwa.wasm.WasmModule
 
 const val WasmtimeNativeTarget: String = "native"
 
@@ -253,17 +252,6 @@ private fun validateWasmtimeResourceLimit(name: String, value: Long) {
     }
 }
 
-fun configureWasmtimeExecution(module: WasmModule, config: WasmtimeExecutionConfig) {
-    WasmtimeExecutionRegistry.register(module, config)
-}
-
-fun clearWasmtimeExecution(module: WasmModule) {
-    WasmtimeExecutionRegistry.unregister(module)
-}
-
-fun wasmtimeExecutionConfigFor(module: WasmModule): WasmtimeExecutionConfig? =
-    WasmtimeExecutionRegistry.configFor(module)
-
 expect fun wasmtimeTargetUnavailableReason(target: String): String?
 
 expect fun wasmtimePreview3ComponentUnavailableReason(config: WasmtimePreview3ComponentConfig): String?
@@ -296,17 +284,3 @@ expect fun wasmtimePreview3ComponentCallString(
 expect fun wasmtimePreview3CommandRunUnavailableReason(config: WasmtimePreview3ComponentConfig): String?
 
 expect fun installWasmtimePulleyExecutionProviderIfAvailable()
-
-internal object WasmtimeExecutionRegistry {
-    private val configsByModule = mutableMapOf<WasmModule, WasmtimeExecutionConfig>()
-
-    fun register(module: WasmModule, config: WasmtimeExecutionConfig) {
-        configsByModule[module] = config
-    }
-
-    fun unregister(module: WasmModule) {
-        configsByModule.remove(module)
-    }
-
-    fun configFor(module: WasmModule): WasmtimeExecutionConfig? = configsByModule[module]
-}
