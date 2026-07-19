@@ -1,4 +1,3 @@
-import java.net.URI
 import java.security.MessageDigest
 import org.gradle.api.plugins.BasePluginExtension
 import org.gradle.api.publish.PublishingExtension
@@ -7,6 +6,7 @@ import org.gradle.kotlin.dsl.configure
 import org.gradle.kotlin.dsl.withType
 import uk.shusek.krwa.gradle.configureKrwaPom
 import uk.shusek.krwa.gradle.configureKrwaRepositories
+import uk.shusek.krwa.gradle.prepareVerifiedReleaseDownload
 
 group = rootProject.group
 
@@ -21,6 +21,8 @@ extensions.configure<BasePluginExtension> {
 }
 
 val wasmtimePulleyVersion = libs.versions.wasmtime.get()
+val rustReleaseVersion = libs.versions.rustRelease.get()
+val rustReleaseCommitHash = libs.versions.rustReleaseCommit.get()
 val wasmtimePulleyAndroidArchiveName =
     "wasmtime-v$wasmtimePulleyVersion-aarch64-android-c-api.tar.xz"
 val wasmtimePulleyAndroidArchiveSha256 =
@@ -99,16 +101,25 @@ fun localCodexRustExecutable(name: String): File? =
 
 fun cargoBinary(): File? = executableFromEnvOrPath("CARGO", "cargo") ?: localCodexRustExecutable("cargo")
 
-fun rustupBinary(): File? = executableFromEnvOrPath("RUSTUP", "rustup") ?: localCodexRustExecutable("rustup")
-
-fun cargoStableCommand(cargo: File): List<String> {
+fun cargoReleaseCommand(cargo: File): List<String> {
     val path = cargo.absolutePath.replace('\\', '/')
     return if ("/toolchains/" in path) {
+        val toolchain = path.substringAfter("/toolchains/").substringBefore('/')
+        check(
+            toolchain == rustReleaseVersion ||
+                toolchain.startsWith("$rustReleaseVersion-")
+        ) {
+            "CARGO points to Rust toolchain '$toolchain', but release builds require " +
+                "'$rustReleaseVersion'. Use the rustup cargo proxy or the pinned toolchain directly."
+        }
         listOf(cargo.absolutePath)
     } else {
-        listOf(cargo.absolutePath, "+stable")
+        listOf(cargo.absolutePath, "+$rustReleaseVersion")
     }
 }
+
+fun cargoNetworkArguments(): List<String> =
+    if (gradle.startParameter.isOffline) listOf("--offline") else emptyList()
 
 fun localCodexRustEnvironment(): Map<String, String> =
     listOf(
@@ -199,11 +210,9 @@ val downloadWasmtimePulleyAndroidJniLib by tasks.registering {
     inputs.property("wasmtimePulleyVersion", wasmtimePulleyVersion)
     inputs.property("wasmtimePulleyAndroidArchiveSha256", wasmtimePulleyAndroidArchiveSha256)
     inputs.property("wasmtimePulleyAndroidLibSha256", wasmtimePulleyAndroidLibSha256)
-    outputs.file(wasmtimePulleyAndroidJniLib)
-    outputs.upToDateWhen {
-        val output = wasmtimePulleyAndroidJniLib.asFile
-        output.isFile && sha256(output) == wasmtimePulleyAndroidLibSha256
-    }
+    doNotTrackState(
+        "The verified Android runtime is durable local state and must survive Gradle version changes.",
+    )
 
     doLast {
         val downloadDir = layout.buildDirectory.dir("wasmtime-pulley-android").get().asFile
@@ -215,16 +224,12 @@ val downloadWasmtimePulleyAndroidJniLib by tasks.registering {
         val archiveUrl =
             "https://github.com/bytecodealliance/wasmtime/releases/download/" +
                 "v$wasmtimePulleyVersion/$wasmtimePulleyAndroidArchiveName"
-        if (!archive.isFile || sha256(archive) != wasmtimePulleyAndroidArchiveSha256) {
-            URI(archiveUrl).toURL().openStream().use { input ->
-                archive.outputStream().use { outputStream ->
-                    input.copyTo(outputStream)
-                }
-            }
-        }
-        check(sha256(archive) == wasmtimePulleyAndroidArchiveSha256) {
-            "Downloaded $wasmtimePulleyAndroidArchiveName SHA-256 mismatch"
-        }
+        prepareVerifiedReleaseDownload(
+            description = "Wasmtime $wasmtimePulleyVersion Android C API archive",
+            url = archiveUrl,
+            target = archive,
+            expectedSha256 = wasmtimePulleyAndroidArchiveSha256,
+        )
 
         extractedDir.deleteRecursively()
         extractedDir.mkdirs()
@@ -301,7 +306,9 @@ val buildKrwaPulleyAndroidJniLib by tasks.registering {
 val buildKrwaWasmtimeP3BridgeAndroidJniLib by tasks.registering {
     description = "Builds the KRWA Wasmtime Preview3 bridge for Android arm64-v8a."
     notCompatibleWithConfigurationCache("Runs cargo against the pinned Wasmtime source checkout.")
-    dependsOn(project(":runtime").tasks.named("prepareWasmtimePulleyIosSource"))
+    dependsOn(project(":runtime").tasks.named("prepareRustReleaseDependencies"))
+    inputs.property("rustReleaseVersion", rustReleaseVersion)
+    inputs.property("rustReleaseCommitHash", rustReleaseCommitHash)
     inputs.property("androidNdkVersion", androidNdkVersion)
     inputs.property("androidMinSdk", androidMinSdk)
     inputs.property("android16KbElfRustFlags", android16KbElfRustFlags)
@@ -315,7 +322,6 @@ val buildKrwaWasmtimeP3BridgeAndroidJniLib by tasks.registering {
     doLast {
         val cargo = cargoBinary()
             ?: error("cargo is required to build the Wasmtime Preview3 Android bridge. Install Rust or set CARGO.")
-        val rustup = rustupBinary()
         val ndkDir = androidNdkDirectory()
         val toolchainBin = ndkDir.resolve("toolchains/llvm/prebuilt/${androidNdkHostTag()}/bin")
         val clang = toolchainBin.resolve("aarch64-linux-android$androidMinSdk-clang")
@@ -342,24 +348,19 @@ val buildKrwaWasmtimeP3BridgeAndroidJniLib by tasks.registering {
                     "CARGO_TARGET_AARCH64_LINUX_ANDROID_AR" to ar.absolutePath,
                     "CARGO_TARGET_AARCH64_LINUX_ANDROID_RUSTFLAGS" to android16KbElfRustFlags,
                 )
-        rustup?.let { rustupBinary ->
-            runProcess(
-                listOf(rustupBinary.absolutePath, "target", "add", "aarch64-linux-android"),
-                projectDir,
-                environment,
-            )
-        }
         runProcess(
-            cargoStableCommand(cargo) + listOf(
-                "build",
-                "--release",
-                "--target",
-                "aarch64-linux-android",
-                "--manifest-path",
-                wasmtimeP3BridgeDirectory.file("Cargo.toml").asFile.absolutePath,
-                "--target-dir",
-                wasmtimeP3BridgeAndroidTargetDirectory.get().asFile.absolutePath,
-            ),
+            cargoReleaseCommand(cargo) +
+                listOf("build") +
+                cargoNetworkArguments() +
+                listOf(
+                    "--release",
+                    "--target",
+                    "aarch64-linux-android",
+                    "--manifest-path",
+                    wasmtimeP3BridgeDirectory.file("Cargo.toml").asFile.absolutePath,
+                    "--target-dir",
+                    wasmtimeP3BridgeAndroidTargetDirectory.get().asFile.absolutePath,
+                ),
             projectDir,
             environment,
         )

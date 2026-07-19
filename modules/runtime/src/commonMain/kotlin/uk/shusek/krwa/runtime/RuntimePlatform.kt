@@ -11,7 +11,7 @@ internal expect object RuntimePlatform {
         imports: ImportValues,
         backend: ExecutionBackend,
         hostInstance: Instance,
-        memoryLimits: MemoryLimits?,
+        definedMemoryLimits: Array<MemoryLimits>?,
     ): PlatformInstanceExecution?
 
     fun executionBackendAvailability(backend: ExecutionBackend): ExecutionBackendAvailability

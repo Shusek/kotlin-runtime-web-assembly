@@ -42,7 +42,7 @@ class KrwaComponentModelPluginTest {
 
         val result = GradleRunner.create()
             .withProjectDir(tempDir.toFile())
-            .withArguments("tasks", "--group", "krwa")
+            .withReleaseGateArguments("tasks", "--group", "krwa")
             .withPluginClasspath()
             .build()
 
@@ -79,7 +79,7 @@ class KrwaComponentModelPluginTest {
 
         val result = GradleRunner.create()
             .withProjectDir(tempDir.toFile())
-            .withArguments("generateKrwaKotlinWitBindings", "--stacktrace")
+            .withReleaseGateArguments("generateKrwaKotlinWitBindings", "--stacktrace")
             .withPluginClasspath()
             .build()
 
@@ -119,7 +119,7 @@ class KrwaComponentModelPluginTest {
 
         val result = GradleRunner.create()
             .withProjectDir(tempDir.toFile())
-            .withArguments("generateKrwaKotlinWitBindings", "--stacktrace")
+            .withReleaseGateArguments("generateKrwaKotlinWitBindings", "--stacktrace")
             .withPluginClasspath()
             .build()
 
@@ -163,7 +163,7 @@ class KrwaComponentModelPluginTest {
 
         val result = GradleRunner.create()
             .withProjectDir(tempDir.toFile())
-            .withArguments("generateKrwaKotlinWitBindings", "--stacktrace")
+            .withReleaseGateArguments("generateKrwaKotlinWitBindings", "--stacktrace")
             .withPluginClasspath()
             .build()
 
@@ -249,7 +249,7 @@ class KrwaComponentModelPluginTest {
 
         val result = GradleRunner.create()
             .withProjectDir(tempDir.toFile())
-            .withArguments("compileKotlinJvm", "--stacktrace")
+            .withReleaseGateArguments("compileKotlinJvm", "--stacktrace")
             .withPluginClasspath()
             .build()
 
@@ -332,7 +332,7 @@ class KrwaComponentModelPluginTest {
 
         val result = GradleRunner.create()
             .withProjectDir(tempDir.toFile())
-            .withArguments("packageKrwaComponent", "--stacktrace")
+            .withReleaseGateArguments("packageKrwaComponent", "--stacktrace")
             .withPluginClasspath()
             .build()
 
@@ -400,7 +400,7 @@ class KrwaComponentModelPluginTest {
 
         val result = GradleRunner.create()
             .withProjectDir(tempDir.toFile())
-            .withArguments("packageKrwaComponent", "--stacktrace")
+            .withReleaseGateArguments("packageKrwaComponent", "--stacktrace")
             .withPluginClasspath()
             .build()
 

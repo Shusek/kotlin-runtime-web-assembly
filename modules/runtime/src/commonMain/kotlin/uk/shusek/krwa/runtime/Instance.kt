@@ -505,6 +505,8 @@ private constructor(
         private val defaultMemoryFactory: (MemoryLimits) -> Memory,
     ) {
         private var memoryLimits: MemoryLimits? = null
+        private var memoryPolicy: WasmMemoryPolicy? = null
+        private var resolvedDefinedMemoryLimits: Array<MemoryLimits>? = null
         private var importValues: ImportValues? = null
         private var executionBackend: ExecutionBackend = ExecutionBackend.AUTO
         private var wasmtimeExecutionConfig: WasmtimeExecutionConfig? = null
@@ -515,6 +517,22 @@ private constructor(
                 "memory limits cannot be combined with an atomic execution policy"
             }
             memoryLimits = limits
+            memoryPolicy = null
+            return this
+        }
+
+        fun withMemoryPolicy(policy: WasmMemoryPolicy): Builder {
+            check(!executionPolicyApplied) {
+                "memory policy cannot be combined with an atomic execution policy"
+            }
+            memoryLimits = null
+            memoryPolicy = policy
+            val currentConfig = wasmtimeExecutionConfig ?: WasmtimeExecutionConfig()
+            wasmtimeExecutionConfig =
+                currentConfig.copy(
+                    precompiledModuleBytes = null,
+                    maxMemoryBytes = minOf(currentConfig.maxMemoryBytes, policy.maxTotalBytes),
+                )
             return this
         }
 
@@ -535,31 +553,52 @@ private constructor(
             check(!executionPolicyApplied) {
                 "Wasmtime configuration cannot be combined with an atomic execution policy"
             }
-            wasmtimeExecutionConfig = config
+            val selectedPolicy = memoryPolicy
+            wasmtimeExecutionConfig =
+                if (config != null && selectedPolicy != null) {
+                    config.copy(
+                        precompiledModuleBytes = null,
+                        maxMemoryBytes =
+                            minOf(config.maxMemoryBytes, selectedPolicy.maxTotalBytes),
+                    )
+                } else {
+                    config
+                }
             return this
         }
 
         /** Applies one complete engine and resource policy, replacing prior backend settings. */
         fun withExecutionPolicy(policy: WasmExecutionPolicy): Builder {
+            val selectedMemoryPolicy = policy.memoryPolicyOrNull()
             when (policy) {
                 is WasmExecutionPolicy.Automatic -> {
                     executionBackend = ExecutionBackend.AUTO
-                    memoryLimits = policy.maxMemoryBytes?.let(module::cappedFirstMemoryLimits)
-                    wasmtimeExecutionConfig = policy.maxMemoryBytes?.let { maxMemoryBytes ->
-                        WasmtimeExecutionConfig(maxMemoryBytes = maxMemoryBytes)
+                    memoryLimits = null
+                    memoryPolicy = selectedMemoryPolicy
+                    wasmtimeExecutionConfig = selectedMemoryPolicy?.let { selected ->
+                        WasmtimeExecutionConfig(maxMemoryBytes = selected.maxTotalBytes)
                     }
                 }
 
                 is WasmExecutionPolicy.HostWebAssembly -> {
                     executionBackend = ExecutionBackend.NATIVE
-                    memoryLimits = policy.maxMemoryBytes?.let(module::cappedFirstMemoryLimits)
+                    memoryLimits = null
+                    memoryPolicy = selectedMemoryPolicy
                     wasmtimeExecutionConfig = null
                 }
 
                 is WasmExecutionPolicy.Wasmtime -> {
                     executionBackend = ExecutionBackend.PULLEY
                     memoryLimits = null
-                    wasmtimeExecutionConfig = policy.config
+                    memoryPolicy = selectedMemoryPolicy
+                    wasmtimeExecutionConfig =
+                        selectedMemoryPolicy?.let { selected ->
+                            policy.config.copy(
+                                precompiledModuleBytes = null,
+                                maxMemoryBytes =
+                                    minOf(policy.config.maxMemoryBytes, selected.maxTotalBytes)
+                            )
+                        } ?: policy.config
                 }
             }
             executionPolicyApplied = true
@@ -983,11 +1022,11 @@ private constructor(
             try {
                 val platformExecution =
                     RuntimePlatform.createPlatformExecution(
-                        module,
+                        module.withDefinedMemoryLimits(resolvedDefinedMemoryLimits),
                         hostInstance.imports(),
                         executionBackend,
                         hostInstance,
-                        memoryLimits,
+                        resolvedDefinedMemoryLimits,
                     )
                         ?: throw WasmEngineException(
                             "${executionBackend.name.lowercase()} WebAssembly execution is not available"
@@ -1041,6 +1080,7 @@ private constructor(
 
             val mappedHostImports =
                 mapHostImports(imports.requireNoNulls(), importValues ?: ImportValues.empty())
+            resolvedDefinedMemoryLimits = resolveDefinedMemoryLimits(mappedHostImports)
 
             for (i in 0 until module.functionSection().functionCount()) {
                 functionTypes[funcIdx++] = module.functionSection().getFunctionType(i)
@@ -1055,7 +1095,7 @@ private constructor(
                 memories =
                     Array(memSection.memoryCount()) { i ->
                         val limits = memSection.getMemory(i).limits()
-                        val effectiveLimits = if (i == 0) memoryLimits ?: limits else limits
+                        val effectiveLimits = resolvedDefinedMemoryLimits?.get(i) ?: limits
                         defaultMemoryFactory(effectiveLimits)
                     }
             }
@@ -1119,6 +1159,92 @@ private constructor(
             )
         }
 
+        private fun resolveDefinedMemoryLimits(
+            mappedHostImports: ImportValues
+        ): Array<MemoryLimits>? {
+            val memorySection = module.memorySection()
+            val definedCount = memorySection?.memoryCount() ?: 0
+            val legacyLimits = memoryLimits
+            val selectedPolicy = memoryPolicy
+            if (selectedPolicy == null) {
+                if (legacyLimits == null) {
+                    return null
+                }
+                if (definedCount > 1) {
+                    throw UninstantiableException(
+                        "legacy memory limits cannot safely constrain a multi-memory module; " +
+                            "use withMemoryPolicy"
+                    )
+                }
+                return if (definedCount == 0) emptyArray() else arrayOf(legacyLimits)
+            }
+
+            val totalCount = mappedHostImports.memoryCount() + definedCount
+            if (totalCount > selectedPolicy.maxMemories) {
+                throw UninstantiableException(
+                    "WebAssembly instance declares $totalCount memories, exceeding policy limit " +
+                        selectedPolicy.maxMemories
+                )
+            }
+
+            val perMemoryPages = selectedPolicy.maxPagesPerMemory
+            var remainingTotalPages = selectedPolicy.maxTotalPages
+            for (index in 0 until mappedHostImports.memoryCount()) {
+                val hostMemory =
+                    mappedHostImports.memory(index).memory()
+                        ?: throw UnlinkableException("imported memory is unavailable")
+                if (
+                    hostMemory.pages() > perMemoryPages ||
+                        hostMemory.maximumPages() > perMemoryPages
+                ) {
+                    throw UnlinkableException(
+                        "imported memory $index exceeds the per-memory policy limit of " +
+                            "$perMemoryPages pages"
+                    )
+                }
+                remainingTotalPages -= hostMemory.maximumPages().toLong()
+                if (remainingTotalPages < 0L) {
+                    throw UnlinkableException(
+                        "imported memories exceed the aggregate memory policy limit"
+                    )
+                }
+            }
+
+            val initialPages = IntArray(definedCount)
+            for (index in 0 until definedCount) {
+                val initial = memorySection!!.getMemory(index).limits().initialPages()
+                if (initial > perMemoryPages) {
+                    throw UninstantiableException(
+                        "defined memory $index initial size $initial exceeds the per-memory " +
+                            "policy limit of $perMemoryPages pages"
+                    )
+                }
+                initialPages[index] = initial
+                remainingTotalPages -= initial.toLong()
+                if (remainingTotalPages < 0L) {
+                    throw UninstantiableException(
+                        "defined memory initial sizes exceed the aggregate memory policy limit"
+                    )
+                }
+            }
+
+            return Array(definedCount) { index ->
+                val declared = memorySection!!.getMemory(index).limits()
+                val initial = initialPages[index]
+                val maximumBeforeAggregateCap =
+                    minOf(declared.maximumPages(), perMemoryPages)
+                val requestedGrowth =
+                    (maximumBeforeAggregateCap - initial).coerceAtLeast(0).toLong()
+                val grantedGrowth = minOf(requestedGrowth, remainingTotalPages)
+                remainingTotalPages -= grantedGrowth
+                MemoryLimits(
+                    initial,
+                    initial + grantedGrowth.toInt(),
+                    declared.shared(),
+                )
+            }
+        }
+
         companion object {
             internal fun create(module: WasmModule): Builder =
                 Builder(
@@ -1139,15 +1265,4 @@ private constructor(
         @RuntimeJvmStatic
         fun builder(module: WasmModule): Builder = Builder.create(module)
     }
-}
-
-private fun WasmModule.cappedFirstMemoryLimits(maxMemoryBytes: Long): MemoryLimits {
-    val maxPages = (maxMemoryBytes / Memory.PAGE_SIZE.toLong()).toInt()
-    val memory = memorySection()?.getMemory(0) ?: return MemoryLimits(0, maxPages)
-    val declaredLimits = memory.limits()
-    return MemoryLimits(
-        declaredLimits.initialPages(),
-        minOf(declaredLimits.maximumPages(), maxPages),
-        declaredLimits.shared(),
-    )
 }

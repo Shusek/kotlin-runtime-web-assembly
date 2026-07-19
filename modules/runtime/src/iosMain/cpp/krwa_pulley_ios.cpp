@@ -226,9 +226,12 @@ struct NativeMemoryHandle {
 };
 
 thread_local std::string gLastError;
+thread_local std::int32_t gLastErrorKind;
+thread_local std::string gHostCallbackError;
 
-const char *setError(std::string message) {
+const char *setError(std::string message, std::int32_t kind = 0) {
     gLastError = std::move(message);
+    gLastErrorKind = kind;
     return gLastError.c_str();
 }
 
@@ -432,6 +435,7 @@ wasm_trap_t *hostFunctionCallback(
     std::vector<std::int64_t> args(callback->paramOpcodes.size());
     std::vector<std::int64_t> results(callback->returnOpcodes.size());
     readRawValues(argsAndResults, callback->paramOpcodes, args.data());
+    gHostCallbackError.clear();
     int status =
         callback->callback(
             callback->callbackId,
@@ -441,7 +445,10 @@ wasm_trap_t *hostFunctionCallback(
             results.size()
         );
     if (status != 0) {
-        return trapFromMessage("host callback failed");
+        const std::string message =
+            gHostCallbackError.empty() ? "host callback failed" : gHostCallbackError;
+        gHostCallbackError.clear();
+        return trapFromMessage(message);
     }
     writeRawValues(argsAndResults, callback->returnOpcodes, results.data());
     return nullptr;
@@ -501,6 +508,24 @@ int writePrimitive(std::int64_t nativeHandle, std::int64_t nativeMemory, std::in
 
 extern "C" const char *krwa_pulley_last_error(void) {
     return gLastError.empty() ? nullptr : gLastError.c_str();
+}
+
+extern "C" std::int32_t krwa_pulley_last_error_kind(void) {
+    return gLastErrorKind;
+}
+
+extern "C" void krwa_pulley_report_host_callback_error(
+    const std::uint8_t *message,
+    std::size_t messageSize
+) {
+    if (message == nullptr || messageSize == 0) {
+        gHostCallbackError = "host callback failed";
+        return;
+    }
+    gHostCallbackError.assign(
+        reinterpret_cast<const char *>(message),
+        messageSize
+    );
 }
 
 extern "C" const char *krwa_pulley_unavailable_reason(void) {
@@ -654,6 +679,7 @@ extern "C" std::int64_t krwa_pulley_create(
     krwa_pulley_host_callback_t hostCallback
 ) {
     gLastError.clear();
+    gLastErrorKind = KRWA_PULLEY_ERROR_KIND_ENGINE;
     if (moduleBytes == nullptr || hostCallback == nullptr) {
         setError("missing Wasmtime Pulley create input");
         return 0;
@@ -770,7 +796,10 @@ extern "C" std::int64_t krwa_pulley_create(
         return 0;
     }
     if (trap != nullptr) {
-        setError("instantiate Pulley module: " + consumeTrap(trap));
+        setError(
+            "instantiate Pulley module: " + consumeTrap(trap),
+            KRWA_PULLEY_ERROR_KIND_UNINSTANTIABLE
+        );
         return 0;
     }
 
@@ -781,12 +810,22 @@ extern "C" void krwa_pulley_destroy(std::int64_t nativeHandle) {
     delete executionFrom(nativeHandle);
 }
 
-extern "C" std::int64_t krwa_pulley_bind_function(std::int64_t nativeHandle, const char *name, std::size_t nameSize) {
+extern "C" std::int64_t krwa_pulley_bind_function(
+    std::int64_t nativeHandle,
+    const std::uint8_t *name,
+    std::size_t nameSize
+) {
     gLastError.clear();
     auto *execution = executionFrom(nativeHandle);
     std::lock_guard<std::recursive_mutex> lock(execution->mutex);
     WasmtimeExtern item{};
-    bool found = wasmtime_instance_export_get(execution->context, &execution->instance, name, nameSize, &item);
+    bool found = wasmtime_instance_export_get(
+        execution->context,
+        &execution->instance,
+        reinterpret_cast<const char *>(name),
+        nameSize,
+        &item
+    );
     if (!found || item.kind != WASMTIME_EXTERN_FUNC) {
         setError("Unknown function export");
         return 0;
@@ -795,12 +834,22 @@ extern "C" std::int64_t krwa_pulley_bind_function(std::int64_t nativeHandle, con
     return reinterpret_cast<std::int64_t>(function);
 }
 
-extern "C" std::int64_t krwa_pulley_bind_memory(std::int64_t nativeHandle, const char *name, std::size_t nameSize) {
+extern "C" std::int64_t krwa_pulley_bind_memory(
+    std::int64_t nativeHandle,
+    const std::uint8_t *name,
+    std::size_t nameSize
+) {
     gLastError.clear();
     auto *execution = executionFrom(nativeHandle);
     std::lock_guard<std::recursive_mutex> lock(execution->mutex);
     WasmtimeExtern item{};
-    bool found = wasmtime_instance_export_get(execution->context, &execution->instance, name, nameSize, &item);
+    bool found = wasmtime_instance_export_get(
+        execution->context,
+        &execution->instance,
+        reinterpret_cast<const char *>(name),
+        nameSize,
+        &item
+    );
     if (!found || item.kind != WASMTIME_EXTERN_MEMORY) {
         return 0;
     }

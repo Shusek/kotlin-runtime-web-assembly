@@ -17,8 +17,8 @@ import uk.shusek.krwa.runtime.PulleyExecutionProvider
 import uk.shusek.krwa.runtime.PulleyExecutionProviders
 import uk.shusek.krwa.runtime.TrapException
 import uk.shusek.krwa.runtime.WasmFunctionHandle
+import uk.shusek.krwa.runtime.WasmtimeAutomaticTarget
 import uk.shusek.krwa.runtime.WasmtimeExecutionConfig
-import uk.shusek.krwa.runtime.WasmtimeNativeTarget
 import uk.shusek.krwa.runtime.WasmtimePulleyTarget
 import uk.shusek.krwa.wasm.InvalidException
 import uk.shusek.krwa.wasm.UnlinkableException
@@ -34,13 +34,14 @@ fun installAndroidWasmtimePulleyExecutionProviderIfAvailable() {
 
 private object AndroidPulleyExecutionProvider : PulleyExecutionProvider {
     override fun availability(): ExecutionBackendAvailability =
-        androidWasmtimeTargetUnavailableReason(WasmtimeNativeTarget)?.let { reason ->
+        androidWasmtimeTargetUnavailableReason(WasmtimePulleyTarget)?.let { reason ->
             ExecutionBackendAvailability(available = false, reason = reason)
         } ?: ExecutionBackendAvailability(available = true)
 
     override fun create(module: WasmModule, imports: ImportValues, hostInstance: Instance): PlatformInstanceExecution {
         val config = hostInstance.wasmtimeExecutionConfig() ?: androidWasmtimePropertyConfig()
-        val unavailableReason = androidWasmtimeTargetUnavailableReason(config.target)
+        val target = androidWasmtimeTarget(config.target)
+        val unavailableReason = androidWasmtimeTargetUnavailableReason(target)
         if (unavailableReason != null) {
             throw WasmEngineException(unavailableReason)
         }
@@ -64,7 +65,7 @@ private object AndroidPulleyExecutionProvider : PulleyExecutionProvider {
                 AndroidWasmtimePulleyNative.create(
                     precompiledModuleBytes ?: pulleyBytes.bytes,
                     precompiledModuleBytes != null,
-                    config.target,
+                    target,
                     config.maxMemoryBytes,
                     config.maxWasmStackBytes,
                     config.maxTableElements,
@@ -97,8 +98,11 @@ private fun androidWasmtimePropertyConfig(): WasmtimeExecutionConfig = WasmtimeE
     target = System.getProperty(AndroidWasmtimeTargetProperty)
         ?.trim()
         ?.takeIf(String::isNotEmpty)
-        ?: WasmtimeNativeTarget,
+        ?: WasmtimePulleyTarget,
 )
+
+internal fun androidWasmtimeTarget(target: String): String =
+    if (target == WasmtimeAutomaticTarget) WasmtimePulleyTarget else target
 
 private class AndroidWasmtimePulleyExecution(
     private val nativeHandle: Long,
@@ -117,7 +121,7 @@ private class AndroidWasmtimePulleyExecution(
     fun bindExports() {
         for (export in functionsByName.values) {
             export.nativeFunction =
-                AndroidWasmtimePulleyNative.bindFunction(nativeHandle, export.name)
+                AndroidWasmtimePulleyNative.bindFunction(nativeHandle, export.name.encodeToByteArray())
         }
         bindExportedMemories()
     }
@@ -166,7 +170,7 @@ private class AndroidWasmtimePulleyExecution(
     }
 
     private fun bindMemoryExport(name: String, index: Int, exposeName: Boolean) {
-        val nativeMemory = AndroidWasmtimePulleyNative.bindMemory(nativeHandle, name)
+        val nativeMemory = AndroidWasmtimePulleyNative.bindMemory(nativeHandle, name.encodeToByteArray())
         if (nativeMemory == 0L) {
             return
         }
@@ -575,10 +579,10 @@ private object AndroidWasmtimePulleyNative {
     external fun destroy(nativeHandle: Long)
 
     @JvmStatic
-    external fun bindFunction(nativeHandle: Long, name: String): Long
+    external fun bindFunction(nativeHandle: Long, nameUtf8: ByteArray): Long
 
     @JvmStatic
-    external fun bindMemory(nativeHandle: Long, name: String): Long
+    external fun bindMemory(nativeHandle: Long, nameUtf8: ByteArray): Long
 
     @JvmStatic
     external fun call(

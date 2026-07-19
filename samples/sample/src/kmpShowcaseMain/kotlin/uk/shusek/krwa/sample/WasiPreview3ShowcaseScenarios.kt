@@ -8,11 +8,17 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
-import uk.shusek.krwa.component.WasiPreview3
 import uk.shusek.krwa.component.WasiHttpRequest
+import uk.shusek.krwa.component.WasiHttpNetworkEndpoint
+import uk.shusek.krwa.component.WasiHttpNetworkProtocol
 import uk.shusek.krwa.component.WasiHttpResponse
+import uk.shusek.krwa.component.WasiNetworkEndpoint
+import uk.shusek.krwa.component.WasiNetworkPolicy
+import uk.shusek.krwa.component.WasiPreview3
+import uk.shusek.krwa.component.WasiPreview3HostOwnership
 import uk.shusek.krwa.component.WasiSuspendingHttpClient
 import uk.shusek.krwa.component.WasmPlugin
+import uk.shusek.krwa.component.WitHostImportId
 import uk.shusek.krwa.component.WitPackage
 
 internal const val SHOWCASE_WASI3_HTTP_AUTHORITY: String = "127.0.0.1:7777"
@@ -43,7 +49,7 @@ internal fun runWasiPreview3CliClocksRandomScenario(module: ByteArray) {
     val plugin =
         WasmPlugin.builder(wasiPreview3CliClocksRandomWit())
             .withModule(module)
-            .withWasiPreview3(wasi)
+            .withWasiPreview3(wasi, WasiPreview3HostOwnership.BORROWED)
             .build()
 
     requireShowcaseValue(7L, plugin.call("api.run"), "WASIp3 CLI, clocks, random")
@@ -56,9 +62,10 @@ internal fun runWasiPreview3HttpClientScenario(module: ByteArray) {
             .withModule(module)
             .withWasiPreview3(
                 WasiPreview3.builder()
-                    .withNetworking()
+                    .withNetworkPolicy(showcaseHttpNetworkPolicy())
                     .withHttpClient(httpClient)
-                    .build()
+                    .build(),
+                WasiPreview3HostOwnership.BORROWED,
             )
             .build()
 
@@ -86,9 +93,10 @@ internal fun runWasiPreview3KtorHttpClientScenario(module: ByteArray) {
                 .withModule(module)
                 .withWasiPreview3(
                     WasiPreview3.builder()
-                        .withNetworking()
+                        .withNetworkPolicy(showcaseHttpNetworkPolicy())
                         .withHttpClient(client)
-                        .build()
+                        .build(),
+                    WasiPreview3HostOwnership.BORROWED,
                 )
                 .build()
 
@@ -108,7 +116,7 @@ internal fun configureWasiPreview3KtorHttpClient() {
     val client = showcaseKtorHttpClient { _, _ -> }
     try {
         WasiPreview3.builder()
-            .withNetworking()
+            .withNetworkPolicy(showcaseHttpNetworkPolicy())
             .withHttpClient(client)
             .build()
             .close()
@@ -139,21 +147,34 @@ internal fun runWasiPreview3FilesystemScenario(
             .withWasiPreview3(
                 WasiPreview3.builder()
                     .withPreopenedDirectory("/", hostRoot)
-                    .build()
+                    .build(),
+                WasiPreview3HostOwnership.BORROWED,
             )
             .build()
 
     requireShowcaseValue(532L, plugin.call("api.run"), "WASIp3 filesystem preopen stream")
 }
 
-internal fun runWasiPreview3SocketsScenario(module: ByteArray) {
+internal fun runWasiPreview3SocketsScenario(
+    module: ByteArray,
+    tcpPort: Int,
+    udpPort: Int,
+) {
     val plugin =
         WasmPlugin.builder(wasiPreview3SocketsWit())
             .withModule(module)
             .withWasiPreview3(
                 WasiPreview3.builder()
-                    .withNetworking()
-                    .build()
+                    .withNetworkPolicy(
+                        WasiNetworkPolicy(
+                            rawSocketEndpoints = setOf(
+                                WasiNetworkEndpoint("127.0.0.1", tcpPort),
+                                WasiNetworkEndpoint("127.0.0.1", udpPort),
+                            ),
+                        ),
+                    )
+                    .build(),
+                WasiPreview3HostOwnership.BORROWED,
             )
             .build()
 
@@ -167,7 +188,10 @@ internal fun runWasiPreview3CanonicalIntrinsicsScenarios(
     val streamPlugin =
         WasmPlugin.builder(wasiPreview3StreamIntrinsicsWit())
             .withModule(streamModule)
-            .withWasiPreview3(WasiPreview3.builder().build())
+            .withWasiPreview3(
+                WasiPreview3.builder().build(),
+                WasiPreview3HostOwnership.BORROWED,
+            )
             .build()
 
     requireShowcaseValue(294L, streamPlugin.call("api.run"), "WASIp3 canonical stream intrinsics")
@@ -176,12 +200,25 @@ internal fun runWasiPreview3CanonicalIntrinsicsScenarios(
     val futurePlugin =
         WasmPlugin.builder(wasiPreview3FutureIntrinsicsWit())
             .withModule(futureModule)
-            .withHostImport("plugin", "seed") { futureWasi.completedFuture(0L) }
-            .withWasiPreview3(futureWasi)
+            .withWitHostImport(WitHostImportId("plugin", "seed")) {
+                futureWasi.completedFuture(0L)
+            }
+            .withWasiPreview3(futureWasi, WasiPreview3HostOwnership.BORROWED)
             .build()
 
     requireShowcaseValue(123456L, futurePlugin.call("api.run"), "WASIp3 canonical future intrinsics")
 }
+
+private fun showcaseHttpNetworkPolicy(): WasiNetworkPolicy =
+    WasiNetworkPolicy(
+        httpEndpoints = setOf(
+            WasiHttpNetworkEndpoint(
+                protocol = WasiHttpNetworkProtocol.Http,
+                host = "127.0.0.1",
+                port = 7777,
+            ),
+        ),
+    )
 
 private class RecordingWasiPreview3HttpClient : WasiSuspendingHttpClient {
     var request: WasiHttpRequest? = null

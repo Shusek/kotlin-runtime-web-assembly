@@ -1,6 +1,3 @@
-import java.io.File
-import java.net.URI
-import org.gradle.api.GradleException
 import org.gradle.api.plugins.BasePluginExtension
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
@@ -37,6 +34,7 @@ val commonComponentModelSources =
         "CanonicalStreamIntrinsics.kt",
         "ContextualHostHandler.kt",
         "HostHandler.kt",
+        "HostImportIds.kt",
         "RandomAdapters.kt",
         "WasiComponentInvoker.kt",
         "WasiHostImportBuilder.kt",
@@ -79,53 +77,27 @@ val wasiPreview1Adapters =
             "0acb10959bd3c1d2e7903ef82212910bfc156ab5698ef3f2ff669474ba59fb0a",
     )
 
-fun sha256(file: File): String {
-    val digest = java.security.MessageDigest.getInstance("SHA-256")
-    file.inputStream().use { input ->
-        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
-        while (true) {
-            val read = input.read(buffer)
-            if (read < 0) {
-                break
-            }
-            digest.update(buffer, 0, read)
-        }
-    }
-    return digest.digest().joinToString("") { byte -> "%02x".format(byte) }
-}
-
 val downloadWasiPreview1Adapters =
     tasks.register("downloadWasiPreview1Adapters") {
         inputs.property("wasmtimeVersion", wasmtimeVersion)
         inputs.property("wasiPreview1Adapters", wasiPreview1Adapters)
-        outputs.files(
-            wasiPreview1Adapters.keys.map { name ->
-                wasiPreview1AdapterResources.map { dir ->
-                    dir.asFile.resolve("$wasiPreview1AdapterPackage/$name")
-                }
-            }
+        doNotTrackState(
+            "Verified WASI adapters are durable local state and must survive Gradle version changes.",
         )
         doLast {
             val targetDir =
                 wasiPreview1AdapterResources.get().asFile.resolve(wasiPreview1AdapterPackage)
-            targetDir.mkdirs()
             for ((name, expectedSha256) in wasiPreview1Adapters) {
                 val target = targetDir.resolve(name)
                 val url =
                     "https://github.com/bytecodealliance/wasmtime/releases/download/" +
                         "v$wasmtimeVersion/$name"
-                if (!target.isFile || sha256(target) != expectedSha256) {
-                    URI(url).toURL().openStream().use { input ->
-                        target.outputStream().use { output -> input.copyTo(output) }
-                    }
-                }
-                val actualSha256 = sha256(target)
-                if (actualSha256 != expectedSha256) {
-                    throw GradleException(
-                        "Downloaded $name SHA-256 mismatch: expected " +
-                            "$expectedSha256, got $actualSha256"
-                    )
-                }
+                prepareVerifiedReleaseDownload(
+                    description = "WASI Preview 1 adapter $name",
+                    url = url,
+                    target = target,
+                    expectedSha256 = expectedSha256,
+                )
             }
         }
     }

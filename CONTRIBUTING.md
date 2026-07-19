@@ -80,6 +80,43 @@ Basic steps:
 * `./gradlew --no-daemon publishToMavenLocal -x test` to publish local artifacts while skipping tests.
 * `./scripts/compile-resources.sh` will recompile and regenerate the `resources/compiled` folders
 
+### Local release gate
+
+Before preparing a release candidate, run the aggregate gate with an immutable candidate version:
+
+```shell
+./gradlew --no-daemon prepareReleaseDependencies
+./gradlew --no-daemon --offline -Pversion=0.3.0-rc.1 releaseGate
+```
+
+`prepareReleaseDependencies` is the repository-owned online preparation step. It downloads pinned
+native sources, tools, adapters, and conformance inputs into task-owned locations, verifies every
+download against its checked-in revision or SHA-256, installs the exact Rust toolchain declared by
+`rustRelease` in `gradle/libs.versions.toml`, verifies its `rustReleaseCommit`, installs targets for
+that toolchain, and populates Cargo's locked dependency cache. Run it before disconnecting the
+release runner. If a verified input, pinned compiler, Rust target, or locked crate is unavailable,
+the offline gate fails without trying to fetch it and points back to the preparation command.
+
+The gate runs project checks and tests, Kotlin ABI validation, Gradle plugin validation, and the
+disabled-test policy. It then publishes Maven artifacts only to
+`build/release-staging-repository`. The staging repository is recreated by the gate; it does not
+write to Maven Local and it does not invoke any externally configured publishing repository.
+
+Run the gate with `--offline` after Gradle dependencies, toolchains, and the verified release inputs
+have been provisioned. This keeps release verification independent of network availability and
+prevents accidental resolution from changing during the gate.
+
+Disabled tests must include both a useful reason and a durable tracking reference in the annotation,
+for example:
+
+```kotlin
+@Disabled("Flaky on macOS; tracked by #123")
+```
+
+An issue URL or tracker ID such as `KRWA-123` is also accepted. `@Ignore` and TestNG
+`@Test(enabled = false)` follow the same rule. A disabled test without such a reference fails
+`verifyNoUnjustifiedDisabledTests`, which is part of both `check` and `releaseGate`.
+
 ### Proposals implementation
 
 Our priority is to focus on implementing [proposals](https://github.com/WebAssembly/proposals) that are in the most advanced stages of development. While we wholeheartedly encourage and support explorations, we’ll be dedicating less time to early-stage proposals until we have more comprehensive support for those that are stabilized.

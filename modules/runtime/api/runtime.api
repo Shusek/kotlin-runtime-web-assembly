@@ -215,6 +215,10 @@ public final class uk/shusek/krwa/runtime/CtrlFrame {
 	public final fun getStartValues ()I
 }
 
+public final class uk/shusek/krwa/runtime/ExactNetworkHostKt {
+	public static final fun canonicalizeExactNetworkHost (Ljava/lang/String;)Ljava/lang/String;
+}
+
 public final class uk/shusek/krwa/runtime/ExecutionBackend : java/lang/Enum {
 	public static final field AUTO Luk/shusek/krwa/runtime/ExecutionBackend;
 	public static final field NATIVE Luk/shusek/krwa/runtime/ExecutionBackend;
@@ -437,6 +441,7 @@ public final class uk/shusek/krwa/runtime/Instance$Builder {
 	public final fun withExecutionPolicy (Luk/shusek/krwa/runtime/WasmExecutionPolicy;)Luk/shusek/krwa/runtime/Instance$Builder;
 	public final fun withImportValues (Luk/shusek/krwa/runtime/ImportValues;)Luk/shusek/krwa/runtime/Instance$Builder;
 	public final fun withMemoryLimits (Luk/shusek/krwa/wasm/types/MemoryLimits;)Luk/shusek/krwa/runtime/Instance$Builder;
+	public final fun withMemoryPolicy (Luk/shusek/krwa/runtime/WasmMemoryPolicy;)Luk/shusek/krwa/runtime/Instance$Builder;
 	public final fun withWasmtimeExecutionConfig (Luk/shusek/krwa/runtime/WasmtimeExecutionConfig;)Luk/shusek/krwa/runtime/Instance$Builder;
 }
 
@@ -907,37 +912,44 @@ public abstract interface class uk/shusek/krwa/runtime/WasmExecutionPolicy {
 
 public final class uk/shusek/krwa/runtime/WasmExecutionPolicy$Automatic : uk/shusek/krwa/runtime/WasmExecutionPolicy {
 	public fun <init> ()V
-	public fun <init> (Ljava/lang/Long;)V
-	public synthetic fun <init> (Ljava/lang/Long;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/lang/Long;Luk/shusek/krwa/runtime/WasmMemoryPolicy;)V
+	public synthetic fun <init> (Ljava/lang/Long;Luk/shusek/krwa/runtime/WasmMemoryPolicy;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Ljava/lang/Long;
-	public final fun copy (Ljava/lang/Long;)Luk/shusek/krwa/runtime/WasmExecutionPolicy$Automatic;
-	public static synthetic fun copy$default (Luk/shusek/krwa/runtime/WasmExecutionPolicy$Automatic;Ljava/lang/Long;ILjava/lang/Object;)Luk/shusek/krwa/runtime/WasmExecutionPolicy$Automatic;
+	public final fun component2 ()Luk/shusek/krwa/runtime/WasmMemoryPolicy;
+	public final fun copy (Ljava/lang/Long;Luk/shusek/krwa/runtime/WasmMemoryPolicy;)Luk/shusek/krwa/runtime/WasmExecutionPolicy$Automatic;
+	public static synthetic fun copy$default (Luk/shusek/krwa/runtime/WasmExecutionPolicy$Automatic;Ljava/lang/Long;Luk/shusek/krwa/runtime/WasmMemoryPolicy;ILjava/lang/Object;)Luk/shusek/krwa/runtime/WasmExecutionPolicy$Automatic;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getMaxMemoryBytes ()Ljava/lang/Long;
+	public final fun getMemoryPolicy ()Luk/shusek/krwa/runtime/WasmMemoryPolicy;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
 
 public final class uk/shusek/krwa/runtime/WasmExecutionPolicy$HostWebAssembly : uk/shusek/krwa/runtime/WasmExecutionPolicy {
 	public fun <init> ()V
-	public fun <init> (Ljava/lang/Long;)V
-	public synthetic fun <init> (Ljava/lang/Long;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/lang/Long;Luk/shusek/krwa/runtime/WasmMemoryPolicy;)V
+	public synthetic fun <init> (Ljava/lang/Long;Luk/shusek/krwa/runtime/WasmMemoryPolicy;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Ljava/lang/Long;
-	public final fun copy (Ljava/lang/Long;)Luk/shusek/krwa/runtime/WasmExecutionPolicy$HostWebAssembly;
-	public static synthetic fun copy$default (Luk/shusek/krwa/runtime/WasmExecutionPolicy$HostWebAssembly;Ljava/lang/Long;ILjava/lang/Object;)Luk/shusek/krwa/runtime/WasmExecutionPolicy$HostWebAssembly;
+	public final fun component2 ()Luk/shusek/krwa/runtime/WasmMemoryPolicy;
+	public final fun copy (Ljava/lang/Long;Luk/shusek/krwa/runtime/WasmMemoryPolicy;)Luk/shusek/krwa/runtime/WasmExecutionPolicy$HostWebAssembly;
+	public static synthetic fun copy$default (Luk/shusek/krwa/runtime/WasmExecutionPolicy$HostWebAssembly;Ljava/lang/Long;Luk/shusek/krwa/runtime/WasmMemoryPolicy;ILjava/lang/Object;)Luk/shusek/krwa/runtime/WasmExecutionPolicy$HostWebAssembly;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getMaxMemoryBytes ()Ljava/lang/Long;
+	public final fun getMemoryPolicy ()Luk/shusek/krwa/runtime/WasmMemoryPolicy;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
 
 public final class uk/shusek/krwa/runtime/WasmExecutionPolicy$Wasmtime : uk/shusek/krwa/runtime/WasmExecutionPolicy {
-	public fun <init> (Luk/shusek/krwa/runtime/WasmtimeExecutionConfig;)V
+	public fun <init> (Luk/shusek/krwa/runtime/WasmtimeExecutionConfig;Luk/shusek/krwa/runtime/WasmMemoryPolicy;)V
+	public synthetic fun <init> (Luk/shusek/krwa/runtime/WasmtimeExecutionConfig;Luk/shusek/krwa/runtime/WasmMemoryPolicy;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Luk/shusek/krwa/runtime/WasmtimeExecutionConfig;
-	public final fun copy (Luk/shusek/krwa/runtime/WasmtimeExecutionConfig;)Luk/shusek/krwa/runtime/WasmExecutionPolicy$Wasmtime;
-	public static synthetic fun copy$default (Luk/shusek/krwa/runtime/WasmExecutionPolicy$Wasmtime;Luk/shusek/krwa/runtime/WasmtimeExecutionConfig;ILjava/lang/Object;)Luk/shusek/krwa/runtime/WasmExecutionPolicy$Wasmtime;
+	public final fun component2 ()Luk/shusek/krwa/runtime/WasmMemoryPolicy;
+	public final fun copy (Luk/shusek/krwa/runtime/WasmtimeExecutionConfig;Luk/shusek/krwa/runtime/WasmMemoryPolicy;)Luk/shusek/krwa/runtime/WasmExecutionPolicy$Wasmtime;
+	public static synthetic fun copy$default (Luk/shusek/krwa/runtime/WasmExecutionPolicy$Wasmtime;Luk/shusek/krwa/runtime/WasmtimeExecutionConfig;Luk/shusek/krwa/runtime/WasmMemoryPolicy;ILjava/lang/Object;)Luk/shusek/krwa/runtime/WasmExecutionPolicy$Wasmtime;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getConfig ()Luk/shusek/krwa/runtime/WasmtimeExecutionConfig;
+	public final fun getMemoryPolicy ()Luk/shusek/krwa/runtime/WasmMemoryPolicy;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
@@ -970,6 +982,27 @@ public class uk/shusek/krwa/runtime/WasmInterruptedException : uk/shusek/krwa/wa
 	public fun <init> (Ljava/lang/String;)V
 	public fun <init> (Ljava/lang/String;Ljava/lang/Throwable;)V
 	public fun <init> (Ljava/lang/Throwable;)V
+}
+
+public final class uk/shusek/krwa/runtime/WasmMemoryPolicy {
+	public static final field Companion Luk/shusek/krwa/runtime/WasmMemoryPolicy$Companion;
+	public fun <init> ()V
+	public fun <init> (JJI)V
+	public synthetic fun <init> (JJIILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()J
+	public final fun component2 ()J
+	public final fun component3 ()I
+	public final fun copy (JJI)Luk/shusek/krwa/runtime/WasmMemoryPolicy;
+	public static synthetic fun copy$default (Luk/shusek/krwa/runtime/WasmMemoryPolicy;JJIILjava/lang/Object;)Luk/shusek/krwa/runtime/WasmMemoryPolicy;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getMaxBytesPerMemory ()J
+	public final fun getMaxMemories ()I
+	public final fun getMaxTotalBytes ()J
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/runtime/WasmMemoryPolicy$Companion {
 }
 
 public class uk/shusek/krwa/runtime/WasmRuntimeException : uk/shusek/krwa/wasm/WasmEngineException {
@@ -1021,6 +1054,7 @@ public final class uk/shusek/krwa/runtime/WasmtimeExecutionConfigKt {
 	public static final field DefaultWasmtimeCoreMaxTables J
 	public static final field DefaultWasmtimeMaxMemoryBytes J
 	public static final field DefaultWasmtimeMaxWasmStackBytes J
+	public static final field WasmtimeAutomaticTarget Ljava/lang/String;
 	public static final field WasmtimeNativeTarget Ljava/lang/String;
 	public static final field WasmtimePulleyTarget Ljava/lang/String;
 	public static final field WasmtimeUnlimitedResourceLimit J
@@ -1079,19 +1113,40 @@ public final class uk/shusek/krwa/runtime/WasmtimePreview3ExecutionCancellation 
 	public final fun isCancellationRequested ()Z
 }
 
+public final class uk/shusek/krwa/runtime/WasmtimePreview3HttpEndpoint {
+	public fun <init> (Luk/shusek/krwa/runtime/WasmtimePreview3HttpProtocol;Ljava/lang/String;I)V
+	public final fun component1 ()Luk/shusek/krwa/runtime/WasmtimePreview3HttpProtocol;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()I
+	public final fun copy (Luk/shusek/krwa/runtime/WasmtimePreview3HttpProtocol;Ljava/lang/String;I)Luk/shusek/krwa/runtime/WasmtimePreview3HttpEndpoint;
+	public static synthetic fun copy$default (Luk/shusek/krwa/runtime/WasmtimePreview3HttpEndpoint;Luk/shusek/krwa/runtime/WasmtimePreview3HttpProtocol;Ljava/lang/String;IILjava/lang/Object;)Luk/shusek/krwa/runtime/WasmtimePreview3HttpEndpoint;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getHost ()Ljava/lang/String;
+	public final fun getNormalizedHost ()Ljava/lang/String;
+	public final fun getPort ()I
+	public final fun getProtocol ()Luk/shusek/krwa/runtime/WasmtimePreview3HttpProtocol;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/runtime/WasmtimePreview3HttpProtocol : java/lang/Enum {
+	public static final field Http Luk/shusek/krwa/runtime/WasmtimePreview3HttpProtocol;
+	public static final field Https Luk/shusek/krwa/runtime/WasmtimePreview3HttpProtocol;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Luk/shusek/krwa/runtime/WasmtimePreview3HttpProtocol;
+	public static fun values ()[Luk/shusek/krwa/runtime/WasmtimePreview3HttpProtocol;
+}
+
 public final class uk/shusek/krwa/runtime/WasmtimePreview3NetworkPolicy {
 	public fun <init> ()V
-	public fun <init> (Ljava/util/List;Ljava/util/List;Z)V
-	public synthetic fun <init> (Ljava/util/List;Ljava/util/List;ZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/util/List;)V
+	public synthetic fun <init> (Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Ljava/util/List;
-	public final fun component2 ()Ljava/util/List;
-	public final fun component3 ()Z
-	public final fun copy (Ljava/util/List;Ljava/util/List;Z)Luk/shusek/krwa/runtime/WasmtimePreview3NetworkPolicy;
-	public static synthetic fun copy$default (Luk/shusek/krwa/runtime/WasmtimePreview3NetworkPolicy;Ljava/util/List;Ljava/util/List;ZILjava/lang/Object;)Luk/shusek/krwa/runtime/WasmtimePreview3NetworkPolicy;
+	public final fun copy (Ljava/util/List;)Luk/shusek/krwa/runtime/WasmtimePreview3NetworkPolicy;
+	public static synthetic fun copy$default (Luk/shusek/krwa/runtime/WasmtimePreview3NetworkPolicy;Ljava/util/List;ILjava/lang/Object;)Luk/shusek/krwa/runtime/WasmtimePreview3NetworkPolicy;
+	public final fun encodedHttpEndpoints ()Ljava/util/List;
 	public fun equals (Ljava/lang/Object;)Z
-	public final fun getAllowPrivateNetwork ()Z
-	public final fun getAllowedHosts ()Ljava/util/List;
-	public final fun getBlockedHosts ()Ljava/util/List;
+	public final fun getHttpEndpoints ()Ljava/util/List;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }

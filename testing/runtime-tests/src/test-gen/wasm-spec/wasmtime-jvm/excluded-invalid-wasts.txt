@@ -1,0 +1,1 @@
+# Intentionally empty. KRWA-1 exclusions in this category must be reviewed per release candidate.

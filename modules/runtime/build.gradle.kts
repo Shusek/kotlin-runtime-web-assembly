@@ -1,5 +1,8 @@
-import java.net.URI
+import java.nio.file.AtomicMoveNotSupportedException
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 import java.security.MessageDigest
+import org.gradle.api.GradleException
 import org.gradle.api.plugins.BasePluginExtension
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
@@ -23,6 +26,8 @@ apply(plugin = "maven-publish")
 
 val wasmtimePulleyVersion = libs.versions.wasmtime.get()
 val wasmtimePulleyGitRevision = "823d1b8f251494a06288194d0df746191f535ff7"
+val rustReleaseVersion = libs.versions.rustRelease.get()
+val rustReleaseCommitHash = libs.versions.rustReleaseCommit.get()
 val wasmtimePulleyFeatures =
     "pulley,cranelift,gc,gc-drc,gc-null,all-arch,component-model,component-model-async,wasi,wasi-http,disable-logging"
 val wasmtimePulleyIosTargets = listOf(
@@ -77,14 +82,25 @@ fun localCodexRustExecutable(name: String): File? =
 
 fun cargoBinary(): File? = executableFromEnvOrPath("CARGO", "cargo") ?: localCodexRustExecutable("cargo")
 
-fun cargoStableCommand(cargo: File): List<String> {
+fun cargoReleaseCommand(cargo: File): List<String> {
     val path = cargo.absolutePath.replace('\\', '/')
     return if ("/toolchains/" in path) {
+        val toolchain = path.substringAfter("/toolchains/").substringBefore('/')
+        check(
+            toolchain == rustReleaseVersion ||
+                toolchain.startsWith("$rustReleaseVersion-")
+        ) {
+            "CARGO points to Rust toolchain '$toolchain', but release builds require " +
+                "'$rustReleaseVersion'. Use the rustup cargo proxy or the pinned toolchain directly."
+        }
         listOf(cargo.absolutePath)
     } else {
-        listOf(cargo.absolutePath, "+stable")
+        listOf(cargo.absolutePath, "+$rustReleaseVersion")
     }
 }
+
+fun cargoNetworkArguments(): List<String> =
+    if (gradle.startParameter.isOffline) listOf("--offline") else emptyList()
 
 fun rustupBinary(): File? = executableFromEnvOrPath("RUSTUP", "rustup") ?: localCodexRustExecutable("rustup")
 
@@ -148,17 +164,160 @@ fun runProcess(command: List<String>, workingDirectory: File, environment: Map<S
     }
 }
 
-fun captureProcess(command: List<String>, workingDirectory: File): String {
-    val process = ProcessBuilder(command)
-        .directory(workingDirectory)
-        .redirectError(ProcessBuilder.Redirect.INHERIT)
-        .start()
+fun captureProcess(
+    command: List<String>,
+    workingDirectory: File,
+    environment: Map<String, String> = emptyMap(),
+): String {
+    val processBuilder =
+        ProcessBuilder(command)
+            .directory(workingDirectory)
+            .redirectError(ProcessBuilder.Redirect.INHERIT)
+    processBuilder.environment().putAll(environment)
+    val process = processBuilder.start()
     val output = process.inputStream.bufferedReader().readText().trim()
     val exitCode = process.waitFor()
     check(exitCode == 0) {
         "Command failed with exit code $exitCode: ${command.joinToString(" ")}"
     }
     return output
+}
+
+fun preparePinnedRustToolchain(
+    rustup: File,
+    environment: Map<String, String>,
+): String {
+    val toolchains =
+        captureProcess(
+            listOf(rustup.absolutePath, "toolchain", "list"),
+            projectDir,
+            environment,
+        )
+    val pinnedToolchainInstalled =
+        toolchains.lineSequence().any { line ->
+            val name = line.substringBefore(' ')
+            name == rustReleaseVersion || name.startsWith("$rustReleaseVersion-")
+        }
+    if (!pinnedToolchainInstalled) {
+        if (gradle.startParameter.isOffline) {
+            throw GradleException(
+                "The release-pinned Rust toolchain $rustReleaseVersion is not installed. Run " +
+                    "'./gradlew --no-daemon prepareReleaseDependencies' while online, then retry " +
+                    "releaseGate with --offline.",
+            )
+        }
+        runProcess(
+            listOf(
+                rustup.absolutePath,
+                "toolchain",
+                "install",
+                rustReleaseVersion,
+                "--profile",
+                "minimal",
+            ),
+            projectDir,
+            environment,
+        )
+    }
+
+    val rustcVersion =
+        captureProcess(
+            listOf(rustup.absolutePath, "run", rustReleaseVersion, "rustc", "-vV"),
+            projectDir,
+            environment,
+        )
+    val actualRustRelease =
+        rustcVersion.lineSequence()
+            .firstOrNull { line -> line.startsWith("release: ") }
+            ?.substringAfter("release: ")
+            ?.trim()
+    val actualRustCommit =
+        rustcVersion.lineSequence()
+            .firstOrNull { line -> line.startsWith("commit-hash: ") }
+            ?.substringAfter("commit-hash: ")
+            ?.trim()
+    if (actualRustRelease != rustReleaseVersion || actualRustCommit != rustReleaseCommitHash) {
+        throw GradleException(
+            "The Rust toolchain $rustReleaseVersion must resolve to the release-pinned compiler " +
+                "$rustReleaseVersion ($rustReleaseCommitHash), but rustc -vV reported " +
+                "${actualRustRelease ?: "an unknown release"} " +
+                "(${actualRustCommit ?: "an unknown commit"}). Update the release pin and native " +
+                "artifacts deliberately before running releaseGate.",
+        )
+    }
+    val hostTarget =
+        rustcVersion.lineSequence()
+            .firstOrNull { line -> line.startsWith("host: ") }
+            ?.substringAfter("host: ")
+            ?.trim()
+            ?.takeIf(String::isNotEmpty)
+            ?: throw GradleException(
+                "Cannot determine the host target for Rust toolchain $rustReleaseVersion",
+            )
+    val installedTargets =
+        captureProcess(
+            listOf(
+                rustup.absolutePath,
+                "target",
+                "list",
+                "--installed",
+                "--toolchain",
+                rustReleaseVersion,
+            ),
+            projectDir,
+            environment,
+        ).lineSequence().map(String::trim).filter(String::isNotEmpty).toSet()
+    val requiredTargets =
+        (listOf(hostTarget) + wasmtimePulleyIosTargets + "aarch64-linux-android").distinct()
+    val missingTargets = requiredTargets.filterNot(installedTargets::contains)
+    if (missingTargets.isNotEmpty() && gradle.startParameter.isOffline) {
+        throw GradleException(
+            "Rust $rustReleaseVersion is missing release targets ${missingTargets.joinToString()}. Run " +
+                "'./gradlew --no-daemon prepareReleaseDependencies' while online, then retry " +
+                "releaseGate with --offline.",
+        )
+    }
+    for (target in missingTargets) {
+        runProcess(
+            listOf(
+                rustup.absolutePath,
+                "target",
+                "add",
+                "--toolchain",
+                rustReleaseVersion,
+                target,
+            ),
+            projectDir,
+            environment,
+        )
+    }
+    return hostTarget
+}
+
+fun isPinnedWasmtimeSource(directory: File): Boolean {
+    if (!directory.resolve(".git").isDirectory) {
+        return false
+    }
+    return runCatching {
+        captureProcess(listOf("git", "rev-parse", "HEAD"), directory) ==
+            wasmtimePulleyGitRevision &&
+            captureProcess(
+                listOf("git", "status", "--porcelain", "--untracked-files=normal"),
+                directory,
+            ).isEmpty()
+    }.getOrDefault(false)
+}
+
+fun moveWasmtimeSource(source: File, target: File) {
+    try {
+        Files.move(
+            source.toPath(),
+            target.toPath(),
+            StandardCopyOption.ATOMIC_MOVE,
+        )
+    } catch (_: AtomicMoveNotSupportedException) {
+        Files.move(source.toPath(), target.toPath())
+    }
 }
 
 fun xcrun(sdk: String, vararg args: String): String = captureProcess(listOf("xcrun", "--sdk", sdk, *args), projectDir)
@@ -187,42 +346,130 @@ val prepareWasmtimePulleyIosSource by tasks.registering {
     notCompatibleWithConfigurationCache("Fetches a pinned native dependency through external git commands.")
     inputs.property("wasmtimePulleyVersion", wasmtimePulleyVersion)
     inputs.property("wasmtimePulleyGitRevision", wasmtimePulleyGitRevision)
-    outputs.dir(wasmtimePulleySourceDirectory)
+    doNotTrackState(
+        "The verified Wasmtime checkout is durable local state and must survive Gradle version changes.",
+    )
 
     doLast {
         val sourceDirectory = wasmtimePulleySourceDirectory.get().asFile
         val legacySourceDirectory = legacyWasmtimePulleyIosSourceDirectory.get().asFile
         val parentDirectory = sourceDirectory.parentFile
         parentDirectory.mkdirs()
-        if (!sourceDirectory.resolve(".git").isDirectory && legacySourceDirectory.resolve(".git").isDirectory) {
+        if (isPinnedWasmtimeSource(sourceDirectory)) {
+            return@doLast
+        }
+        if (isPinnedWasmtimeSource(legacySourceDirectory)) {
             sourceDirectory.deleteRecursively()
-            check(legacySourceDirectory.renameTo(sourceDirectory) || legacySourceDirectory.copyRecursively(sourceDirectory)) {
+            check(
+                legacySourceDirectory.renameTo(sourceDirectory) ||
+                    legacySourceDirectory.copyRecursively(sourceDirectory)
+            ) {
                 "Failed to migrate Wasmtime source checkout from " +
                     "${legacySourceDirectory.invariantSeparatorsPath} to ${sourceDirectory.invariantSeparatorsPath}"
             }
+            check(isPinnedWasmtimeSource(sourceDirectory)) {
+                "Migrated Wasmtime source is not the required clean revision $wasmtimePulleyGitRevision"
+            }
+            return@doLast
         }
-        if (!sourceDirectory.resolve(".git").isDirectory) {
-            sourceDirectory.deleteRecursively()
+
+        if (gradle.startParameter.isOffline) {
+            throw GradleException(
+                "Pinned Wasmtime source $wasmtimePulleyGitRevision is missing or not clean at " +
+                    "${sourceDirectory.invariantSeparatorsPath}. Run " +
+                    "'./gradlew --no-daemon prepareReleaseDependencies' while online, then retry " +
+                    "releaseGate with --offline.",
+            )
+        }
+
+        val temporaryDirectory = parentDirectory.resolve("${sourceDirectory.name}.download.tmp")
+        try {
+            temporaryDirectory.deleteRecursively()
             runProcess(
                 listOf(
                     "git",
                     "clone",
+                    "--no-checkout",
                     "--filter=blob:none",
                     "https://github.com/bytecodealliance/wasmtime.git",
-                    sourceDirectory.absolutePath,
+                    temporaryDirectory.absolutePath,
                 ),
                 parentDirectory,
             )
+            runProcess(
+                listOf("git", "fetch", "origin", "tag", "v$wasmtimePulleyVersion"),
+                temporaryDirectory,
+            )
+            runProcess(
+                listOf("git", "checkout", "--detach", wasmtimePulleyGitRevision),
+                temporaryDirectory,
+            )
+            check(isPinnedWasmtimeSource(temporaryDirectory)) {
+                "Wasmtime source preparation did not produce clean revision " +
+                    wasmtimePulleyGitRevision
+            }
+            sourceDirectory.deleteRecursively()
+            moveWasmtimeSource(temporaryDirectory, sourceDirectory)
+        } finally {
+            temporaryDirectory.deleteRecursively()
         }
-        val currentRevision = captureProcess(listOf("git", "rev-parse", "HEAD"), sourceDirectory)
-        if (currentRevision == wasmtimePulleyGitRevision) {
-            return@doLast
-        }
-        runProcess(listOf("git", "fetch", "origin", "tag", "v$wasmtimePulleyVersion"), sourceDirectory)
-        runProcess(listOf("git", "checkout", wasmtimePulleyGitRevision), sourceDirectory)
-        val actualRevision = captureProcess(listOf("git", "rev-parse", "HEAD"), sourceDirectory)
-        check(actualRevision == wasmtimePulleyGitRevision) {
-            "Wasmtime source revision mismatch: expected $wasmtimePulleyGitRevision, got $actualRevision"
+    }
+}
+
+val prepareRustReleaseDependencies by tasks.registering {
+    group = "build setup"
+    description =
+        "Installs release Rust targets online and verifies locked Cargo inputs for offline builds."
+    dependsOn(prepareWasmtimePulleyIosSource)
+    inputs.property("wasmtimePulleyGitRevision", wasmtimePulleyGitRevision)
+    inputs.property("rustReleaseVersion", rustReleaseVersion)
+    inputs.property("rustReleaseCommitHash", rustReleaseCommitHash)
+    inputs.file(wasmtimePulleySourceDirectory.map { directory -> directory.file("Cargo.toml") })
+    inputs.file(wasmtimePulleySourceDirectory.map { directory -> directory.file("Cargo.lock") })
+    inputs.files(
+        fileTree(wasmtimeP3BridgeDirectory) {
+            include("Cargo.toml", "Cargo.lock")
+        },
+    )
+
+    doLast {
+        val cargo =
+            cargoBinary()
+                ?: throw GradleException(
+                    "cargo is required to prepare release dependencies. Install Rust first.",
+                )
+        val rustup =
+            rustupBinary()
+                ?: throw GradleException(
+                    "rustup is required to prepare the release-pinned Rust toolchain and targets.",
+                )
+        val environment = localCodexRustEnvironment() + codexRustEnvironmentFor(cargo)
+        val hostTarget = preparePinnedRustToolchain(rustup, environment)
+        val sourceManifest =
+            wasmtimePulleySourceDirectory.get().asFile.resolve("Cargo.toml")
+        val bridgeManifest = wasmtimeP3BridgeDirectory.file("Cargo.toml").asFile
+        val fetches =
+            listOf(
+                sourceManifest to (listOf(hostTarget) + wasmtimePulleyIosTargets),
+                bridgeManifest to
+                    (listOf(hostTarget) + wasmtimePulleyIosTargets + "aarch64-linux-android"),
+            )
+        for ((manifest, targets) in fetches) {
+            for (target in targets.distinct()) {
+                runProcess(
+                    cargoReleaseCommand(cargo) +
+                        listOf("fetch", "--locked") +
+                        cargoNetworkArguments() +
+                        listOf(
+                            "--manifest-path",
+                            manifest.absolutePath,
+                            "--target",
+                            target,
+                        ),
+                    projectDir,
+                    environment,
+                )
+            }
         }
     }
 }
@@ -232,9 +479,11 @@ val buildWasmtimePulleyIosLibs by tasks.registering {
     description = "Builds pinned Wasmtime Pulley C API static libraries for iOS device and simulator."
     notCompatibleWithConfigurationCache("Builds a native dependency through external cargo/rustup/cmake commands.")
     onlyIf("iOS native bridge libraries require macOS toolchains") { hostIsMacOs }
-    dependsOn(prepareWasmtimePulleyIosSource)
+    dependsOn(prepareRustReleaseDependencies)
     inputs.property("wasmtimePulleyVersion", wasmtimePulleyVersion)
     inputs.property("wasmtimePulleyGitRevision", wasmtimePulleyGitRevision)
+    inputs.property("rustReleaseVersion", rustReleaseVersion)
+    inputs.property("rustReleaseCommitHash", rustReleaseCommitHash)
     inputs.property("wasmtimePulleyFeatures", wasmtimePulleyFeatures)
     inputs.property("wasmtimePulleyIosTargets", wasmtimePulleyIosTargets.joinToString(","))
     outputs.files(
@@ -246,7 +495,6 @@ val buildWasmtimePulleyIosLibs by tasks.registering {
     doLast {
         val cargo = cargoBinary()
             ?: error("cargo is required to build Wasmtime Pulley iOS libraries. Install Rust or set CARGO.")
-        val rustup = rustupBinary()
         val cmake = cmakeBinary()
             ?: error("cmake is required to build Wasmtime Pulley iOS libraries. Install CMake or set CMAKE.")
         val sourceDirectory = wasmtimePulleySourceDirectory.get().asFile
@@ -259,26 +507,23 @@ val buildWasmtimePulleyIosLibs by tasks.registering {
                     "CMAKE" to cmake.absolutePath,
                     "PATH" to cmake.parentFile.absolutePath + File.pathSeparator + System.getenv("PATH").orEmpty(),
                 )
-        rustup?.let { rustupBinary ->
-            for (target in wasmtimePulleyIosTargets) {
-                runProcess(listOf(rustupBinary.absolutePath, "target", "add", target), sourceDirectory, environment)
-            }
-        }
         for (target in wasmtimePulleyIosTargets) {
             runProcess(
-                cargoStableCommand(cargo) + listOf(
-                    "build",
-                    "-p",
-                    "wasmtime-c-api",
-                    "--release",
-                    "--target",
-                    target,
-                    "--no-default-features",
-                    "--features",
-                    wasmtimePulleyFeatures,
-                    "--target-dir",
-                    targetDirectory.absolutePath,
-                ),
+                cargoReleaseCommand(cargo) +
+                    listOf("build") +
+                    cargoNetworkArguments() +
+                    listOf(
+                        "-p",
+                        "wasmtime-c-api",
+                        "--release",
+                        "--target",
+                        target,
+                        "--no-default-features",
+                        "--features",
+                        wasmtimePulleyFeatures,
+                        "--target-dir",
+                        targetDirectory.absolutePath,
+                    ),
                 sourceDirectory,
                 environment,
             )
@@ -345,9 +590,11 @@ val buildWasmtimeP3BridgeIosLibs by tasks.registering {
     description = "Builds the Rust Wasmtime Preview3 bridge static libraries for iOS device and simulator."
     notCompatibleWithConfigurationCache("Runs cargo against the pinned Wasmtime source checkout.")
     onlyIf("iOS native bridge libraries require macOS toolchains") { hostIsMacOs }
-    dependsOn(prepareWasmtimePulleyIosSource)
+    dependsOn(prepareRustReleaseDependencies)
     inputs.property("wasmtimePulleyVersion", wasmtimePulleyVersion)
     inputs.property("wasmtimePulleyGitRevision", wasmtimePulleyGitRevision)
+    inputs.property("rustReleaseVersion", rustReleaseVersion)
+    inputs.property("rustReleaseCommitHash", rustReleaseCommitHash)
     inputs.property("wasmtimePulleyIosTargets", wasmtimePulleyIosTargets.joinToString(","))
     inputs.files(
         fileTree(wasmtimeP3BridgeDirectory) {
@@ -365,27 +612,23 @@ val buildWasmtimeP3BridgeIosLibs by tasks.registering {
     doLast {
         val cargo = cargoBinary()
             ?: error("cargo is required to build the Wasmtime Preview3 iOS bridge. Install Rust or set CARGO.")
-        val rustup = rustupBinary()
         val targetDirectory = wasmtimeP3BridgeTargetDirectory.get().asFile
         val outputDirectory = wasmtimeP3BridgeIosLibDirectory.get().asFile
         val environment = localCodexRustEnvironment() + codexRustEnvironmentFor(cargo)
-        rustup?.let { rustupBinary ->
-            for (target in wasmtimePulleyIosTargets) {
-                runProcess(listOf(rustupBinary.absolutePath, "target", "add", target), projectDir, environment)
-            }
-        }
         for (target in wasmtimePulleyIosTargets) {
             runProcess(
-                cargoStableCommand(cargo) + listOf(
-                    "build",
-                    "--release",
-                    "--target",
-                    target,
-                    "--manifest-path",
-                    wasmtimeP3BridgeDirectory.file("Cargo.toml").asFile.absolutePath,
-                    "--target-dir",
-                    targetDirectory.absolutePath,
-                ),
+                cargoReleaseCommand(cargo) +
+                    listOf("build") +
+                    cargoNetworkArguments() +
+                    listOf(
+                        "--release",
+                        "--target",
+                        target,
+                        "--manifest-path",
+                        wasmtimeP3BridgeDirectory.file("Cargo.toml").asFile.absolutePath,
+                        "--target-dir",
+                        targetDirectory.absolutePath,
+                    ),
                 projectDir,
                 environment,
             )
@@ -404,27 +647,33 @@ val testWasmtimeP3Bridge by tasks.registering {
     group = LifecycleBasePlugin.VERIFICATION_GROUP
     description = "Builds and tests the Rust Wasmtime Preview3 bridge probe."
     notCompatibleWithConfigurationCache("Runs cargo against the pinned Wasmtime source checkout.")
-    dependsOn(prepareWasmtimePulleyIosSource)
+    dependsOn(prepareRustReleaseDependencies)
     inputs.property("wasmtimePulleyVersion", wasmtimePulleyVersion)
     inputs.property("wasmtimePulleyGitRevision", wasmtimePulleyGitRevision)
+    inputs.property("rustReleaseVersion", rustReleaseVersion)
+    inputs.property("rustReleaseCommitHash", rustReleaseCommitHash)
     inputs.files(
         fileTree(wasmtimeP3BridgeDirectory) {
             include("Cargo.toml", "Cargo.lock", "src/**/*.rs")
         },
     )
-    outputs.dir(wasmtimeP3BridgeTargetDirectory)
+    doNotTrackState(
+        "Cargo owns this shared target directory; tracking it lets Gradle race with Cargo or macOS metadata writers while cleaning it.",
+    )
 
     doLast {
         val cargo = cargoBinary()
             ?: error("cargo is required to test the Wasmtime Preview3 bridge. Install Rust or set CARGO.")
         runProcess(
-            cargoStableCommand(cargo) + listOf(
-                "test",
-                "--manifest-path",
-                wasmtimeP3BridgeDirectory.file("Cargo.toml").asFile.absolutePath,
-                "--target-dir",
-                wasmtimeP3BridgeTargetDirectory.get().asFile.absolutePath,
-            ),
+            cargoReleaseCommand(cargo) +
+                listOf("test") +
+                cargoNetworkArguments() +
+                listOf(
+                    "--manifest-path",
+                    wasmtimeP3BridgeDirectory.file("Cargo.toml").asFile.absolutePath,
+                    "--target-dir",
+                    wasmtimeP3BridgeTargetDirectory.get().asFile.absolutePath,
+                ),
             projectDir,
             localCodexRustEnvironment() + codexRustEnvironmentFor(cargo),
         )
@@ -435,9 +684,11 @@ val buildWasmtimeP3BridgeLib by tasks.registering {
     group = LifecycleBasePlugin.BUILD_GROUP
     description = "Builds the Rust Wasmtime Preview3 bridge shared library for JVM integration tests."
     notCompatibleWithConfigurationCache("Runs cargo against the pinned Wasmtime source checkout.")
-    dependsOn(prepareWasmtimePulleyIosSource)
+    dependsOn(prepareRustReleaseDependencies)
     inputs.property("wasmtimePulleyVersion", wasmtimePulleyVersion)
     inputs.property("wasmtimePulleyGitRevision", wasmtimePulleyGitRevision)
+    inputs.property("rustReleaseVersion", rustReleaseVersion)
+    inputs.property("rustReleaseCommitHash", rustReleaseCommitHash)
     inputs.files(
         fileTree(wasmtimeP3BridgeDirectory) {
             include("Cargo.toml", "Cargo.lock", "src/**/*.rs")
@@ -449,14 +700,16 @@ val buildWasmtimeP3BridgeLib by tasks.registering {
         val cargo = cargoBinary()
             ?: error("cargo is required to build the Wasmtime Preview3 bridge. Install Rust or set CARGO.")
         runProcess(
-            cargoStableCommand(cargo) + listOf(
-                "build",
-                "--release",
-                "--manifest-path",
-                wasmtimeP3BridgeDirectory.file("Cargo.toml").asFile.absolutePath,
-                "--target-dir",
-                wasmtimeP3BridgeTargetDirectory.get().asFile.absolutePath,
-            ),
+            cargoReleaseCommand(cargo) +
+                listOf("build") +
+                cargoNetworkArguments() +
+                listOf(
+                    "--release",
+                    "--manifest-path",
+                    wasmtimeP3BridgeDirectory.file("Cargo.toml").asFile.absolutePath,
+                    "--target-dir",
+                    wasmtimeP3BridgeTargetDirectory.get().asFile.absolutePath,
+                ),
             projectDir,
             localCodexRustEnvironment() + codexRustEnvironmentFor(cargo),
         )

@@ -21,7 +21,35 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
         asyncTaskReturn: AsyncTaskReturn? = null,
         asyncCallbackExportName: String? = null,
     ): BoundFunction =
-        bindInternal(instance, exportName, function, asyncTaskReturn, asyncCallbackExportName, null)
+        bindInternal(
+            instance,
+            exportName,
+            function,
+            asyncTaskReturn,
+            asyncCallbackExportName,
+            null,
+            null,
+            null,
+        )
+
+    internal fun bindPlugin(
+        instance: Instance,
+        exportName: String,
+        function: WitPackage.Function,
+        asyncFutures: CanonicalFutureIntrinsics?,
+        asyncStreams: CanonicalStreamIntrinsics?,
+        asyncTasks: CanonicalAsyncLowerTasks,
+    ): BoundFunction =
+        bindInternal(
+            instance,
+            exportName,
+            function,
+            null,
+            null,
+            asyncTasks,
+            asyncFutures,
+            asyncStreams,
+        )
 
     internal fun bindAsyncCallback(
         instance: Instance,
@@ -30,8 +58,19 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
         asyncTaskReturn: AsyncTaskReturn?,
         asyncCallbackExportName: String?,
         asyncTasks: CanonicalAsyncLowerTasks?,
+        asyncFutures: CanonicalFutureIntrinsics?,
+        asyncStreams: CanonicalStreamIntrinsics?,
     ): BoundFunction =
-        bindInternal(instance, exportName, function, asyncTaskReturn, asyncCallbackExportName, asyncTasks)
+        bindInternal(
+            instance,
+            exportName,
+            function,
+            asyncTaskReturn,
+            asyncCallbackExportName,
+            asyncTasks,
+            asyncFutures,
+            asyncStreams,
+        )
 
     private fun bindInternal(
         instance: Instance,
@@ -40,6 +79,8 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
         asyncTaskReturn: AsyncTaskReturn?,
         asyncCallbackExportName: String?,
         asyncTasks: CanonicalAsyncLowerTasks?,
+        asyncFutures: CanonicalFutureIntrinsics?,
+        asyncStreams: CanonicalStreamIntrinsics?,
     ): BoundFunction =
         BoundFunction(
             this,
@@ -49,6 +90,8 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
             asyncTaskReturn,
             asyncCallbackExportName,
             asyncTasks,
+            asyncFutures,
+            asyncStreams,
         )
 
     fun call(
@@ -72,12 +115,39 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
         handler: HostHandler,
         asyncFutures: CanonicalFutureIntrinsics?,
     ): HostFunction =
+        hostFunction(
+            moduleName,
+            symbolName,
+            function,
+            handler,
+            asyncFutures,
+            null,
+            null,
+        )
+
+    internal fun hostFunction(
+        moduleName: String,
+        symbolName: String,
+        function: WitPackage.Function,
+        handler: HostHandler,
+        asyncFutures: CanonicalFutureIntrinsics?,
+        asyncStreams: CanonicalStreamIntrinsics?,
+        asyncTasks: CanonicalAsyncLowerTasks?,
+    ): HostFunction =
         HostFunction(
             moduleName,
             symbolName,
             coreFunctionType(function, Direction.LOWERED_IMPORT),
         ) { instance, args ->
-            callHostFunction(instance, function, handler, asyncFutures, args)
+            callHostFunction(
+                instance,
+                function,
+                handler,
+                asyncFutures,
+                asyncStreams,
+                asyncTasks,
+                args,
+            )
         }
 
     fun asyncLoweredHostFunction(
@@ -87,7 +157,17 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
         function: WitPackage.Function,
         handler: HostHandler,
     ): HostFunction =
-        asyncLoweredHostFunction(moduleName, symbolName, coreFunctionType, function, handler, null, null, null)
+        asyncLoweredHostFunction(
+            moduleName,
+            symbolName,
+            coreFunctionType,
+            function,
+            handler,
+            null,
+            null,
+            null,
+            null,
+        )
 
     fun asyncLoweredHostFunction(
         moduleName: String,
@@ -97,7 +177,17 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
         handler: HostHandler,
         asyncFutures: CanonicalFutureIntrinsics?,
     ): HostFunction =
-        asyncLoweredHostFunction(moduleName, symbolName, coreFunctionType, function, handler, asyncFutures, null, null)
+        asyncLoweredHostFunction(
+            moduleName,
+            symbolName,
+            coreFunctionType,
+            function,
+            handler,
+            asyncFutures,
+            null,
+            null,
+            null,
+        )
 
     internal fun asyncLoweredHostFunction(
         moduleName: String,
@@ -106,6 +196,7 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
         function: WitPackage.Function,
         handler: HostHandler,
         asyncFutures: CanonicalFutureIntrinsics?,
+        asyncStreams: CanonicalStreamIntrinsics?,
         asyncTasks: CanonicalAsyncLowerTasks?,
         asyncResultPayloadType: WitPackage.TypeRef?,
     ): HostFunction =
@@ -116,6 +207,7 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
                 function,
                 handler,
                 asyncFutures,
+                asyncStreams,
                 asyncTasks,
                 asyncResultPayloadType,
                 args,
@@ -359,6 +451,8 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
         function: WitPackage.Function,
         handler: HostHandler,
         asyncFutures: CanonicalFutureIntrinsics?,
+        asyncStreams: CanonicalStreamIntrinsics?,
+        asyncTasks: CanonicalAsyncLowerTasks?,
         args: LongArray,
     ): LongArray {
         val context = Context.forInstance(instance)
@@ -400,11 +494,23 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
             if (directResult != null) {
                 directResult.value
             } else {
-                val params = liftFlatValues(context, function.parameters(), paramValues, MAX_FLAT_PARAMS)
+                val params =
+                    internalizeGuestValues(
+                        function.parameters(),
+                        liftFlatValues(
+                            context,
+                            function.parameters(),
+                            paramValues,
+                            MAX_FLAT_PARAMS,
+                        ),
+                        asyncFutures,
+                        asyncStreams,
+                        asyncTasks,
+                    )
                 applyHostHandler(handler, params, hostCallContext)
             }
         if (function.isAsync) {
-            val futureHandle =
+            val delegateHandle =
                 if (result is WitFuture<*>) {
                     result.handle()
                 } else {
@@ -413,9 +519,22 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
                             "lowered async import ${function.name()} requires canonical future intrinsics"
                         )
                 }
+            val futureHandle =
+                if (asyncTasks != null && asyncFutures != null) {
+                    asyncTasks.externalizeFutureReadableHandle(delegateHandle, asyncFutures)
+                } else {
+                    delegateHandle
+                }
             return longArrayOf(futureHandle and 0xffff_ffffL)
         }
-        val resultValues = resultValues(function.results(), result, asyncFutures)
+        val resultValues =
+            resultValues(
+                function.results(),
+                result,
+                asyncFutures,
+                asyncStreams,
+                asyncTasks,
+            )
         if (flatResultCount > MAX_FLAT_RESULTS) {
             if (args.size <= resultPointerIndex) {
                 throw ComponentModelException("lowered import is missing result pointer")
@@ -440,6 +559,7 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
         function: WitPackage.Function,
         handler: HostHandler,
         asyncFutures: CanonicalFutureIntrinsics?,
+        asyncStreams: CanonicalStreamIntrinsics?,
         asyncTasks: CanonicalAsyncLowerTasks?,
         asyncResultPayloadType: WitPackage.TypeRef?,
         args: LongArray,
@@ -454,7 +574,7 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
         }
 
         val flatParamCount = flattenFields(function.parameters()).size
-        val params =
+        val liftedParams =
             when {
                 paramArgCount == flatParamCount ->
                     liftFlatValues(
@@ -475,6 +595,14 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
                             "parameters or one parameter pointer, got $paramArgCount"
                     )
             }
+        val params =
+            internalizeGuestValues(
+                function.parameters(),
+                liftedParams,
+                asyncFutures,
+                asyncStreams,
+                asyncTasks,
+            )
 
         val result = applyHostHandler(handler, params, HostCallContext.ASYNC_LOWER)
         if (result is WitFuture<*> && !asyncLoweredResultCanContainFuture(function.results())) {
@@ -513,7 +641,14 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
             )
         }
         if (hasResults) {
-            val resultValues = resultValues(function.results(), result, asyncFutures)
+            val resultValues =
+                resultValues(
+                    function.results(),
+                    result,
+                    asyncFutures,
+                    asyncStreams,
+                    asyncTasks,
+                )
             val resultPtr = memoryIndex(args[args.size - 1], "async-lower result pointer")
             try {
                 storeValues(
@@ -582,6 +717,8 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
         results: List<WitPackage.Field>,
         result: Any?,
         asyncFutures: CanonicalFutureIntrinsics? = null,
+        asyncStreams: CanonicalStreamIntrinsics? = null,
+        asyncTasks: CanonicalAsyncLowerTasks? = null,
     ): List<Any?> {
         val values: List<Any?>
         if (results.isEmpty()) {
@@ -600,62 +737,166 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
         }
         val normalized = ArrayList<Any?>(values.size)
         for (i in results.indices) {
-            normalized.add(normalizeHostResultValue(results[i].type(), values[i], asyncFutures))
+            normalized.add(
+                externalizeHostValue(
+                    results[i].type(),
+                    values[i],
+                    asyncFutures,
+                    asyncStreams,
+                    asyncTasks,
+                )
+            )
         }
         return normalized
     }
 
-    private fun normalizeHostResultValue(
+    private fun externalizeHostValues(
+        fields: List<WitPackage.Field>,
+        values: List<Any?>,
+        asyncFutures: CanonicalFutureIntrinsics?,
+        asyncStreams: CanonicalStreamIntrinsics?,
+        asyncTasks: CanonicalAsyncLowerTasks?,
+    ): List<Any?> {
+        if (asyncTasks == null || fields.size != values.size) {
+            return values
+        }
+        val externalized = ArrayList<Any?>(values.size)
+        for (i in fields.indices) {
+            externalized.add(
+                externalizeHostValue(
+                    fields[i].type(),
+                    values[i],
+                    asyncFutures,
+                    asyncStreams,
+                    asyncTasks,
+                )
+            )
+        }
+        return externalized
+    }
+
+    private fun externalizeHostValue(
         type: WitPackage.TypeRef,
         value: Any?,
         asyncFutures: CanonicalFutureIntrinsics?,
+        asyncStreams: CanonicalStreamIntrinsics?,
+        asyncTasks: CanonicalAsyncLowerTasks?,
     ): Any? {
         val resolved = resolveAlias(type)
         if (resolved.kind() == WitPackage.TypeRef.TypeKind.NAMED) {
             val declaration = requireDeclaration(resolved.name()!!)
             return when (declaration.kind()) {
                 WitPackage.TypeDeclaration.Kind.RECORD ->
-                    normalizeHostRecordResultValue(declaration.fields(), value, asyncFutures)
+                    externalizeHostRecordValue(
+                        declaration.fields(),
+                        value,
+                        asyncFutures,
+                        asyncStreams,
+                        asyncTasks,
+                    )
                 WitPackage.TypeDeclaration.Kind.VARIANT ->
-                    normalizeHostVariantResultValue(
+                    externalizeHostVariantValue(
                         casesFromDeclaration(declaration),
                         value,
                         asyncFutures,
+                        asyncStreams,
+                        asyncTasks,
+                    )
+                WitPackage.TypeDeclaration.Kind.ALIAS ->
+                    externalizeHostValue(
+                        declaration.target()!!,
+                        value,
+                        asyncFutures,
+                        asyncStreams,
+                        asyncTasks,
                     )
                 else -> value
             }
         }
         return when (resolved.kind()) {
             WitPackage.TypeRef.TypeKind.FUTURE ->
-                normalizeHostFutureResultValue(value, asyncFutures)
+                externalizeHostFutureValue(value, asyncFutures, asyncTasks)
+            WitPackage.TypeRef.TypeKind.STREAM ->
+                externalizeHostStreamValue(value, asyncStreams, asyncTasks)
             WitPackage.TypeRef.TypeKind.LIST ->
-                normalizeHostListResultValue(firstArgument(resolved), value, asyncFutures)
+                externalizeHostListValue(
+                    firstArgument(resolved),
+                    value,
+                    asyncFutures,
+                    asyncStreams,
+                    asyncTasks,
+                )
             WitPackage.TypeRef.TypeKind.OPTION,
             WitPackage.TypeRef.TypeKind.RESULT ->
-                normalizeHostVariantResultValue(casesFromConstructed(resolved), value, asyncFutures)
+                externalizeHostVariantValue(
+                    casesFromConstructed(resolved),
+                    value,
+                    asyncFutures,
+                    asyncStreams,
+                    asyncTasks,
+                )
             WitPackage.TypeRef.TypeKind.TUPLE ->
-                normalizeHostTupleResultValue(resolved.arguments(), value, asyncFutures)
+                externalizeHostTupleValue(
+                    resolved.arguments(),
+                    value,
+                    asyncFutures,
+                    asyncStreams,
+                    asyncTasks,
+                )
             else -> value
         }
     }
 
-    private fun normalizeHostFutureResultValue(
+    private fun externalizeHostFutureValue(
         value: Any?,
         asyncFutures: CanonicalFutureIntrinsics?,
+        asyncTasks: CanonicalAsyncLowerTasks?,
     ): Any? {
-        if (value is Number || value is WitFuture<*>) {
-            return value
-        }
-        return asyncFutures?.completedFutureHandle(value)
-            ?: throw ComponentModelException(
-                "lowered import returned a completed future payload without canonical future intrinsics"
-            )
+        val futures =
+            asyncFutures
+                ?: throw ComponentModelException(
+                    "lowered import returned a future without canonical future intrinsics"
+                )
+        val delegateHandle =
+            when (value) {
+                is Number -> value.toLong()
+                is WitFuture<*> -> value.handle()
+                else ->
+                    futures.completedFutureHandle(value)
+            }
+        return asyncTasks?.externalizeFutureReadableHandle(delegateHandle, futures)
+            ?: delegateHandle
     }
 
-    private fun normalizeHostListResultValue(
+    private fun externalizeHostStreamValue(
+        value: Any?,
+        asyncStreams: CanonicalStreamIntrinsics?,
+        asyncTasks: CanonicalAsyncLowerTasks?,
+    ): Any? {
+        val streams =
+            asyncStreams
+                ?: throw ComponentModelException(
+                    "lowered import returned a stream without canonical stream intrinsics"
+                )
+        val delegateHandle =
+            when (value) {
+                is Number -> value.toLong()
+                is WitStream<*> -> value.handle()
+                else ->
+                    throw ComponentModelException(
+                        "lowered import returned a non-handle stream value $value"
+                    )
+            }
+        return asyncTasks?.externalizeStreamReadableHandle(delegateHandle, streams)
+            ?: delegateHandle
+    }
+
+    private fun externalizeHostListValue(
         elementType: WitPackage.TypeRef,
         value: Any?,
         asyncFutures: CanonicalFutureIntrinsics?,
+        asyncStreams: CanonicalStreamIntrinsics?,
+        asyncTasks: CanonicalAsyncLowerTasks?,
     ): Any? {
         if (isByteList(elementType)) {
             return value
@@ -663,47 +904,294 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
         val elements = listElements(value)
         val normalized = ArrayList<Any?>(elements.size)
         for (element in elements) {
-            normalized.add(normalizeHostResultValue(elementType, element, asyncFutures))
+            normalized.add(
+                externalizeHostValue(
+                    elementType,
+                    element,
+                    asyncFutures,
+                    asyncStreams,
+                    asyncTasks,
+                )
+            )
         }
         return normalized
     }
 
-    private fun normalizeHostRecordResultValue(
+    private fun externalizeHostRecordValue(
         fields: List<WitPackage.Field>,
         value: Any?,
         asyncFutures: CanonicalFutureIntrinsics?,
+        asyncStreams: CanonicalStreamIntrinsics?,
+        asyncTasks: CanonicalAsyncLowerTasks?,
     ): Map<String, Any?> {
         val normalized = LinkedHashMap<String, Any?>()
         for (field in fields) {
             normalized[field.name()] =
-                normalizeHostResultValue(field.type(), fieldValue(value, field.name()), asyncFutures)
+                externalizeHostValue(
+                    field.type(),
+                    fieldValue(value, field.name()),
+                    asyncFutures,
+                    asyncStreams,
+                    asyncTasks,
+                )
         }
         return normalized
     }
 
-    private fun normalizeHostTupleResultValue(
+    private fun externalizeHostTupleValue(
         types: List<WitPackage.TypeRef>,
         value: Any?,
         asyncFutures: CanonicalFutureIntrinsics?,
+        asyncStreams: CanonicalStreamIntrinsics?,
+        asyncTasks: CanonicalAsyncLowerTasks?,
     ): List<Any?> {
         val values = positionalValues(value, types.size)
         val normalized = ArrayList<Any?>(types.size)
         for (i in types.indices) {
-            normalized.add(normalizeHostResultValue(types[i], values[i], asyncFutures))
+            normalized.add(
+                externalizeHostValue(
+                    types[i],
+                    values[i],
+                    asyncFutures,
+                    asyncStreams,
+                    asyncTasks,
+                )
+            )
         }
         return normalized
     }
 
-    private fun normalizeHostVariantResultValue(
+    private fun externalizeHostVariantValue(
         cases: List<CaseLayout>,
         value: Any?,
         asyncFutures: CanonicalFutureIntrinsics?,
+        asyncStreams: CanonicalStreamIntrinsics?,
+        asyncTasks: CanonicalAsyncLowerTasks?,
     ): Any? {
         val selected = selectCase(value, cases)
         val payloadType = selected.type ?: return value
         return WitValue.variant(
             cases[selected.index].label,
-            normalizeHostResultValue(payloadType, selected.value, asyncFutures),
+            externalizeHostValue(
+                payloadType,
+                selected.value,
+                asyncFutures,
+                asyncStreams,
+                asyncTasks,
+            ),
+        )
+    }
+
+    private fun internalizeGuestValues(
+        fields: List<WitPackage.Field>,
+        values: List<Any?>,
+        asyncFutures: CanonicalFutureIntrinsics?,
+        asyncStreams: CanonicalStreamIntrinsics?,
+        asyncTasks: CanonicalAsyncLowerTasks?,
+    ): List<Any?> {
+        if (asyncTasks == null || fields.size != values.size) {
+            return values
+        }
+        val internalized = ArrayList<Any?>(values.size)
+        for (i in fields.indices) {
+            internalized.add(
+                internalizeGuestValue(
+                    fields[i].type(),
+                    values[i],
+                    asyncFutures,
+                    asyncStreams,
+                    asyncTasks,
+                )
+            )
+        }
+        return internalized
+    }
+
+    private fun internalizeGuestValue(
+        type: WitPackage.TypeRef,
+        value: Any?,
+        asyncFutures: CanonicalFutureIntrinsics?,
+        asyncStreams: CanonicalStreamIntrinsics?,
+        asyncTasks: CanonicalAsyncLowerTasks,
+    ): Any? {
+        val resolved = resolveAlias(type)
+        if (resolved.kind() == WitPackage.TypeRef.TypeKind.NAMED) {
+            val declaration = requireDeclaration(resolved.name()!!)
+            return when (declaration.kind()) {
+                WitPackage.TypeDeclaration.Kind.RECORD ->
+                    internalizeGuestRecordValue(
+                        declaration.fields(),
+                        value,
+                        asyncFutures,
+                        asyncStreams,
+                        asyncTasks,
+                    )
+                WitPackage.TypeDeclaration.Kind.VARIANT ->
+                    internalizeGuestVariantValue(
+                        casesFromDeclaration(declaration),
+                        value,
+                        asyncFutures,
+                        asyncStreams,
+                        asyncTasks,
+                    )
+                WitPackage.TypeDeclaration.Kind.ALIAS ->
+                    internalizeGuestValue(
+                        declaration.target()!!,
+                        value,
+                        asyncFutures,
+                        asyncStreams,
+                        asyncTasks,
+                    )
+                else -> value
+            }
+        }
+        return when (resolved.kind()) {
+            WitPackage.TypeRef.TypeKind.FUTURE -> {
+                val futures =
+                    asyncFutures
+                        ?: throw ComponentModelException(
+                            "guest passed a future without canonical future intrinsics"
+                        )
+                val externalHandle =
+                    when (value) {
+                        is WitFuture<*> -> value.handle()
+                        is Number -> value.toLong()
+                        else ->
+                            throw ComponentModelException(
+                                "guest passed a non-handle future value $value"
+                            )
+                    }
+                WitFuture.of<Any?>(
+                    asyncTasks.internalizeFutureReadableHandle(externalHandle, futures)
+                )
+            }
+            WitPackage.TypeRef.TypeKind.STREAM -> {
+                val streams =
+                    asyncStreams
+                        ?: throw ComponentModelException(
+                            "guest passed a stream without canonical stream intrinsics"
+                        )
+                val externalHandle =
+                    when (value) {
+                        is WitStream<*> -> value.handle()
+                        is Number -> value.toLong()
+                        else ->
+                            throw ComponentModelException(
+                                "guest passed a non-handle stream value $value"
+                            )
+                    }
+                WitStream.of<Any?>(
+                    asyncTasks.internalizeStreamReadableHandle(externalHandle, streams)
+                )
+            }
+            WitPackage.TypeRef.TypeKind.LIST ->
+                internalizeGuestListValue(
+                    firstArgument(resolved),
+                    value,
+                    asyncFutures,
+                    asyncStreams,
+                    asyncTasks,
+                )
+            WitPackage.TypeRef.TypeKind.OPTION,
+            WitPackage.TypeRef.TypeKind.RESULT ->
+                internalizeGuestVariantValue(
+                    casesFromConstructed(resolved),
+                    value,
+                    asyncFutures,
+                    asyncStreams,
+                    asyncTasks,
+                )
+            WitPackage.TypeRef.TypeKind.TUPLE ->
+                internalizeGuestTupleValue(
+                    resolved.arguments(),
+                    value,
+                    asyncFutures,
+                    asyncStreams,
+                    asyncTasks,
+                )
+            else -> value
+        }
+    }
+
+    private fun internalizeGuestListValue(
+        elementType: WitPackage.TypeRef,
+        value: Any?,
+        asyncFutures: CanonicalFutureIntrinsics?,
+        asyncStreams: CanonicalStreamIntrinsics?,
+        asyncTasks: CanonicalAsyncLowerTasks,
+    ): Any? {
+        if (isByteList(elementType)) {
+            return value
+        }
+        return listElements(value).map { element ->
+            internalizeGuestValue(
+                elementType,
+                element,
+                asyncFutures,
+                asyncStreams,
+                asyncTasks,
+            )
+        }
+    }
+
+    private fun internalizeGuestRecordValue(
+        fields: List<WitPackage.Field>,
+        value: Any?,
+        asyncFutures: CanonicalFutureIntrinsics?,
+        asyncStreams: CanonicalStreamIntrinsics?,
+        asyncTasks: CanonicalAsyncLowerTasks,
+    ): Map<String, Any?> {
+        val internalized = LinkedHashMap<String, Any?>()
+        for (field in fields) {
+            internalized[field.name()] =
+                internalizeGuestValue(
+                    field.type(),
+                    fieldValue(value, field.name()),
+                    asyncFutures,
+                    asyncStreams,
+                    asyncTasks,
+                )
+        }
+        return internalized
+    }
+
+    private fun internalizeGuestTupleValue(
+        types: List<WitPackage.TypeRef>,
+        value: Any?,
+        asyncFutures: CanonicalFutureIntrinsics?,
+        asyncStreams: CanonicalStreamIntrinsics?,
+        asyncTasks: CanonicalAsyncLowerTasks,
+    ): List<Any?> {
+        val values = positionalValues(value, types.size)
+        return types.indices.map { index ->
+            internalizeGuestValue(
+                types[index],
+                values[index],
+                asyncFutures,
+                asyncStreams,
+                asyncTasks,
+            )
+        }
+    }
+
+    private fun internalizeGuestVariantValue(
+        cases: List<CaseLayout>,
+        value: Any?,
+        asyncFutures: CanonicalFutureIntrinsics?,
+        asyncStreams: CanonicalStreamIntrinsics?,
+        asyncTasks: CanonicalAsyncLowerTasks,
+    ): Any? {
+        val selected = selectCase(value, cases)
+        val payloadType = selected.type ?: return value
+        return WitValue.variant(
+            cases[selected.index].label,
+            internalizeGuestValue(
+                payloadType,
+                selected.value,
+                asyncFutures,
+                asyncStreams,
+                asyncTasks,
+            ),
         )
     }
 
@@ -2237,17 +2725,27 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
         private val asyncTaskReturn: AsyncTaskReturn? = null,
         private val asyncCallbackExportName: String? = null,
         private val asyncTasks: CanonicalAsyncLowerTasks? = null,
+        private val asyncFutures: CanonicalFutureIntrinsics? = null,
+        private val asyncStreams: CanonicalStreamIntrinsics? = null,
     ) {
         fun coreFunctionType(): FunctionType =
             abi.coreFunctionType(function, Direction.LIFTED_EXPORT)
 
         fun call(vararg args: Any?): Any? {
             val context = Context.forInstance(instance)
+            val externalizedArguments =
+                abi.externalizeHostValues(
+                    function.parameters(),
+                    args.toList(),
+                    asyncFutures,
+                    asyncStreams,
+                    asyncTasks,
+                )
             val lowered =
                 abi.lowerFlatValues(
                     context,
                     function.parameters(),
-                    args.toList(),
+                    externalizedArguments,
                     MAX_FLAT_PARAMS,
                 )
             asyncTaskReturn?.reset()
@@ -2265,11 +2763,19 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
                     canonicalResults,
                     if (asyncTaskReturn != null) MAX_FLAT_PARAMS else MAX_FLAT_RESULTS,
                 )
+            val internalized =
+                abi.internalizeGuestValues(
+                    function.results(),
+                    lifted,
+                    asyncFutures,
+                    asyncStreams,
+                    asyncTasks,
+                )
             callPostReturn(canonicalResults)
-            if (lifted.isEmpty()) {
+            if (internalized.isEmpty()) {
                 return null
             }
-            return if (lifted.size == 1) lifted[0] else lifted
+            return if (internalized.size == 1) internalized[0] else internalized
         }
 
         private fun asyncTaskReturnResults(rawResults: LongArray): LongArray {

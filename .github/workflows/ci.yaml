@@ -10,26 +10,13 @@ permissions:
 
 jobs:
   gradle-tests:
-    name: Gradle Tests
-    runs-on: ubuntu-latest
+    name: Release Gate
+    runs-on: macos-latest
+    timeout-minutes: 120
 
     steps:
       - name: Checkout sources
         uses: actions/checkout@v6
-
-      - name: Checkout WebAssembly testsuite
-        uses: actions/checkout@v6
-        with:
-          repository: WebAssembly/testsuite
-          path: build/external-testsuites/wasm
-          ref: 88e97b0f742f4c3ee01fea683da130f344dd7b02
-
-      - name: Checkout WASI testsuite
-        uses: actions/checkout@v6
-        with:
-          repository: WebAssembly/wasi-testsuite
-          path: build/external-testsuites/wasi
-          ref: prod/testsuite-base
 
       - name: Set up Java
         uses: actions/setup-java@v5
@@ -43,47 +30,110 @@ jobs:
 
       - name: Install Wasmtime C API
         run: |
+          set -euo pipefail
           version="$(grep '^wasmtime = ' gradle/libs.versions.toml | cut -d '"' -f 2)"
-          archive="$RUNNER_TEMP/wasmtime-c-api.tar.xz"
+          case "$(uname -m)" in
+            arm64)
+              target="aarch64-macos"
+              api_sha256="f2a33c780715cbe740ca888ed3ee38a197d970800ca1b117b338db3aed819333"
+              cli_sha256="acee50be70dbe90b0ab2ac7db1321fc44715153a1b1cc58291c97b6d7cffc558"
+              ;;
+            x86_64)
+              target="x86_64-macos"
+              api_sha256="c376c153dfd13f281f7f6cf1f9d5ad18b283ab093cf6ae9142612f4f9915f707"
+              cli_sha256="0513db67e7089c7e5f743a01427782bc4def83854222f4bc9b1d75f0b925240b"
+              ;;
+            *) echo "Unsupported macOS architecture: $(uname -m)" >&2; exit 1 ;;
+          esac
+          api_archive="$RUNNER_TEMP/wasmtime-c-api.tar.xz"
+          cli_archive="$RUNNER_TEMP/wasmtime-cli.tar.xz"
           root="$RUNNER_TEMP/wasmtime-c-api"
-          curl --fail --location --output "$archive" \
-            "https://github.com/bytecodealliance/wasmtime/releases/download/v${version}/wasmtime-v${version}-x86_64-linux-c-api.tar.xz"
+          curl --fail --location --output "$api_archive" \
+            "https://github.com/bytecodealliance/wasmtime/releases/download/v${version}/wasmtime-v${version}-${target}-c-api.tar.xz"
+          curl --fail --location --output "$cli_archive" \
+            "https://github.com/bytecodealliance/wasmtime/releases/download/v${version}/wasmtime-v${version}-${target}.tar.xz"
+          test "$(shasum -a 256 "$api_archive" | cut -d ' ' -f 1)" = "$api_sha256"
+          test "$(shasum -a 256 "$cli_archive" | cut -d ' ' -f 1)" = "$cli_sha256"
           mkdir -p "$root"
-          tar -xJf "$archive" -C "$root"
-          library="$root/wasmtime-v${version}-x86_64-linux-c-api/lib/libwasmtime.so"
+          tar -xJf "$api_archive" -C "$root"
+          tar -xJf "$cli_archive" -C "$root"
+          library="$root/wasmtime-v${version}-${target}-c-api/lib/libwasmtime.dylib"
+          executable="$root/wasmtime-v${version}-${target}/wasmtime"
           test -f "$library"
+          test -x "$executable"
           echo "KRWA_WASMTIME_LIBRARY=$library" >> "$GITHUB_ENV"
+          echo "WASMTIME=$executable" >> "$GITHUB_ENV"
+          dirname "$executable" >> "$GITHUB_PATH"
 
       - name: Install wasm-tools CLI
         run: |
+          set -euo pipefail
           version="$(grep '^wasmTools = ' gradle/libs.versions.toml | cut -d '"' -f 2)"
+          case "$(uname -m)" in
+            arm64)
+              target="aarch64-macos"
+              archive_sha256="c4c0f8560d996e47313aadf8df745e4d15eef38090e671384eafcb06d8d135fa"
+              ;;
+            x86_64)
+              target="x86_64-macos"
+              archive_sha256="108759377f47278ec598a994993bf10770d907dd935be5c436ca5cfc01bd008c"
+              ;;
+            *) echo "Unsupported macOS architecture: $(uname -m)" >&2; exit 1 ;;
+          esac
           archive="$RUNNER_TEMP/wasm-tools.tar.gz"
           root="$RUNNER_TEMP/wasm-tools"
           curl --fail --location --output "$archive" \
-            "https://github.com/bytecodealliance/wasm-tools/releases/download/v${version}/wasm-tools-${version}-x86_64-linux.tar.gz"
+            "https://github.com/bytecodealliance/wasm-tools/releases/download/v${version}/wasm-tools-${version}-${target}.tar.gz"
+          test "$(shasum -a 256 "$archive" | cut -d ' ' -f 1)" = "$archive_sha256"
           mkdir -p "$root"
           tar -xzf "$archive" -C "$root"
-          executable="$root/wasm-tools-${version}-x86_64-linux/wasm-tools"
+          executable="$root/wasm-tools-${version}-${target}/wasm-tools"
           test -x "$executable"
           echo "KRWA_WASM_TOOLS=$executable" >> "$GITHUB_ENV"
           dirname "$executable" >> "$GITHUB_PATH"
 
-      - name: Verify Component Model Gradle plugin
-        run: ./gradlew --no-daemon :component-model-gradle-plugin:test :component-model-gradle-plugin:validatePlugins
+      - name: Install and verify pinned native toolchain
+        run: |
+          set -euo pipefail
+          rust_version="$(sed -n 's/^rustRelease = "\(.*\)"$/\1/p' gradle/libs.versions.toml)"
+          rust_commit="$(sed -n 's/^rustReleaseCommit = "\(.*\)"$/\1/p' gradle/libs.versions.toml)"
+          test -n "$rust_version"
+          test -n "$rust_commit"
+          rustup --version
+          rustup toolchain install "$rust_version" --profile minimal
+          rustc_metadata="$(rustup run "$rust_version" rustc -vV)"
+          test "$(printf '%s\n' "$rustc_metadata" | sed -n 's/^release: //p')" = "$rust_version"
+          test "$(printf '%s\n' "$rustc_metadata" | sed -n 's/^commit-hash: //p')" = "$rust_commit"
+          cargo "+$rust_version" --version
+          cmake --version
+          node --version
+          xcrun --sdk iphonesimulator --find clang++
+
+      - name: Create compatible iOS simulator
+        run: |
+          set -euo pipefail
+          runtime="$(xcrun simctl list runtimes | awk '/^iOS / && $0 !~ /unavailable/ { value=$NF } END { gsub(/[()]/, "", value); print value }')"
+          device_id=""
+          while IFS= read -r device_type; do
+            if device_id="$(xcrun simctl create 'KRWA CI' "$device_type" "$runtime" 2>/dev/null)"; then
+              break
+            fi
+          done < <(xcrun simctl list devicetypes | awk '/^iPhone / { value=$NF; gsub(/[()]/, "", value); print value }')
+          test -n "$device_id"
+          echo "KRWA_TEST_SIMULATOR_ID=$device_id" >> "$GITHUB_ENV"
+
+      - name: Test build logic
+        run: ./gradlew -p buildSrc --no-daemon test
         env:
           GRADLE_OPTS: "-ea"
 
-      - name: Run tests
-        run: ./gradlew --no-daemon test --continue
+      - name: Prepare pinned release dependencies
+        run: ./gradlew --no-daemon prepareReleaseDependencies
         env:
           GRADLE_OPTS: "-ea"
 
-      - name: Verify Android Wasmtime runtime artifact
-        run: >-
-          ./gradlew --no-daemon
-          :runtime-wasmtime-android:check
-          :runtime-wasmtime-android:bundleAndroidMainAar
-          :runtime-wasmtime-android:verifyAndroidJniLib16KbAlignment
+      - name: Run complete release gate offline
+        run: ./gradlew --no-daemon --offline releaseGate
         env:
           GRADLE_OPTS: "-ea"
 
@@ -92,9 +142,17 @@ jobs:
           set -euo pipefail
           aar=modules/runtime-wasmtime-android/build/outputs/aar/runtime-wasmtime-android.aar
           unzip -p "$aar" proguard.txt | grep -F AndroidWasmtimePulleyNative
-          unzip -p "$aar" classes.jar > /tmp/runtime-wasmtime-android-classes.jar
-          unzip -l /tmp/runtime-wasmtime-android-classes.jar | grep -F META-INF/LICENSE-WASMTIME
-          unzip -l /tmp/runtime-wasmtime-android-classes.jar | grep -F META-INF/THIRD-PARTY.txt
+          classes_jar="$RUNNER_TEMP/runtime-wasmtime-android-classes.jar"
+          unzip -p "$aar" classes.jar > "$classes_jar"
+          unzip -l "$classes_jar" | grep -F META-INF/LICENSE-WASMTIME
+          unzip -l "$classes_jar" | grep -F META-INF/THIRD-PARTY.txt
+
+      - name: Delete test simulator
+        if: always()
+        run: |
+          if [ -n "${KRWA_TEST_SIMULATOR_ID:-}" ]; then
+            xcrun simctl delete "$KRWA_TEST_SIMULATOR_ID" || true
+          fi
 
   docs:
     name: Documentation
@@ -127,59 +185,3 @@ jobs:
 
       - name: Build Dokka API docs
         run: ./gradlew --no-daemon :dokkaGenerate
-
-  ios-runtime:
-    name: iOS Runtime And ABI
-    runs-on: macos-latest
-    timeout-minutes: 60
-
-    steps:
-      - name: Checkout sources
-        uses: actions/checkout@v6
-
-      - name: Set up Java
-        uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: 25
-          cache: gradle
-
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v6
-
-      - name: Verify native toolchain
-        run: |
-          cargo --version
-          rustup --version
-          cmake --version
-          xcrun --sdk iphonesimulator --find clang++
-
-      - name: Create compatible iOS simulator
-        run: |
-          set -euo pipefail
-          runtime="$(xcrun simctl list runtimes | awk '/^iOS / && $0 !~ /unavailable/ { value=$NF } END { gsub(/[()]/, "", value); print value }')"
-          device_id=""
-          while IFS= read -r device_type; do
-            if device_id="$(xcrun simctl create 'KRWA CI' "$device_type" "$runtime" 2>/dev/null)"; then
-              break
-            fi
-          done < <(xcrun simctl list devicetypes | awk '/^iPhone / { value=$NF; gsub(/[()]/, "", value); print value }')
-          test -n "$device_id"
-          echo "KRWA_TEST_SIMULATOR_ID=$device_id" >> "$GITHUB_ENV"
-
-      - name: Compile iOS runtime and component integration
-        run: >-
-          ./gradlew --no-daemon
-          :runtime:compileKotlinIosSimulatorArm64
-          :component-model:compileKotlinIosSimulatorArm64
-          :ios-runtime-smoke:iosSimulatorArm64Test
-
-      - name: Check public Kotlin ABI
-        run: ./gradlew --no-daemon checkKotlinAbi
-
-      - name: Delete test simulator
-        if: always()
-        run: |
-          if [ -n "${KRWA_TEST_SIMULATOR_ID:-}" ]; then
-            xcrun simctl delete "$KRWA_TEST_SIMULATOR_ID" || true
-          fi

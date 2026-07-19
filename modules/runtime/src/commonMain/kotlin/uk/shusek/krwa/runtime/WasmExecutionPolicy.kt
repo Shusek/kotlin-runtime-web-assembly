@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package uk.shusek.krwa.runtime
 
 /**
@@ -10,23 +12,49 @@ package uk.shusek.krwa.runtime
  * linked provider reports them.
  */
 sealed interface WasmExecutionPolicy {
-    /** Let the platform choose its normal engine, applying [maxMemoryBytes] to either path. */
-    data class Automatic(val maxMemoryBytes: Long? = null) : WasmExecutionPolicy {
+    /** Let the platform choose its normal engine and apply one atomic memory policy. */
+    data class Automatic(
+        @Deprecated("Use memoryPolicy")
+        val maxMemoryBytes: Long? = null,
+        val memoryPolicy: WasmMemoryPolicy? = null,
+    ) : WasmExecutionPolicy {
         init {
             validateHostMemoryLimit(maxMemoryBytes)
+            require(maxMemoryBytes == null || memoryPolicy == null) {
+                "maxMemoryBytes and memoryPolicy cannot be configured together"
+            }
         }
     }
 
     /** Require the host platform WebAssembly engine, such as browser or Node WebAssembly. */
-    data class HostWebAssembly(val maxMemoryBytes: Long? = null) : WasmExecutionPolicy {
+    data class HostWebAssembly(
+        @Deprecated("Use memoryPolicy")
+        val maxMemoryBytes: Long? = null,
+        val memoryPolicy: WasmMemoryPolicy? = null,
+    ) : WasmExecutionPolicy {
         init {
             validateHostMemoryLimit(maxMemoryBytes)
+            require(maxMemoryBytes == null || memoryPolicy == null) {
+                "maxMemoryBytes and memoryPolicy cannot be configured together"
+            }
         }
     }
 
     /** Require the linked Wasmtime provider with the supplied target and serialized-module policy. */
-    data class Wasmtime(val config: WasmtimeExecutionConfig) : WasmExecutionPolicy
+    data class Wasmtime(
+        val config: WasmtimeExecutionConfig,
+        val memoryPolicy: WasmMemoryPolicy? = null,
+    ) : WasmExecutionPolicy
 }
+
+internal fun WasmExecutionPolicy.memoryPolicyOrNull(): WasmMemoryPolicy? =
+    when (this) {
+        is WasmExecutionPolicy.Automatic ->
+            memoryPolicy ?: maxMemoryBytes?.let(WasmMemoryPolicy::fromLegacyMaxBytes)
+        is WasmExecutionPolicy.HostWebAssembly ->
+            memoryPolicy ?: maxMemoryBytes?.let(WasmMemoryPolicy::fromLegacyMaxBytes)
+        is WasmExecutionPolicy.Wasmtime -> memoryPolicy
+    }
 
 private fun validateHostMemoryLimit(maxMemoryBytes: Long?) {
     if (maxMemoryBytes == null) return

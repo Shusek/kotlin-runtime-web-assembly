@@ -27,7 +27,7 @@ class KotlinWitBindings private constructor(builder: Builder) {
 
     private val witPackage: WitPackage = builder.witPackage
     private val witSource: String? = builder.witSource
-    private val packageName: String? = builder.packageName
+    private val packageName: String? = requireValidPackageName(builder.packageName)
     private val runtimePackageName: String? = builder.runtimePackageName
     private val includeRuntimeTypes: Boolean =
         builder.includeRuntimeTypes || builder.includeGuestExportAdapters
@@ -170,7 +170,19 @@ class KotlinWitBindings private constructor(builder: Builder) {
 
     private fun packageDirectory(outputDirectory: Path): Path {
         val packagePath = packageName?.takeIf { it.isNotBlank() }?.replace('.', '/')
-        return if (packagePath == null) outputDirectory else outputDirectory.resolve(packagePath, normalize = true)
+        val directory =
+            if (packagePath == null) {
+                outputDirectory
+            } else {
+                outputDirectory.resolve(packagePath, normalize = true)
+            }
+        check(
+            directory == outputDirectory ||
+                directory.relativeTo(outputDirectory).segments.none { segment -> segment == ".." }
+        ) {
+            "generated package path must remain within outputDirectory"
+        }
+        return directory
     }
 
     private fun fileBaseName(declaration: Declaration): String =
@@ -668,7 +680,7 @@ class KotlinWitBindings private constructor(builder: Builder) {
         owner: InterfaceDeclaration?,
         context: String,
     ): String =
-        adapterTypeName(declaration.name()) +
+        adapterTypeName(declaration) +
             "(" +
             declaration.fields().joinToString(", ") { field ->
                 memberName(field.name()) +
@@ -687,7 +699,7 @@ class KotlinWitBindings private constructor(builder: Builder) {
         declaration: TypeDeclaration,
         context: String,
     ): String =
-        adapterTypeName(declaration.name()) +
+        adapterTypeName(declaration) +
             "(" +
             declaration.cases().joinToString(", ") { flag ->
                 memberName(flag.name()) +
@@ -698,7 +710,7 @@ class KotlinWitBindings private constructor(builder: Builder) {
     private fun fromAbiEnumExpression(value: String, declaration: TypeDeclaration, context: String): String =
         "when (__krwaVariant($value, ${kotlinString(context)}).label()) {" +
             declaration.cases().joinToString("; ") { witCase ->
-                "${kotlinString(witCase.name())} -> ${adapterTypeName(declaration.name())}.${enumName(witCase.name())}"
+                "${kotlinString(witCase.name())} -> ${adapterTypeName(declaration)}.${enumName(witCase.name())}"
             } +
             "; else -> error(\"unknown WIT enum case\") }"
 
@@ -708,7 +720,7 @@ class KotlinWitBindings private constructor(builder: Builder) {
         owner: InterfaceDeclaration?,
         context: String,
     ): String {
-        val type = adapterTypeName(declaration.name())
+        val type = adapterTypeName(declaration)
         return "when (__krwaVariant($value, ${kotlinString(context)}).label()) {" +
             declaration.cases().joinToString("; ") { witCase ->
                 val target = "$type.${typeName(witCase.name())}"
@@ -860,7 +872,7 @@ class KotlinWitBindings private constructor(builder: Builder) {
             TypeDeclaration.Kind.ENUM ->
                 "when ($value) {" +
                     declaration.cases().joinToString("; ") { witCase ->
-                        "${adapterTypeName(declaration.name())}.${enumName(witCase.name())} -> " +
+                        "${adapterTypeName(declaration)}.${enumName(witCase.name())} -> " +
                             "WitValue.variant(${kotlinString(witCase.name())})"
                     } +
                     " }"
@@ -874,7 +886,7 @@ class KotlinWitBindings private constructor(builder: Builder) {
         declaration: TypeDeclaration,
         owner: InterfaceDeclaration?,
     ): String {
-        val type = adapterTypeName(declaration.name())
+        val type = adapterTypeName(declaration)
         return "when ($value) {" +
             declaration.cases().joinToString("; ") { witCase ->
                 val caseType = "$type.${typeName(witCase.name())}"
@@ -1756,7 +1768,7 @@ class KotlinWitBindings private constructor(builder: Builder) {
 
     private fun appendGuestExportStoreHelpers(out: StringBuilder) {
         for ((declaration, helper) in guestExportStoreHelpers) {
-            val typeName = adapterTypeName(declaration.name())
+            val typeName = adapterTypeName(declaration)
             out.append("private fun ")
                 .append(helper.storeFunctionName)
                 .append("(ptr: Int, value: ")
@@ -1767,8 +1779,7 @@ class KotlinWitBindings private constructor(builder: Builder) {
             }
             out.append("}\n\n")
 
-            val elementType = TypeRef.named(declaration.name())
-            val stride = listStride(elementType)
+            val stride = sizeOfFields(declaration.fields())
             out.append("private fun ")
                 .append(helper.storeListFunctionName)
                 .append("(value: List<")
@@ -2240,6 +2251,28 @@ class KotlinWitBindings private constructor(builder: Builder) {
             }
         }
         return typeName(simpleName)
+    }
+
+    private fun adapterTypeName(declaration: TypeDeclaration): String {
+        for (candidate in witPackage.declarations()) {
+            if (candidate === declaration) {
+                return typeName(declaration.name())
+            }
+            if (candidate is InterfaceDeclaration) {
+                for (member in candidate.members()) {
+                    if (member === declaration) {
+                        return interfaceTypeName(candidate) + "." + typeName(declaration.name())
+                    }
+                }
+            } else if (candidate is WorldDeclaration) {
+                for (member in candidate.declarations()) {
+                    if (member === declaration) {
+                        return worldTypeName(candidate) + "." + typeName(declaration.name())
+                    }
+                }
+            }
+        }
+        return adapterTypeName(declaration.name())
     }
 
     private fun adapterUseTypeName(
@@ -3966,11 +3999,89 @@ class KotlinWitBindings private constructor(builder: Builder) {
     }
 
     private fun findTypeDeclaration(name: String): TypeDeclaration? {
-        val normalized = WitNames.lastSegment(name)
+        val normalized = normalizeTypeReference(name)
+        if (isQualifiedTypeReference(name) || isQualifiedTypeReference(normalized)) {
+            val simpleName = WitNames.lastSegment(normalized)
+            for (declaration in witPackage.declarations()) {
+                val found =
+                    findQualifiedTypeDeclaration(
+                        declaration,
+                        name,
+                        normalized,
+                        simpleName,
+                    )
+                if (found != null) {
+                    return found
+                }
+            }
+            return null
+        }
+        val simpleName = WitNames.lastSegment(normalized)
         for (declaration in witPackage.declarations()) {
-            val found = findTypeDeclaration(declaration, normalized, name)
+            val found = findTypeDeclaration(declaration, simpleName, name)
             if (found != null) {
                 return found
+            }
+        }
+        return null
+    }
+
+    private fun findQualifiedTypeDeclaration(
+        declaration: Declaration,
+        original: String,
+        normalized: String,
+        simpleName: String,
+    ): TypeDeclaration? {
+        if (declaration is TypeDeclaration) {
+            return if (typeMatches(declaration.name(), original, normalized, simpleName)) {
+                declaration
+            } else {
+                null
+            }
+        }
+        if (declaration is InterfaceDeclaration) {
+            for (member in declaration.members()) {
+                if (
+                    member is TypeDeclaration &&
+                        (
+                            typeMatches(
+                                qualifiedTypeName(declaration.qualifiedName(), member.name()),
+                                original,
+                                normalized,
+                                simpleName,
+                            ) ||
+                                typeMatches(
+                                    declaration.qualifiedName() + "." + member.name(),
+                                    original,
+                                    normalized,
+                                    simpleName,
+                                )
+                        )
+                ) {
+                    return member
+                }
+            }
+        } else if (declaration is WorldDeclaration) {
+            for (member in declaration.declarations()) {
+                if (
+                    member is TypeDeclaration &&
+                        (
+                            typeMatches(
+                                qualifiedTypeName(declaration.qualifiedName(), member.name()),
+                                original,
+                                normalized,
+                                simpleName,
+                            ) ||
+                                typeMatches(
+                                    declaration.qualifiedName() + "." + member.name(),
+                                    original,
+                                    normalized,
+                                    simpleName,
+                                )
+                        )
+                ) {
+                    return member
+                }
             }
         }
         return null
@@ -4122,7 +4233,7 @@ class KotlinWitBindings private constructor(builder: Builder) {
         internal var includeGuestExportAdapters: Boolean = false
 
         fun withPackageName(packageName: String?): Builder {
-            this.packageName = packageName
+            this.packageName = requireValidPackageName(packageName)
             return this
         }
 
@@ -4186,8 +4297,50 @@ class KotlinWitBindings private constructor(builder: Builder) {
                 "when",
                 "while",
             )
+        private val KOTLIN_PACKAGE_KEYWORDS = KEYWORDS - "constructor" + "typeof"
 
         @JvmStatic fun builder(witPackage: WitPackage): Builder = Builder(witPackage)
+
+        private fun requireValidPackageName(packageName: String?): String? {
+            if (packageName == null) {
+                return null
+            }
+            require(packageName.isNotBlank()) {
+                "packageName must be null or a non-empty Kotlin package name"
+            }
+            require(
+                packageName.split('.').all { segment ->
+                    isKotlinPackageSegment(segment) && segment !in KOTLIN_PACKAGE_KEYWORDS
+                }
+            ) {
+                "packageName must contain only valid, non-keyword Kotlin identifier segments"
+            }
+            return packageName
+        }
+
+        private fun isKotlinPackageSegment(segment: String): Boolean {
+            if (segment.isEmpty()) {
+                return false
+            }
+            var offset = 0
+            var codePoint = segment.codePointAt(offset)
+            if (codePoint != '_'.code && !Character.isLetter(codePoint)) {
+                return false
+            }
+            offset += Character.charCount(codePoint)
+            while (offset < segment.length) {
+                codePoint = segment.codePointAt(offset)
+                if (
+                    codePoint != '_'.code &&
+                        !Character.isLetter(codePoint) &&
+                        !Character.isDigit(codePoint)
+                ) {
+                    return false
+                }
+                offset += Character.charCount(codePoint)
+            }
+            return true
+        }
 
         @JvmStatic
         fun generate(witPackage: WitPackage, packageName: String?): String =

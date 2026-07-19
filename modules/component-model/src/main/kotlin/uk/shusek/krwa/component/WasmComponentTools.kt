@@ -7,6 +7,7 @@ import kotlinx.io.Buffer
 import kotlinx.io.readByteArray
 import okio.FileSystem
 import okio.Path
+import okio.Path.Companion.toPath
 import uk.shusek.krwa.wasm.Parser
 import uk.shusek.krwa.wasm.WasmWriter
 import uk.shusek.krwa.wasm.types.CustomSection
@@ -39,9 +40,23 @@ object WasmComponentTools {
         coreModule: Path,
         asyncCallback: Boolean,
     ): ByteArray =
+        withTempDirectory("embed-result") { root ->
+            val output = root.resolve("embedded.wasm")
+            embedWitToFile(witFileOrDirectory, world, coreModule, output, asyncCallback)
+            fileSystem.read(output) { readByteArray() }
+        }
+
+    private fun embedWitToFile(
+        witFileOrDirectory: Path,
+        world: String,
+        coreModule: Path,
+        output: Path,
+        asyncCallback: Boolean,
+    ) {
         withTempDirectory("embed") { root ->
             val stagedWit = stage(root, "wit", witFileOrDirectory)
             val stagedModule = stage(root, "module", coreModule)
+            val toolOutput = root.resolve("embedded-output.wasm")
 
             val args = ArrayList<String>()
             args.add("wasm-tools")
@@ -54,22 +69,39 @@ object WasmComponentTools {
                 args.add(relative(root, stagedWit))
                 args.add("--world")
                 args.add(world)
-                val dummyModule =
-                    WasmToolsInvoker.run(args, WasmToolsInvoker.directory(".", root)).stdout()
-                val module = fileSystem.read(stagedModule) { readByteArray() }
-                return@withTempDirectory appendCustomSections(module, dummyModule)
+                args.add("--output")
+                args.add(relative(root, toolOutput))
+                WasmToolsInvoker.run(args, WasmToolsInvoker.directory(".", root))
+                appendCustomSectionsToFile(stagedModule, toolOutput, output)
+                return@withTempDirectory
             }
             args.add(relative(root, stagedWit))
             args.add("--world")
             args.add(world)
             args.add(relative(root, stagedModule))
-            WasmToolsInvoker.run(args, WasmToolsInvoker.directory(".", root)).stdout()
+            args.add("--output")
+            args.add(relative(root, toolOutput))
+            WasmToolsInvoker.run(args, WasmToolsInvoker.directory(".", root))
+            copyFileReplacing(toolOutput, output)
         }
+    }
 
     @JvmStatic
     fun componentNew(embeddedCoreModule: Path, vararg adapters: Path): ByteArray =
+        withTempDirectory("new-result") { root ->
+            val output = root.resolve("component.wasm")
+            componentNewToFile(embeddedCoreModule, output, *adapters)
+            fileSystem.read(output) { readByteArray() }
+        }
+
+    private fun componentNewToFile(
+        embeddedCoreModule: Path,
+        output: Path,
+        vararg adapters: Path,
+    ) {
         withTempDirectory("new") { root ->
             val stagedModule = stage(root, "module", embeddedCoreModule)
+            val toolOutput = root.resolve("component-output.wasm")
 
             val args = ArrayList<String>()
             args.add("wasm-tools")
@@ -87,8 +119,12 @@ object WasmComponentTools {
                 )
             }
 
-            WasmToolsInvoker.run(args, WasmToolsInvoker.directory(".", root)).stdout()
+            args.add("--output")
+            args.add(relative(root, toolOutput))
+            WasmToolsInvoker.run(args, WasmToolsInvoker.directory(".", root))
+            copyFileReplacing(toolOutput, output)
         }
+    }
 
     @JvmStatic
     fun componentFromCore(
@@ -108,16 +144,16 @@ object WasmComponentTools {
         vararg adapters: Path,
     ): ByteArray =
         withTempDirectory("package") { root ->
-            val embedded = root.resolve("embedded.wasm")
-            fileSystem.write(embedded) {
-                write(embedWit(witFileOrDirectory, world, coreModule, asyncCallback))
-            }
-            val resolvedAdapters = ArrayList<Path>()
-            resolvedAdapters.addAll(adapters)
-            if (WasiPreview1Adapter.shouldInstall(coreModule, adapters.asList())) {
-                resolvedAdapters.add(WasiPreview1Adapter.writeBundledReactor(root))
-            }
-            componentNew(embedded, *resolvedAdapters.toTypedArray())
+            val output = root.resolve("component.wasm")
+            packageComponentToFile(
+                witFileOrDirectory,
+                world,
+                coreModule,
+                output,
+                asyncCallback,
+                adapters,
+            )
+            fileSystem.read(output) { readByteArray() }
         }
 
     @JvmStatic
@@ -149,21 +185,63 @@ object WasmComponentTools {
         validate: Boolean,
         asyncCallback: Boolean,
         vararg adapters: Path,
+    ): Path =
+        writeOutputAtomically(outputComponent) { stagedOutput ->
+            packageComponentToFile(
+                witFileOrDirectory,
+                world,
+                coreModule,
+                stagedOutput,
+                asyncCallback,
+                adapters,
+            )
+            if (validate) {
+                validateComponent(stagedOutput, asyncCallback)
+            }
+        }
+
+    /**
+     * Runs all output production and validation against a same-filesystem staging path, then
+     * atomically installs the result. The target is unchanged if [writeAndValidate] or the atomic
+     * move fails.
+     */
+    @JvmSynthetic
+    internal fun writeOutputAtomically(
+        outputComponent: Path,
+        writeAndValidate: (Path) -> Unit,
     ): Path {
         try {
-            val parent = outputComponent.normalized().parent
-            if (parent != null) {
-                fileSystem.createDirectories(parent)
-            }
-            fileSystem.write(outputComponent) {
-                write(componentFromCore(witFileOrDirectory, world, coreModule, asyncCallback, *adapters))
-            }
-            if (validate) {
-                validateComponent(outputComponent, asyncCallback)
+            val normalizedOutput = outputComponent.normalized()
+            val outputDirectory = normalizedOutput.parent ?: ".".toPath(normalize = true)
+            fileSystem.createDirectories(outputDirectory)
+            withTempDirectory("write-package", outputDirectory) { root ->
+                val stagedOutput = root.resolve("component.wasm")
+                writeAndValidate(stagedOutput)
+                fileSystem.atomicMove(stagedOutput, normalizedOutput)
             }
             return outputComponent
         } catch (e: IOException) {
             throw UncheckedIOException(e)
+        }
+    }
+
+    private fun packageComponentToFile(
+        witFileOrDirectory: Path,
+        world: String,
+        coreModule: Path,
+        outputComponent: Path,
+        asyncCallback: Boolean,
+        adapters: Array<out Path>,
+    ) {
+        withTempDirectory("package-files") { root ->
+            val embedded = root.resolve("embedded.wasm")
+            embedWitToFile(witFileOrDirectory, world, coreModule, embedded, asyncCallback)
+            val resolvedAdapters = ArrayList<Path>()
+            resolvedAdapters.addAll(adapters)
+            if (WasiPreview1Adapter.shouldInstall(coreModule, adapters.asList())) {
+                resolvedAdapters.add(WasiPreview1Adapter.writeBundledReactor(root))
+            }
+            componentNewToFile(embedded, outputComponent, *resolvedAdapters.toTypedArray())
         }
     }
 
@@ -212,10 +290,11 @@ object WasmComponentTools {
             args.add("modules")
             args.add(relative(root, stagedComponent))
 
-            val directories = LinkedHashMap<String, Path>()
-            directories["."] = root
-            directories["modules"] = modules
-            val result = WasmToolsInvoker.run(args, directories)
+            val result =
+                WasmToolsInvoker.run(
+                    args,
+                    WasmToolsInvoker.directory(".", root),
+                )
 
             UnbundledComponent(result.stdout(), readModules(modules))
         }
@@ -228,19 +307,26 @@ object WasmComponentTools {
 
     private fun relative(root: Path, path: Path): String = "./${path.relativeTo(root)}"
 
-    private fun appendCustomSections(module: ByteArray, customSectionSourceModule: ByteArray): ByteArray {
-        val out = Buffer()
-        out.write(module)
-        for (section in Parser.parse(customSectionSourceModule).customSections()) {
-            if (section.name() == "name") {
-                continue
+    private fun appendCustomSectionsToFile(
+        module: Path,
+        customSectionSourceModule: Path,
+        output: Path,
+    ) {
+        val customSectionBytes = fileSystem.read(customSectionSourceModule) { readByteArray() }
+        fileSystem.write(output) {
+            fileSystem.source(module).use { source -> writeAll(source) }
+            for (section in Parser.parse(customSectionBytes).customSections()) {
+                if (section.name() == "name") {
+                    continue
+                }
+                val contents = encodeCustomSectionContents(section)
+                val header = Buffer()
+                header.writeByte(0)
+                WasmWriter.writeVarUInt32(header, contents.size)
+                write(header.readByteArray())
+                write(contents)
             }
-            val contents = encodeCustomSectionContents(section)
-            out.writeByte(0)
-            WasmWriter.writeVarUInt32(out, contents.size)
-            out.write(contents)
         }
-        return out.readByteArray()
     }
 
     private fun encodeCustomSectionContents(section: CustomSection): ByteArray {
@@ -271,6 +357,12 @@ object WasmComponentTools {
         }
     }
 
+    private fun copyFileReplacing(source: Path, target: Path) {
+        target.normalized().parent?.let(fileSystem::createDirectories)
+        fileSystem.delete(target, mustExist = false)
+        fileSystem.copy(source, target)
+    }
+
     private fun readModules(moduleDirectory: Path): Map<String, ByteArray> {
         val modules = LinkedHashMap<String, ByteArray>()
         val files =
@@ -284,10 +376,14 @@ object WasmComponentTools {
         return modules
     }
 
-    private fun <T> withTempDirectory(prefix: String, operation: (Path) -> T): T {
+    private fun <T> withTempDirectory(
+        prefix: String,
+        base: Path = FileSystem.SYSTEM_TEMPORARY_DIRECTORY,
+        operation: (Path) -> T,
+    ): T {
         var dir: Path? = null
         try {
-            dir = createTempDirectory("krwa-component-$prefix-")
+            dir = createTempDirectory(base, "krwa-component-$prefix-")
             return operation(dir)
         } catch (e: IOException) {
             throw UncheckedIOException(e)
@@ -296,8 +392,7 @@ object WasmComponentTools {
         }
     }
 
-    private fun createTempDirectory(prefix: String): Path {
-        val base = FileSystem.SYSTEM_TEMPORARY_DIRECTORY
+    private fun createTempDirectory(base: Path, prefix: String): Path {
         for (attempt in 0 until 100) {
             val candidate =
                 base.resolve("$prefix-${java.lang.System.nanoTime()}-$attempt", normalize = true)

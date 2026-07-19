@@ -10,7 +10,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import org.kotlincrypto.random.CryptoRand
 
-public expect class KotlinWasiPreview3 {
+public expect class KotlinWasiPreview3 : AutoCloseable {
     public val version: String
 
     public val fileSystems: Map<String, WasiFileSystem>
@@ -19,7 +19,7 @@ public expect class KotlinWasiPreview3 {
 
     public fun fileSystemOrNull(guestRoot: String = "/"): WasiFileSystem?
 
-    public fun close()
+    override fun close()
 
     public fun cancel()
 
@@ -89,8 +89,16 @@ public expect class KotlinWasiPreview3 {
 
         public fun withTerminalStderr(terminalStderr: Boolean): Builder
 
+        public fun withNetworkPolicy(networkPolicy: WasiNetworkPolicy): Builder
+
+        @Deprecated(
+            "Unrestricted networking bypasses endpoint isolation. Use withNetworkPolicy.",
+        )
         public fun withNetworking(): Builder
 
+        @Deprecated(
+            "Unrestricted networking bypasses endpoint isolation. Use withNetworkPolicy.",
+        )
         public fun withNetworking(networkingEnabled: Boolean): Builder
 
         public fun withoutNetworking(): Builder

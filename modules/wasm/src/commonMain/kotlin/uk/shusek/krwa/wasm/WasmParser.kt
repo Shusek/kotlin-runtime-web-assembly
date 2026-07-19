@@ -51,6 +51,11 @@ class WasmParser private constructor(private val core: WasmParserCore) {
             return this
         }
 
+        fun withLimits(limits: WasmParserLimits): Builder {
+            coreBuilder.withLimits(limits)
+            return this
+        }
+
         fun build(): WasmParser = WasmParser(coreBuilder.build())
 
         companion object {

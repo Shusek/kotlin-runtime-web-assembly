@@ -201,11 +201,12 @@ private fun compileJsonSequenceGuest(tempDir: Path): Path {
 
     val outputFile = projectDir.resolve("gradle-output.log")
     val process = ProcessBuilder(
-        repoGradlew().toString(),
-        "--no-daemon",
-        "--stacktrace",
-        "-q",
-        "compileProductionExecutableKotlinWasmWasi",
+        nestedGradleCommand(
+            repoGradlew(),
+            "--stacktrace",
+            "-q",
+            "compileProductionExecutableKotlinWasmWasi",
+        ),
     )
         .directory(projectDir.toFile())
         .redirectErrorStream(true)

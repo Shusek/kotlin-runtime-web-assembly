@@ -346,6 +346,10 @@ void throwEngine(JNIEnv *env, const std::string &message) {
     throwJava(env, "uk/shusek/krwa/wasm/WasmEngineException", message);
 }
 
+void throwUninstantiable(JNIEnv *env, const std::string &message) {
+    throwJava(env, "uk/shusek/krwa/wasm/UninstantiableException", message);
+}
+
 void throwRuntime(JNIEnv *env, const std::string &message) {
     throwJava(env, "uk/shusek/krwa/runtime/WasmRuntimeException", message);
 }
@@ -1062,7 +1066,7 @@ Java_uk_shusek_krwa_runtime_wasmtime_android_AndroidWasmtimePulleyNative_create(
         return 0;
     }
     if (trap != nullptr) {
-        throwEngine(env, "instantiate Pulley module: " + consumeTrap(api, trap));
+        throwUninstantiable(env, "instantiate Pulley module: " + consumeTrap(api, trap));
         return 0;
     }
 
@@ -1083,25 +1087,38 @@ Java_uk_shusek_krwa_runtime_wasmtime_android_AndroidWasmtimePulleyNative_bindFun
     JNIEnv *env,
     jclass,
     jlong nativeHandle,
-    jstring name
+    jbyteArray nameUtf8
 ) {
     auto *execution = executionFrom(nativeHandle);
     std::lock_guard<std::recursive_mutex> lock(execution->mutex);
-    const char *chars = env->GetStringUTFChars(name, nullptr);
-    if (chars == nullptr) {
+    if (nameUtf8 == nullptr) {
+        throwEngine(env, "function export name must not be null");
         return 0;
     }
-    std::size_t length = static_cast<std::size_t>(env->GetStringUTFLength(name));
+    jsize javaLength = env->GetArrayLength(nameUtf8);
+    std::vector<std::uint8_t> nameBytes(static_cast<std::size_t>(javaLength));
+    if (javaLength > 0) {
+        env->GetByteArrayRegion(
+            nameUtf8,
+            0,
+            javaLength,
+            reinterpret_cast<jbyte *>(nameBytes.data())
+        );
+        if (env->ExceptionCheck()) {
+            return 0;
+        }
+    }
+    const char *chars =
+        nameBytes.empty() ? "" : reinterpret_cast<const char *>(nameBytes.data());
     WasmtimeExtern item{};
     bool found =
         execution->api->instanceExportGet(
             execution->context,
             &execution->instance,
             chars,
-            length,
+            nameBytes.size(),
             &item
         );
-    env->ReleaseStringUTFChars(name, chars);
     if (!found || item.kind != WASMTIME_EXTERN_FUNC) {
         throwEngine(env, "Unknown function export");
         return 0;
@@ -1115,25 +1132,38 @@ Java_uk_shusek_krwa_runtime_wasmtime_android_AndroidWasmtimePulleyNative_bindMem
     JNIEnv *env,
     jclass,
     jlong nativeHandle,
-    jstring name
+    jbyteArray nameUtf8
 ) {
     auto *execution = executionFrom(nativeHandle);
     std::lock_guard<std::recursive_mutex> lock(execution->mutex);
-    const char *chars = env->GetStringUTFChars(name, nullptr);
-    if (chars == nullptr) {
+    if (nameUtf8 == nullptr) {
+        throwEngine(env, "memory export name must not be null");
         return 0;
     }
-    std::size_t length = static_cast<std::size_t>(env->GetStringUTFLength(name));
+    jsize javaLength = env->GetArrayLength(nameUtf8);
+    std::vector<std::uint8_t> nameBytes(static_cast<std::size_t>(javaLength));
+    if (javaLength > 0) {
+        env->GetByteArrayRegion(
+            nameUtf8,
+            0,
+            javaLength,
+            reinterpret_cast<jbyte *>(nameBytes.data())
+        );
+        if (env->ExceptionCheck()) {
+            return 0;
+        }
+    }
+    const char *chars =
+        nameBytes.empty() ? "" : reinterpret_cast<const char *>(nameBytes.data());
     WasmtimeExtern item{};
     bool found =
         execution->api->instanceExportGet(
             execution->context,
             &execution->instance,
             chars,
-            length,
+            nameBytes.size(),
             &item
         );
-    env->ReleaseStringUTFChars(name, chars);
     if (!found || item.kind != WASMTIME_EXTERN_MEMORY) {
         return 0;
     }

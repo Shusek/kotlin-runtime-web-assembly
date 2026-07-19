@@ -49,7 +49,12 @@ internal fun readName(buffer: WasmByteReader): String = readName(buffer, true)
 
 /** Read a symbol name from the buffer as UTF-8 String. */
 internal fun readName(buffer: WasmByteReader, checkMalformed: Boolean): String {
-    val length = readVarUInt32(buffer).toInt()
+    val length =
+        readLimitedSize(
+            buffer,
+            limitName = "maxNameBytes",
+            configuredLimit = buffer.limits.maxNameBytes,
+        )
     val bytes = ByteArray(length)
     readBytes(buffer, bytes)
     val name = bytes.decodeToString()
@@ -57,6 +62,61 @@ internal fun readName(buffer: WasmByteReader, checkMalformed: Boolean): String {
         throw MalformedException("malformed UTF-8 encoding")
     }
     return name
+}
+
+internal fun readVectorSize(
+    buffer: WasmByteReader,
+    limitName: String,
+    configuredLimit: Int,
+    specificationReason: String? = null,
+): Int {
+    val count = readVarUInt32(buffer)
+    requireWithinLimit(
+        limitName = "maxVectorElements",
+        configuredLimit = buffer.limits.maxVectorElements.toLong(),
+        actual = count,
+        specificationReason = specificationReason,
+    )
+    requireWithinLimit(
+        limitName = limitName,
+        configuredLimit = configuredLimit.toLong(),
+        actual = count,
+        specificationReason = specificationReason,
+    )
+    return count.toInt()
+}
+
+internal fun readVectorSize(buffer: WasmByteReader): Int =
+    readVectorSize(
+        buffer,
+        limitName = "maxVectorElements",
+        configuredLimit = buffer.limits.maxVectorElements,
+    )
+
+internal fun readLimitedSize(
+    buffer: WasmByteReader,
+    limitName: String,
+    configuredLimit: Int,
+): Int {
+    val size = readVarUInt32(buffer)
+    requireWithinLimit(limitName, configuredLimit.toLong(), size)
+    return size.toInt()
+}
+
+internal fun requireWithinLimit(
+    limitName: String,
+    configuredLimit: Long,
+    actual: Long,
+    specificationReason: String? = null,
+) {
+    if (actual > configuredLimit) {
+        throw WasmParseLimitException(
+            limitName,
+            configuredLimit,
+            actual,
+            specificationReason,
+        )
+    }
 }
 
 internal fun isValidIdentifier(string: String): Boolean =

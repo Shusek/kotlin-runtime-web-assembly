@@ -39,22 +39,22 @@ class WasmToolsTest {
 
     @Test
     fun shouldRunWat2WasmOnString() {
-        val moduleInstance =
-            Instance.builder(
-                    Parser.parse(
-                        Wat2Wasm.parse(
-                            "(module (func (export \"add\") (param \$x" +
-                                " i32) (param \$y i32) (result i32)" +
-                                " (i32.add (local.get \$x) (local.get" +
-                                " \$y))))"
-                        )
+        Instance.builder(
+                Parser.parse(
+                    Wat2Wasm.parse(
+                        "(module (func (export \"add\") (param \$x" +
+                            " i32) (param \$y i32) (result i32)" +
+                            " (i32.add (local.get \$x) (local.get" +
+                            " \$y))))"
                     )
                 )
-                .build()
-
-        val addFunction = moduleInstance.export("add")
-        val results = addFunction.apply(1, 41)
-        assertEquals(42L, results[0])
+            )
+            .build()
+            .use { moduleInstance ->
+                val addFunction = moduleInstance.export("add")
+                val results = addFunction.apply(1, 41)
+                assertEquals(42L, results[0])
+            }
     }
 
     @Test

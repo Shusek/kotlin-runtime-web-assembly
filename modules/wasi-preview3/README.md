@@ -33,11 +33,24 @@ Example:
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.Dispatchers
 import uk.shusek.krwa.wasi.preview3.KotlinWasiPreview3
+import uk.shusek.krwa.wasi.preview3.WasiHttpNetworkEndpoint
+import uk.shusek.krwa.wasi.preview3.WasiHttpNetworkProtocol
+import uk.shusek.krwa.wasi.preview3.WasiNetworkPolicy
 import uk.shusek.krwa.wasi.preview3.asDeferred
 
 fun main() = runBlocking {
     val runtime = KotlinWasiPreview3.builder()
-        .withNetworking()
+        .withNetworkPolicy(
+            WasiNetworkPolicy(
+                httpEndpoints = setOf(
+                    WasiHttpNetworkEndpoint(
+                        WasiHttpNetworkProtocol.Https,
+                        "api.example.com",
+                        443,
+                    ),
+                ),
+            ),
+        )
         .withResourceBudget(
             parallelism = 2,
             streamBufferCapacity = 64 * 1024,
@@ -53,6 +66,9 @@ fun main() = runBlocking {
     runtime.close()
 }
 ```
+
+The default network policy denies all access. HTTP scheme, canonical host, and
+port are matched exactly; raw-socket grants are independent.
 
 ## CPU Budgets and Coroutine Scheduling
 

@@ -13,13 +13,31 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.io.TempDir
 import uk.shusek.krwa.component.WasiPreview2
+import uk.shusek.krwa.component.WasiPreview2HostOwnership
 import uk.shusek.krwa.component.WasiPreview3
+import uk.shusek.krwa.component.WasiPreview3HostOwnership
 import uk.shusek.krwa.component.WasmPlugin
 import uk.shusek.krwa.component.WitResult
 import uk.shusek.krwa.component.WitValue
 
 class WasiPreview3TestsuiteTest {
     @TempDir lateinit var tempDir: java.nio.file.Path
+
+    @Test
+    fun officialPreview3InventoryIsFullyExecutedOrExplicitlyTracked() {
+        val directory = preview3ComponentsDirectory()
+        val actual =
+            directory
+                .listFiles { file -> file.isFile && file.extension == "wasm" }
+                ?.mapTo(sortedSetOf()) { file -> file.name }
+                ?: throw AssertionError("missing WASI Preview 3 testsuite directory: $directory")
+
+        assertEquals(
+            EXECUTED_PREVIEW3_COMPONENTS + TRACKED_PREVIEW3_EXCLUSIONS,
+            actual,
+            "Every pinned Preview 3 component must be executed or listed in docs/testing-exclusions.md",
+        )
+    }
 
     @Test
     fun officialPreview3RandomComponentRuns() {
@@ -81,9 +99,38 @@ class WasiPreview3TestsuiteTest {
 
     @TestFactory
     fun officialPreview3HttpMessageTypeComponentsRun(): List<DynamicTest> =
-        listOf("http-request.wasm", "http-response.wasm").map { wasmName ->
+        listOf(
+            "http-request.wasm",
+            "http-request-options.wasm",
+            "http-response.wasm",
+        ).map { wasmName ->
             dynamicTest(wasmName) { runCommandComponent(wasmName) }
         }
+
+    @Test
+    fun officialPreview3TcpBindComponentRuns() {
+        runCommandComponent("sockets-tcp-bind.wasm", networking = true)
+    }
+
+    @Test
+    fun officialPreview3TcpConnectComponentRuns() {
+        runCommandComponent("sockets-tcp-connect.wasm", networking = true)
+    }
+
+    @Test
+    fun officialPreview3TcpListenComponentRuns() {
+        runCommandComponent("sockets-tcp-listen.wasm", networking = true)
+    }
+
+    @Test
+    fun officialPreview3TcpReceiveComponentRuns() {
+        runCommandComponent("sockets-tcp-receive.wasm", networking = true)
+    }
+
+    @Test
+    fun officialPreview3TcpSendComponentRuns() {
+        runCommandComponent("sockets-tcp-send.wasm", networking = true)
+    }
 
     @TestFactory
     fun officialPreview3SocketPropertyComponentsRun(): List<DynamicTest> =
@@ -109,22 +156,7 @@ class WasiPreview3TestsuiteTest {
 
     @Test
     fun officialPreview3HttpServiceComponentHandlesRequests() {
-        val component = preview3Component("http-service.wasm")
-        assertTrue(component.isFile, "missing WASI Preview 3 testsuite component: $component")
-        val wasi = WasiPreview3.builder().build()
-        val wasiPreview2 = WasiPreview2.builder().build()
-        try {
-            val plugin =
-                WasmPlugin.builderFromComponent(component.toOkioPath())
-                    .withComponentModule(component.toOkioPath(), "unbundled-module0.wasm")
-                    .withWasiPreview2(wasiPreview2)
-                    .withWasiPreview3(wasi)
-                    .build()
-            assertTrue(
-                "handler.handle" in plugin.exports().keys,
-                "expected handler.handle export, got ${plugin.exports().keys}",
-            )
-
+        withHttpServiceComponent("http-service.wasm") { wasi, plugin ->
             val root = handleHttp(wasi, plugin, "GET", "/")
             assertEquals(200, root.statusCode(), "GET / status")
             assertEquals("hey\n", root.body().decodeToString(), "GET / body")
@@ -138,8 +170,51 @@ class WasiPreview3TestsuiteTest {
             val post = handleHttp(wasi, plugin, "POST", "/")
             assertEquals(405, post.statusCode(), "POST / status")
             assertEquals("", post.body().decodeToString(), "POST / body")
-        } finally {
-            wasi.close()
+        }
+    }
+
+    @Test
+    fun officialPreview3HttpServiceEchoComponentHandlesRequests() {
+        withHttpServiceComponent("http-service-echo.wasm") { wasi, plugin ->
+            val echoBody = "hello, echo".encodeToByteArray()
+            val echo =
+                handleHttp(
+                    wasi,
+                    plugin,
+                    method = "POST",
+                    pathWithQuery = "/echo",
+                    body = echoBody,
+                )
+            assertEquals(200, echo.statusCode(), "POST /echo status")
+            assertEquals("hello, echo", echo.body().decodeToString(), "POST /echo body")
+            assertHeader(echo, "content-type", "application/octet-stream")
+            assertHeader(echo, "content-length", echoBody.size.toString())
+
+            val empty = handleHttp(wasi, plugin, "POST", "/echo")
+            assertEquals(200, empty.statusCode(), "empty POST /echo status")
+            assertEquals("", empty.body().decodeToString(), "empty POST /echo body")
+
+            val reflected =
+                handleHttp(
+                    wasi,
+                    plugin,
+                    method = "GET",
+                    pathWithQuery = "/reflect-header",
+                    headers = mapOf("x-echo" to listOf("ping".encodeToByteArray())),
+                )
+            assertEquals(200, reflected.statusCode(), "GET /reflect-header status")
+            assertHeader(reflected, "x-echoed", "ping")
+
+            val missing = handleHttp(wasi, plugin, "GET", "/whatever")
+            assertEquals(404, missing.statusCode(), "GET /whatever status")
+        }
+    }
+
+    @Test
+    fun officialPreview3HttpServiceUriComponentReceivesSchemeAndAuthority() {
+        withHttpServiceComponent("http-service-uri.wasm") { wasi, plugin ->
+            val response = handleHttp(wasi, plugin, "GET", "/whoami")
+            assertEquals(200, response.statusCode(), "GET /whoami status")
         }
     }
 
@@ -225,46 +300,79 @@ class WasiPreview3TestsuiteTest {
             val plugin =
                 WasmPlugin.builderFromComponent(component.toOkioPath())
                     .withComponentModule(component.toOkioPath(), "unbundled-module0.wasm")
-                    .withWasiPreview2(wasiPreview2)
-                    .withWasiPreview3(wasi)
+                    .withWasiPreview2(wasiPreview2, WasiPreview2HostOwnership.OWNED)
+                    .withWasiPreview3(wasi, WasiPreview3HostOwnership.BORROWED)
                     .build()
-            assertTrue(
-                "run" in plugin.exports().keys,
-                "expected run export, got ${plugin.exports().keys}",
-            )
-            val actualExitCode =
-                try {
-                    commandExitCode(plugin.call("run"))
-                } catch (exit: WasiPreview3.ExitException) {
-                    exit.statusCode()
-                } catch (exit: WasiPreview2.ExitException) {
-                    exit.statusCode()
-                } catch (failure: Throwable) {
-                    val capturedStdout = stdout.readByteArray().decodeToString()
-                    val capturedStderr = stderr.readByteArray().decodeToString()
-                    throw AssertionError(
-                        "$wasmName failed; stdout=$capturedStdout stderr=$capturedStderr",
-                        failure,
-                    )
-                }
-            assertEquals(expectedExitCode, actualExitCode, "exit code")
-            assertEquals(expectedStdout, stdout.readByteArray().decodeToString(), "stdout")
-            assertEquals(expectedStderr, stderr.readByteArray().decodeToString(), "stderr")
+            plugin.use {
+                assertTrue(
+                    "run" in plugin.exports().keys,
+                    "expected run export, got ${plugin.exports().keys}",
+                )
+                val actualExitCode =
+                    try {
+                        commandExitCode(plugin.call("run"))
+                    } catch (exit: WasiPreview3.ExitException) {
+                        exit.statusCode()
+                    } catch (exit: WasiPreview2.ExitException) {
+                        exit.statusCode()
+                    } catch (failure: Throwable) {
+                        val capturedStdout = stdout.readByteArray().decodeToString()
+                        val capturedStderr = stderr.readByteArray().decodeToString()
+                        throw AssertionError(
+                            "$wasmName failed; stdout=$capturedStdout stderr=$capturedStderr",
+                            failure,
+                        )
+                    }
+                assertEquals(expectedExitCode, actualExitCode, "exit code")
+                assertEquals(expectedStdout, stdout.readByteArray().decodeToString(), "stdout")
+                assertEquals(expectedStderr, stderr.readByteArray().decodeToString(), "stderr")
+            }
         } finally {
             wasi.close()
         }
     }
 
-    private fun preview3Component(name: String): File =
-        File("../../build/external-testsuites/wasi/tests/rust/testsuite/wasm32-wasip3/$name")
+    private fun preview3ComponentsDirectory(): File =
+        File("../../build/external-testsuites/wasi/tests/rust/testsuite/wasm32-wasip3")
+
+    private fun preview3Component(name: String): File = File(preview3ComponentsDirectory(), name)
 
     private fun File.toOkioPath(): okio.Path = absolutePath.toPath(normalize = true)
+
+    private fun withHttpServiceComponent(
+        name: String,
+        assertions: (WasiPreview3, WasmPlugin) -> Unit,
+    ) {
+        val component = preview3Component(name)
+        assertTrue(component.isFile, "missing WASI Preview 3 testsuite component: $component")
+        val wasi = WasiPreview3.builder().build()
+        val wasiPreview2 = WasiPreview2.builder().build()
+        try {
+            val plugin =
+                WasmPlugin.builderFromComponent(component.toOkioPath())
+                    .withComponentModule(component.toOkioPath(), "unbundled-module0.wasm")
+                    .withWasiPreview2(wasiPreview2, WasiPreview2HostOwnership.OWNED)
+                    .withWasiPreview3(wasi, WasiPreview3HostOwnership.BORROWED)
+                    .build()
+            plugin.use {
+                assertTrue(
+                    "handler.handle" in plugin.exports().keys,
+                    "expected handler.handle export, got ${plugin.exports().keys}",
+                )
+                assertions(wasi, plugin)
+            }
+        } finally {
+            wasi.close()
+        }
+    }
 
     private fun handleHttp(
         wasi: WasiPreview3,
         plugin: WasmPlugin,
         method: String,
         pathWithQuery: String,
+        headers: Map<String, List<ByteArray>> = emptyMap(),
+        body: ByteArray = ByteArray(0),
     ): WasiPreview2.HttpResponseSnapshot =
         wasi.handleHttpRequest(
             plugin,
@@ -272,8 +380,8 @@ class WasiPreview3TestsuiteTest {
             pathWithQuery,
             "http",
             "localhost",
-            emptyMap(),
-            ByteArray(0),
+            headers,
+            body,
         )
 
     private fun assertHeader(
@@ -300,5 +408,59 @@ class WasiPreview3TestsuiteTest {
                 }
             else -> throw AssertionError("expected command status result, got $result")
         }
+    }
+
+    private companion object {
+        val EXECUTED_PREVIEW3_COMPONENTS: Set<String> =
+            sortedSetOf(
+                "cli-env.wasm",
+                "cli-exit.wasm",
+                "cli-stdio-roundtrip.wasm",
+                "cli-stdio.wasm",
+                "cli-terminal.wasm",
+                "filesystem-advise.wasm",
+                "filesystem-dotdot.wasm",
+                "filesystem-flags-and-type.wasm",
+                "filesystem-hard-links.wasm",
+                "filesystem-io.wasm",
+                "filesystem-is-same-object.wasm",
+                "filesystem-metadata-hash.wasm",
+                "filesystem-mkdir-rmdir.wasm",
+                "filesystem-open-errors.wasm",
+                "filesystem-read-directory.wasm",
+                "filesystem-rename.wasm",
+                "filesystem-set-size.wasm",
+                "filesystem-stat.wasm",
+                "filesystem-unlink-errors.wasm",
+                "http-fields.wasm",
+                "http-request-options.wasm",
+                "http-request.wasm",
+                "http-response.wasm",
+                "http-service-echo.wasm",
+                "http-service-uri.wasm",
+                "http-service.wasm",
+                "monotonic-clock.wasm",
+                "multi-clock-wait.wasm",
+                "random.wasm",
+                "run-with-err.wasm",
+                "sockets-tcp-bind.wasm",
+                "sockets-tcp-connect.wasm",
+                "sockets-tcp-listen.wasm",
+                "sockets-tcp-properties.wasm",
+                "sockets-tcp-receive.wasm",
+                "sockets-tcp-send.wasm",
+                "sockets-udp-bind.wasm",
+                "sockets-udp-connect.wasm",
+                "sockets-udp-properties.wasm",
+                "sockets-udp-receive.wasm",
+                "sockets-udp-send.wasm",
+                "wall-clock.wasm",
+            )
+
+        val TRACKED_PREVIEW3_EXCLUSIONS: Set<String> =
+            sortedSetOf(
+                "cli-stdout-flush.wasm",
+                "sockets-echo.wasm",
+            )
     }
 }

@@ -4,7 +4,9 @@ package uk.shusek.krwa.component
 
 import io.ktor.client.HttpClient as KtorHttpClient
 import io.ktor.client.engine.js.Js
+import io.ktor.client.plugins.HttpRedirect
 import io.ktor.client.plugins.HttpTimeout
+import io.ktor.client.plugins.pluginOrNull
 import io.ktor.client.plugins.timeout
 import io.ktor.client.request.headers
 import io.ktor.client.request.request
@@ -24,13 +26,14 @@ import okio.Path
 
 private const val DST_PROBE_SECONDS: Long = 183L * 24L * 60L * 60L
 
-internal actual fun defaultWasiHttpClient(): WasiHttpClient =
-    WasmJsKtorWasiHttpClient(
+internal actual fun defaultWasiHttpClient(): WasiHttpClient {
+    val client =
         KtorHttpClient(Js) {
             install(HttpTimeout)
-            followRedirects = true
+            followRedirects = false
         }
-    )
+    return ownedWasiHttpClient(WasmJsKtorWasiHttpClient(client), client::close)
+}
 
 internal actual fun ktorWasiHttpClient(httpClient: KtorHttpClient): WasiHttpClient =
     WasmJsKtorWasiHttpClient(httpClient)
@@ -139,31 +142,49 @@ private class WasmJsKtorWasiHttpClient(private val delegate: KtorHttpClient) : W
         throw UnsupportedOperationException("Synchronous WASI HTTP is not available on web/wasm")
 
     override suspend fun sendSuspending(request: WasiHttpRequest): WasiHttpResponse {
-        val response =
-            delegate.request(request.uri) {
-                method = KtorHttpMethod(request.method)
-                val timeout = request.timeout
-                if (timeout != null) {
-                    timeout {
-                        val millis = maxOf(1L, timeout.inWholeMilliseconds)
-                        requestTimeoutMillis = millis
-                        connectTimeoutMillis = millis
-                        socketTimeoutMillis = millis
+        val requestClient = delegate.withoutRedirects()
+        try {
+            val response =
+                requestClient.request(request.uri) {
+                    method = KtorHttpMethod(request.method)
+                    val timeout = request.timeout
+                    if (timeout != null) {
+                        timeout {
+                            val millis = maxOf(1L, timeout.inWholeMilliseconds)
+                            requestTimeoutMillis = millis
+                            connectTimeoutMillis = millis
+                            socketTimeoutMillis = millis
+                        }
                     }
-                }
-                headers {
-                    for (entry in request.headers) {
-                        append(entry.name, entry.value)
+                    headers {
+                        for (entry in request.headers) {
+                            append(entry.name, entry.value)
+                        }
                     }
+                    setBody(request.body)
                 }
-                setBody(request.body)
-            }
-        return WasiHttpResponse(
-            response.status.value,
-            response.headers.entries().associate { entry -> entry.key to entry.value.toList() },
-            response.bodyAsBytes(),
+            return WasiHttpResponse(
+                response.status.value,
+                response.headers.entries().associate { entry -> entry.key to entry.value.toList() },
+                response.bodyAsBytes(),
+            )
+        } finally {
+            requestClient.close()
+        }
+    }
+}
+
+private fun KtorHttpClient.withoutRedirects(): KtorHttpClient {
+    val client = config {
+        followRedirects = false
+    }
+    if (client.pluginOrNull(HttpRedirect) != null) {
+        client.close()
+        throw IllegalArgumentException(
+            "Ktor WASI HTTP clients must not install HttpRedirect explicitly."
         )
     }
+    return client
 }
 
 private class NullSource : RawSource {

@@ -9,6 +9,8 @@ import uk.shusek.krwa.runtime.Instance
 import uk.shusek.krwa.runtime.Memory
 import uk.shusek.krwa.runtime.WasmtimeExecutionConfig
 import uk.shusek.krwa.runtime.WasmExecutionPolicy
+import uk.shusek.krwa.runtime.WasmFunctionHandle
+import uk.shusek.krwa.runtime.WasmMemoryPolicy
 import uk.shusek.krwa.wasm.InvalidException
 import uk.shusek.krwa.wasm.WasmModule
 import uk.shusek.krwa.wasm.WasmParser
@@ -19,6 +21,41 @@ import uk.shusek.krwa.wasm.types.MemoryLimits
 import uk.shusek.krwa.wasm.types.ValType
 import uk.shusek.krwa.wasi.WasiPreview1
 import uk.shusek.krwa.wasi.WasiOptions
+
+private inline fun closeAfterFailure(
+    failure: Throwable,
+    close: () -> Unit,
+) {
+    try {
+        close()
+    } catch (closeFailure: Throwable) {
+        failure.addSuppressed(closeFailure)
+    }
+}
+
+/**
+ * Defines whether a [WasmPlugin] merely uses a caller-managed Preview 2 host or takes responsibility
+ * for closing it.
+ */
+enum class WasiPreview2HostOwnership {
+    /** The caller keeps responsibility for closing the host. */
+    BORROWED,
+
+    /** The builder closes the host on failure, or transfers that responsibility to the plugin. */
+    OWNED,
+}
+
+/**
+ * Defines whether a [WasmPlugin] merely uses a caller-managed Preview 3 host or takes responsibility
+ * for closing it.
+ */
+enum class WasiPreview3HostOwnership {
+    /** The caller keeps responsibility for closing the host. */
+    BORROWED,
+
+    /** The builder closes the host on failure, or transfers that responsibility to the plugin. */
+    OWNED,
+}
 
 /**
  * A live Component Model plugin session.
@@ -31,6 +68,8 @@ private constructor(
     private val witPackage: WitPackage,
     private val world: WitPackage.WorldDeclaration,
     private val instance: Instance,
+    private val ownedPreview2Host: WasiPreview2?,
+    private val ownedPreview3Host: WasiPreview3?,
     exports: Map<String, CanonicalAbi.BoundFunction>,
 ) : WasiComponentInvoker, AutoCloseable {
     private val exportsByName: Map<String, CanonicalAbi.BoundFunction> =
@@ -51,7 +90,46 @@ private constructor(
     override fun close() {
         if (closed) return
         closed = true
-        instance.close()
+        try {
+            instance.close()
+        } catch (failure: Throwable) {
+            closeOwnedHostsAfterFailure(failure)
+            throw failure
+        }
+        closeOwnedHosts()
+    }
+
+    private fun closeOwnedHostsAfterFailure(failure: Throwable) {
+        ownedPreview2Host?.let { host ->
+            closeAfterFailure(failure) {
+                host.close()
+            }
+        }
+        ownedPreview3Host?.let { host ->
+            closeAfterFailure(failure) {
+                host.close()
+            }
+        }
+    }
+
+    private fun closeOwnedHosts() {
+        var failure: Throwable? = null
+        try {
+            ownedPreview2Host?.close()
+        } catch (closeFailure: Throwable) {
+            failure = closeFailure
+        }
+        try {
+            ownedPreview3Host?.close()
+        } catch (closeFailure: Throwable) {
+            val previous = failure
+            if (previous == null) {
+                failure = closeFailure
+            } else {
+                previous.addSuppressed(closeFailure)
+            }
+        }
+        failure?.let { throw it }
     }
 
     private fun ensureOpen() {
@@ -88,15 +166,25 @@ private constructor(
         private var canonicalFutureIntrinsics: CanonicalFutureIntrinsics? = null
         private var canonicalStreamIntrinsics: CanonicalStreamIntrinsics? = null
         private var preview1HostConfigured: Boolean = false
+        private var preview2Host: WasiPreview2? = null
+        private var preview2HostOwnership: WasiPreview2HostOwnership =
+            WasiPreview2HostOwnership.BORROWED
+        private var ownedPreview2HostConsumed: Boolean = false
         private var preview3Host: WasiPreview3? = null
+        private var preview3HostOwnership: WasiPreview3HostOwnership =
+            WasiPreview3HostOwnership.BORROWED
+        private var ownedPreview3HostConsumed: Boolean = false
         private var worldName: String? = null
         private var module: WasmModule? = null
         private var component: WasmPluginUnbundledComponent? = null
         private var executionBackend: ExecutionBackend? = null
         private var maxMemoryPages: Int? = null
+        private var memoryPolicy: WasmMemoryPolicy? = null
         private var wasmtimeExecutionConfig: WasmtimeExecutionConfig? = null
         private var executionPolicy: WasmExecutionPolicy? = null
         private val rawHostFunctions = ArrayList<ImportFunction>()
+        private val explicitCoreHostFunctions = LinkedHashMap<String, ImportFunction>()
+        private var legacyModuleImportDiscovery: Boolean = false
 
         fun withWorld(worldName: String?): Builder {
             this.worldName = worldName
@@ -126,6 +214,7 @@ private constructor(
             return this
         }
 
+        @Deprecated("Use withMemoryPolicy")
         fun withMaxMemoryPages(maxPages: Int?): Builder {
             check(executionPolicy == null) {
                 "maximum memory pages cannot be combined with an atomic execution policy"
@@ -136,6 +225,16 @@ private constructor(
                 }
             }
             maxMemoryPages = maxPages
+            memoryPolicy = null
+            return this
+        }
+
+        fun withMemoryPolicy(policy: WasmMemoryPolicy?): Builder {
+            check(executionPolicy == null) {
+                "memory policy cannot be combined with an atomic execution policy"
+            }
+            maxMemoryPages = null
+            memoryPolicy = policy
             return this
         }
 
@@ -154,6 +253,7 @@ private constructor(
         fun withExecutionPolicy(policy: WasmExecutionPolicy): Builder {
             executionBackend = null
             maxMemoryPages = null
+            memoryPolicy = null
             wasmtimeExecutionConfig = null
             executionPolicy = policy
             return this
@@ -187,6 +287,13 @@ private constructor(
             return this
         }
 
+        @Deprecated(
+            message = "Use withWitHostImport(WitHostImportId, handler) for an exact WIT import.",
+            replaceWith =
+                ReplaceWith(
+                    "withWitHostImport(WitHostImportId(interfaceName!!, functionName!!), handler)"
+                ),
+        )
         override fun withHostImport(
             interfaceName: String?,
             functionName: String?,
@@ -196,8 +303,42 @@ private constructor(
             return this
         }
 
+        @Deprecated("Unqualified host imports are ambiguous; use withWitHostImport instead.")
         override fun withHostImport(qualifiedName: String, handler: HostHandler): Builder {
             hostImports[qualifiedName] = handler
+            return this
+        }
+
+        override fun withWitHostImport(id: WitHostImportId, handler: HostHandler): Builder {
+            hostImports[importKey(id.interfaceName, id.functionName)] = handler
+            return this
+        }
+
+        /**
+         * Grants one exact raw core WebAssembly import outside the selected WIT world.
+         */
+        fun withCoreHostImport(
+            id: CoreHostImportId,
+            functionType: FunctionType,
+            handler: WasmFunctionHandle,
+        ): Builder {
+            val key = importKey(id.moduleName, id.functionName)
+            explicitCoreHostFunctions[key] =
+                HostFunction(id.moduleName, id.functionName, functionType, handler)
+            return this
+        }
+
+        /**
+         * Restores pre-strict discovery for migration only.
+         */
+        @UnsafeComponentModelApi
+        @Deprecated(
+            message =
+                "Legacy discovery can expose imports outside the selected WIT world. " +
+                    "Register exact WIT or core imports instead.",
+        )
+        fun withLegacyModuleImportDiscovery(): Builder {
+            legacyModuleImportDiscovery = true
             return this
         }
 
@@ -235,8 +376,58 @@ private constructor(
             return this
         }
 
-        fun withWasiPreview2(wasi: WasiPreview2): Builder {
-            wasi.install(this)
+        @Deprecated(
+            message =
+                "Preview 2 host ownership must be explicit. " +
+                    "Use withWasiPreview2(wasi, WasiPreview2HostOwnership.BORROWED).",
+            replaceWith =
+                ReplaceWith(
+                    "withWasiPreview2(wasi, WasiPreview2HostOwnership.BORROWED)"
+                ),
+        )
+        fun withWasiPreview2(wasi: WasiPreview2): Builder =
+            withWasiPreview2(wasi, WasiPreview2HostOwnership.BORROWED)
+
+        /**
+         * Installs a Preview 2 host with an explicit lifecycle.
+         *
+         * [WasiPreview2HostOwnership.OWNED] transfers responsibility immediately: this builder
+         * closes the host if configuration or [build] fails, and a successfully built plugin closes
+         * it from [WasmPlugin.close]. A [WasiPreview2HostOwnership.BORROWED] host is never closed by
+         * the builder or plugin.
+         */
+        fun withWasiPreview2(
+            wasi: WasiPreview2,
+            ownership: WasiPreview2HostOwnership,
+        ): Builder {
+            val previousHost = preview2Host
+            if (previousHost === wasi && ownedPreview2HostConsumed) {
+                throw IllegalStateException(
+                    "owned WASI Preview 2 host has already been transferred to a plugin"
+                )
+            }
+            if (
+                previousHost != null &&
+                    previousHost !== wasi &&
+                    preview2HostOwnership == WasiPreview2HostOwnership.OWNED &&
+                    !ownedPreview2HostConsumed
+            ) {
+                previousHost.close()
+            }
+            preview2Host = wasi
+            preview2HostOwnership = ownership
+            ownedPreview2HostConsumed = false
+            try {
+                wasi.install(this)
+            } catch (failure: Throwable) {
+                if (ownership == WasiPreview2HostOwnership.OWNED) {
+                    ownedPreview2HostConsumed = true
+                    closeAfterFailure(failure) {
+                        wasi.close()
+                    }
+                }
+                throw failure
+            }
             return this
         }
 
@@ -246,57 +437,155 @@ private constructor(
             return this
         }
 
-        fun withWasiPreview3(wasi: WasiPreview3): Builder {
-            asyncLowerTasks.withMaxWaitables(wasi.maxWaitables())
-            asyncLowerTasks.withMaxInFlightHostTasks(wasi.maxInFlightHostTasks())
-            wasi.install(this)
+        @Deprecated(
+            message =
+                "Preview 3 host ownership must be explicit. " +
+                    "Use withWasiPreview3(wasi, WasiPreview3HostOwnership.BORROWED).",
+            replaceWith =
+                ReplaceWith(
+                    "withWasiPreview3(wasi, WasiPreview3HostOwnership.BORROWED)"
+                ),
+        )
+        fun withWasiPreview3(wasi: WasiPreview3): Builder =
+            withWasiPreview3(wasi, WasiPreview3HostOwnership.BORROWED)
+
+        /**
+         * Installs a Preview 3 host with an explicit lifecycle.
+         *
+         * [WasiPreview3HostOwnership.OWNED] transfers responsibility immediately: this builder
+         * closes the host if configuration or [build] fails, and a successfully built plugin closes
+         * it from [WasmPlugin.close]. A [WasiPreview3HostOwnership.BORROWED] host is never closed by
+         * the builder or plugin.
+         */
+        fun withWasiPreview3(
+            wasi: WasiPreview3,
+            ownership: WasiPreview3HostOwnership,
+        ): Builder {
+            val previousHost = preview3Host
+            if (previousHost === wasi && ownedPreview3HostConsumed) {
+                throw IllegalStateException(
+                    "owned WASI Preview 3 host has already been transferred to a plugin"
+                )
+            }
+            if (
+                previousHost != null &&
+                    previousHost !== wasi &&
+                    preview3HostOwnership == WasiPreview3HostOwnership.OWNED &&
+                    !ownedPreview3HostConsumed
+            ) {
+                previousHost.close()
+            }
             preview3Host = wasi
+            preview3HostOwnership = ownership
+            ownedPreview3HostConsumed = false
+            try {
+                asyncLowerTasks.withMaxWaitables(wasi.maxWaitables())
+                asyncLowerTasks.withMaxInFlightHostTasks(wasi.maxInFlightHostTasks())
+                wasi.install(this)
+            } catch (failure: Throwable) {
+                if (ownership == WasiPreview3HostOwnership.OWNED) {
+                    ownedPreview3HostConsumed = true
+                    closeAfterFailure(failure) {
+                        wasi.close()
+                    }
+                }
+                throw failure
+            }
             return this
         }
 
         fun build(): WasmPlugin {
-            val world = selectWorld()
-            val selectedComponent = component
-            if (module == null && selectedComponent != null) {
-                module = selectComponentModule(selectedComponent, world)
-            }
-            val selectedModule =
-                module ?: throw ComponentModelException("plugin module is required")
-            val imports = buildImports(world, selectedModule)
-            val missingPreview1Imports = missingPreview1Imports(selectedModule, imports)
-            if (missingPreview1Imports.isNotEmpty()) {
-                throw ComponentModelException(
-                    "selected core module imports WASI Preview 1 functions " +
-                        missingPreview1Imports.joinToString(prefix = "[", postfix = "]") +
-                        "; Kotlin wasmWasi components must be loaded with " +
-                        "WasmPlugin.Builder.withWasiPreview1(...)"
+            val selectedPreview2Host = preview2Host
+            val ownsPreview2Host =
+                selectedPreview2Host != null &&
+                    preview2HostOwnership == WasiPreview2HostOwnership.OWNED
+            val selectedPreview3Host = preview3Host
+            val ownsPreview3Host =
+                selectedPreview3Host != null &&
+                    preview3HostOwnership == WasiPreview3HostOwnership.OWNED
+
+            var instance: Instance? = null
+            var transfersPreview2Host = false
+            var transfersPreview3Host = false
+            try {
+                if (ownsPreview2Host) {
+                    check(!ownedPreview2HostConsumed) {
+                        "owned WASI Preview 2 host has already been transferred to a plugin"
+                    }
+                    ownedPreview2HostConsumed = true
+                    transfersPreview2Host = true
+                }
+                if (ownsPreview3Host) {
+                    check(!ownedPreview3HostConsumed) {
+                        "owned WASI Preview 3 host has already been transferred to a plugin"
+                    }
+                    ownedPreview3HostConsumed = true
+                    transfersPreview3Host = true
+                }
+                val world = selectWorld()
+                val selectedComponent = component
+                if (module == null && selectedComponent != null) {
+                    module = selectComponentModule(selectedComponent, world)
+                }
+                val selectedModule =
+                    module ?: throw ComponentModelException("plugin module is required")
+                val imports = buildImports(world, selectedModule)
+                val missingPreview1Imports = missingPreview1Imports(selectedModule, imports)
+                if (missingPreview1Imports.isNotEmpty()) {
+                    throw ComponentModelException(
+                        "selected core module imports WASI Preview 1 functions " +
+                            missingPreview1Imports.joinToString(prefix = "[", postfix = "]") +
+                            "; Kotlin wasmWasi components must be loaded with " +
+                            "WasmPlugin.Builder.withWasiPreview1(...)"
+                    )
+                }
+                val instanceBuilder = Instance.builder(selectedModule).withImportValues(imports)
+                val selectedPolicy = executionPolicy
+                if (selectedPolicy != null) {
+                    instanceBuilder.withExecutionPolicy(selectedPolicy)
+                } else {
+                    executionBackend?.let { instanceBuilder.withExecutionBackend(it) }
+                    instanceBuilder.withWasmtimeExecutionConfig(wasmtimeExecutionConfig)
+                    maxMemoryPages?.let { maxPages ->
+                        val maxMemoryBytes = maxPages.toLong() * Memory.PAGE_SIZE.toLong()
+                        instanceBuilder.withMemoryPolicy(
+                            WasmMemoryPolicy(
+                                maxBytesPerMemory = maxMemoryBytes,
+                                maxTotalBytes = maxMemoryBytes,
+                                maxMemories = 1,
+                            )
+                        )
+                    }
+                    memoryPolicy?.let(instanceBuilder::withMemoryPolicy)
+                }
+                val builtInstance = instanceBuilder.build()
+                instance = builtInstance
+                runGuestInitializers(selectedModule, builtInstance)
+                val exports = bindExports(world, builtInstance)
+                return WasmPlugin(
+                    witPackage,
+                    world,
+                    builtInstance,
+                    if (transfersPreview2Host) selectedPreview2Host else null,
+                    if (transfersPreview3Host) selectedPreview3Host else null,
+                    exports,
                 )
-            }
-            val instanceBuilder = Instance.builder(selectedModule).withImportValues(imports)
-            val selectedPolicy = executionPolicy
-            if (selectedPolicy != null) {
-                instanceBuilder.withExecutionPolicy(selectedPolicy)
-            } else {
-                executionBackend?.let { instanceBuilder.withExecutionBackend(it) }
-                var selectedWasmtimeConfig = wasmtimeExecutionConfig
-                maxMemoryPages?.let { maxPages ->
-                    if (executionBackend == ExecutionBackend.NATIVE) {
-                        instanceBuilder.withMemoryLimits(selectedModule.cappedFirstMemoryLimits(maxPages))
-                    } else {
-                        val currentConfig = selectedWasmtimeConfig ?: WasmtimeExecutionConfig()
-                        selectedWasmtimeConfig =
-                            currentConfig.copy(maxMemoryBytes = maxPages.toLong() * Memory.PAGE_SIZE.toLong())
+            } catch (failure: Throwable) {
+                instance?.let { builtInstance ->
+                    closeAfterFailure(failure) {
+                        builtInstance.close()
                     }
                 }
-                instanceBuilder.withWasmtimeExecutionConfig(selectedWasmtimeConfig)
-            }
-            val instance = instanceBuilder.build()
-            try {
-                runGuestInitializers(selectedModule, instance)
-                val exports = bindExports(world, instance)
-                return WasmPlugin(witPackage, world, instance, exports)
-            } catch (failure: Throwable) {
-                instance.close()
+                if (transfersPreview2Host) {
+                    closeAfterFailure(failure) {
+                        checkNotNull(selectedPreview2Host).close()
+                    }
+                }
+                if (transfersPreview3Host) {
+                    closeAfterFailure(failure) {
+                        checkNotNull(selectedPreview3Host).close()
+                    }
+                }
                 throw failure
             }
         }
@@ -453,7 +742,8 @@ private constructor(
             }
             functions.addAll(rawHostFunctions)
             addPreview1BridgeHostImports(functions, module)
-            addModuleDeclaredHostImports(functions, module)
+            functions.addAll(explicitCoreHostFunctions.values)
+            addModuleDeclaredHostImports(functions, module, world)
             return ImportValues.builder().withFunctions(deduplicateFunctions(functions)).build()
         }
 
@@ -578,7 +868,9 @@ private constructor(
                 symbolName,
                 function,
                 handler,
-                hostResultFutures(function),
+                canonicalFutureIntrinsics,
+                canonicalStreamIntrinsics,
+                asyncLowerTasks,
             )
         }
 
@@ -637,6 +929,7 @@ private constructor(
         private fun addModuleDeclaredHostImports(
             functions: MutableList<ImportFunction>,
             module: WasmModule,
+            world: WitPackage.WorldDeclaration,
         ) {
             val existing = LinkedHashSet<String>()
             for (function in functions) {
@@ -671,6 +964,16 @@ private constructor(
                         existing.add(key)
                         continue
                     }
+                }
+                if (
+                    !legacyModuleImportDiscovery &&
+                        !isCanonicalImportModuleAllowedByWorld(world, imported.module())
+                ) {
+                    throw ComponentModelException(
+                        "core import ${imported.module()}.${imported.name()} is outside the " +
+                            "selected WIT world ${world.qualifiedName()}; register it explicitly " +
+                            "with withCoreHostImport(...) if this capability is intentional"
+                    )
                 }
                 val contextIntrinsic = ContextIntrinsic.parse(imported.name())
                 if (contextIntrinsic != null) {
@@ -725,10 +1028,12 @@ private constructor(
                 val futureIntrinsic = FutureIntrinsic.parse(imported.name())
                 if (futureIntrinsic != null && canonicalFutureIntrinsics != null) {
                     val function =
-                        findDeclaredHostFunction(
+                        findSelectedHostFunction(
+                            world,
                             imported.module(),
                             futureIntrinsic.targetSymbolName,
-                        ) ?: syntheticWasiPreview3HostFunction(
+                        ) ?: syntheticSelectedWasiPreview3HostFunction(
+                            world,
                             imported.module(),
                             futureIntrinsic.targetSymbolName,
                         )
@@ -750,10 +1055,12 @@ private constructor(
                 val streamIntrinsic = StreamIntrinsic.parse(imported.name())
                 if (streamIntrinsic != null && canonicalStreamIntrinsics != null) {
                     val function =
-                        findDeclaredHostFunction(
+                        findSelectedHostFunction(
+                            world,
                             imported.module(),
                             streamIntrinsic.targetSymbolName,
-                        ) ?: syntheticWasiPreview3HostFunction(
+                        ) ?: syntheticSelectedWasiPreview3HostFunction(
+                            world,
                             imported.module(),
                             streamIntrinsic.targetSymbolName,
                         )
@@ -775,7 +1082,8 @@ private constructor(
                 val asyncLowerIntrinsic = AsyncLowerIntrinsic.parse(imported.name())
                 if (asyncLowerIntrinsic != null) {
                     val binding =
-                        findDeclaredHostBinding(
+                        findSelectedHostBinding(
+                            world,
                             imported.module(),
                             asyncLowerIntrinsic.targetSymbolName,
                         ) ?: continue
@@ -796,7 +1104,8 @@ private constructor(
                             functionType,
                             binding.function,
                             handler,
-                            hostResultFutures(binding.function),
+                            canonicalFutureIntrinsics,
+                            canonicalStreamIntrinsics,
                             asyncLowerTasks,
                             asyncResultPayloadType(binding.function),
                         )
@@ -805,13 +1114,18 @@ private constructor(
                     continue
                 }
                 val taskReturnFunction =
-                    findExportedAsyncTaskReturnFunction(imported.module(), imported.name())
+                    findExportedAsyncTaskReturnFunction(
+                        world,
+                        imported.module(),
+                        imported.name(),
+                    )
                 if (taskReturnFunction != null) {
                     addAsyncTaskReturnImport(functions, imported.module(), taskReturnFunction)
                     existing.add(key)
                     continue
                 }
-                val binding = findDeclaredHostImport(imported.module(), imported.name())
+                val binding =
+                    findSelectedHostImport(world, imported.module(), imported.name())
                 if (binding != null) {
                     val handler =
                         requireHostHandler(
@@ -827,10 +1141,26 @@ private constructor(
                             imported.name(),
                             binding.function,
                             handler,
-                            hostResultFutures(binding.function),
+                            canonicalFutureIntrinsics,
+                            canonicalStreamIntrinsics,
+                            asyncLowerTasks,
                         )
                     )
                     existing.add(key)
+                    continue
+                }
+                if (
+                    addSelectedImportedResourceIntrinsic(
+                        functions,
+                        world,
+                        imported.module(),
+                        imported.name(),
+                    )
+                ) {
+                    existing.add(key)
+                    continue
+                }
+                if (!legacyModuleImportDiscovery) {
                     continue
                 }
                 val exactHandler = hostImports[key] ?: continue
@@ -846,6 +1176,240 @@ private constructor(
                 )
                 existing.add(key)
             }
+        }
+
+        private fun isCanonicalImportModuleAllowedByWorld(
+            world: WitPackage.WorldDeclaration,
+            moduleName: String,
+        ): Boolean {
+            if (moduleName == ROOT_CANONICAL_MODULE) {
+                return true
+            }
+            val rootNames =
+                setOf(
+                    world.name(),
+                    world.qualifiedName(),
+                    WitNames.withoutVersion(world.qualifiedName()),
+                )
+            if (matchesInterfaceModuleName(moduleName, rootNames)) {
+                return true
+            }
+            for (item in world.imports()) {
+                if (item.isFunction) {
+                    continue
+                }
+                if (matchesInterfaceModuleName(moduleName, interfaceModuleNames(item, requireInterface(item)))) {
+                    return true
+                }
+            }
+            for (declaration in witPackage.interfaces()) {
+                if (
+                    matchesInterfaceModuleName(moduleName, interfaceModuleNames(declaration)) &&
+                        isInterfaceReachableFromWorld(world, declaration)
+                ) {
+                    return true
+                }
+            }
+            if (moduleName == rootAsyncTaskReturnModuleName()) {
+                return true
+            }
+            for (item in world.exports()) {
+                if (item.isFunction) {
+                    continue
+                }
+                val declaration = requireInterface(item)
+                if (
+                    matchesExportModuleName(
+                        moduleName,
+                        exportedTaskReturnModuleNames(item, declaration) +
+                            exportedResourceModuleNames(item, declaration),
+                    )
+                ) {
+                    return true
+                }
+            }
+            return false
+        }
+
+        private fun findSelectedHostFunction(
+            world: WitPackage.WorldDeclaration,
+            moduleName: String,
+            functionName: String,
+        ): WitPackage.Function? =
+            findSelectedHostBinding(world, moduleName, functionName)?.function
+
+        private fun findSelectedHostBinding(
+            world: WitPackage.WorldDeclaration,
+            moduleName: String,
+            functionName: String,
+        ): ModuleImportBinding? =
+            if (legacyModuleImportDiscovery) {
+                findDeclaredHostBinding(moduleName, functionName)
+            } else {
+                findSelectedHostImport(world, moduleName, functionName)
+            }
+
+        private fun findSelectedHostImport(
+            world: WitPackage.WorldDeclaration,
+            moduleName: String,
+            functionName: String,
+        ): ModuleImportBinding? {
+            if (legacyModuleImportDiscovery) {
+                return findDeclaredHostImport(moduleName, functionName)
+                    ?: findWorldHostImport(moduleName, functionName)
+            }
+            val rootNames = setOf(world.name(), world.qualifiedName())
+            if (matchesInterfaceModuleName(moduleName, rootNames)) {
+                for (item in world.imports()) {
+                    if (item.isFunction && item.name() == functionName) {
+                        return ModuleImportBinding(
+                            world.name(),
+                            item.name(),
+                            item.name(),
+                            item.function()!!,
+                            listOf(world.qualifiedName()),
+                        )
+                    }
+                }
+            }
+            for (item in world.imports()) {
+                if (item.isFunction) {
+                    continue
+                }
+                val declaration = requireInterface(item)
+                val interfaceNames = interfaceModuleNames(item, declaration)
+                if (!matchesInterfaceModuleName(moduleName, interfaceNames)) {
+                    continue
+                }
+                for (binding in interfaceFunctionBindings(declaration)) {
+                    if (functionName == binding.publicName || functionName == binding.symbolName) {
+                        val localName = interfaceName(item)
+                        return ModuleImportBinding(
+                            localName,
+                            binding.publicName,
+                            binding.symbolName,
+                            binding.function,
+                            interfaceNames.filter { it != localName },
+                        )
+                    }
+                }
+            }
+            for (declaration in witPackage.interfaces()) {
+                val interfaceNames = interfaceModuleNames(declaration)
+                if (
+                    !matchesInterfaceModuleName(moduleName, interfaceNames) ||
+                        !isInterfaceReachableFromWorld(world, declaration)
+                ) {
+                    continue
+                }
+                for (binding in interfaceFunctionBindings(declaration)) {
+                    if (functionName == binding.publicName || functionName == binding.symbolName) {
+                        val localName = WitNames.lastSegment(declaration.name())
+                        return ModuleImportBinding(
+                            localName,
+                            binding.publicName,
+                            binding.symbolName,
+                            binding.function,
+                            interfaceNames.filter { it != localName },
+                        )
+                    }
+                }
+            }
+            return null
+        }
+
+        private fun isInterfaceReachableFromWorld(
+            world: WitPackage.WorldDeclaration,
+            candidate: WitPackage.InterfaceDeclaration,
+        ): Boolean {
+            val candidateNames = interfaceModuleNames(candidate)
+            for (item in world.imports() + world.exports()) {
+                if (item.isFunction) {
+                    if (functionReferencesInterface(item.function()!!, candidateNames)) {
+                        return true
+                    }
+                    continue
+                }
+                val declaration = requireInterface(item)
+                if (matchesInterfaceModuleName(candidate.qualifiedName(), interfaceModuleNames(item, declaration))) {
+                    return true
+                }
+                for (member in declaration.members()) {
+                    when (member) {
+                        is WitPackage.Function ->
+                            if (functionReferencesInterface(member, candidateNames)) {
+                                return true
+                            }
+                        is WitPackage.TypeDeclaration ->
+                            if (typeDeclarationReferencesInterface(member, candidateNames)) {
+                                return true
+                            }
+                    }
+                }
+            }
+            return false
+        }
+
+        private fun functionReferencesInterface(
+            function: WitPackage.Function,
+            interfaceNames: Set<String>,
+        ): Boolean =
+            (function.parameters() + function.results()).any { field ->
+                typeReferencesInterface(field.type(), interfaceNames)
+            }
+
+        private fun typeDeclarationReferencesInterface(
+            declaration: WitPackage.TypeDeclaration,
+            interfaceNames: Set<String>,
+        ): Boolean {
+            if (declaration.fields().any { typeReferencesInterface(it.type(), interfaceNames) }) {
+                return true
+            }
+            if (
+                declaration.cases().any { case ->
+                    case.type()?.let { typeReferencesInterface(it, interfaceNames) } == true
+                }
+            ) {
+                return true
+            }
+            if (
+                declaration.target()?.let { typeReferencesInterface(it, interfaceNames) } == true
+            ) {
+                return true
+            }
+            return declaration.functions().any { function ->
+                functionReferencesInterface(function, interfaceNames)
+            }
+        }
+
+        private fun typeReferencesInterface(
+            type: WitPackage.TypeRef,
+            interfaceNames: Set<String>,
+        ): Boolean {
+            val name = type.name()
+            if (name != null && name.contains('/')) {
+                val interfaceName = name.substringBeforeLast('/')
+                if (matchesInterfaceModuleName(interfaceName, interfaceNames)) {
+                    return true
+                }
+            }
+            return type.arguments().any { argument ->
+                typeReferencesInterface(argument, interfaceNames)
+            }
+        }
+
+        private fun syntheticSelectedWasiPreview3HostFunction(
+            world: WitPackage.WorldDeclaration,
+            moduleName: String,
+            functionName: String,
+        ): WitPackage.Function? {
+            if (
+                !legacyModuleImportDiscovery &&
+                    !isCanonicalImportModuleAllowedByWorld(world, moduleName)
+            ) {
+                return null
+            }
+            return syntheticWasiPreview3HostFunction(moduleName, functionName)
         }
 
         private fun findDeclaredHostFunction(
@@ -1514,6 +2078,35 @@ private constructor(
             }
         }
 
+        private fun addSelectedImportedResourceIntrinsic(
+            functions: MutableList<ImportFunction>,
+            world: WitPackage.WorldDeclaration,
+            moduleName: String,
+            symbolName: String,
+        ): Boolean {
+            for (declaration in witPackage.interfaces()) {
+                if (
+                    !matchesInterfaceModuleName(moduleName, interfaceModuleNames(declaration)) ||
+                        !isInterfaceReachableFromWorld(world, declaration)
+                ) {
+                    continue
+                }
+                for (resource in resourceDeclarations(declaration)) {
+                    if (symbolName != ResourceIntrinsic.DROP.symbolName(resource.name())) {
+                        continue
+                    }
+                    addResourceIntrinsic(
+                        functions,
+                        moduleName,
+                        resource.name(),
+                        ResourceIntrinsic.DROP,
+                    )
+                    return true
+                }
+            }
+            return false
+        }
+
         private fun addExportedResourceIntrinsics(
             functions: MutableList<ImportFunction>,
             item: WitPackage.WorldItem,
@@ -1744,11 +2337,18 @@ private constructor(
         }
 
         private fun findExportedAsyncTaskReturnFunction(
+            selectedWorld: WitPackage.WorldDeclaration,
             moduleName: String,
             importName: String,
         ): WitPackage.Function? {
             val functionName = asyncTaskReturnFunctionName(importName) ?: return null
-            for (world in witPackage.worlds()) {
+            val worlds =
+                if (legacyModuleImportDiscovery) {
+                    witPackage.worlds()
+                } else {
+                    listOf(selectedWorld)
+                }
+            for (world in worlds) {
                 for (item in world.exports()) {
                     if (item.isFunction) {
                         val function = item.function()!!
@@ -1896,12 +2496,17 @@ private constructor(
                         asyncTaskReturn,
                         asyncCallbackExportName,
                         asyncLowerTasks,
+                        canonicalFutureIntrinsics,
+                        canonicalStreamIntrinsics,
                     )
                 } else {
-                    abi.bind(
+                    abi.bindPlugin(
                         instance,
                         coreName,
                         function,
+                        canonicalFutureIntrinsics,
+                        canonicalStreamIntrinsics,
+                        asyncLowerTasks,
                     )
                 }
             exports[publicName] = bound
@@ -2407,6 +3012,7 @@ private constructor(
         companion object {
             private const val ASYNC_LIFT_EXPORT_PREFIX = "[async-lift]"
             private const val PREVIEW1_MODULE = "wasi_snapshot_preview1"
+            private const val ROOT_CANONICAL_MODULE = "\$root"
             private val GUEST_INIT_EXPORTS = arrayOf("krwa_guest_init")
 
             private fun <K, V> putIfAbsent(map: MutableMap<K, V>, key: K, value: V) {
@@ -2428,12 +3034,4 @@ private constructor(
         fun builderFromComponent(componentPath: Path): Builder =
             builder(wasmPluginParseWit(componentPath)).withComponent(componentPath)
     }
-}
-
-private fun WasmModule.cappedFirstMemoryLimits(maxPages: Int): MemoryLimits {
-    val memory = memorySection()?.getMemory(0)
-        ?: return MemoryLimits(0, maxPages)
-    val declaredLimits = memory.limits()
-    val cappedMaximum = minOf(declaredLimits.maximumPages(), maxPages)
-    return MemoryLimits(declaredLimits.initialPages(), cappedMaximum, declaredLimits.shared())
 }

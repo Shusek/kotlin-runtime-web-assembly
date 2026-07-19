@@ -2,6 +2,9 @@ package uk.shusek.krwa.component
 
 import io.ktor.client.HttpClient as KtorHttpClient
 import io.ktor.client.engine.cio.CIO
+import io.ktor.utils.io.ByteReadChannel
+import io.ktor.utils.io.InternalAPI
+import java.io.IOException
 import java.net.InetAddress
 import java.net.ServerSocket
 import java.nio.charset.StandardCharsets
@@ -18,8 +21,10 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.io.Buffer
 import kotlinx.io.RawSource
+import kotlinx.io.Source
 import kotlinx.io.readByteArray
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import uk.shusek.krwa.tools.wasm.Wat2Wasm
@@ -65,6 +70,49 @@ class WasiHttpStreamingTest {
 
         assertEquals(299L, plugin.call("api.run"))
         assertEquals(0, bodyReads.get())
+    }
+
+    @Test
+    fun preview3ResponseDropClosesUnconsumedStreamingBody() {
+        val version = WasiPreview3.DEFAULT_VERSION
+        val closes = AtomicInteger(0)
+        val client =
+            object : WasiHttpClient {
+                override fun send(request: WasiHttpRequest): WasiHttpResponse =
+                    WasiHttpResponse(299, emptyMap(), CloseTrackingRawSource(closes))
+            }
+        val plugin =
+            WasmPlugin.builder(preview3HttpClientPackage(version))
+                .withModule(preview3HttpClientStatusModule(version))
+                .withWasiPreview3(
+                    WasiPreview3.builder().withNetworking().withHttpClient(client).build()
+                )
+                .build()
+
+        assertEquals(299L, plugin.call("api.run"))
+        assertEquals(1, closes.get())
+    }
+
+    @Test
+    fun preview3HostCloseClosesUnconsumedStreamingResponses() {
+        val version = WasiPreview3.DEFAULT_VERSION
+        val closes = AtomicInteger(0)
+        val client =
+            object : WasiHttpClient {
+                override fun send(request: WasiHttpRequest): WasiHttpResponse =
+                    WasiHttpResponse(299, emptyMap(), CloseTrackingRawSource(closes))
+            }
+        val host = WasiPreview3.builder().withNetworking().withHttpClient(client).build()
+        val plugin =
+            WasmPlugin.builder(preview3HttpClientPackage(version))
+                .withModule(preview3HttpClientStatusModule(version, dropResponse = false))
+                .withWasiPreview3(host, WasiPreview3HostOwnership.OWNED)
+                .build()
+
+        assertEquals(299L, plugin.call("api.run"))
+        assertEquals(0, closes.get())
+        plugin.close()
+        assertEquals(1, closes.get())
     }
 
     @Test
@@ -251,6 +299,99 @@ class WasiHttpStreamingTest {
         }
     }
 
+    @Test
+    fun ktorStreamingBodyClosesRequestClientWhenChannelReadFails() {
+        val channel =
+            object : ByteReadChannel {
+                override val closedCause: Throwable? = null
+                override val isClosedForRead: Boolean = false
+
+                @OptIn(InternalAPI::class)
+                override val readBuffer: Source
+                    get() = throw IOException("expected test channel failure")
+
+                override suspend fun awaitContent(min: Int): Boolean =
+                    throw IOException("expected test channel failure")
+
+                override fun cancel(cause: Throwable?) = Unit
+            }
+        val closes = AtomicInteger(0)
+        val source = KtorStreamingBodySource(channel) { closes.incrementAndGet() }
+
+        assertThrows(IOException::class.java) {
+            source.readAtMostTo(Buffer(), 1)
+        }
+        assertEquals(1, closes.get())
+        assertEquals(-1L, source.readAtMostTo(Buffer(), 1))
+        source.close()
+        assertEquals(1, closes.get())
+    }
+
+    @Test
+    fun ktorWasiHttpClientNeverFollowsRedirects() = runBlocking {
+        val redirectServer = ServerSocket(0, 1, InetAddress.getLoopbackAddress())
+        val targetServer = ServerSocket(0, 1, InetAddress.getLoopbackAddress())
+        val targetHits = AtomicInteger(0)
+        val targetJob =
+            launch(Dispatchers.IO) {
+                runCatching {
+                    val socket = targetServer.accept()
+                    socket.use {
+                        targetHits.incrementAndGet()
+                        it.getOutputStream().write(
+                            "HTTP/1.1 204 No Content\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+                                .toByteArray(StandardCharsets.ISO_8859_1)
+                        )
+                    }
+                }
+            }
+        val redirectJob =
+            launch(Dispatchers.IO) {
+                val socket = redirectServer.accept()
+                socket.use {
+                    val reader =
+                        it.getInputStream().bufferedReader(StandardCharsets.ISO_8859_1)
+                    while (true) {
+                        val line = reader.readLine() ?: break
+                        if (line.isEmpty()) break
+                    }
+                    val location = "http://127.0.0.1:${targetServer.localPort}/outside-grant"
+                    it.getOutputStream().write(
+                        (
+                            "HTTP/1.1 302 Found\r\n" +
+                                "Location: $location\r\n" +
+                                "Content-Length: 0\r\n" +
+                                "Connection: close\r\n\r\n"
+                        ).toByteArray(StandardCharsets.ISO_8859_1)
+                    )
+                }
+            }
+
+        val client = KtorHttpClient(CIO)
+        try {
+            val response =
+                KtorWasiHttpClient(client).sendSuspending(
+                    WasiHttpRequest(
+                        method = "GET",
+                        uri = "http://127.0.0.1:${redirectServer.localPort}/allowed",
+                        headers = emptyList(),
+                        body = ByteArray(0),
+                        timeout = 5.seconds,
+                    )
+                )
+            assertEquals(302, response.status)
+            response.consumeBodySource().close()
+            delay(100)
+            assertEquals(0, targetHits.get())
+        } finally {
+            client.close()
+            redirectServer.close()
+            targetServer.close()
+            redirectJob.cancelAndJoin()
+            targetJob.cancelAndJoin()
+        }
+    }
+
     private fun preview2HttpClientPackage(): WitPackage =
         WitPackage.parse(
             """
@@ -426,10 +567,28 @@ class WasiHttpStreamingTest {
                 .trimIndent()
         )
 
-    private fun preview3HttpClientStatusModule(version: String): ByteArray {
+    private fun preview3HttpClientStatusModule(
+        version: String,
+        dropResponse: Boolean = true,
+    ): ByteArray {
         val d = '$'
         val authority = "example.invalid"
         val pathWithQuery = "/lazy"
+        val responseDropImport =
+            if (dropResponse) {
+                """
+                (import "wasi:http/types@$version" "[resource-drop]response"
+                  (func ${d}response_drop (param i32)))
+                """.trimIndent()
+            } else {
+                ""
+            }
+        val responseDropCall =
+            if (dropResponse) {
+                "(call ${d}response_drop (local.get ${d}response))"
+            } else {
+                ""
+            }
         return Wat2Wasm.parse(
             """
             (module
@@ -456,6 +615,7 @@ class WasiHttpStreamingTest {
                 (func ${d}waitable_set_drop (param i32)))
               (import "wasi:http/types@$version" "[method]response.get-status-code"
                 (func ${d}status (param i32) (result i32)))
+              $responseDropImport
               (memory (export "memory") 1)
               (global ${d}heap (mut i32) (i32.const 256))
               (data (i32.const 16) "$authority")
@@ -482,6 +642,7 @@ class WasiHttpStreamingTest {
                 (local ${d}future i32)
                 (local ${d}read_status i32)
                 (local ${d}waitable_set i32)
+                (local ${d}status_code i32)
                 (call ${d}request_new
                   (call ${d}fields_new)
                   (i32.const 0)
@@ -547,7 +708,10 @@ class WasiHttpStreamingTest {
                   (i32.ne (i32.load8_u (i32.const 128)) (i32.const 0))
                   (then (return (i32.const 99))))
                 (local.set ${d}response (i32.load (i32.const 132)))
-                (call ${d}status (local.get ${d}response)))
+                (local.set ${d}status_code
+                  (call ${d}status (local.get ${d}response)))
+                $responseDropCall
+                (local.get ${d}status_code))
               (export "api.run" (func ${d}run))
             )
             """
@@ -814,6 +978,19 @@ private class FailingRawSource(private val reads: AtomicReference<Int>) : RawSou
     }
 
     override fun close() {}
+}
+
+private class CloseTrackingRawSource(private val closes: AtomicInteger) : RawSource {
+    private var closed = false
+
+    override fun readAtMostTo(sink: Buffer, byteCount: Long): Long = -1L
+
+    override fun close() {
+        if (!closed) {
+            closed = true
+            closes.incrementAndGet()
+        }
+    }
 }
 
 private class ChunkedRawSource(

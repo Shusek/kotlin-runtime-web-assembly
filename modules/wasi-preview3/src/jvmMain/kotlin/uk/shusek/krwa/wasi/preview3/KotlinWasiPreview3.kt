@@ -9,13 +9,17 @@ import kotlinx.coroutines.CoroutineScope
 import okio.FileSystem
 import okio.Path.Companion.toPath
 import org.kotlincrypto.random.CryptoRand
+import uk.shusek.krwa.component.WasiHttpNetworkEndpoint as ComponentWasiHttpNetworkEndpoint
+import uk.shusek.krwa.component.WasiHttpNetworkProtocol as ComponentWasiHttpNetworkProtocol
+import uk.shusek.krwa.component.WasiNetworkEndpoint as ComponentWasiNetworkEndpoint
+import uk.shusek.krwa.component.WasiNetworkPolicy as ComponentWasiNetworkPolicy
 import uk.shusek.krwa.component.WasiPreview3
 import uk.shusek.krwa.component.WasmPlugin
 
 public actual class KotlinWasiPreview3 private constructor(
     public val wasi: WasiPreview3,
     public actual val fileSystems: Map<String, WasiFileSystem> = emptyMap(),
-) {
+) : AutoCloseable {
     public actual val version: String = wasi.version()
 
     public fun install(builder: WasmPlugin.Builder): WasmPlugin.Builder = wasi.install(builder)
@@ -34,7 +38,7 @@ public actual class KotlinWasiPreview3 private constructor(
     public actual fun fileSystemOrNull(guestRoot: String): WasiFileSystem? =
         fileSystems[WasiFileSystem.normalizeGuestRoot(guestRoot)]
 
-    public actual fun close() {
+    public actual override fun close() {
         wasi.close()
     }
 
@@ -180,11 +184,43 @@ public actual class KotlinWasiPreview3 private constructor(
             return this
         }
 
+        public actual fun withNetworkPolicy(networkPolicy: WasiNetworkPolicy): Builder {
+            delegate.withNetworkPolicy(
+                ComponentWasiNetworkPolicy(
+                    httpEndpoints = networkPolicy.httpEndpoints.mapTo(linkedSetOf()) { endpoint ->
+                        ComponentWasiHttpNetworkEndpoint(
+                            protocol = when (endpoint.protocol) {
+                                WasiHttpNetworkProtocol.Http -> ComponentWasiHttpNetworkProtocol.Http
+                                WasiHttpNetworkProtocol.Https -> ComponentWasiHttpNetworkProtocol.Https
+                            },
+                            host = endpoint.normalizedHost,
+                            port = endpoint.port,
+                        )
+                    },
+                    rawSocketEndpoints = networkPolicy.rawSocketEndpoints.mapTo(linkedSetOf()) { endpoint ->
+                        ComponentWasiNetworkEndpoint(
+                            host = endpoint.normalizedHost,
+                            port = endpoint.port,
+                        )
+                    },
+                ),
+            )
+            return this
+        }
+
+        @Deprecated(
+            "Unrestricted networking bypasses endpoint isolation. Use withNetworkPolicy.",
+        )
+        @Suppress("DEPRECATION")
         public actual fun withNetworking(): Builder {
             delegate.withNetworking()
             return this
         }
 
+        @Deprecated(
+            "Unrestricted networking bypasses endpoint isolation. Use withNetworkPolicy.",
+        )
+        @Suppress("DEPRECATION")
         public actual fun withNetworking(networkingEnabled: Boolean): Builder {
             delegate.withNetworking(networkingEnabled)
             return this

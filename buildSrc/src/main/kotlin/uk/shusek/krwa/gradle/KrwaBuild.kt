@@ -28,7 +28,7 @@ import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
 
-val krwaModuleByArtifact =
+val krwaPublicModuleByArtifact =
     mapOf(
         "annotations" to ":annotations:annotations",
         "annotations-processor" to ":annotations:processor",
@@ -36,33 +36,61 @@ val krwaModuleByArtifact =
         "codegen" to ":codegen",
         "component-model-gradle-plugin" to ":component-model-gradle-plugin",
         "component-model" to ":component-model",
-        "jmh" to ":jmh",
         "log" to ":log",
         "runtime" to ":runtime",
         "runtime-wasmtime-android" to ":runtime-wasmtime-android",
-        "test-gen-lib" to ":test-gen-lib",
         "wabt" to ":wabt",
         "wasi" to ":wasi",
         "wasi-preview3" to ":wasi-preview3",
-        "wasi-test-gen" to ":wasi-test-gen",
-        "wasi-tests" to ":wasi-tests",
         "wasm" to ":wasm",
-        "wasm-corpus" to ":wasm-corpus",
         "wasm-tools" to ":wasm-tools",
     )
 
+private val krwaInternalModuleByArtifact =
+    mapOf(
+        "jmh" to ":jmh",
+        "runtime-tests" to ":runtime-tests",
+        "test-gen-lib" to ":test-gen-lib",
+        "wasi-test-gen" to ":wasi-test-gen",
+        "wasi-tests" to ":wasi-tests",
+        "wasm-corpus" to ":wasm-corpus",
+    )
+
+val krwaModuleByArtifact = krwaPublicModuleByArtifact + krwaInternalModuleByArtifact
 val krwaArtifactByProject = krwaModuleByArtifact.entries.associate { (artifact, path) -> path to artifact }
+private val krwaPublicProjectPaths = krwaPublicModuleByArtifact.values.toSet()
 
 fun Project.krwa(artifactId: String) = project(krwaModuleByArtifact.getValue(artifactId))
 
 fun MavenPublication.configureKrwaPom() {
     pom {
+        name.set("Kotlin Runtime Web Assembly")
+        description.set(
+            "Kotlin-first WebAssembly runtime, WASI host, and Component Model toolchain.",
+        )
+        url.set("https://github.com/Shusek/kotlin-runtime-web-assembly")
         licenses {
             license {
                 name.set("MIT")
                 url.set("https://opensource.org/licenses/MIT")
                 distribution.set("repo")
             }
+        }
+        developers {
+            developer {
+                id.set("shusek")
+                name.set("Shusek")
+                url.set("https://github.com/Shusek")
+            }
+        }
+        scm {
+            connection.set("scm:git:https://github.com/Shusek/kotlin-runtime-web-assembly.git")
+            developerConnection.set("scm:git:ssh://git@github.com/Shusek/kotlin-runtime-web-assembly.git")
+            url.set("https://github.com/Shusek/kotlin-runtime-web-assembly")
+        }
+        issueManagement {
+            system.set("GitHub")
+            url.set("https://github.com/Shusek/kotlin-runtime-web-assembly/issues")
         }
     }
 }
@@ -89,10 +117,13 @@ private fun Project.lib(alias: String) =
 @OptIn(ExperimentalAbiValidation::class)
 fun Project.configureKrwaJvmProject() {
     group = rootProject.group
+    val publish = path in krwaPublicProjectPaths
 
     pluginManager.apply("java-library")
     pluginManager.apply("org.jetbrains.kotlin.jvm")
-    pluginManager.apply("maven-publish")
+    if (publish) {
+        pluginManager.apply("maven-publish")
+    }
 
     extensions.configure<BasePluginExtension> {
         archivesName.set(krwaArtifactByProject.getValue(path))
@@ -104,7 +135,9 @@ fun Project.configureKrwaJvmProject() {
     }
 
     extensions.configure<KotlinJvmProjectExtension> {
-        abiValidation {}
+        if (publish) {
+            abiValidation {}
+        }
         compilerOptions {
             jvmTarget.set(JvmTarget.fromTarget("25"))
             javaParameters.set(true)
@@ -148,13 +181,15 @@ fun Project.configureKrwaJvmProject() {
     dependencies.add("testRuntimeOnly", lib("junitJupiterEngine"))
     dependencies.add("testRuntimeOnly", lib("junitPlatformLauncher"))
 
-    extensions.configure<PublishingExtension> {
-        configureKrwaRepositories(project)
-        publications {
-            create<MavenPublication>("maven") {
-                from(components["java"])
-                artifactId = krwaArtifactByProject.getValue(path)
-                configureKrwaPom()
+    if (publish) {
+        extensions.configure<PublishingExtension> {
+            configureKrwaRepositories(project)
+            publications {
+                create<MavenPublication>("maven") {
+                    from(components["java"])
+                    artifactId = krwaArtifactByProject.getValue(path)
+                    configureKrwaPom()
+                }
             }
         }
     }
@@ -272,17 +307,32 @@ fun Project.filterKotlinTemplates(
 data class WasmSpecTestGenConfig(
     val includedWasts: List<String>,
     val excludedTests: List<String>,
+    val excludedRuntimeTests: List<String>,
     val excludedMalformedWasts: List<String>,
     val excludedInvalidWasts: List<String>,
     val excludedUninstantiableWasts: List<String>,
     val excludedUnlinkableWasts: List<String>,
     val excludedWasts: List<String>,
+    val excludedRuntimeWasts: List<String>,
 )
 
 data class WasiSpecTestGenConfig(
     val includes: List<String>,
     val excludes: List<String>,
 )
+
+const val WASM_TEST_SUITE_REPOSITORY =
+    "https://github.com/WebAssembly/testsuite"
+const val WASM_TEST_SUITE_REVISION =
+    "88e97b0f742f4c3ee01fea683da130f344dd7b02"
+const val WASM_TEST_SUITE_ARCHIVE_SHA256 =
+    "8dda64df353a3fbe38c3acdbcda4524eba951b53c7d4d1474ab86b0878f474e4"
+private const val WASI_TEST_SUITE_REPOSITORY =
+    "https://github.com/WebAssembly/wasi-testsuite"
+private const val WASI_TEST_SUITE_REVISION =
+    "caf3b66fa3457cc17156864d971387a7e9f5933b"
+private const val WASI_TEST_SUITE_ARCHIVE_SHA256 =
+    "5bc6471f2ccf57f2c4241fb74bb59a57b897607f3eb2769fc7a2ff97c9e928b3"
 
 fun File.readListFile(): List<String> =
     if (!isFile) {
@@ -298,11 +348,13 @@ fun File.readWasmSpecTestGenConfig(): WasmSpecTestGenConfig {
     return WasmSpecTestGenConfig(
         includedWasts = resolve("included-wasts.txt").readListFile(),
         excludedTests = resolve("excluded-tests.txt").readListFile(),
+        excludedRuntimeTests = resolve("excluded-runtime-tests.txt").readListFile(),
         excludedMalformedWasts = resolve("excluded-malformed-wasts.txt").readListFile(),
         excludedInvalidWasts = resolve("excluded-invalid-wasts.txt").readListFile(),
         excludedUninstantiableWasts = resolve("excluded-uninstantiable-wasts.txt").readListFile(),
         excludedUnlinkableWasts = resolve("excluded-unlinkable-wasts.txt").readListFile(),
         excludedWasts = resolve("excluded-wasts.txt").readListFile(),
+        excludedRuntimeWasts = resolve("excluded-runtime-wasts.txt").readListFile(),
     )
 }
 
@@ -340,19 +392,26 @@ fun wasmSpecTestGenJson(
     testsuiteFolder: File,
     sourceDestinationFolder: File,
     compiledWastTargetFolder: File,
+    offline: Boolean,
 ): String =
     """
     {
+      "testSuiteRepo": ${jsonString(WASM_TEST_SUITE_REPOSITORY)},
+      "testSuiteRepoRef": ${jsonString(WASM_TEST_SUITE_REVISION)},
+      "testSuiteArchiveSha256": ${jsonString(WASM_TEST_SUITE_ARCHIVE_SHA256)},
       "testsuiteFolder": ${jsonString(testsuiteFolder.absolutePath)},
       "sourceDestinationFolder": ${jsonString(sourceDestinationFolder.absolutePath)},
       "compiledWastTargetFolder": ${jsonString(compiledWastTargetFolder.absolutePath)},
+      "offline": $offline,
       "includedWasts": ${jsonArray(config.includedWasts)},
       "excludedTests": ${jsonArray(config.excludedTests)},
+      "excludedRuntimeTests": ${jsonArray(config.excludedRuntimeTests)},
       "excludedMalformedWasts": ${jsonArray(config.excludedMalformedWasts)},
       "excludedInvalidWasts": ${jsonArray(config.excludedInvalidWasts)},
       "excludedUninstantiableWasts": ${jsonArray(config.excludedUninstantiableWasts)},
       "excludedUnlinkableWasts": ${jsonArray(config.excludedUnlinkableWasts)},
-      "excludedWasts": ${jsonArray(config.excludedWasts)}
+      "excludedWasts": ${jsonArray(config.excludedWasts)},
+      "excludedRuntimeWasts": ${jsonArray(config.excludedRuntimeWasts)}
     }
     """.trimIndent()
 
@@ -361,12 +420,17 @@ fun wasiSpecTestGenJson(
     testSuiteFolder: File,
     sourceDestinationFolder: File,
     projectDirectory: File,
+    offline: Boolean,
 ): String =
     """
     {
+      "testSuiteRepo": ${jsonString(WASI_TEST_SUITE_REPOSITORY)},
+      "testSuiteRepoRef": ${jsonString(WASI_TEST_SUITE_REVISION)},
+      "testSuiteArchiveSha256": ${jsonString(WASI_TEST_SUITE_ARCHIVE_SHA256)},
       "testSuiteFolder": ${jsonString(testSuiteFolder.absolutePath)},
       "sourceDestinationFolder": ${jsonString(sourceDestinationFolder.absolutePath)},
       "projectDirectory": ${jsonString(projectDirectory.absolutePath)},
+      "offline": $offline,
       "includes": ${jsonArray(config.includes)},
       "excludes": ${jsonArray(config.excludes)}
     }
@@ -383,12 +447,14 @@ fun Project.registerWasmSpecTests(
         configDir
             .readWasmSpecTestGenConfig()
             .let { base ->
-                val excludedWasts =
+                val parserExcludedWasts =
                     (base.excludedWasts + additionalExcludedWasts).distinct().sorted()
+                val fullyExcludedWasts =
+                    (parserExcludedWasts + base.excludedRuntimeWasts).toSet()
                 base.copy(
-                    includedWasts = base.includedWasts.filterNot(excludedWasts::contains),
+                    includedWasts = base.includedWasts.filterNot(fullyExcludedWasts::contains),
                     excludedTests = (base.excludedTests + additionalExcludedTests).distinct(),
-                    excludedWasts = excludedWasts,
+                    excludedWasts = parserExcludedWasts,
                 )
             }
     val configFile = layout.buildDirectory.file("generated/test-gen/config.json")
@@ -396,16 +462,23 @@ fun Project.registerWasmSpecTests(
     val compiledWastDir = layout.buildDirectory.dir("generated/test-resources/compiled-wast")
     val testsuiteFolder =
         rootProject.layout.buildDirectory.dir("external-testsuites/wasm").get().asFile
+    val offline = gradle.startParameter.isOffline
     val writeConfigTask =
         tasks.register("writeWasmSpecTestGenConfig") {
             inputs.dir(configDir)
+            inputs.property("testSuiteRepository", WASM_TEST_SUITE_REPOSITORY)
+            inputs.property("testSuiteRevision", WASM_TEST_SUITE_REVISION)
+            inputs.property("testSuiteArchiveSha256", WASM_TEST_SUITE_ARCHIVE_SHA256)
+            inputs.property("offline", offline)
             inputs.property("includedWasts", config.includedWasts)
             inputs.property("excludedTests", config.excludedTests)
+            inputs.property("excludedRuntimeTests", config.excludedRuntimeTests)
             inputs.property("excludedMalformedWasts", config.excludedMalformedWasts)
             inputs.property("excludedInvalidWasts", config.excludedInvalidWasts)
             inputs.property("excludedUninstantiableWasts", config.excludedUninstantiableWasts)
             inputs.property("excludedUnlinkableWasts", config.excludedUnlinkableWasts)
             inputs.property("excludedWasts", config.excludedWasts)
+            inputs.property("excludedRuntimeWasts", config.excludedRuntimeWasts)
             outputs.file(configFile)
             doLast {
                 val output = configFile.get().asFile
@@ -416,6 +489,7 @@ fun Project.registerWasmSpecTests(
                         testsuiteFolder,
                         generatedSourceDir.get().asFile,
                         compiledWastDir.get().asFile,
+                        offline,
                     )
                 )
             }
@@ -424,14 +498,17 @@ fun Project.registerWasmSpecTests(
     val generateTask =
         tasks.register<JavaExec>("generateWasmSpecTests") {
             dependsOn(writeConfigTask)
+            dependsOn(":test-gen-lib:prepareWasmSpecTestsuite")
             dependsOn(":test-gen-lib:classes")
             dependsOn(":wasm-tools:classes")
             inputs.dir(configDir)
             inputs.dir(testsuiteFolder)
+            inputs.property("wasmToolsMode", "embedded")
             outputs.dir(generatedSourceDir)
             outputs.dir(compiledWastDir)
             mainClass.set("uk.shusek.krwa.testgen.TestGenCli")
             classpath = rootProject.project(":test-gen-lib").mainSourceSet().runtimeClasspath
+            systemProperty("krwa.wasmTools.forceEmbedded", "true")
             doFirst {
                 project.delete(generatedSourceDir.get().asFile, compiledWastDir.get().asFile)
                 setArgs(listOf(configFile.get().asFile.absolutePath))
@@ -462,9 +539,18 @@ fun Project.registerWasiSpecTests() {
     val generatedSourceDir = layout.buildDirectory.dir("generated/test-sources/wasi-test-gen")
     val testSuiteFolder =
         rootProject.layout.buildDirectory.dir("external-testsuites/wasi").get().asFile
+    val testSuiteArchive =
+        rootProject.layout.buildDirectory.file(
+            "external-testsuites/wasi-testsuite-$WASI_TEST_SUITE_REVISION.zip"
+        )
+    val offline = gradle.startParameter.isOffline
     val writeConfigTask =
         tasks.register("writeWasiSpecTestGenConfig") {
             inputs.dir(configDir)
+            inputs.property("testSuiteRepository", WASI_TEST_SUITE_REPOSITORY)
+            inputs.property("testSuiteRevision", WASI_TEST_SUITE_REVISION)
+            inputs.property("testSuiteArchiveSha256", WASI_TEST_SUITE_ARCHIVE_SHA256)
+            inputs.property("offline", offline)
             inputs.property("includes", config.includes)
             inputs.property("excludes", config.excludes)
             outputs.file(configFile)
@@ -477,14 +563,31 @@ fun Project.registerWasiSpecTests() {
                         testSuiteFolder,
                         generatedSourceDir.get().asFile,
                         layout.projectDirectory.asFile,
+                        offline,
                     )
                 )
+            }
+        }
+
+    val prepareTask =
+        tasks.register<JavaExec>("prepareWasiSpecTestsuite") {
+            dependsOn(writeConfigTask)
+            dependsOn(":wasi-test-gen:classes")
+            inputs.file(configFile)
+            doNotTrackState(
+                "The verified specification checkout is durable local state and must survive Gradle version changes.",
+            )
+            mainClass.set("uk.shusek.krwa.wasitestgen.WasiTestGenPrepareCli")
+            classpath = rootProject.project(":wasi-test-gen").mainSourceSet().runtimeClasspath
+            doFirst {
+                setArgs(listOf(configFile.get().asFile.absolutePath))
             }
         }
 
     val generateTask =
         tasks.register<JavaExec>("generateWasiSpecTests") {
             dependsOn(writeConfigTask)
+            dependsOn(prepareTask)
             dependsOn(":wasi-test-gen:classes")
             inputs.dir(configDir)
             outputs.dir(generatedSourceDir)

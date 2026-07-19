@@ -53,12 +53,19 @@ val jsonSequenceGuestDir =
 
 val compileJsonSequenceGuestWasm by tasks.registering(Exec::class) {
     workingDir = jsonSequenceGuestDir
+    val arguments =
+        mutableListOf(
+            "--no-daemon",
+            "--stacktrace",
+            "-q",
+        )
+    if (gradle.startParameter.isOffline) {
+        arguments += "--offline"
+    }
+    arguments += "compileProductionExecutableKotlinWasmWasi"
     commandLine(
         repoRoot.resolve("gradlew").absolutePath,
-        "--no-daemon",
-        "--stacktrace",
-        "-q",
-        "compileProductionExecutableKotlinWasmWasi",
+        *arguments.toTypedArray(),
     )
 }
 
@@ -84,7 +91,6 @@ dependencies {
     androidTestImplementation(libs.krwa.wasi)
     androidTestImplementation(libs.krwa.runtime)
     androidTestImplementation(libs.krwa.wasm)
-    androidTestImplementation(libs.krwa.wasmCorpus)
     androidTestImplementation(libs.kotlinx.io.core.jvm)
     androidTestImplementation(libs.junit.jupiter.api)
 }

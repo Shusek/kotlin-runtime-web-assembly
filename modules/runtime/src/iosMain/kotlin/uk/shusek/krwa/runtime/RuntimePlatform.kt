@@ -12,7 +12,7 @@ internal actual object RuntimePlatform {
         imports: ImportValues,
         backend: ExecutionBackend,
         hostInstance: Instance,
-        memoryLimits: MemoryLimits?,
+        definedMemoryLimits: Array<MemoryLimits>?,
     ): PlatformInstanceExecution? =
         when (backend) {
             ExecutionBackend.AUTO,

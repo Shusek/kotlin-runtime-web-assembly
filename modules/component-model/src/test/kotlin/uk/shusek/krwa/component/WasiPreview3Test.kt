@@ -23,6 +23,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runBlocking
@@ -2113,7 +2114,7 @@ class WasiPreview3Test {
     }
 
     @Test
-    fun receivesTcpDataAfterReceiveStreamIsCreatedStableWithoutJson() {
+    fun cancelledTcpReceiveAwaitDoesNotTurnStreamIntoEof() {
         val version = WasiPreview3.DEFAULT_VERSION
         val serverFailure = AtomicReference<Throwable?>()
         val allowWrite = CountDownLatch(1)
@@ -2298,6 +2299,15 @@ class WasiPreview3Test {
 
             val stream = plugin.call("api.receive") as WitStream<*>
             runBlocking {
+                val cancelledAwait =
+                    async {
+                        wasi.awaitStreamReadable(stream)
+                    }
+                delay(50L)
+
+                assertFalse(cancelledAwait.isCompleted)
+                cancelledAwait.cancelAndJoin()
+
                 val readable =
                     async {
                         wasi.awaitStreamReadable(stream)
@@ -5561,6 +5571,7 @@ class WasiPreview3Test {
                 package example:wasi3-stream-intrinsics;
 
                 world plugin {
+                  import wasi:cli/stdin@$version;
                   export api;
                 }
 
@@ -5665,9 +5676,10 @@ class WasiPreview3Test {
                 }
 
                 interface api {
+                  use wasi:cli/types@$version.{error-code};
                   read-stdin: func() -> u32;
-                  write-stdout: func() -> u32;
-                  write-stderr: func() -> u32;
+                  write-stdout: func() -> future<result<_, error-code>>;
+                  write-stderr: func() -> future<result<_, error-code>>;
                 }
 
                 package wasi:cli@$version {
@@ -5818,8 +5830,8 @@ class WasiPreview3Test {
                 .build()
 
         assertEquals(248L, plugin.call("api.read-stdin"))
-        val stdoutFuture = WitFuture.of<Any?>(plugin.call("api.write-stdout") as Long)
-        val stderrFuture = WitFuture.of<Any?>(plugin.call("api.write-stderr") as Long)
+        val stdoutFuture = plugin.call("api.write-stdout") as WitFuture<*>
+        val stderrFuture = plugin.call("api.write-stderr") as WitFuture<*>
 
         assertTrue(runBlocking { wasi.awaitFuture(stdoutFuture) } is WitResult.Ok<*, *>)
         assertTrue(runBlocking { wasi.awaitFuture(stderrFuture) } is WitResult.Ok<*, *>)

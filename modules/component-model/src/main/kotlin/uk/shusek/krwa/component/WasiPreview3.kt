@@ -14,10 +14,12 @@ import kotlin.time.TimeSource
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.offsetAt
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
@@ -39,6 +41,7 @@ import okio.Sink as OkioSink
 import okio.Timeout
 import okio.buffer
 import org.kotlincrypto.random.CryptoRand
+import uk.shusek.krwa.runtime.canonicalizeExactNetworkHost
 
 private const val CLI_PACKAGE: String = "wasi:cli"
 private const val CLOCKS_PACKAGE: String = "wasi:clocks"
@@ -57,6 +60,62 @@ private const val U32_MASK: Long = 0xffff_ffffL
 private const val TCP_EPHEMERAL_PORT_START: Int = 49_152
 private const val TCP_EPHEMERAL_PORT_END: Int = 65_535
 
+private data class WasiPreview3TcpBindKey(
+    val address: List<Int>,
+    val port: Int,
+)
+
+private object WasiPreview3TcpBindRegistry {
+    private val lock = WasiPreviewLock()
+    private val reserved: MutableSet<WasiPreview3TcpBindKey> = LinkedHashSet()
+    private var nextEphemeralPort: Int =
+        Random.Default.nextInt(TCP_EPHEMERAL_PORT_START, TCP_EPHEMERAL_PORT_END + 1)
+
+    fun reserveExact(key: WasiPreview3TcpBindKey): Boolean =
+        withWasiPreviewLock(lock) {
+            if (reserved.any { conflicts(it, key) }) {
+                false
+            } else {
+                reserved.add(key)
+                true
+            }
+        }
+
+    fun reserveEphemeral(address: List<Int>): WasiPreview3TcpBindKey? =
+        withWasiPreviewLock(lock) {
+            val portCount = TCP_EPHEMERAL_PORT_END - TCP_EPHEMERAL_PORT_START + 1
+            repeat(portCount) {
+                val port = nextEphemeralPort
+                nextEphemeralPort =
+                    if (port == TCP_EPHEMERAL_PORT_END) TCP_EPHEMERAL_PORT_START else port + 1
+                val candidate = WasiPreview3TcpBindKey(address, port)
+                if (reserved.none { conflicts(it, candidate) }) {
+                    reserved.add(candidate)
+                    return@withWasiPreviewLock candidate
+                }
+            }
+            null
+        }
+
+    fun release(key: WasiPreview3TcpBindKey?) {
+        if (key != null) {
+            withWasiPreviewLock(lock) { reserved.remove(key) }
+        }
+    }
+
+    private fun conflicts(
+        first: WasiPreview3TcpBindKey,
+        second: WasiPreview3TcpBindKey,
+    ): Boolean {
+        if (first.port != second.port || first.address.size != second.address.size) {
+            return false
+        }
+        return first.address == second.address ||
+            first.address.all { it == 0 } ||
+            second.address.all { it == 0 }
+    }
+}
+
 private fun defaultPreview3MonotonicClock(): () -> Long {
     val mark = TimeSource.Monotonic.markNow()
     return { mark.elapsedNow().inWholeNanoseconds }
@@ -66,6 +125,60 @@ private fun defaultPreview3CoroutineScope(): CoroutineScope =
     CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
 private fun <T : Any> requirePresent(value: T?, name: String): T = requireNotNull(value) { name }
+
+private object DefaultWasiPreview3HttpClient : WasiHttpClient {
+    override fun send(request: WasiHttpRequest): WasiHttpResponse =
+        error("The default WASI Preview 3 HTTP client is created by Builder.build()")
+}
+
+private class WasiPreview3Transports(
+    val httpClient: WasiHttpClient,
+    val socketRuntime: WasiSocketRuntime,
+    ownedHttpClient: WasiPreview3TransportResource?,
+    ownedSocketRuntime: WasiPreview3TransportResource?,
+) : WasiPreview3TransportResource {
+    private val lifecycleLock = WasiPreviewLock()
+    private val ownedResources: List<WasiPreview3TransportResource> =
+        listOfNotNull(ownedSocketRuntime, ownedHttpClient)
+    private var closed: Boolean = false
+
+    override fun close() {
+        val resources =
+            withWasiPreviewLock(lifecycleLock) {
+                if (closed) {
+                    emptyList()
+                } else {
+                    closed = true
+                    ownedResources
+                }
+            }
+        var failure: Throwable? = null
+        for (resource in resources) {
+            try {
+                resource.close()
+            } catch (closeFailure: Throwable) {
+                val previous = failure
+                if (previous == null) {
+                    failure = closeFailure
+                } else {
+                    previous.addSuppressed(closeFailure)
+                }
+            }
+        }
+        failure?.let { throw it }
+    }
+}
+
+private fun closeWasiPreview3TransportAfterFailure(
+    failure: Throwable,
+    resource: WasiPreview3TransportResource,
+) {
+    try {
+        resource.close()
+    } catch (closeFailure: Throwable) {
+        failure.addSuppressed(closeFailure)
+    }
+}
 
 private fun stringValue(value: Any?): String = value.toString()
 
@@ -127,7 +240,137 @@ private fun defaultWasiHttpHandler(): WasiHttpHandler =
         WasiPreview2.HttpResponseSnapshot(501, emptyMap(), ByteArray(0), true)
     }
 
-class WasiPreview3 private constructor(builder: Builder) : WasiPreview3CanonicalIntrinsics {
+/**
+ * One exact network destination. Host wildcards, URL-shaped values, and ambiguous IP literals are
+ * rejected.
+ *
+ * Port `0` is accepted for raw-socket local binds requesting an ephemeral port. HTTP grants must
+ * use an explicit port from `1` through `65535`.
+ */
+data class WasiNetworkEndpoint(
+    val host: String,
+    val port: Int,
+) {
+    internal val normalizedHost: String = normalizeNetworkPolicyHost(host)
+
+    init {
+        require(port in 0..0xffff) { "network endpoint port must be between 0 and 65535" }
+    }
+}
+
+enum class WasiHttpNetworkProtocol {
+    Http,
+    Https,
+}
+
+/**
+ * One exact HTTP destination. Scheme, host, and port must all match the request.
+ */
+data class WasiHttpNetworkEndpoint(
+    val protocol: WasiHttpNetworkProtocol,
+    val host: String,
+    val port: Int,
+) {
+    internal val normalizedHost: String = normalizeNetworkPolicyHost(host)
+
+    init {
+        require(port in 1..0xffff) {
+            "HTTP network endpoint port must be between 1 and 65535"
+        }
+    }
+}
+
+/**
+ * Explicit network capabilities granted to a WASI Preview 3 host.
+ *
+ * HTTP and raw sockets are independent. Empty endpoint sets deny all network access. Matching is
+ * exact after ASCII hostname/IP normalization; wildcard and suffix matching are deliberately not
+ * supported.
+ */
+class WasiNetworkPolicy(
+    httpEndpoints: Set<WasiHttpNetworkEndpoint> = emptySet(),
+    rawSocketEndpoints: Set<WasiNetworkEndpoint> = emptySet(),
+) {
+    private val configuredHttpEndpoints: Set<WasiHttpNetworkEndpoint> =
+        LinkedHashSet(httpEndpoints)
+    private val configuredRawSocketEndpoints: Set<WasiNetworkEndpoint> =
+        LinkedHashSet(rawSocketEndpoints)
+
+    val httpEndpoints: Set<WasiHttpNetworkEndpoint>
+        get() = configuredHttpEndpoints.toSet()
+
+    val rawSocketEndpoints: Set<WasiNetworkEndpoint>
+        get() = configuredRawSocketEndpoints.toSet()
+
+    fun allowsHttp(
+        protocol: WasiHttpNetworkProtocol,
+        host: String,
+        port: Int,
+    ): Boolean =
+        normalizedNetworkPolicyHostOrNull(host)?.let { normalized ->
+            configuredHttpEndpoints.any { endpoint ->
+                endpoint.protocol == protocol &&
+                    endpoint.normalizedHost == normalized &&
+                    endpoint.port == port
+            }
+        } ?: false
+
+    fun allowsRawSocket(host: String, port: Int): Boolean =
+        normalizedNetworkPolicyHostOrNull(host)?.let { normalized ->
+            configuredRawSocketEndpoints.any { endpoint ->
+                endpoint.normalizedHost == normalized && endpoint.port == port
+            }
+        } ?: false
+
+    internal fun allowsRawSocketHost(normalizedHost: String): Boolean =
+        configuredRawSocketEndpoints.any { it.normalizedHost == normalizedHost }
+
+    internal fun allowsResolvedRawSocket(
+        numericHost: String,
+        port: Int,
+        resolvedAddresses: Map<String, Set<String>>,
+    ): Boolean =
+        configuredRawSocketEndpoints.any { endpoint ->
+            endpoint.port == port &&
+                resolvedAddresses[endpoint.normalizedHost]?.contains(numericHost) == true
+        }
+
+    internal fun hasHttpAccess(): Boolean = configuredHttpEndpoints.isNotEmpty()
+
+    internal fun hasRawSocketAccess(): Boolean = configuredRawSocketEndpoints.isNotEmpty()
+
+    companion object {
+        val DENY_ALL: WasiNetworkPolicy = WasiNetworkPolicy()
+    }
+}
+
+private fun normalizedNetworkPolicyHostOrNull(host: String): String? =
+    try {
+        normalizeNetworkPolicyHost(host)
+    } catch (_: IllegalArgumentException) {
+        null
+    }
+
+private fun normalizeNetworkPolicyHost(host: String): String =
+    canonicalizeExactNetworkHost(host)
+
+private fun networkHostFromAddress(address: ByteArray): String =
+    when (address.size) {
+        4 -> address.joinToString(".") { unsignedByte(it).toString() }
+        16 ->
+            (0 until 8).joinToString(":") { index ->
+                ((unsignedByte(address[index * 2]) shl 8) or
+                        unsignedByte(address[index * 2 + 1]))
+                    .toString(16)
+            }
+        else -> throw IllegalArgumentException("network address must contain 4 or 16 bytes")
+    }
+
+class WasiPreview3
+private constructor(
+    builder: Builder,
+    private val transports: WasiPreview3Transports,
+) : WasiPreview3CanonicalIntrinsics, AutoCloseable {
 
     companion object {
         const val DEFAULT_VERSION: String = "0.3.0"
@@ -156,13 +399,17 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
     private val terminalStdin: Boolean = builder.terminalStdin
     private val terminalStdout: Boolean = builder.terminalStdout
     private val terminalStderr: Boolean = builder.terminalStderr
-    private val networkingEnabled: Boolean = builder.networkingEnabled
-    private val httpClient: WasiHttpClient = builder.httpClient
-    private val hostScope = builder.coroutineScope ?: defaultPreview3CoroutineScope()
-    private val ownsHostScope: Boolean = builder.coroutineScope == null || builder.ownsCoroutineScope
+    private val networkPolicy: WasiNetworkPolicy = builder.networkPolicy
+    private val unsafeAllowAllNetworking: Boolean = builder.unsafeAllowAllNetworking
+    private val httpClient: WasiHttpClient = transports.httpClient
+    private val configuredHostScope = builder.coroutineScope ?: defaultPreview3CoroutineScope()
+    private val ownsConfiguredHostScope: Boolean =
+        builder.coroutineScope == null || builder.ownsCoroutineScope
+    private val hostJob = SupervisorJob(configuredHostScope.coroutineContext[Job])
+    private val hostScope = CoroutineScope(configuredHostScope.coroutineContext + hostJob)
     private val httpHandler: WasiHttpHandler = builder.httpHandler
     private val fileSystem: FileSystem = builder.fileSystem
-    private val socketRuntime: WasiSocketRuntime = builder.socketRuntime
+    private val socketRuntime: WasiSocketRuntime = transports.socketRuntime
     private val streamBufferCapacity: Int = builder.streamBufferCapacity
     private val maxCanonicalThreads: Int = builder.maxCanonicalThreads
     private val maxPendingFutures: Int = builder.maxPendingFutures
@@ -178,11 +425,12 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
     private val responses: WitResourceTable<HttpResponse> = WitResourceTable()
     private val tcpSockets: WitResourceTable<TcpSocket> = WitResourceTable()
     private val udpSockets: WitResourceTable<UdpSocket> = WitResourceTable()
-    private val futures: WitResourceTable<FutureValue> = WitResourceTable()
-    private val streams: WitResourceTable<StreamValue> = WitResourceTable()
+    private val futures: WitResourceTable<FutureValue> = WitResourceTable(maxPendingFutures)
+    private val streams: WitResourceTable<StreamValue> = WitResourceTable(maxPendingStreams)
     private val terminalInputs: WitResourceTable<TerminalInput> = WitResourceTable()
     private val terminalOutputs: WitResourceTable<TerminalOutput> = WitResourceTable()
     private val tcpBoundAddresses: MutableSet<SocketAddressKey> = LinkedHashSet()
+    private val resolvedRawSocketAddresses: MutableMap<String, Set<String>> = LinkedHashMap()
     private val hostTaskLock = WasiPreviewLock()
     private val filesystemReadHandler = FilesystemReadHostHandler()
     private val filesystemWriteHandler = FilesystemWriteHostHandler()
@@ -191,7 +439,6 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
     private val filesystemReadBuffer = ByteArray(DIRECT_FILESYSTEM_WRITE_CHUNK_SIZE)
     private val filesystemWriteBuffer = ByteArray(DIRECT_FILESYSTEM_WRITE_CHUNK_SIZE)
     private var inFlightHostTasks: Int = 0
-    private var nextTcpEphemeralPort: Int = TCP_EPHEMERAL_PORT_START
     private var closed: Boolean = false
 
     fun version(): String = version
@@ -228,7 +475,7 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
 
     internal fun preview1FileSystem(): FileSystem = fileSystem
 
-    fun close() {
+    override fun close() {
         val shouldClose =
             withWasiPreviewLock(hostTaskLock) {
                 if (closed) {
@@ -241,10 +488,17 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
         if (!shouldClose) {
             return
         }
-        if (ownsHostScope) {
-            hostScope.cancel()
+        hostJob.cancel()
+        if (ownsConfiguredHostScope) {
+            configuredHostScope.cancel()
         }
-        closeResources()
+        try {
+            closeResources()
+        } catch (failure: Throwable) {
+            closeWasiPreview3TransportAfterFailure(failure, transports)
+            throw failure
+        }
+        transports.close()
     }
 
     fun cancel() {
@@ -252,27 +506,41 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
     }
 
     private fun closeResources() {
-        for (stream in streams.snapshot()) {
+        val streamsToClose = streams.close()
+        val descriptorsToClose = descriptors.close()
+        val tcpSocketsToClose = tcpSockets.close()
+        val udpSocketsToClose = udpSockets.close()
+        val futuresToCancel = futures.close()
+        val responsesToClose = responses.close()
+        directoryEntryStreams.close()
+        fields.close()
+        requests.close()
+        requestOptions.close()
+        terminalInputs.close()
+        terminalOutputs.close()
+
+        for (stream in streamsToClose) {
             closeStreamValue(stream)
         }
-        streams.clear()
-        for (descriptor in descriptors.snapshot()) {
+        for (descriptor in descriptorsToClose) {
             closeFilesystemDescriptor(descriptor)
         }
-        descriptors.clear()
-        for (socket in tcpSockets.snapshot()) {
+        for (socket in tcpSocketsToClose) {
             closeTcpSocket(socket)
         }
-        tcpSockets.clear()
-        for (socket in udpSockets.snapshot()) {
+        for (socket in udpSocketsToClose) {
             closeUdpSocket(socket)
         }
-        udpSockets.clear()
-        for (future in futures.snapshot()) {
+        for (future in futuresToCancel) {
             future.state.cancelReadable()
             future.state.cancelWritable()
         }
-        futures.clear()
+        for (response in responsesToClose) {
+            closeHttpResponse(response)
+        }
+        withWasiPreviewLock(hostTaskLock) {
+            resolvedRawSocketAddresses.clear()
+        }
     }
 
     private fun closeStreamValue(stream: StreamValue) {
@@ -285,15 +553,33 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
                 data.cancelReadable()
                 data.cancelWritable()
             }
+            is TcpListenerStream -> data.close()
             is TcpReceiveStream -> data.drop()
             is SourceByteStream -> data.close()
             is RawSource -> closeIgnoringFailure { data.close() }
         }
     }
 
+    private fun closeHttpResponse(response: HttpResponse) {
+        when (val body = response.body) {
+            is HttpBody -> {
+                body.streamData.cancelReadable()
+                body.streamData.cancelWritable()
+            }
+            is ByteStreamBuffer -> {
+                body.cancelReadable()
+                body.cancelWritable()
+            }
+            is SourceByteStream -> body.close()
+            is RawSource -> closeIgnoringFailure { body.close() }
+        }
+    }
+
     private fun closeTcpSocket(socket: TcpSocket) {
         socket.boundAddressKey?.let { tcpBoundAddresses.remove(it) }
         socket.boundAddressKey = null
+        WasiPreview3TcpBindRegistry.release(socket.globalBoundAddressKey)
+        socket.globalBoundAddressKey = null
         closeIgnoringFailure { socket.connection?.close() }
         socket.connection = null
         closeIgnoringFailure { socket.listener?.close() }
@@ -398,6 +684,12 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
 
     fun completeFuture(handle: Long, value: Any?) {
         futures.get(handle).state.complete(value)
+    }
+
+    private fun completeFutureIfPresent(future: WitFuture<*>, value: Any?) {
+        futures.updateIfPresent(future.handle()) { entry ->
+            entry.state.complete(value)
+        }
     }
 
     fun futureCompleted(future: WitFuture<*>): Boolean = futureCompleted(future.handle())
@@ -551,8 +843,15 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
                     writableDropped = false,
                     capacity = streamBufferCapacity,
                 )
-        val reader = streamHandle(StreamValue("stream-readable", buffer))
-        val writer = streamHandle(StreamValue("stream-writable", buffer))
+        val handles =
+            streams.insertResourceHandles(
+                listOf(
+                    StreamValue("stream-readable", buffer),
+                    StreamValue("stream-writable", buffer),
+                )
+            )
+        val reader = handles[0]
+        val writer = handles[1]
         return (writer shl 32) or reader
     }
 
@@ -658,7 +957,7 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
         ptr: Int,
         len: Int,
     ): Long {
-        requireNetworking()
+        requireRawSocketAccess()
         val length = len.coerceAtMost(STREAM_MAX_LENGTH)
         if (length == 0) {
             return streamCompleted(0)
@@ -721,7 +1020,7 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
         len: Int,
         payloadType: WitPackage.TypeRef,
     ): Long {
-        requireNetworking()
+        requireRawSocketAccess()
         val length = len.coerceAtMost(STREAM_MAX_LENGTH)
         if (length == 0) {
             return streamCompleted(0)
@@ -729,7 +1028,7 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
         if (!listener.socket.listening || listener.socket.listener == null) {
             return streamDropped(0)
         }
-        val child = listener.accept(1_000L) ?: return STREAM_BLOCKED
+        val child = listener.takeAccepted() ?: return STREAM_BLOCKED
         val resource = tcpSockets.insertResource(child)
         context.storeListElements(ptr, payloadType, listOf(resource))
         return streamCompleted(1)
@@ -776,8 +1075,15 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
     override fun futureNew(): Long {
         requireFutureCapacity(2)
         val state = FutureState()
-        val reader = futureHandle(state)
-        val writer = futureHandle(state)
+        val handles =
+            futures.insertResourceHandles(
+                listOf(
+                    FutureValue(state),
+                    FutureValue(state),
+                )
+            )
+        val reader = handles[0]
+        val writer = handles[1]
         return (writer shl 32) or reader
     }
 
@@ -1490,7 +1796,7 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
         val future = pendingFuture<Any?>()
         launchHostTask {
             delay(unsignedNanosDuration(nanos))
-            completeFuture(future, null)
+            completeFutureIfPresent(future, null)
         }
         return future
     }
@@ -2135,8 +2441,12 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
     private fun resolveAddresses(args: List<Any?>): Any? {
         requireArity("resolve-addresses", args, 1)
         return nameLookupResult {
-            requireNetworking()
-            val addresses = resolveIpAddresses(string(args[0])).map { ipAddress(it) }
+            requireRawSocketAccess()
+            val hostname = string(args[0])
+            val normalizedHostname = requireRawSocketHostnameAllowed(hostname)
+            val rawAddresses = resolveIpAddresses(hostname)
+            rememberResolvedRawSocketAddresses(normalizedHostname, rawAddresses)
+            val addresses = rawAddresses.map { ipAddress(it) }
             if (addresses.isEmpty()) {
                 throw NameLookupException("name-unresolvable")
             }
@@ -2147,7 +2457,7 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
     private fun tcpCreate(args: List<Any?>): Any? {
         requireArity("tcp-socket.create", args, 1)
         return socketResult {
-            requireNetworking()
+            requireRawSocketAccess()
             tcpSockets.insertResource(TcpSocket(addressFamily(args[0])))
         }
     }
@@ -2155,16 +2465,19 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
     private fun tcpBind(socket: TcpSocket, args: List<Any?>): Any? {
         requireArity("tcp-socket.bind", args, 2)
         return socketResult {
-            requireNetworking()
+            requireRawSocketAccess()
             if (socket.bound || socket.connected || socket.listening) {
                 throw NetException("invalid-state")
             }
             val local = socketAddress(args[1])
             requireFamily(socket.family, local)
+            requireRawSocketEndpointAllowed(local)
             val assigned = reserveTcpBindAddress(socket.family, local)
             socket.localAddress = assigned.address
             socket.boundAddressKey = assigned.key
+            socket.globalBoundAddressKey = assigned.globalKey
             socket.bound = true
+            socket.localPolicyAuthorized = true
             null
         }
     }
@@ -2173,12 +2486,13 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
         requireArity("tcp-socket.connect", args, 2)
         val connection =
             socketResultValue {
-                requireNetworking()
+                requireRawSocketAccess()
                 if (socket.connected || socket.listening) {
                     throw NetException("invalid-state")
                 }
                 val remote = socketAddress(args[1])
                 validateRemoteAddress(socket.family, remote)
+                requireRawSocketEndpointAllowed(remote)
                 remote
             }
         if (connection is WitResult.Err<*, *>) {
@@ -2189,7 +2503,7 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
         if (suspendingRuntime != null) {
             val future = pendingFuture<Any?>()
             launchHostTask {
-                completeFuture(
+                completeFutureIfPresent(
                     future,
                     socketResultValueSuspending {
                         val tcpConnection =
@@ -2221,14 +2535,26 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
     }
 
     private fun completeTcpConnect(socket: TcpSocket, connection: WasiTcpConnection) {
-        if (socket.connected || socket.listening) {
-            throw NetException("invalid-state")
+        try {
+            val remoteAddress = connection.remoteAddress
+            val localAddress = connection.localAddress
+            withWasiPreviewLock(hostTaskLock) {
+                if (closed) {
+                    throw CancellationException("WASI Preview 3 host is closed")
+                }
+                if (socket.connected || socket.listening) {
+                    throw NetException("invalid-state")
+                }
+                socket.connection = connection
+                socket.remoteAddress = remoteAddress
+                socket.localAddress = localAddress
+                socket.bound = true
+                socket.connected = true
+            }
+        } catch (failure: Throwable) {
+            closeIgnoringFailure { connection.close() }
+            throw failure
         }
-        socket.connection = connection
-        socket.remoteAddress = connection.remoteAddress
-        socket.localAddress = connection.localAddress
-        socket.bound = true
-        socket.connected = true
     }
 
     private fun tcpListen(
@@ -2239,11 +2565,16 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
         requireArity("tcp-socket.listen", args, 1)
         val validation =
             socketResultValue {
-                requireNetworking()
+                requireRawSocketAccess()
                 if (socket.connected || socket.listening) {
                     throw NetException("invalid-state")
                 }
-                socket.localAddress ?: wildcardAddress(socket.family)
+                val local = socket.localAddress ?: wildcardAddress(socket.family)
+                if (!socket.localPolicyAuthorized) {
+                    requireRawSocketEndpointAllowed(local)
+                    socket.localPolicyAuthorized = true
+                }
+                local
             }
         if (validation is WitResult.Err<*, *>) {
             return validation
@@ -2253,7 +2584,7 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
         if (context.isAsync && suspendingRuntime != null) {
             val future = pendingFuture<Any?>()
             launchHostTask {
-                completeFuture(
+                completeFutureIfPresent(
                     future,
                     socketResultValueSuspending {
                         completeTcpListen(
@@ -2271,18 +2602,60 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
     }
 
     private fun completeTcpListen(socket: TcpSocket, listener: WasiTcpListener): Long {
-        socket.listener = listener
-        socket.localAddress = listener.localAddress
-        socket.bound = true
-        socket.listening = true
-        return streamHandle(StreamValue("tcp-listener", TcpListenerStream(socket)))
+        var addedLocalKey: SocketAddressKey? = null
+        var addedGlobalKey: WasiPreview3TcpBindKey? = null
+        try {
+            return withWasiPreviewLock(hostTaskLock) {
+                if (closed) {
+                    throw CancellationException("WASI Preview 3 host is closed")
+                }
+                if (socket.connected || socket.listening) {
+                    throw NetException("invalid-state")
+                }
+                val localAddress = listener.localAddress
+                if (socket.boundAddressKey == null) {
+                    val localKey = socketAddressKey(socket.family, localAddress)
+                    val globalKey = globalSocketAddressKey(localAddress)
+                    if (!WasiPreview3TcpBindRegistry.reserveExact(globalKey)) {
+                        throw NetException("address-in-use")
+                    }
+                    addedGlobalKey = globalKey
+                    if (!tcpBoundAddresses.add(localKey)) {
+                        throw NetException("address-in-use")
+                    }
+                    addedLocalKey = localKey
+                    socket.boundAddressKey = localKey
+                    socket.globalBoundAddressKey = globalKey
+                }
+                val streamHandle =
+                    streamHandle(StreamValue("tcp-listener", TcpListenerStream(socket)))
+                socket.listener = listener
+                socket.localAddress = localAddress
+                socket.bound = true
+                socket.listening = true
+                streamHandle
+            }
+        } catch (failure: Throwable) {
+            addedLocalKey?.let { key ->
+                tcpBoundAddresses.remove(key)
+                if (socket.boundAddressKey == key) {
+                    socket.boundAddressKey = null
+                }
+            }
+            WasiPreview3TcpBindRegistry.release(addedGlobalKey)
+            if (socket.globalBoundAddressKey == addedGlobalKey) {
+                socket.globalBoundAddressKey = null
+            }
+            closeIgnoringFailure { listener.close() }
+            throw failure
+        }
     }
 
     private fun tcpAccept(socket: TcpSocket, args: List<Any?>): Any? {
         requireArity("tcp-socket.accept", args, 1)
         val validation =
             socketResultValue {
-                requireNetworking()
+                requireRawSocketAccess()
                 if (!socket.listening || socket.listener == null) {
                     throw NetException("invalid-state")
                 }
@@ -2294,7 +2667,7 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
 
         val future = pendingFuture<Any?>()
         launchHostTask {
-            completeFuture(
+            completeFutureIfPresent(
                 future,
                 socketResultValueSuspending {
                     tcpAcceptResult(acceptTcpConnectionSocketSuspending(socket))
@@ -2304,23 +2677,42 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
         return future
     }
 
-    private fun tcpAcceptResult(accepted: TcpSocket): List<Any?> =
-        listOf(
-            tcpSockets.insertResource(accepted),
-            socketAddress(
-                accepted.remoteAddress
-                    ?: throw NetException("invalid-state")
-            ),
-        )
+    private fun tcpAcceptResult(accepted: TcpSocket): List<Any?> {
+        try {
+            val remoteAddress =
+                socketAddress(accepted.remoteAddress ?: throw NetException("invalid-state"))
+            return withWasiPreviewLock(hostTaskLock) {
+                if (closed) {
+                    throw CancellationException("WASI Preview 3 host is closed")
+                }
+                listOf(tcpSockets.insertResource(accepted), remoteAddress)
+            }
+        } catch (failure: Throwable) {
+            closeTcpSocket(accepted)
+            throw failure
+        }
+    }
 
-    private fun acceptTcpConnectionResource(socket: TcpSocket): WitResource<Nothing> =
-        tcpSockets.insertResource(acceptTcpConnectionSocket(socket))
+    private fun acceptTcpConnectionResource(socket: TcpSocket): WitResource<Nothing> {
+        val accepted = acceptTcpConnectionSocket(socket)
+        try {
+            return withWasiPreviewLock(hostTaskLock) {
+                if (closed) {
+                    throw CancellationException("WASI Preview 3 host is closed")
+                }
+                tcpSockets.insertResource(accepted)
+            }
+        } catch (failure: Throwable) {
+            closeTcpSocket(accepted)
+            throw failure
+        }
+    }
 
     private fun acceptTcpConnectionSocket(socket: TcpSocket): TcpSocket =
         acceptTcpConnectionSocketOrNull(socket, 1_000L) ?: throw NetException("timeout")
 
     private fun acceptTcpConnectionSocketOrNull(socket: TcpSocket, timeoutMillis: Long): TcpSocket? {
-        requireNetworking()
+        requireRawSocketAccess()
         if (!socket.listening || socket.listener == null) {
             throw NetException("invalid-state")
         }
@@ -2329,7 +2721,7 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
     }
 
     private suspend fun acceptTcpConnectionSocketSuspending(socket: TcpSocket): TcpSocket {
-        requireNetworking()
+        requireRawSocketAccess()
         if (!socket.listening || socket.listener == null) {
             throw NetException("invalid-state")
         }
@@ -2337,21 +2729,28 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
     }
 
     private fun tcpSocketFromConnection(parent: TcpSocket, accepted: WasiTcpConnection): TcpSocket {
-        val child = TcpSocket(parent.family)
-        child.inheritConnectionOptionsFrom(parent)
-        child.connection = accepted
-        child.bound = true
-        child.connected = true
-        child.localAddress = accepted.localAddress
-        child.remoteAddress = accepted.remoteAddress
-        return child
+        try {
+            val localAddress = accepted.localAddress
+            val remoteAddress = accepted.remoteAddress
+            val child = TcpSocket(parent.family)
+            child.inheritConnectionOptionsFrom(parent)
+            child.connection = accepted
+            child.bound = true
+            child.connected = true
+            child.localAddress = localAddress
+            child.remoteAddress = remoteAddress
+            return child
+        } catch (failure: Throwable) {
+            closeIgnoringFailure { accepted.close() }
+            throw failure
+        }
     }
 
     private fun tcpSend(socket: TcpSocket, args: List<Any?>): Any? {
         requireArity("tcp-socket.send", args, 2)
         val send =
             socketResultValue {
-                requireNetworking()
+                requireRawSocketAccess()
                 val connection = socket.connection
                 if (!socket.connected || connection == null || socket.sendConsumed) {
                     throw NetException("invalid-state")
@@ -2369,7 +2768,7 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
     private fun tcpReceive(socket: TcpSocket, args: List<Any?>): Any? {
         requireArity("tcp-socket.receive", args, 1)
         return try {
-            requireNetworking()
+            requireRawSocketAccess()
             val connection = socket.connection
             if (!socket.connected || connection == null || socket.receiveConsumed) {
                 throw NetException("invalid-state")
@@ -2539,7 +2938,7 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
     private fun udpCreate(args: List<Any?>): Any? {
         requireArity("udp-socket.create", args, 1)
         return socketResult {
-            requireNetworking()
+            requireRawSocketAccess()
             val family = addressFamily(args[0])
             udpSockets.insertResource(UdpSocket(family))
         }
@@ -2548,18 +2947,17 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
     private fun udpBind(socket: UdpSocket, args: List<Any?>): Any? {
         requireArity("udp-socket.bind", args, 2)
         return socketResult {
-            requireNetworking()
+            requireRawSocketAccess()
             if (socket.bound) {
                 throw NetException("invalid-state")
             }
             val local = socketAddress(args[1])
             requireFamily(socket.family, local)
             validateLocalBindAddress(socket.family, local)
+            requireRawSocketEndpointAllowed(local)
             val endpoint =
                 socketRuntime.bindUdp(local, socket.receiveBufferSize, socket.sendBufferSize)
-            socket.endpoint = endpoint
-            socket.localAddress = endpoint.localAddress
-            socket.bound = true
+            attachUdpEndpoint(socket, endpoint)
             null
         }
     }
@@ -2567,9 +2965,10 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
     private fun udpConnect(socket: UdpSocket, args: List<Any?>): Any? {
         requireArity("udp-socket.connect", args, 2)
         return socketResult {
-            requireNetworking()
+            requireRawSocketAccess()
             val remote = socketAddress(args[1])
             validateRemoteAddress(socket.family, remote)
+            requireRawSocketEndpointAllowed(remote)
             if (!socket.bound && socket.endpoint == null) {
                 socket.localAddress = addressWithPort(remote, 0)
             }
@@ -2596,7 +2995,7 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
         requireArity("udp-socket.send", args, 3)
         val send =
             socketResultValue {
-                requireNetworking()
+                requireRawSocketAccess()
                 val data = bytes(args[1])
                 if (data.size > 65_535) {
                     throw NetException("datagram-too-large")
@@ -2608,6 +3007,7 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
                 if (remote == null) {
                     throw NetException("invalid-argument")
                 }
+                requireRawSocketEndpointAllowed(remote)
                 PendingUdpSend(udpEndpoint(socket), data, remote)
             }
         if (send is WitResult.Err<*, *>) {
@@ -2617,7 +3017,7 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
         if (endpoint is WasiSuspendingUdpEndpoint) {
             val future = pendingFuture<Any?>()
             launchHostTask {
-                completeFuture(
+                completeFutureIfPresent(
                     future,
                     socketResultValueSuspending {
                         endpoint.sendSuspending(data, remote)
@@ -2641,7 +3041,7 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
         requireArity("udp-socket.receive", args, 1)
         val receive =
             socketResultValue {
-                requireNetworking()
+                requireRawSocketAccess()
                 val endpoint = socket.endpoint
                 if (!socket.bound || endpoint == null) {
                     throw NetException("invalid-state")
@@ -2655,7 +3055,7 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
         if (endpoint is WasiSuspendingUdpEndpoint) {
             val future = pendingFuture<Any?>()
             launchHostTask {
-                completeFuture(
+                completeFutureIfPresent(
                     future,
                     socketResultValueSuspending {
                         val datagram =
@@ -2737,7 +3137,7 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
 
     private fun clientSend(args: List<Any?>): Any? {
         requireArity("client.send", args, 1)
-        if (!networkingEnabled) {
+        if (!canAttemptHttpRequests()) {
             return WitResult.err("HTTP-request-denied")
         }
         val request = requests.get(handle(args, 0))
@@ -2747,7 +3147,7 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
         }
         val future = pendingFuture<Any?>()
         launchHostTask {
-            completeFuture(future, clientSendResultSuspending(request))
+            completeFutureIfPresent(future, clientSendResultSuspending(request))
         }
         return future
     }
@@ -2761,7 +3161,7 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
         }
         val future = pendingFuture<Any?>()
         launchHostTask {
-            completeFuture(future, handlerHandleResultSuspending(request))
+            completeFutureIfPresent(future, handlerHandleResultSuspending(request))
         }
         return future
     }
@@ -3618,15 +4018,88 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
     ): WitResult<T, Any?> =
         try {
             WitResult.ok(operation())
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: NetException) {
             WitResult.err(e.code)
         } catch (e: Exception) {
             WitResult.err(socketExceptionCode(e))
         }
 
-    private fun requireNetworking() {
-        if (!networkingEnabled) {
+    private fun canAttemptHttpRequests(): Boolean =
+        unsafeAllowAllNetworking || networkPolicy.hasHttpAccess()
+
+    private fun requireHttpRequestAllowed(request: WasiHttpRequest) {
+        if (unsafeAllowAllNetworking) {
+            return
+        }
+        val url =
+            try {
+                Url(request.uri)
+            } catch (_: URLParserException) {
+                throw HttpException("HTTP-request-URI-invalid")
+            } catch (_: IllegalArgumentException) {
+                throw HttpException("HTTP-request-URI-invalid")
+            }
+        val protocol =
+            when (url.protocol.name.lowercase()) {
+                "http" -> WasiHttpNetworkProtocol.Http
+                "https" -> WasiHttpNetworkProtocol.Https
+                else -> throw HttpException("HTTP-request-denied")
+            }
+        if (!networkPolicy.allowsHttp(protocol, url.host, url.port)) {
+            throw HttpException("HTTP-request-denied")
+        }
+    }
+
+    private fun requireRawSocketAccess() {
+        if (!unsafeAllowAllNetworking && !networkPolicy.hasRawSocketAccess()) {
             throw NetException("access-denied")
+        }
+    }
+
+    private fun requireRawSocketEndpointAllowed(address: InetSocketAddress) {
+        if (unsafeAllowAllNetworking) {
+            return
+        }
+        val numericHost = networkHostFromAddress(addressBytes(address))
+        if (networkPolicy.allowsRawSocket(numericHost, address.port)) {
+            return
+        }
+        val allowedByResolvedHostname =
+            withWasiPreviewLock(hostTaskLock) {
+                networkPolicy.allowsResolvedRawSocket(
+                    numericHost,
+                    address.port,
+                    resolvedRawSocketAddresses,
+                )
+            }
+        if (!allowedByResolvedHostname) {
+            throw NetException("access-denied")
+        }
+    }
+
+    private fun requireRawSocketHostnameAllowed(hostname: String): String? {
+        if (unsafeAllowAllNetworking) {
+            return null
+        }
+        val normalized = normalizeNetworkPolicyHost(hostname)
+        if (!networkPolicy.allowsRawSocketHost(normalized)) {
+            throw NameLookupException("access-denied")
+        }
+        return normalized
+    }
+
+    private fun rememberResolvedRawSocketAddresses(
+        normalizedHostname: String?,
+        addresses: List<ByteArray>,
+    ) {
+        if (normalizedHostname == null) {
+            return
+        }
+        val normalizedAddresses = addresses.map(::networkHostFromAddress).toSet()
+        withWasiPreviewLock(hostTaskLock) {
+            resolvedRawSocketAddresses[normalizedHostname] = normalizedAddresses
         }
     }
 
@@ -3796,31 +4269,24 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
         local: InetSocketAddress,
     ): ReservedSocketAddress {
         validateLocalBindAddress(family, local)
-        val assigned =
-            if (local.port == 0) addressWithPort(local, nextTcpEphemeralPort(family, local))
-            else local
-        val key = socketAddressKey(family, assigned)
-        if (!tcpBoundAddresses.add(key)) {
+        val globalKey =
+            if (local.port == 0) {
+                WasiPreview3TcpBindRegistry.reserveEphemeral(addressBytes(local).asUnsignedList())
+                    ?: throw NetException("address-in-use")
+            } else {
+                globalSocketAddressKey(local).also { key ->
+                    if (!WasiPreview3TcpBindRegistry.reserveExact(key)) {
+                        throw NetException("address-in-use")
+                    }
+                }
+            }
+        val assigned = addressWithPort(local, globalKey.port)
+        val localKey = socketAddressKey(family, assigned)
+        if (!tcpBoundAddresses.add(localKey)) {
+            WasiPreview3TcpBindRegistry.release(globalKey)
             throw NetException("address-in-use")
         }
-        return ReservedSocketAddress(assigned, key)
-    }
-
-    private fun nextTcpEphemeralPort(
-        family: AddressFamily,
-        address: InetSocketAddress,
-    ): Int {
-        val portCount = TCP_EPHEMERAL_PORT_END - TCP_EPHEMERAL_PORT_START + 1
-        repeat(portCount) {
-            val port = nextTcpEphemeralPort
-            nextTcpEphemeralPort =
-                if (port == TCP_EPHEMERAL_PORT_END) TCP_EPHEMERAL_PORT_START else port + 1
-            val key = socketAddressKey(family, addressWithPort(address, port))
-            if (!tcpBoundAddresses.contains(key)) {
-                return port
-            }
-        }
-        throw NetException("address-in-use")
+        return ReservedSocketAddress(assigned, localKey, globalKey)
     }
 
     private fun addressWithPort(address: InetSocketAddress, port: Int): InetSocketAddress =
@@ -3835,6 +4301,11 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
             addressBytes(address).map { unsignedByte(it) },
             address.port,
         )
+
+    private fun globalSocketAddressKey(address: InetSocketAddress): WasiPreview3TcpBindKey =
+        WasiPreview3TcpBindKey(addressBytes(address).asUnsignedList(), address.port)
+
+    private fun ByteArray.asUnsignedList(): List<Int> = map(::unsignedByte)
 
     private fun validateLocalBindAddress(
         family: AddressFamily,
@@ -3917,10 +4388,36 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
                 socket.receiveBufferSize,
                 socket.sendBufferSize,
             )
-        socket.endpoint = endpoint
-        socket.localAddress = endpoint.localAddress
-        socket.bound = true
-        return endpoint
+        return attachUdpEndpoint(socket, endpoint)
+    }
+
+    private fun attachUdpEndpoint(
+        socket: UdpSocket,
+        endpoint: WasiUdpEndpoint,
+    ): WasiUdpEndpoint {
+        try {
+            val localAddress = endpoint.localAddress
+            return withWasiPreviewLock(hostTaskLock) {
+                if (closed) {
+                    throw CancellationException("WASI Preview 3 host is closed")
+                }
+                val existing = socket.endpoint
+                if (existing != null) {
+                    closeIgnoringFailure { endpoint.close() }
+                    existing
+                } else {
+                    socket.endpoint = endpoint
+                    socket.localAddress = localAddress
+                    socket.bound = true
+                    endpoint
+                }
+            }
+        } catch (failure: Throwable) {
+            if (socket.endpoint !== endpoint) {
+                closeIgnoringFailure { endpoint.close() }
+            }
+            throw failure
+        }
     }
 
     private fun recordField(value: Any?, name: String): Any? {
@@ -4105,6 +4602,7 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
     private fun closeDroppedResource(resource: Any?) {
         when (resource) {
             is FilesystemDescriptor -> closeFilesystemDescriptor(resource)
+            is HttpResponse -> closeHttpResponse(resource)
             is TcpSocket -> closeTcpSocket(resource)
             is UdpSocket -> closeUdpSocket(resource)
         }
@@ -4203,6 +4701,7 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
 
     private fun sendHttpRequestResult(request: WasiHttpRequest): Any? =
         try {
+            requireHttpRequestAllowed(request)
             WitResult.ok(httpResponseResource(httpClient.send(request)))
         } catch (e: HttpException) {
             WitResult.err(e.code)
@@ -4248,6 +4747,8 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
             } else {
                 sendHttpRequestResult(data)
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: HttpException) {
             WitResult.err(e.code)
         } catch (e: IOException) {
@@ -4288,6 +4789,8 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
     private suspend fun handlerHandleResultSuspending(request: HttpRequest): Any? =
         try {
             handlerHandleResult(request, WitResult.ok(request.body.awaitBytes()))
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: HttpException) {
             WitResult.err(e.code)
         } catch (e: IOException) {
@@ -4305,7 +4808,10 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
 
     private suspend fun sendHttpRequestSuspendingResult(request: WasiHttpRequest): Any? =
         try {
+            requireHttpRequestAllowed(request)
             WitResult.ok(httpResponseResource(httpClient.sendSuspending(request)))
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: HttpException) {
             WitResult.err(e.code)
         } catch (e: IOException) {
@@ -4321,16 +4827,28 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
             }
         }
 
-    private fun httpResponseResource(response: WasiHttpResponse): WitResource<Nothing> =
-        responses.insertResource(
-            HttpResponse(
-                response.status,
-                fieldsFromHttpHeaders(response.headers, false),
-                response.consumeBodySource(),
-                true,
-                emptyTrailers(),
-            )
-        )
+    private fun httpResponseResource(response: WasiHttpResponse): WitResource<Nothing> {
+        val bodySource = response.consumeBodySource()
+        try {
+            val resource =
+                HttpResponse(
+                    response.status,
+                    fieldsFromHttpHeaders(response.headers, false),
+                    bodySource,
+                    true,
+                    emptyTrailers(),
+                )
+            return withWasiPreviewLock(hostTaskLock) {
+                if (closed) {
+                    throw CancellationException("WASI Preview 3 host is closed")
+                }
+                responses.insertResource(resource)
+            }
+        } catch (failure: Throwable) {
+            closeIgnoringFailure { bodySource.close() }
+            throw failure
+        }
+    }
 
     private suspend fun httpRequestData(request: HttpRequest): WasiHttpRequest =
         httpRequestData(request, request.body.awaitBytes())
@@ -4959,7 +5477,7 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
     private fun writeCliOutputStream(sink: RawSink, streamHandle: Long): Long {
         val future = pendingFuture<Any?>()
         launchHostTask {
-            completeFuture(
+            completeFutureIfPresent(
                 future,
                 try {
                     writeByteStreamToSink(streamHandle, sink)
@@ -4999,7 +5517,7 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
                     result = WitResult.err(filesystemError(e))
                 }
             }
-            completeFuture(future, result)
+            completeFutureIfPresent(future, result)
         }
         return future.handle()
     }
@@ -5010,7 +5528,7 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
             byteStream(streamHandle)
                 .pipeToSink(
                     sink,
-                    { result -> completeFuture(future, result) },
+                    { result -> completeFutureIfPresent(future, result) },
                     { error ->
                         when (error) {
                             is FsException -> error.code
@@ -5023,14 +5541,14 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
                     },
                 )
         } catch (e: FsException) {
-            completeFuture(future, WitResult.err(e.code))
+            completeFutureIfPresent(future, WitResult.err(e.code))
         } catch (e: IOException) {
-            completeFuture(future, WitResult.err(filesystemError(e)))
+            completeFutureIfPresent(future, WitResult.err(filesystemError(e)))
         } catch (_: ComponentModelException) {
-            completeFuture(future, WitResult.err("unsupported"))
+            completeFutureIfPresent(future, WitResult.err("unsupported"))
         } catch (e: Exception) {
             if (isWasiSecurityException(e)) {
-                completeFuture(future, WitResult.err("not-permitted"))
+                completeFutureIfPresent(future, WitResult.err("not-permitted"))
             } else {
                 throw e
             }
@@ -5041,7 +5559,7 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
     private fun sendTcpOutputStream(connection: WasiTcpConnection, streamHandle: Long): Long {
         val future = pendingFuture<Any?>()
         launchHostTask {
-            completeFuture(
+            completeFutureIfPresent(
                 future,
                 socketResultValueSuspending {
                     if (connection is WasiSuspendingTcpConnection) {
@@ -5396,8 +5914,15 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
         var terminalStdin: Boolean = false
         var terminalStdout: Boolean = false
         var terminalStderr: Boolean = false
-        var networkingEnabled: Boolean = false
-        var httpClient: WasiHttpClient = defaultWasiHttpClient()
+        internal var networkPolicy: WasiNetworkPolicy = WasiNetworkPolicy.DENY_ALL
+        internal var unsafeAllowAllNetworking: Boolean = false
+        /**
+         * HTTP transport used by this host.
+         *
+         * Assigning a client transfers no ownership: the caller remains responsible for closing
+         * it. The internally created default transport is owned and closed by the built host.
+         */
+        var httpClient: WasiHttpClient = DefaultWasiPreview3HttpClient
         var httpHandler: WasiHttpHandler = defaultWasiHttpHandler()
         var streamBufferCapacity: Int = DEFAULT_STREAM_BUFFER_CAPACITY
         var maxCanonicalThreads: Int = WASI_PREVIEW3_UNLIMITED_RESOURCES
@@ -5407,7 +5932,9 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
         var maxInFlightHostTasks: Int = WASI_PREVIEW3_UNLIMITED_RESOURCES
         internal var coroutineScope: CoroutineScope? = null
         internal var ownsCoroutineScope: Boolean = false
-        internal var socketRuntime: WasiSocketRuntime = defaultWasiSocketRuntime()
+        internal var defaultHttpClientFactory: () -> WasiHttpClient = ::defaultWasiHttpClient
+        internal var socketRuntime: WasiSocketRuntime? = null
+        internal var socketRuntimeFactory: () -> WasiSocketRuntime = ::defaultWasiSocketRuntime
 
         fun withVersion(version: String): Builder {
             this.version = requirePresent(version, "version")
@@ -5546,18 +6073,48 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
             return this
         }
 
-        fun withNetworking(): Builder {
-            networkingEnabled = true
+        /**
+         * Replaces the network capability set. The default policy is [WasiNetworkPolicy.DENY_ALL].
+         *
+         * HTTP and raw-socket endpoints are granted independently and matched by exact host and
+         * port.
+         */
+        fun withNetworkPolicy(networkPolicy: WasiNetworkPolicy): Builder {
+            this.networkPolicy = requirePresent(networkPolicy, "networkPolicy")
+            unsafeAllowAllNetworking = false
             return this
         }
 
+        @UnsafeComponentModelApi
+        @Deprecated(
+            message =
+                "Unrestricted networking bypasses endpoint isolation. " +
+                    "Use withNetworkPolicy with explicit HTTP and raw-socket grants.",
+        )
+        fun withNetworking(): Builder {
+            unsafeAllowAllNetworking = true
+            networkPolicy = WasiNetworkPolicy.DENY_ALL
+            return this
+        }
+
+        @UnsafeComponentModelApi
+        @Deprecated(
+            message =
+                "Unrestricted networking bypasses endpoint isolation. " +
+                    "Use withNetworkPolicy with explicit HTTP and raw-socket grants.",
+        )
         fun withNetworking(networkingEnabled: Boolean): Builder {
-            this.networkingEnabled = networkingEnabled
+            if (!networkingEnabled) {
+                return withoutNetworking()
+            }
+            unsafeAllowAllNetworking = true
+            networkPolicy = WasiNetworkPolicy.DENY_ALL
             return this
         }
 
         fun withoutNetworking(): Builder {
-            networkingEnabled = false
+            unsafeAllowAllNetworking = false
+            networkPolicy = WasiNetworkPolicy.DENY_ALL
             return this
         }
 
@@ -5568,16 +6125,25 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
          * for translating binary WebSocket frames to real UDP datagrams.
          */
         fun withUdpWebSocketProxy(proxyUrl: String): Builder {
-            socketRuntime =
-                webSocketUdpProxySocketRuntime(requirePresent(proxyUrl, "proxyUrl"))
+            val checkedProxyUrl = requirePresent(proxyUrl, "proxyUrl")
+            socketRuntime = null
+            socketRuntimeFactory = { webSocketUdpProxySocketRuntime(checkedProxyUrl) }
             return this
         }
 
+        /**
+         * Uses a caller-owned HTTP transport. [WasiPreview3.close] never closes the supplied
+         * client.
+         */
         fun withHttpClient(httpClient: WasiHttpClient): Builder {
             this.httpClient = requirePresent(httpClient, "httpClient")
             return this
         }
 
+        /**
+         * Uses a caller-owned Ktor HTTP client. [WasiPreview3.close] never closes the supplied
+         * client.
+         */
         fun withHttpClient(httpClient: io.ktor.client.HttpClient): Builder =
             withHttpClient(ktorWasiHttpClient(requirePresent(httpClient, "httpClient")))
 
@@ -5624,7 +6190,57 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
                 ownsCoroutineScope = true
             }
 
-        fun build(): WasiPreview3 = WasiPreview3(this)
+        fun build(): WasiPreview3 {
+            val ownsHttpClient = httpClient === DefaultWasiPreview3HttpClient
+            var ownedHttpClient: WasiPreview3TransportResource? = null
+            var ownedSocketRuntime: WasiPreview3TransportResource? = null
+            var selectedTransports: WasiPreview3Transports? = null
+            try {
+                val selectedHttpClient =
+                    if (ownsHttpClient) {
+                        defaultHttpClientFactory().also { client ->
+                            ownedHttpClient =
+                                client as? WasiPreview3TransportResource
+                                    ?: error(
+                                        "The default WASI Preview 3 HTTP client must be closeable"
+                                    )
+                        }
+                    } else {
+                        httpClient
+                    }
+                val selectedSocketRuntime =
+                    socketRuntime
+                        ?: socketRuntimeFactory().also { runtime ->
+                            ownedSocketRuntime =
+                                runtime as? WasiPreview3TransportResource
+                                    ?: error(
+                                        "The default WASI Preview 3 socket runtime must be closeable"
+                                    )
+                        }
+                val transports =
+                    WasiPreview3Transports(
+                        selectedHttpClient,
+                        selectedSocketRuntime,
+                        ownedHttpClient,
+                        ownedSocketRuntime,
+                    )
+                selectedTransports = transports
+                return WasiPreview3(this, transports)
+            } catch (failure: Throwable) {
+                val transports = selectedTransports
+                if (transports != null) {
+                    closeWasiPreview3TransportAfterFailure(failure, transports)
+                } else {
+                    ownedSocketRuntime?.let { resource ->
+                        closeWasiPreview3TransportAfterFailure(failure, resource)
+                    }
+                    ownedHttpClient?.let { resource ->
+                        closeWasiPreview3TransportAfterFailure(failure, resource)
+                    }
+                }
+                throw failure
+            }
+        }
 
         private fun requireNanos(name: String, value: Long): Long {
             if (value <= 0L) {
@@ -5714,9 +6330,11 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
         var localAddress: InetSocketAddress? = null
         var remoteAddress: InetSocketAddress? = null
         var boundAddressKey: SocketAddressKey? = null
+        var globalBoundAddressKey: WasiPreview3TcpBindKey? = null
         var bound: Boolean = false
         var connected: Boolean = false
         var listening: Boolean = false
+        var localPolicyAuthorized: Boolean = false
         var sendConsumed: Boolean = false
         var receiveConsumed: Boolean = false
         var listenBacklog: Int = 128
@@ -5769,24 +6387,56 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
     private data class ReservedSocketAddress(
         val address: InetSocketAddress,
         val key: SocketAddressKey,
+        val globalKey: WasiPreview3TcpBindKey,
     )
 
     private inner class TcpListenerStream(val socket: TcpSocket) {
+        private val lifecycleLock = WasiPreviewLock()
         private var pendingAccepted: TcpSocket? = null
+        private var closed: Boolean = false
 
-        fun accept(timeoutMillis: Long): TcpSocket? {
-            val pending = pendingAccepted
-            if (pending != null) {
-                pendingAccepted = null
-                return pending
+        fun takeAccepted(): TcpSocket? =
+            withWasiPreviewLock(lifecycleLock) {
+                if (closed) {
+                    return@withWasiPreviewLock null
+                }
+                pendingAccepted.also { pendingAccepted = null }
             }
-            return acceptTcpConnectionSocketOrNull(socket, timeoutMillis)
-        }
 
         suspend fun awaitReadable() {
-            if (pendingAccepted == null) {
-                pendingAccepted = acceptTcpConnectionSocketSuspending(socket)
+            val shouldAccept =
+                withWasiPreviewLock(lifecycleLock) {
+                    !closed && pendingAccepted == null
+                }
+            if (!shouldAccept) {
+                return
             }
+            val accepted = acceptTcpConnectionSocketSuspending(socket)
+            val retained =
+                withWasiPreviewLock(lifecycleLock) {
+                    if (closed || pendingAccepted != null) {
+                        false
+                    } else {
+                        pendingAccepted = accepted
+                        true
+                    }
+                }
+            if (!retained) {
+                closeTcpSocket(accepted)
+            }
+        }
+
+        fun close() {
+            val pending =
+                withWasiPreviewLock(lifecycleLock) {
+                    if (closed) {
+                        null
+                    } else {
+                        closed = true
+                        pendingAccepted.also { pendingAccepted = null }
+                    }
+                }
+            pending?.let(::closeTcpSocket)
         }
     }
 
@@ -5831,6 +6481,8 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
                 val read =
                     try {
                         suspendingConnection.readSuspending(STREAM_MAX_LENGTH)
+                    } catch (e: CancellationException) {
+                        throw e
                     } catch (e: Exception) {
                         completeErr(e)
                         cachedRead = TcpReadChunk(ByteArray(0), closed = true)
@@ -5844,6 +6496,8 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
             }
             try {
                 connection.awaitReadable()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 completeErr(e)
                 cachedRead = TcpReadChunk(ByteArray(0), closed = true)
@@ -5904,14 +6558,14 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
         private fun completeOk() {
             if (!completionResolved) {
                 completionResolved = true
-                completeFuture(completion, WitResult.ok(null))
+                completeFutureIfPresent(completion, WitResult.ok(null))
             }
         }
 
         private fun completeErr(e: Exception) {
             if (!completionResolved) {
                 completionResolved = true
-                completeFuture(completion, WitResult.err(socketExceptionCode(e)))
+                completeFutureIfPresent(completion, WitResult.err(socketExceptionCode(e)))
             }
         }
     }
@@ -6114,7 +6768,7 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
                 }
             if (shouldComplete) {
                 deferred.complete(value)
-                completeFuture(future, httpBodyFutureResult(value))
+                completeFutureIfPresent(future, httpBodyFutureResult(value))
             }
         }
 
@@ -6236,7 +6890,7 @@ class WasiPreview3 private constructor(builder: Builder) : WasiPreview3Canonical
                     }
                 }
             if (shouldComplete) {
-                completeFuture(future, value)
+                completeFutureIfPresent(future, value)
             }
         }
     }

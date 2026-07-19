@@ -8,6 +8,7 @@ import kotlin.time.ExperimentalTime
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import org.kotlincrypto.random.CryptoRand
@@ -32,6 +33,7 @@ public actual class KotlinWasiPreview3 private constructor(
     public val terminalStdin: Boolean,
     public val terminalStdout: Boolean,
     public val terminalStderr: Boolean,
+    public val networkPolicy: WasiNetworkPolicy,
     public val networkingEnabled: Boolean,
     public val streamBufferCapacity: Int,
     public val maxCanonicalThreads: Int,
@@ -41,7 +43,7 @@ public actual class KotlinWasiPreview3 private constructor(
     public val maxInFlightHostTasks: Int,
     public val coroutineScope: CoroutineScope?,
     private val ownsCoroutineScope: Boolean,
-) {
+) : AutoCloseable {
     public actual fun fileSystem(guestRoot: String): WasiFileSystem =
         fileSystemOrNull(guestRoot)
             ?: throw IllegalArgumentException("unknown WASI Preview 3 preopen ${WasiFileSystem.normalizeGuestRoot(guestRoot)}")
@@ -49,7 +51,7 @@ public actual class KotlinWasiPreview3 private constructor(
     public actual fun fileSystemOrNull(guestRoot: String): WasiFileSystem? =
         fileSystems[WasiFileSystem.normalizeGuestRoot(guestRoot)]
 
-    public actual fun close() {
+    public actual override fun close() {
         if (ownsCoroutineScope) {
             coroutineScope?.cancel()
         }
@@ -79,6 +81,7 @@ public actual class KotlinWasiPreview3 private constructor(
         private var terminalStdin = true
         private var terminalStdout = true
         private var terminalStderr = true
+        private var networkPolicy = WasiNetworkPolicy.DENY_ALL
         private var networkingEnabled = false
         private var streamBufferCapacity = DEFAULT_STREAM_BUFFER_CAPACITY
         private var maxCanonicalThreads = Int.MAX_VALUE
@@ -208,16 +211,32 @@ public actual class KotlinWasiPreview3 private constructor(
             return this
         }
 
-        public actual fun withNetworking(): Builder =
-            withNetworking(true)
-
-        public actual fun withNetworking(networkingEnabled: Boolean): Builder {
-            this.networkingEnabled = networkingEnabled
+        public actual fun withNetworkPolicy(networkPolicy: WasiNetworkPolicy): Builder {
+            this.networkPolicy = networkPolicy
+            networkingEnabled = false
             return this
         }
 
-        public actual fun withoutNetworking(): Builder =
-            withNetworking(false)
+        @Deprecated(
+            "Unrestricted networking bypasses endpoint isolation. Use withNetworkPolicy.",
+        )
+        public actual fun withNetworking(): Builder =
+            withNetworking(true)
+
+        @Deprecated(
+            "Unrestricted networking bypasses endpoint isolation. Use withNetworkPolicy.",
+        )
+        public actual fun withNetworking(networkingEnabled: Boolean): Builder {
+            this.networkingEnabled = networkingEnabled
+            networkPolicy = WasiNetworkPolicy.DENY_ALL
+            return this
+        }
+
+        public actual fun withoutNetworking(): Builder {
+            networkingEnabled = false
+            networkPolicy = WasiNetworkPolicy.DENY_ALL
+            return this
+        }
 
         @OptIn(ExperimentalCoroutinesApi::class)
         public actual fun withResourceBudget(
@@ -253,8 +272,18 @@ public actual class KotlinWasiPreview3 private constructor(
                 ownsCoroutineScope = true
             }
 
-        public actual fun build(): KotlinWasiPreview3 =
-            KotlinWasiPreview3(
+        public actual fun build(): KotlinWasiPreview3 {
+            val configuredScope = coroutineScope
+            val hostScope =
+                if (configuredScope == null || ownsCoroutineScope) {
+                    configuredScope
+                } else {
+                    CoroutineScope(
+                        configuredScope.coroutineContext +
+                            SupervisorJob(configuredScope.coroutineContext[Job])
+                    )
+                }
+            return KotlinWasiPreview3(
                 version,
                 fileSystems.toMap(),
                 arguments,
@@ -271,6 +300,7 @@ public actual class KotlinWasiPreview3 private constructor(
                 terminalStdin,
                 terminalStdout,
                 terminalStderr,
+                networkPolicy,
                 networkingEnabled,
                 streamBufferCapacity,
                 maxCanonicalThreads,
@@ -278,9 +308,10 @@ public actual class KotlinWasiPreview3 private constructor(
                 maxPendingStreams,
                 maxWaitables,
                 maxInFlightHostTasks,
-                coroutineScope,
-                ownsCoroutineScope,
+                hostScope,
+                hostScope != null,
             )
+        }
 
         private fun requirePositive(name: String, duration: Duration): Duration {
             require(duration.inWholeNanoseconds > 0L) {

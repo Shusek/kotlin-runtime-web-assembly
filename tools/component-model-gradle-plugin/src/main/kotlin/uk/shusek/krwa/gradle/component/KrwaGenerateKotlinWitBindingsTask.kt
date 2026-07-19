@@ -2,6 +2,7 @@ package uk.shusek.krwa.gradle.component
 
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.OutputStream
 import java.io.PrintStream
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
@@ -96,18 +97,22 @@ abstract class KrwaGenerateKotlinWitBindingsTask : DefaultTask() {
 
 internal data class KrwaToolResult(val stdout: String, val stderr: String)
 
+internal const val KrwaToolOutputLimitBytes: Int = 64 * 1024
+
 internal fun runTool(
     name: String,
     runner: (stdout: PrintStream, stderr: PrintStream) -> Int,
 ): KrwaToolResult {
-    val stdoutBytes = ByteArrayOutputStream()
-    val stderrBytes = ByteArrayOutputStream()
-    val stdout = PrintStream(stdoutBytes, true, Charsets.UTF_8)
-    val stderr = PrintStream(stderrBytes, true, Charsets.UTF_8)
-    val status = runner(stdout, stderr)
+    val stdoutBytes = BoundedToolOutputStream(KrwaToolOutputLimitBytes)
+    val stderrBytes = BoundedToolOutputStream(KrwaToolOutputLimitBytes)
+    val status = PrintStream(stdoutBytes, true, Charsets.UTF_8).use { stdout ->
+        PrintStream(stderrBytes, true, Charsets.UTF_8).use { stderr ->
+            runner(stdout, stderr)
+        }
+    }
     val result = KrwaToolResult(
-        stdout = stdoutBytes.toString(Charsets.UTF_8),
-        stderr = stderrBytes.toString(Charsets.UTF_8),
+        stdout = stdoutBytes.capturedText(),
+        stderr = stderrBytes.capturedText(),
     )
     if (status != 0) {
         val output = result.stderr.ifBlank { result.stdout }.trimEnd()
@@ -117,3 +122,40 @@ internal fun runTool(
 }
 
 private fun String.prependFailureOutput(): String = if (isBlank()) "" else ":\n$this"
+
+private class BoundedToolOutputStream(private val limit: Int) : OutputStream() {
+    private val captured = ByteArrayOutputStream(limit)
+    private var discardedBytes = 0L
+
+    override fun write(value: Int) {
+        if (captured.size() < limit) {
+            captured.write(value)
+        } else {
+            discardedBytes++
+        }
+    }
+
+    override fun write(bytes: ByteArray, offset: Int, length: Int) {
+        require(offset >= 0 && length >= 0 && offset + length <= bytes.size)
+        val remaining = limit - captured.size()
+        val accepted = minOf(length, remaining.coerceAtLeast(0))
+        if (accepted > 0) {
+            captured.write(bytes, offset, accepted)
+        }
+        discardedBytes += (length - accepted).toLong()
+    }
+
+    fun capturedText(): String {
+        val text = captured.toString(Charsets.UTF_8)
+        if (discardedBytes == 0L) return text
+        return buildString(text.length + 96) {
+            append(text)
+            if (isNotEmpty() && last() != '\n') append('\n')
+            append("[KRWA tool output truncated after ")
+            append(limit)
+            append(" bytes; discarded ")
+            append(discardedBytes)
+            append(" bytes]")
+        }
+    }
+}

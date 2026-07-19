@@ -12,10 +12,26 @@ pluginManagement {
     }
 }
 
+val krwaReleaseRepository = providers.gradleProperty("krwa.releaseRepository").orNull
+
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
-        mavenLocal()
+        if (krwaReleaseRepository != null) {
+            exclusiveContent {
+                forRepository {
+                    maven {
+                        name = "krwaReleaseStaging"
+                        url = uri(krwaReleaseRepository)
+                    }
+                }
+                filter {
+                    includeGroup("uk.shusek.krwa")
+                }
+            }
+        } else {
+            mavenLocal()
+        }
         google()
         mavenCentral()
     }

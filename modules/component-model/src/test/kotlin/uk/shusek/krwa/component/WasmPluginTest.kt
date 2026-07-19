@@ -27,12 +27,15 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import uk.shusek.krwa.runtime.ExecutionBackend
 import uk.shusek.krwa.runtime.Instance
+import uk.shusek.krwa.runtime.WasmMemoryPolicy
 import uk.shusek.krwa.runtime.isAvailable
 import uk.shusek.krwa.tools.wasm.Wat2Wasm
 import uk.shusek.krwa.wasi.WasiPreview1
 import uk.shusek.krwa.wasi.WasiOptions
 import uk.shusek.krwa.wasm.Parser
 import uk.shusek.krwa.wasm.WasmEngineException
+import uk.shusek.krwa.wasm.types.FunctionType
+import uk.shusek.krwa.wasm.types.ValType
 
 class WasmPluginTest {
     @TempDir lateinit var tempDir: Path
@@ -73,6 +76,54 @@ class WasmPluginTest {
                 .build()
 
         assertEquals(-1, plugin.call("api.grow"))
+    }
+
+    @Test
+    fun capsEveryDefinedMemoryAndAggregateGrowth() {
+        val witPackage =
+            WitPackage.parse(
+                """
+                package example:multi-memory-cap;
+
+                interface api {
+                  grow-first: func() -> s32;
+                  grow-second: func() -> s32;
+                }
+                world plugin {
+                  export api;
+                }
+                """
+                    .trimIndent()
+            )
+        val plugin =
+            WasmPlugin.builder(witPackage)
+                .withMemoryPolicy(
+                    WasmMemoryPolicy(
+                        maxBytesPerMemory = 2L * uk.shusek.krwa.runtime.Memory.PAGE_SIZE,
+                        maxTotalBytes = 3L * uk.shusek.krwa.runtime.Memory.PAGE_SIZE,
+                        maxMemories = 2,
+                    )
+                )
+                .withModule(
+                    Wat2Wasm.parse(
+                        """
+                        (module
+                          (memory ${'$'}first 1 10)
+                          (memory ${'$'}second 1 10)
+                          (func (export "api.grow-first") (result i32)
+                            (memory.grow ${'$'}first (i32.const 1)))
+                          (func (export "api.grow-second") (result i32)
+                            (memory.grow ${'$'}second (i32.const 1)))
+                        )
+                        """
+                            .trimIndent()
+                    )
+                )
+                .build()
+
+        assertEquals(1, plugin.call("api.grow-first"))
+        assertEquals(-1, plugin.call("api.grow-first"))
+        assertEquals(-1, plugin.call("api.grow-second"))
     }
 
     @Test
@@ -409,6 +460,96 @@ class WasmPluginTest {
         assertEquals("ok", result.label())
         assertEquals("ok", response.label())
         assertArrayEquals(byteArrayOf(1, 2), response.value() as ByteArray)
+    }
+
+    @Test
+    fun rejectsHostImportOutsideSelectedWorld() {
+        val witPackage =
+            WitPackage.parse(
+                """
+                package example:strict-world;
+
+                interface allowed {
+                  ping: func() -> u32;
+                }
+                interface ambient {
+                  secret: func() -> u32;
+                }
+                interface api {
+                  run: func() -> u32;
+                }
+                world plugin {
+                  import allowed;
+                  export api;
+                }
+                """
+                    .trimIndent()
+            )
+
+        val failure =
+            assertThrows(ComponentModelException::class.java) {
+                WasmPlugin.builder(witPackage)
+                    .withModule(
+                        Wat2Wasm.parse(
+                            """
+                            (module
+                              (import "ambient" "secret" (func ${'$'}secret (result i32)))
+                              (memory (export "memory") 1)
+                              (func (export "api.run") (result i32)
+                                (call ${'$'}secret))
+                            )
+                            """
+                                .trimIndent()
+                        )
+                    )
+                    .withWitHostImport(WitHostImportId("ambient", "secret")) { 42 }
+                    .build()
+            }
+
+        assertTrue(
+            failure.message.orEmpty().contains("ambient") ||
+                failure.message.orEmpty().contains("import")
+        )
+    }
+
+    @Test
+    fun allowsExplicitExactCoreImportOutsideSelectedWorld() {
+        val witPackage =
+            WitPackage.parse(
+                """
+                package example:explicit-core;
+
+                interface api {
+                  run: func() -> u32;
+                }
+                world plugin {
+                  export api;
+                }
+                """
+                    .trimIndent()
+            )
+        val plugin =
+            WasmPlugin.builder(witPackage)
+                .withModule(
+                    Wat2Wasm.parse(
+                        """
+                        (module
+                          (import "host" "seed" (func ${'$'}seed (result i32)))
+                          (memory (export "memory") 1)
+                          (func (export "api.run") (result i32)
+                            (call ${'$'}seed))
+                        )
+                        """
+                            .trimIndent()
+                    )
+                )
+                .withCoreHostImport(
+                    CoreHostImportId("host", "seed"),
+                    FunctionType.of(emptyList(), listOf(ValType.I32)),
+                ) { _, _ -> longArrayOf(9) }
+                .build()
+
+        assertEquals(9L, plugin.call("api.run"))
     }
 
     @Test
@@ -989,6 +1130,274 @@ class WasmPluginTest {
                 .build()
 
         assertEquals(42L, plugin.call("api.run"))
+    }
+
+    @Test
+    fun isolatesGuestWaitableHandlesFromCollidingFutureAndStreamProviders() {
+        val witPackage =
+            WitPackage.parse(
+                """
+                package example:waitable-namespace;
+
+                world plugin {
+                  import async-seed: async func() -> u32;
+                  import host-future: func() -> future<u32>;
+                  import host-stream: func() -> stream<u8>;
+                  import consume-future: func(value: future<u32>);
+                  import consume-stream: func(value: stream<u8>);
+                  import new-future: func() -> future<u32>;
+                  import new-stream: func() -> stream<u8>;
+                  export api;
+                }
+
+                interface api {
+                  run: func() -> u32;
+                }
+                """
+                    .trimIndent()
+            )
+        val futureDrops = ArrayList<String>()
+        val streamDrops = ArrayList<String>()
+        val futureParameterSeen = AtomicBoolean(false)
+        val streamParameterSeen = AtomicBoolean(false)
+        val intrinsics =
+            object : CanonicalFutureIntrinsics, CanonicalStreamIntrinsics {
+                override fun futureNew(): Long = (2L shl 32) or 1L
+
+                override fun futureRead(
+                    instance: Instance,
+                    futureHandle: Long,
+                    ptr: Int,
+                    abi: CanonicalAbi,
+                    payloadType: WitPackage.TypeRef,
+                ): Long {
+                    assertEquals(9L, futureHandle)
+                    return 0xffff_ffffL
+                }
+
+                override fun futureWrite(
+                    instance: Instance,
+                    futureHandle: Long,
+                    ptr: Int,
+                    abi: CanonicalAbi,
+                    payloadType: WitPackage.TypeRef,
+                ): Long = throw AssertionError("future.write should not be used")
+
+                override fun futureCancelRead(futureHandle: Long): Long {
+                    assertEquals(9L, futureHandle)
+                    return 4L
+                }
+
+                override fun futureCancelWrite(futureHandle: Long): Long =
+                    throw AssertionError("future.cancel-write should not be used")
+
+                override fun futureDropReadable(futureHandle: Long) {
+                    futureDrops.add("read:$futureHandle")
+                }
+
+                override fun futureDropWritable(futureHandle: Long) {
+                    futureDrops.add("write:$futureHandle")
+                }
+
+                override fun streamNew(payloadType: WitPackage.TypeRef): Long =
+                    (2L shl 32) or 1L
+
+                override fun streamRead(
+                    instance: Instance,
+                    streamHandle: Long,
+                    ptr: Int,
+                    len: Int,
+                    abi: CanonicalAbi,
+                    payloadType: WitPackage.TypeRef,
+                ): Long = throw AssertionError("stream.read should not be used")
+
+                override fun streamWrite(
+                    instance: Instance,
+                    streamHandle: Long,
+                    ptr: Int,
+                    len: Int,
+                    abi: CanonicalAbi,
+                    payloadType: WitPackage.TypeRef,
+                ): Long = throw AssertionError("stream.write should not be used")
+
+                override fun streamCancelRead(streamHandle: Long): Long =
+                    throw AssertionError("stream.cancel-read should not be used")
+
+                override fun streamCancelWrite(streamHandle: Long): Long =
+                    throw AssertionError("stream.cancel-write should not be used")
+
+                override fun streamDropReadable(streamHandle: Long) {
+                    streamDrops.add("read:$streamHandle")
+                }
+
+                override fun streamDropWritable(streamHandle: Long) {
+                    streamDrops.add("write:$streamHandle")
+                }
+            }
+        val plugin =
+            WasmPlugin.builder(witPackage)
+                .withModule(
+                    Wat2Wasm.parse(
+                        """
+                        (module
+                          (import "plugin" "[async-lower]async-seed"
+                            (func ${'$'}async_seed (param i32) (result i32)))
+                          (import "plugin" "host-future"
+                            (func ${'$'}host_future (result i32)))
+                          (import "plugin" "host-stream"
+                            (func ${'$'}host_stream (result i32)))
+                          (import "plugin" "consume-future"
+                            (func ${'$'}consume_future (param i32)))
+                          (import "plugin" "consume-stream"
+                            (func ${'$'}consume_stream (param i32)))
+                          (import "plugin" "[future-new-0]new-future"
+                            (func ${'$'}future_new (result i64)))
+                          (import "plugin" "[stream-new-0]new-stream"
+                            (func ${'$'}stream_new (result i64)))
+                          (import "plugin" "[future-drop-readable-0]host-future"
+                            (func ${'$'}host_future_drop (param i32)))
+                          (import "plugin" "[stream-drop-readable-0]host-stream"
+                            (func ${'$'}host_stream_drop (param i32)))
+                          (import "plugin" "[future-drop-readable-0]new-future"
+                            (func ${'$'}future_drop_readable (param i32)))
+                          (import "plugin" "[future-drop-writable-0]new-future"
+                            (func ${'$'}future_drop_writable (param i32)))
+                          (import "plugin" "[stream-drop-readable-0]new-stream"
+                            (func ${'$'}stream_drop_readable (param i32)))
+                          (import "plugin" "[stream-drop-writable-0]new-stream"
+                            (func ${'$'}stream_drop_writable (param i32)))
+                          (import "plugin" "subtask.cancel"
+                            (func ${'$'}subtask_cancel (param i32) (result i32)))
+                          (import "plugin" "subtask.drop"
+                            (func ${'$'}subtask_drop (param i32)))
+                          (memory (export "memory") 1)
+                          (func ${'$'}run (result i32)
+                            (local ${'$'}status i32)
+                            (local ${'$'}subtask i32)
+                            (local ${'$'}host_future_handle i32)
+                            (local ${'$'}host_stream_handle i32)
+                            (local ${'$'}future_pair i64)
+                            (local ${'$'}future_reader i32)
+                            (local ${'$'}future_writer i32)
+                            (local ${'$'}stream_pair i64)
+                            (local ${'$'}stream_reader i32)
+                            (local ${'$'}stream_writer i32)
+                            (local.set ${'$'}status
+                              (call ${'$'}async_seed (i32.const 32)))
+                            (if
+                              (i32.ne
+                                (i32.and (local.get ${'$'}status) (i32.const 15))
+                                (i32.const 1))
+                              (then (return (i32.const 90))))
+                            (local.set ${'$'}subtask
+                              (i32.shr_u (local.get ${'$'}status) (i32.const 4)))
+                            (local.set ${'$'}host_future_handle (call ${'$'}host_future))
+                            (local.set ${'$'}host_stream_handle (call ${'$'}host_stream))
+                            (call ${'$'}consume_future
+                              (local.get ${'$'}host_future_handle))
+                            (call ${'$'}consume_stream
+                              (local.get ${'$'}host_stream_handle))
+                            (local.set ${'$'}future_pair (call ${'$'}future_new))
+                            (local.set ${'$'}future_reader
+                              (i32.wrap_i64 (local.get ${'$'}future_pair)))
+                            (local.set ${'$'}future_writer
+                              (i32.wrap_i64
+                                (i64.shr_u
+                                  (local.get ${'$'}future_pair)
+                                  (i64.const 32))))
+                            (local.set ${'$'}stream_pair (call ${'$'}stream_new))
+                            (local.set ${'$'}stream_reader
+                              (i32.wrap_i64 (local.get ${'$'}stream_pair)))
+                            (local.set ${'$'}stream_writer
+                              (i32.wrap_i64
+                                (i64.shr_u
+                                  (local.get ${'$'}stream_pair)
+                                  (i64.const 32))))
+                            (if (i32.ne (local.get ${'$'}subtask) (i32.const 1))
+                              (then (return (i32.const 91))))
+                            (if
+                              (i32.ne
+                                (local.get ${'$'}host_future_handle)
+                                (i32.const 2))
+                              (then (return (i32.const 92))))
+                            (if
+                              (i32.ne
+                                (local.get ${'$'}host_stream_handle)
+                                (i32.const 3))
+                              (then (return (i32.const 93))))
+                            (if
+                              (i32.ne
+                                (local.get ${'$'}future_reader)
+                                (i32.const 4))
+                              (then (return (i32.const 94))))
+                            (if
+                              (i32.ne
+                                (local.get ${'$'}future_writer)
+                                (i32.const 5))
+                              (then (return (i32.const 95))))
+                            (if
+                              (i32.ne
+                                (local.get ${'$'}stream_reader)
+                                (i32.const 6))
+                              (then (return (i32.const 96))))
+                            (if
+                              (i32.ne
+                                (local.get ${'$'}stream_writer)
+                                (i32.const 7))
+                              (then (return (i32.const 97))))
+                            (if
+                              (i32.ne
+                                (call ${'$'}subtask_cancel (local.get ${'$'}subtask))
+                                (i32.const 4))
+                              (then (return (i32.const 98))))
+                            (call ${'$'}subtask_drop (local.get ${'$'}subtask))
+                            (call ${'$'}host_future_drop
+                              (local.get ${'$'}host_future_handle))
+                            (call ${'$'}host_stream_drop
+                              (local.get ${'$'}host_stream_handle))
+                            (call ${'$'}future_drop_readable
+                              (local.get ${'$'}future_reader))
+                            (call ${'$'}future_drop_writable
+                              (local.get ${'$'}future_writer))
+                            (call ${'$'}stream_drop_readable
+                              (local.get ${'$'}stream_reader))
+                            (call ${'$'}stream_drop_writable
+                              (local.get ${'$'}stream_writer))
+                            (i32.const 42))
+                          (export "api.run" (func ${'$'}run))
+                        )
+                        """
+                            .trimIndent()
+                    )
+                )
+                .withHostImport("plugin", "async-seed") {
+                    WitFuture.of<Long>(9L)
+                }
+                .withHostImport("plugin", "host-future") {
+                    WitFuture.of<Long>(7L)
+                }
+                .withHostImport("plugin", "host-stream") {
+                    WitStream.of<UByte>(7L)
+                }
+                .withHostImport("plugin", "consume-future") { arguments ->
+                    assertEquals(7L, (arguments[0] as WitFuture<*>).handle())
+                    futureParameterSeen.set(true)
+                    null
+                }
+                .withHostImport("plugin", "consume-stream") { arguments ->
+                    assertEquals(7L, (arguments[0] as WitStream<*>).handle())
+                    streamParameterSeen.set(true)
+                    null
+                }
+                .withCanonicalFutureIntrinsics(intrinsics)
+                .withCanonicalStreamIntrinsics(intrinsics)
+                .build()
+
+        assertEquals(42L, plugin.call("api.run"))
+        assertTrue(futureParameterSeen.get())
+        assertTrue(streamParameterSeen.get())
+        assertEquals(listOf("read:7", "read:1", "write:2"), futureDrops)
+        assertEquals(listOf("read:7", "read:1", "write:2"), streamDrops)
     }
 
     @Test
@@ -2588,7 +2997,8 @@ class WasmPluginTest {
     }
 
     @Test
-    fun buildsSelectedWorldWhenCoreModuleImportsAsyncTaskReturnsForOtherWorlds() {
+    @OptIn(UnsafeComponentModelApi::class)
+    fun buildsSelectedWorldWithLegacyImportsForOtherWorlds() {
         val witPackage =
             WitPackage.parse(
                 """
@@ -2657,11 +3067,13 @@ class WasmPluginTest {
             WasmPlugin.builder(witPackage)
                 .withWorld("catalog-plugin")
                 .withModule(module)
+                .withLegacyModuleImportDiscovery()
                 .build()
         val playbackPlugin =
             WasmPlugin.builder(witPackage)
                 .withWorld("playback-plugin")
                 .withModule(module)
+                .withLegacyModuleImportDiscovery()
                 .build()
 
         assertEquals(6L, catalogPlugin.call("catalog.len", "kotlin"))
@@ -3368,6 +3780,98 @@ class WasmPluginTest {
                 .build()
 
         assertNull(plugin.call("api.run"))
+    }
+
+    @Test
+    fun linksTransitivelyReachableImportedResourceDropAcrossCompatibleVersions() {
+        val witPackage =
+            WitPackage.parse(
+                """
+                package example:transitive-resource@0.2.4;
+                interface errors {
+                  resource error;
+                }
+                interface io {
+                  use errors.{error};
+                  consume: func(value: own<error>);
+                }
+                interface api {
+                  run: func();
+                }
+                world plugin {
+                  import io;
+                  export api;
+                }
+                """
+                    .trimIndent()
+            )
+        val plugin =
+            WasmPlugin.builder(witPackage)
+                .withModule(
+                    Wat2Wasm.parse(
+                        """
+                        (module
+                          (import "example:transitive-resource/errors@0.2.0"
+                            "[resource-drop]error" (func ${'$'}drop (param i32)))
+                          (memory (export "memory") 1)
+                          (func ${'$'}run
+                            (call ${'$'}drop (i32.const 7)))
+                          (export "api.run" (func ${'$'}run))
+                        )
+                        """
+                            .trimIndent()
+                    )
+                )
+                .build()
+
+        assertNull(plugin.call("api.run"))
+    }
+
+    @Test
+    fun rejectsUnreachableImportedResourceDrop() {
+        val witPackage =
+            WitPackage.parse(
+                """
+                package example:strict-resource@0.2.4;
+                interface allowed {
+                  ping: func();
+                }
+                interface ambient {
+                  resource secret;
+                }
+                interface api {
+                  run: func();
+                }
+                world plugin {
+                  import allowed;
+                  export api;
+                }
+                """
+                    .trimIndent()
+            )
+
+        val failure =
+            assertThrows(ComponentModelException::class.java) {
+                WasmPlugin.builder(witPackage)
+                    .withModule(
+                        Wat2Wasm.parse(
+                            """
+                            (module
+                              (import "example:strict-resource/ambient@0.2.0"
+                                "[resource-drop]secret" (func ${'$'}drop (param i32)))
+                              (memory (export "memory") 1)
+                              (func ${'$'}run
+                                (call ${'$'}drop (i32.const 7)))
+                              (export "api.run" (func ${'$'}run))
+                            )
+                            """
+                                .trimIndent()
+                        )
+                    )
+                    .build()
+            }
+
+        assertTrue(failure.message.orEmpty().contains("outside the selected WIT world"))
     }
 
     @Test

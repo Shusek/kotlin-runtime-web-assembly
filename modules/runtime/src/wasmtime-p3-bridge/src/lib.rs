@@ -1,16 +1,16 @@
 use bytes::Bytes;
 use http::HeaderName;
-use http::uri::Scheme;
+use http::uri::{Scheme, Uri};
 use http_body_util::BodyExt;
 use std::cell::RefCell;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::ffi::{CStr, CString, c_char, c_int};
 use std::fs;
 use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::ptr;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Condvar, Mutex};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::{Arc, Condvar, Mutex, OnceLock};
 use std::thread;
 use std::time::{Duration, Instant};
 use wasmtime::component::types::ComponentItem;
@@ -57,9 +57,14 @@ struct P3CommandStdio {
 
 #[derive(Clone, Default)]
 struct HttpPolicy {
-    allowed_hosts: Vec<String>,
-    blocked_hosts: Vec<String>,
-    allow_private_network: bool,
+    allowed_endpoints: Vec<HttpEndpoint>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct HttpEndpoint {
+    scheme: Scheme,
+    host: String,
+    port: u16,
 }
 
 #[derive(Clone, Copy)]
@@ -111,13 +116,12 @@ struct ExecutionControlState {
 
 #[derive(Default)]
 struct ExecutionControl {
-    completed: bool,
     cancelled: bool,
 }
 
-struct ExecutionCancellationHandle {
-    state: Arc<ExecutionControlState>,
-}
+static NEXT_EXECUTION_CANCELLATION_HANDLE: AtomicU64 = AtomicU64::new(1);
+static EXECUTION_CANCELLATIONS: OnceLock<Mutex<HashMap<u64, Arc<ExecutionControlState>>>> =
+    OnceLock::new();
 
 impl ExecutionControlState {
     fn new() -> Self {
@@ -192,23 +196,23 @@ impl HttpPolicy {
         }
 
         let uri = request.uri();
-        let scheme = uri.scheme().unwrap_or(&Scheme::HTTPS);
+        let scheme = uri.scheme().ok_or(ErrorCode::HttpRequestDenied)?;
         if scheme != &Scheme::HTTP && scheme != &Scheme::HTTPS {
             return Err(ErrorCode::HttpRequestDenied);
         }
         let host = uri
             .host()
-            .map(normalized_host)
-            .filter(|host| !host.is_empty())
+            .and_then(normalize_exact_http_host)
             .ok_or(ErrorCode::HttpRequestDenied)?;
-
-        if !self.allow_private_network && is_private_network_host(&host) {
-            return Err(ErrorCode::HttpRequestDenied);
-        }
-        if host_matches_any(&host, &self.blocked_hosts) {
-            return Err(ErrorCode::HttpRequestDenied);
-        }
-        if !host_matches_any(&host, &self.allowed_hosts) {
+        let port = uri
+            .port_u16()
+            .unwrap_or_else(|| if scheme == &Scheme::HTTP { 80 } else { 443 });
+        let endpoint = HttpEndpoint {
+            scheme: scheme.clone(),
+            host,
+            port,
+        };
+        if !self.allowed_endpoints.contains(&endpoint) {
             return Err(ErrorCode::HttpRequestDenied);
         }
         for name in request.headers().keys() {
@@ -244,45 +248,45 @@ impl WasiHttpView for KrwaP3State {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn krwa_wasmtime_p3_execution_cancellation_create()
--> *mut ExecutionCancellationHandle {
-    Box::into_raw(Box::new(ExecutionCancellationHandle {
-        state: Arc::new(ExecutionControlState::new()),
-    }))
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn krwa_wasmtime_p3_execution_cancellation_cancel(
-    handle: *mut ExecutionCancellationHandle,
-) {
-    if handle.is_null() {
-        return;
-    }
-    unsafe {
-        (*handle).state.cancel();
-    }
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn krwa_wasmtime_p3_execution_cancellation_is_cancelled(
-    handle: *const ExecutionCancellationHandle,
-) -> u8 {
-    if handle.is_null() {
+pub extern "C" fn krwa_wasmtime_p3_execution_cancellation_create() -> u64 {
+    let Some(handle) = NEXT_EXECUTION_CANCELLATION_HANDLE
+        .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |current| {
+            current.checked_add(1)
+        })
+        .ok()
+    else {
         return 0;
-    }
-    unsafe { u8::from((*handle).state.is_cancelled()) }
+    };
+    execution_cancellations()
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .insert(handle, Arc::new(ExecutionControlState::new()));
+    handle
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn krwa_wasmtime_p3_execution_cancellation_free(
-    handle: *mut ExecutionCancellationHandle,
-) {
-    if handle.is_null() {
+pub extern "C" fn krwa_wasmtime_p3_execution_cancellation_cancel(handle: u64) {
+    if let Some(state) = execution_cancellation(handle) {
+        state.cancel();
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn krwa_wasmtime_p3_execution_cancellation_is_cancelled(handle: u64) -> u8 {
+    execution_cancellation(handle)
+        .map(|state| u8::from(state.is_cancelled()))
+        .unwrap_or(0)
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn krwa_wasmtime_p3_execution_cancellation_free(handle: u64) {
+    if handle == 0 {
         return;
     }
-    unsafe {
-        drop(Box::from_raw(handle));
-    }
+    execution_cancellations()
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .remove(&handle);
 }
 
 #[unsafe(no_mangle)]
@@ -570,7 +574,7 @@ pub extern "C" fn krwa_wasmtime_p3_precompiled_component_call_string(
     max_memories: i64,
     max_fuel: i64,
     execution_timeout_millis: u64,
-    execution_cancellation: *const ExecutionCancellationHandle,
+    execution_cancellation: u64,
     result_out: *mut *const c_char,
 ) -> *const c_char {
     match call_component_string(
@@ -707,7 +711,7 @@ pub extern "C" fn krwa_wasmtime_p3_precompiled_command_run_string(
     max_fuel: i64,
     max_output_bytes: u64,
     execution_timeout_millis: u64,
-    execution_cancellation: *const ExecutionCancellationHandle,
+    execution_cancellation: u64,
     result_out: *mut *const c_char,
 ) -> *const c_char {
     match run_command_string(
@@ -933,7 +937,7 @@ fn run_command_string(
     limits: P3Limits,
     max_output_bytes: u64,
     execution_timeout_millis: u64,
-    execution_cancellation: *const ExecutionCancellationHandle,
+    execution_cancellation: u64,
 ) -> Result<String, String> {
     let preopens = preopens_from_c(host_roots, guest_roots, writable_preopens, preopen_count)?;
     let arguments = string_list_from_c(arguments, argument_count, "arguments")?;
@@ -1279,7 +1283,7 @@ fn check_component_call_string(
         allow_private_network,
         limits,
         0,
-        ptr::null(),
+        0,
     )?;
     if value == expected_result {
         Ok(())
@@ -1312,7 +1316,7 @@ fn call_component_string(
     allow_private_network: u8,
     limits: P3Limits,
     execution_timeout_millis: u64,
-    execution_cancellation: *const ExecutionCancellationHandle,
+    execution_cancellation: u64,
 ) -> Result<String, String> {
     let preopens = preopens_from_c(host_roots, guest_roots, writable_preopens, preopen_count)?;
     let arguments = string_list_from_c(arguments, argument_count, "arguments")?;
@@ -1486,6 +1490,7 @@ fn add_p3_linker_imports(linker: &mut Linker<KrwaP3State>) -> Result<(), String>
 
 struct ExecutionDeadlineWatchdog {
     control: Arc<ExecutionControlState>,
+    completed: Arc<AtomicBool>,
     timed_out: Arc<AtomicBool>,
     cancelled: Arc<AtomicBool>,
     handle: Option<thread::JoinHandle<()>>,
@@ -1503,9 +1508,15 @@ impl ExecutionDeadlineWatchdog {
 
 impl Drop for ExecutionDeadlineWatchdog {
     fn drop(&mut self) {
-        if let Ok(mut state) = self.control.state.lock() {
-            state.completed = true;
-            self.control.cvar.notify_all();
+        match self.control.state.lock() {
+            Ok(_state) => {
+                self.completed.store(true, Ordering::SeqCst);
+                self.control.cvar.notify_all();
+            }
+            Err(_poisoned) => {
+                self.completed.store(true, Ordering::SeqCst);
+                self.control.cvar.notify_all();
+            }
         }
         if let Some(handle) = self.handle.take() {
             let _ = handle.join();
@@ -1513,14 +1524,23 @@ impl Drop for ExecutionDeadlineWatchdog {
     }
 }
 
-fn execution_cancellation_from_c(
-    cancellation: *const ExecutionCancellationHandle,
-) -> Option<Arc<ExecutionControlState>> {
-    if cancellation.is_null() {
-        None
-    } else {
-        Some(unsafe { Arc::clone(&(*cancellation).state) })
+fn execution_cancellations() -> &'static Mutex<HashMap<u64, Arc<ExecutionControlState>>> {
+    EXECUTION_CANCELLATIONS.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+fn execution_cancellation(handle: u64) -> Option<Arc<ExecutionControlState>> {
+    if handle == 0 {
+        return None;
     }
+    execution_cancellations()
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .get(&handle)
+        .cloned()
+}
+
+fn execution_cancellation_from_c(handle: u64) -> Option<Arc<ExecutionControlState>> {
+    execution_cancellation(handle)
 }
 
 fn arm_execution_deadline(
@@ -1541,9 +1561,11 @@ fn arm_execution_deadline(
     }
 
     let control = cancellation.unwrap_or_else(|| Arc::new(ExecutionControlState::new()));
+    let completed = Arc::new(AtomicBool::new(false));
     let timed_out = Arc::new(AtomicBool::new(false));
     let cancelled = Arc::new(AtomicBool::new(false));
     let thread_control = Arc::clone(&control);
+    let thread_completed = Arc::clone(&completed);
     let thread_timed_out = Arc::clone(&timed_out);
     let thread_cancelled = Arc::clone(&cancelled);
     let engine = engine.clone();
@@ -1553,7 +1575,7 @@ fn arm_execution_deadline(
             return;
         };
         loop {
-            if state.completed {
+            if thread_completed.load(Ordering::SeqCst) {
                 return;
             }
             if state.cancelled {
@@ -1575,7 +1597,10 @@ fn arm_execution_deadline(
                         return;
                     };
                     state = new_state;
-                    if wait_result.timed_out() && !state.completed && !state.cancelled {
+                    if wait_result.timed_out()
+                        && !thread_completed.load(Ordering::SeqCst)
+                        && !state.cancelled
+                    {
                         thread_timed_out.store(true, Ordering::SeqCst);
                         engine.increment_epoch();
                         return;
@@ -1593,6 +1618,7 @@ fn arm_execution_deadline(
 
     Some(ExecutionDeadlineWatchdog {
         control,
+        completed,
         timed_out,
         cancelled,
         handle: Some(handle),
@@ -1875,89 +1901,99 @@ fn http_policy_from_c(
     blocked_host_count: usize,
     allow_private_network: u8,
 ) -> Result<HttpPolicy, String> {
+    if blocked_host_count != 0 {
+        return Err(
+            "Wasmtime Preview3 exact HTTP policy does not accept legacy blocked hosts".to_string(),
+        );
+    }
+    if allow_private_network != 0 {
+        return Err(
+            "Wasmtime Preview3 exact HTTP policy does not accept allow-private-network".to_string(),
+        );
+    }
+    let _ = string_list_from_c(blocked_hosts, 0, "blocked_hosts")?;
     Ok(HttpPolicy {
-        allowed_hosts: host_patterns_from_c(allowed_hosts, allowed_host_count, "allowed_hosts")?,
-        blocked_hosts: host_patterns_from_c(blocked_hosts, blocked_host_count, "blocked_hosts")?,
-        allow_private_network: allow_private_network != 0,
+        allowed_endpoints: http_endpoints_from_c(
+            allowed_hosts,
+            allowed_host_count,
+            "http_endpoints",
+        )?,
     })
 }
 
-fn host_patterns_from_c(
+fn http_endpoints_from_c(
     values: *const *const c_char,
     count: usize,
     label: &str,
-) -> Result<Vec<String>, String> {
+) -> Result<Vec<HttpEndpoint>, String> {
     let values = string_list_from_c(values, count, label)?;
     let mut result = Vec::with_capacity(values.len());
     for (index, value) in values.into_iter().enumerate() {
-        let trimmed = value.trim();
-        if trimmed.is_empty() {
+        if value.trim().is_empty() {
             return Err(format!("{label}[{index}] is blank"));
         }
-        if trimmed != value {
+        if value.trim() != value {
             return Err(format!(
                 "{label}[{index}] must not contain surrounding whitespace"
             ));
         }
-        if value.contains("://") || value.contains('/') || value.contains('\\') {
-            return Err(format!("{label}[{index}] must be a host pattern"));
+        let uri = value
+            .parse::<Uri>()
+            .map_err(|_| format!("{label}[{index}] must be an exact HTTP endpoint URI"))?;
+        if uri.path_and_query().is_some() {
+            return Err(format!("{label}[{index}] must not contain a path or query"));
         }
-        result.push(value.to_ascii_lowercase());
+        let scheme = uri
+            .scheme()
+            .filter(|scheme| *scheme == &Scheme::HTTP || *scheme == &Scheme::HTTPS)
+            .cloned()
+            .ok_or_else(|| format!("{label}[{index}] must use http or https"))?;
+        let host = uri
+            .host()
+            .and_then(normalize_exact_http_host)
+            .ok_or_else(|| format!("{label}[{index}] contains an invalid exact host"))?;
+        let port = uri
+            .port_u16()
+            .ok_or_else(|| format!("{label}[{index}] must contain an explicit port"))?;
+        let endpoint = HttpEndpoint { scheme, host, port };
+        if result.contains(&endpoint) {
+            return Err(format!("{label}[{index}] duplicates an earlier endpoint"));
+        }
+        result.push(endpoint);
     }
     Ok(result)
 }
 
-fn host_matches_any(host: &str, patterns: &[String]) -> bool {
-    patterns.iter().any(|pattern| {
-        let pattern = pattern.as_str();
-        if pattern == "*" {
-            return true;
-        }
-        let pattern = pattern.strip_prefix("*.").unwrap_or(pattern);
-        host == pattern || host.ends_with(&format!(".{pattern}"))
-    })
-}
-
-fn normalized_host(host: &str) -> String {
-    host.trim_matches(|char| char == '[' || char == ']')
-        .trim_end_matches('.')
-        .to_ascii_lowercase()
-}
-
-fn is_private_network_host(host: &str) -> bool {
-    is_local_network_host(host)
-        || is_private_ipv6_host(host)
-        || ipv4_octets(host).is_some_and(is_private_ipv4_host)
-}
-
-fn is_local_network_host(host: &str) -> bool {
-    host == "localhost" || host.ends_with(".localhost") || host.ends_with(".local")
-}
-
-fn is_private_ipv6_host(host: &str) -> bool {
-    host == "::1" || host.starts_with("fc") || host.starts_with("fd") || host.starts_with("fe80:")
-}
-
-fn ipv4_octets(host: &str) -> Option<[u8; 4]> {
-    let mut result = [0; 4];
-    let mut parts = host.split('.');
-    for item in &mut result {
-        *item = parts.next()?.parse::<u8>().ok()?;
+fn normalize_exact_http_host(host: &str) -> Option<String> {
+    let unbracketed = host
+        .strip_prefix('[')
+        .and_then(|value| value.strip_suffix(']'))
+        .unwrap_or(host);
+    if let Ok(address) = unbracketed.parse::<std::net::IpAddr>() {
+        return Some(address.to_string());
     }
-    if parts.next().is_some() {
+    let normalized = unbracketed.strip_suffix('.').unwrap_or(unbracketed);
+    if normalized.is_empty() || normalized.len() > 253 || !normalized.is_ascii() {
         return None;
     }
-    Some(result)
-}
-
-fn is_private_ipv4_host(octets: [u8; 4]) -> bool {
-    match octets[0] {
-        0 | 10 | 127 => true,
-        100 => (64..=127).contains(&octets[1]),
-        169 => octets[1] == 254,
-        172 => (16..=31).contains(&octets[1]),
-        192 => octets[1] == 168,
-        _ => false,
+    if normalized.split('.').all(|label| {
+        !label.is_empty()
+            && label.len() <= 63
+            && label
+                .as_bytes()
+                .first()
+                .is_some_and(u8::is_ascii_alphanumeric)
+            && label
+                .as_bytes()
+                .last()
+                .is_some_and(u8::is_ascii_alphanumeric)
+            && label
+                .bytes()
+                .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-')
+    }) {
+        Some(normalized.to_ascii_lowercase())
+    } else {
+        None
     }
 }
 
@@ -2182,6 +2218,122 @@ mod tests {
         assert!(!error.is_null());
         let message = unsafe { CStr::from_ptr(error) }.to_str().unwrap();
         assert!(message.contains("host_root is null"), "{message}");
+    }
+
+    #[test]
+    fn execution_cancellation_handles_are_stale_safe_and_never_reused() {
+        let first = krwa_wasmtime_p3_execution_cancellation_create();
+        assert_ne!(first, 0);
+        assert_eq!(
+            krwa_wasmtime_p3_execution_cancellation_is_cancelled(first),
+            0
+        );
+
+        krwa_wasmtime_p3_execution_cancellation_cancel(first);
+        assert_eq!(
+            krwa_wasmtime_p3_execution_cancellation_is_cancelled(first),
+            1
+        );
+        krwa_wasmtime_p3_execution_cancellation_free(first);
+
+        // Every operation on a freed or repeatedly freed token is a safe no-op.
+        krwa_wasmtime_p3_execution_cancellation_cancel(first);
+        assert_eq!(
+            krwa_wasmtime_p3_execution_cancellation_is_cancelled(first),
+            0
+        );
+        krwa_wasmtime_p3_execution_cancellation_free(first);
+        assert!(execution_cancellation_from_c(first).is_none());
+
+        let second = krwa_wasmtime_p3_execution_cancellation_create();
+        assert_ne!(second, 0);
+        assert_ne!(second, first);
+        krwa_wasmtime_p3_execution_cancellation_cancel(first);
+        assert_eq!(
+            krwa_wasmtime_p3_execution_cancellation_is_cancelled(second),
+            0
+        );
+        krwa_wasmtime_p3_execution_cancellation_free(second);
+    }
+
+    #[test]
+    fn execution_cancellation_state_outlives_a_concurrent_handle_free() {
+        let handle = krwa_wasmtime_p3_execution_cancellation_create();
+        let retained = execution_cancellation_from_c(handle).unwrap();
+
+        let workers = (0..4)
+            .map(|_| {
+                thread::spawn(move || {
+                    for _ in 0..1_000 {
+                        krwa_wasmtime_p3_execution_cancellation_cancel(handle);
+                        let _ = krwa_wasmtime_p3_execution_cancellation_is_cancelled(handle);
+                    }
+                })
+            })
+            .collect::<Vec<_>>();
+        krwa_wasmtime_p3_execution_cancellation_free(handle);
+        workers
+            .into_iter()
+            .for_each(|worker| worker.join().unwrap());
+
+        retained.cancel();
+        assert!(retained.is_cancelled());
+        assert_eq!(
+            krwa_wasmtime_p3_execution_cancellation_is_cancelled(handle),
+            0
+        );
+    }
+
+    #[test]
+    fn completing_one_watchdog_does_not_disable_another_using_the_same_cancellation() {
+        let limits = P3Limits::default();
+        let engine = p3_engine(limits).unwrap();
+        let sandbox = temp_sandbox("shared-cancellation");
+        let preopens = [P3Preopen {
+            host_root: sandbox.clone(),
+            guest_root: "/".to_string(),
+            writable: true,
+        }];
+        let mut first_store = Store::new(
+            &engine,
+            p3_state(&preopens, &[], &[], HttpPolicy::default(), limits).unwrap(),
+        );
+        let mut second_store = Store::new(
+            &engine,
+            p3_state(&preopens, &[], &[], HttpPolicy::default(), limits).unwrap(),
+        );
+        let cancellation = Arc::new(ExecutionControlState::new());
+
+        let first = arm_execution_deadline(
+            &engine,
+            &mut first_store,
+            None,
+            Some(Arc::clone(&cancellation)),
+        )
+        .unwrap();
+        let second = arm_execution_deadline(
+            &engine,
+            &mut second_store,
+            None,
+            Some(Arc::clone(&cancellation)),
+        )
+        .unwrap();
+
+        drop(first);
+        cancellation.cancel();
+
+        let deadline = Instant::now() + Duration::from_secs(5);
+        while !second.cancelled() && Instant::now() < deadline {
+            thread::sleep(Duration::from_millis(10));
+        }
+        assert!(
+            second.cancelled(),
+            "the remaining watchdog must observe cancellation after its peer completes"
+        );
+        drop(second);
+        drop(first_store);
+        drop(second_store);
+        fs::remove_dir_all(sandbox).unwrap();
     }
 
     #[test]
@@ -2463,10 +2615,13 @@ mod tests {
     }
 
     #[test]
-    fn p3_http_policy_allows_declared_host_and_subdomains() {
+    fn p3_http_policy_allows_only_declared_scheme_host_and_port() {
         let policy = HttpPolicy {
-            allowed_hosts: vec!["example.test".to_string()],
-            ..HttpPolicy::default()
+            allowed_endpoints: vec![HttpEndpoint {
+                scheme: Scheme::HTTPS,
+                host: "example.test".to_string(),
+                port: 443,
+            }],
         };
 
         assert!(
@@ -2474,38 +2629,35 @@ mod tests {
                 .validate_request(&http_request("https://example.test/catalog"))
                 .is_ok()
         );
+        assert!(matches!(
+            policy.validate_request(&http_request("https://api.example.test/catalog")),
+            Err(ErrorCode::HttpRequestDenied)
+        ));
+        assert!(matches!(
+            policy.validate_request(&http_request("http://example.test/catalog")),
+            Err(ErrorCode::HttpRequestDenied)
+        ));
+        assert!(matches!(
+            policy.validate_request(&http_request("https://example.test:444/catalog")),
+            Err(ErrorCode::HttpRequestDenied)
+        ));
+    }
+
+    #[test]
+    fn p3_http_policy_allows_an_explicit_private_endpoint() {
+        let policy = HttpPolicy {
+            allowed_endpoints: vec![HttpEndpoint {
+                scheme: Scheme::HTTP,
+                host: "127.0.0.1".to_string(),
+                port: 8080,
+            }],
+        };
+
         assert!(
             policy
-                .validate_request(&http_request("https://api.example.test/catalog"))
+                .validate_request(&http_request("http://127.0.0.1:8080/catalog"))
                 .is_ok()
         );
-    }
-
-    #[test]
-    fn p3_http_policy_denies_blocked_host_before_allowed_wildcard() {
-        let policy = HttpPolicy {
-            allowed_hosts: vec!["*".to_string()],
-            blocked_hosts: vec!["blocked.example.test".to_string()],
-            allow_private_network: true,
-        };
-
-        assert!(matches!(
-            policy.validate_request(&http_request("https://blocked.example.test/catalog")),
-            Err(ErrorCode::HttpRequestDenied)
-        ));
-    }
-
-    #[test]
-    fn p3_http_policy_denies_private_network_without_permission() {
-        let policy = HttpPolicy {
-            allowed_hosts: vec!["*".to_string()],
-            ..HttpPolicy::default()
-        };
-
-        assert!(matches!(
-            policy.validate_request(&http_request("http://127.0.0.1/catalog")),
-            Err(ErrorCode::HttpRequestDenied)
-        ));
     }
 
     fn http_request(uri: &str) -> http::Request<()> {

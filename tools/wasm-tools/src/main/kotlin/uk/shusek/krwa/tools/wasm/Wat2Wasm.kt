@@ -82,6 +82,7 @@ class Wat2Wasm private constructor() {
                                             .withWasmtimeExecutionConfig(WasmToolsRuntime.executionConfig)
                                             .withImportValues(imports)
                                             .build()
+                                            .use {}
                                     }
                             } catch (e: WasiExitException) {
                                 if (e.exitCode() != 0 || stdout.size() <= 0) {

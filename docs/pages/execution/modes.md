@@ -31,9 +31,11 @@ where callers need the native wrapper objects.
 
 `ExecutionBackend.PULLEY` selects the historical Wasmtime provider boundary
 where it is linked. It does **not** by itself mean that Wasmtime must use the
-Pulley compiler target. `WasmtimeExecutionConfig.target` selects either
+Pulley compiler target. `WasmtimeExecutionConfig.target` defaults to
+`WasmtimeAutomaticTarget` (`auto`), which selects native Wasmtime on desktop JVM
+and Pulley on iOS and Android. Callers can instead require
 `WasmtimePulleyTarget` (`pulley64`) or `WasmtimeNativeTarget` (`native`, normally
-Cranelift). A platform execution backend owns native
+Cranelift); an explicitly unsupported target fails closed. A platform execution backend owns native
 exports and native linear memories while still receiving KRWA `ImportValues` for
 host callbacks. The JVM implementation loads the Wasmtime C API from
 `krwa.wasmtime.library`, `KRWA_WASMTIME_LIBRARY`, or common system library
@@ -60,7 +62,6 @@ val instance =
         .withExecutionPolicy(
             WasmExecutionPolicy.Wasmtime(
                 WasmtimeExecutionConfig(
-                    target = WasmtimePulleyTarget,
                     maxMemoryBytes = 64L * 1024L * 1024L,
                     maxWasmStackBytes = 256L * 1024L,
                     maxTableElements = WasmtimeUnlimitedResourceLimit,
@@ -147,8 +148,9 @@ The effective platform matrix is intentionally asymmetric:
 | wasmJs | host `WebAssembly` | unavailable | unavailable |
 
 CWasm is a Wasmtime-specific serialized artifact and is therefore never used
-on `wasmJs`. iOS builds only the Pulley target; a `native`/Cranelift target must
-fail availability checks there instead of silently selecting another mode.
+on `wasmJs`. iOS and Android resolve `auto` to Pulley. iOS builds only the
+Pulley target; an explicit `native`/Cranelift target must fail availability
+checks there instead of silently selecting another mode.
 
 - Use the default `ExecutionBackend.AUTO` for normal hosts. It requires a linked
   Wasmtime backend on JVM, Android, and iOS, and uses the host WebAssembly engine
@@ -163,7 +165,8 @@ fail availability checks there instead of silently selecting another mode.
 For untrusted modules, pair platform execution with explicit
 [CPU limits](cpu-limits.md), memory limits, and narrow host capabilities.
 
-iOS users should link the Wasmtime provider before instantiating modules. The standalone sample's
+iOS artifacts include their statically linked Pulley provider and select it automatically; an
+embedder-installed provider still takes precedence. The standalone sample's
 `runIosShowcase` task runs the iOS simulator showcase for the portable parser,
 runtime, host import, exported function, structured-control-flow,
 cross-module `Store`, trap, linear-memory, WIT parsing, WASIp3 metadata, and

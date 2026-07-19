@@ -8,10 +8,10 @@
 
 namespace {
 
-using ExecutionCancellationCreate = void *(*)();
-using ExecutionCancellationCancel = void (*)(void *);
-using ExecutionCancellationIsCancelled = std::uint8_t (*)(const void *);
-using ExecutionCancellationFree = void (*)(void *);
+using ExecutionCancellationCreate = std::uint64_t (*)();
+using ExecutionCancellationCancel = void (*)(std::uint64_t);
+using ExecutionCancellationIsCancelled = std::uint8_t (*)(std::uint64_t);
+using ExecutionCancellationFree = void (*)(std::uint64_t);
 
 using ComponentInstantiateUnavailableReason = const char * (*)(
     const std::uint8_t *,
@@ -65,7 +65,7 @@ using ComponentCallString = const char * (*)(
     std::int64_t,
     std::int64_t,
     std::uint64_t,
-    const void *,
+    std::uint64_t,
     const char **);
 
 using CommandRunUnavailableReason = const char * (*)(
@@ -122,7 +122,7 @@ using CommandRunString = const char * (*)(
     std::int64_t,
     std::uint64_t,
     std::uint64_t,
-    const void *,
+    std::uint64_t,
     const char **);
 
 struct P3BridgeApi {
@@ -475,12 +475,12 @@ Java_uk_shusek_krwa_runtime_wasmtime_android_AndroidWasmtimePreview3Native_nativ
         throwEngine(env, loadError);
         return 0;
     }
-    void *handle = api->executionCancellationCreate();
-    if (handle == nullptr) {
+    std::uint64_t handle = api->executionCancellationCreate();
+    if (handle == 0) {
         throwEngine(env, "Wasmtime Preview3 cancellation handle allocation failed");
         return 0;
     }
-    return reinterpret_cast<jlong>(handle);
+    return static_cast<jlong>(handle);
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -497,7 +497,7 @@ Java_uk_shusek_krwa_runtime_wasmtime_android_AndroidWasmtimePreview3Native_nativ
         throwEngine(env, loadError);
         return;
     }
-    api->executionCancellationCancel(reinterpret_cast<void *>(handle));
+    api->executionCancellationCancel(static_cast<std::uint64_t>(handle));
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
@@ -514,7 +514,7 @@ Java_uk_shusek_krwa_runtime_wasmtime_android_AndroidWasmtimePreview3Native_nativ
         throwEngine(env, loadError);
         return JNI_FALSE;
     }
-    return api->executionCancellationIsCancelled(reinterpret_cast<const void *>(handle)) == 0
+    return api->executionCancellationIsCancelled(static_cast<std::uint64_t>(handle)) == 0
         ? JNI_FALSE
         : JNI_TRUE;
 }
@@ -533,7 +533,7 @@ Java_uk_shusek_krwa_runtime_wasmtime_android_AndroidWasmtimePreview3Native_nativ
         throwEngine(env, loadError);
         return;
     }
-    api->executionCancellationFree(reinterpret_cast<void *>(handle));
+    api->executionCancellationFree(static_cast<std::uint64_t>(handle));
 }
 
 extern "C" JNIEXPORT jstring JNICALL
@@ -614,7 +614,7 @@ Java_uk_shusek_krwa_runtime_wasmtime_android_AndroidWasmtimePreview3Native_nativ
         static_cast<std::int64_t>(maxMemories),
         static_cast<std::int64_t>(maxFuel),
         static_cast<std::uint64_t>(executionTimeoutMillis),
-        reinterpret_cast<const void *>(executionCancellationHandle),
+        static_cast<std::uint64_t>(executionCancellationHandle),
         &result);
     if (error != nullptr) {
         throwEngine(env, error);
@@ -771,7 +771,7 @@ Java_uk_shusek_krwa_runtime_wasmtime_android_AndroidWasmtimePreview3Native_nativ
         static_cast<std::int64_t>(maxFuel),
         static_cast<std::uint64_t>(maxOutputBytes),
         static_cast<std::uint64_t>(executionTimeoutMillis),
-        reinterpret_cast<const void *>(executionCancellationHandle),
+        static_cast<std::uint64_t>(executionCancellationHandle),
         &result);
     if (error != nullptr) {
         throwEngine(env, error);

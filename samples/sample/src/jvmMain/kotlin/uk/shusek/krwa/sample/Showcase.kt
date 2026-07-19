@@ -19,8 +19,10 @@ import kotlinx.io.Buffer
 import kotlinx.io.readByteArray
 import okio.Path.Companion.toPath
 import uk.shusek.krwa.component.WasiPreview3
+import uk.shusek.krwa.component.WasiPreview3HostOwnership
 import uk.shusek.krwa.component.WasmComponentTools
 import uk.shusek.krwa.component.WasmPlugin
+import uk.shusek.krwa.component.WitHostImportId
 import uk.shusek.krwa.component.withSecureRandom
 import uk.shusek.krwa.runtime.HostFunction
 import uk.shusek.krwa.runtime.ImportValues
@@ -173,7 +175,9 @@ private class Showcase(private val kotlinWasiGuest: Path) {
                         .build()
                 val plugin =
                     WasmPlugin.builderFromComponent(componentPath.toOkioPath())
-                        .withHostImport("host-http", "fetch") { arguments -> httpFetch(arguments) }
+                        .withWitHostImport(WitHostImportId("host-http", "fetch")) { arguments ->
+                            httpFetch(arguments)
+                        }
                         .withWasiPreview1(wasi)
                         .build()
 
@@ -253,8 +257,10 @@ private class Showcase(private val kotlinWasiGuest: Path) {
                         .build()
                 val plugin =
                     WasmPlugin.builderFromComponent(componentPath.toOkioPath())
-                        .withHostImport("host-http", "fetch") { arguments -> httpFetch(arguments) }
-                        .withWasiPreview3(wasi)
+                        .withWitHostImport(WitHostImportId("host-http", "fetch")) { arguments ->
+                            httpFetch(arguments)
+                        }
+                        .withWasiPreview3(wasi, WasiPreview3HostOwnership.BORROWED)
                         .build()
 
                 requireValue(42L, plugin.call("api.run"), "Kotlin/WASI component via WASIp3 bridge")
@@ -383,7 +389,7 @@ private class Showcase(private val kotlinWasiGuest: Path) {
                     .build()
             val componentPlugin =
                 WasmPlugin.builderFromComponent(componentPath.toOkioPath())
-                    .withHostImport("host-http", "fetch") {
+                    .withWitHostImport(WitHostImportId("host-http", "fetch")) {
                         componentHttpCalled = true
                         599L
                     }
@@ -424,11 +430,14 @@ private class Showcase(private val kotlinWasiGuest: Path) {
                     .build()
             val preview3Plugin =
                 WasmPlugin.builderFromComponent(componentPath.toOkioPath())
-                    .withHostImport("host-http", "fetch") {
+                    .withWitHostImport(WitHostImportId("host-http", "fetch")) {
                         preview3HttpCalled = true
                         599L
                     }
-                    .withWasiPreview3(preview3Wasi)
+                    .withWasiPreview3(
+                        preview3Wasi,
+                        WasiPreview3HostOwnership.BORROWED,
+                    )
                     .build()
 
             val preview3Result = preview3Plugin.call("api.run")

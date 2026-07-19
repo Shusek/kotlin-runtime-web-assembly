@@ -24,6 +24,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import uk.shusek.krwa.wasm.InvalidException;
+import uk.shusek.krwa.wasm.UninstantiableException;
 import uk.shusek.krwa.wasm.UnlinkableException;
 import uk.shusek.krwa.wasm.WasmEngineException;
 import uk.shusek.krwa.wasm.WasmModule;
@@ -57,7 +58,7 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
     private static final int WASM_MAGIC_AND_VERSION_SIZE = 8;
     private static final int WASM_EXPORT_SECTION_ID = 7;
     private static final String SYNTHETIC_MEMORY_EXPORT_PREFIX = "__krwa_memory_";
-    private static final String DEFAULT_WASMTIME_TARGET = "native";
+    private static final String DEFAULT_WASMTIME_TARGET = "pulley64";
     private static final long DEFAULT_MAX_MEMORY_BYTES = 256L * 1024L * 1024L;
     private static final long DEFAULT_MAX_WASM_STACK_BYTES = 512L * 1024L;
     private static final long DEFAULT_ASYNC_STACK_HEADROOM_BYTES = 512L * 1024L;
@@ -225,8 +226,7 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
             return "Wasmtime Preview3 component bridge requires matching non-null argument, environment, and network policy arrays";
         }
         try (Arena arena = Arena.ofConfined()) {
-            SymbolLookup lookup = SymbolLookup.libraryLookup(WasmtimeP3BridgeApi.findLibrary(), arena);
-            WasmtimeP3BridgeApi api = new WasmtimeP3BridgeApi(Linker.nativeLinker(), lookup);
+            WasmtimeP3BridgeApi api = WasmtimeP3BridgeApi.shared();
             MemorySegment componentBytes = arena.allocate(precompiledComponentBytes.length);
             componentBytes.copyFrom(MemorySegment.ofArray(precompiledComponentBytes));
             MemorySegment hostRoots = allocateCStringArray(arena, hostPreopenRoots);
@@ -338,8 +338,7 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
             return "Wasmtime Preview3 component bridge requires matching non-null argument, environment, and network policy arrays";
         }
         try (Arena arena = Arena.ofConfined()) {
-            SymbolLookup lookup = SymbolLookup.libraryLookup(WasmtimeP3BridgeApi.findLibrary(), arena);
-            WasmtimeP3BridgeApi api = new WasmtimeP3BridgeApi(Linker.nativeLinker(), lookup);
+            WasmtimeP3BridgeApi api = WasmtimeP3BridgeApi.shared();
             MemorySegment componentBytes = arena.allocate(precompiledComponentBytes.length);
             componentBytes.copyFrom(MemorySegment.ofArray(precompiledComponentBytes));
             MemorySegment hostRoots = allocateCStringArray(arena, hostPreopenRoots);
@@ -454,8 +453,7 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
             return "Wasmtime Preview3 component bridge requires matching non-null argument, environment, and network policy arrays";
         }
         try (Arena arena = Arena.ofConfined()) {
-            SymbolLookup lookup = SymbolLookup.libraryLookup(WasmtimeP3BridgeApi.findLibrary(), arena);
-            WasmtimeP3BridgeApi api = new WasmtimeP3BridgeApi(Linker.nativeLinker(), lookup);
+            WasmtimeP3BridgeApi api = WasmtimeP3BridgeApi.shared();
             MemorySegment componentBytes = arena.allocate(precompiledComponentBytes.length);
             componentBytes.copyFrom(MemorySegment.ofArray(precompiledComponentBytes));
             MemorySegment hostRoots = allocateCStringArray(arena, hostPreopenRoots);
@@ -575,8 +573,7 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
             return "Wasmtime Preview3 component bridge requires matching non-null argument, environment, and network policy arrays";
         }
         try (Arena arena = Arena.ofConfined()) {
-            SymbolLookup lookup = SymbolLookup.libraryLookup(WasmtimeP3BridgeApi.findLibrary(), arena);
-            WasmtimeP3BridgeApi api = new WasmtimeP3BridgeApi(Linker.nativeLinker(), lookup);
+            WasmtimeP3BridgeApi api = WasmtimeP3BridgeApi.shared();
             MemorySegment componentBytes = arena.allocate(precompiledComponentBytes.length);
             componentBytes.copyFrom(MemorySegment.ofArray(precompiledComponentBytes));
             MemorySegment hostRoots = allocateCStringArray(arena, hostPreopenRoots);
@@ -636,13 +633,12 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
 
     public static long preview3ExecutionCancellationCreate() {
         try (Arena arena = Arena.ofConfined()) {
-            SymbolLookup lookup = SymbolLookup.libraryLookup(WasmtimeP3BridgeApi.findLibrary(), arena);
-            WasmtimeP3BridgeApi api = new WasmtimeP3BridgeApi(Linker.nativeLinker(), lookup);
-            MemorySegment handle = (MemorySegment) api.executionCancellationCreate.invokeExact();
-            if (handle.equals(MemorySegment.NULL)) {
+            WasmtimeP3BridgeApi api = WasmtimeP3BridgeApi.shared();
+            long handle = (long) api.executionCancellationCreate.invokeExact();
+            if (handle == 0L) {
                 throw new WasmEngineException("Wasmtime Preview3 cancellation handle allocation failed");
             }
-            return handle.address();
+            return handle;
         } catch (IllegalCallerException e) {
             throw new WasmEngineException(
                     "Wasmtime Preview3 component bridge needs JVM native access enabled " +
@@ -668,9 +664,8 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
             return;
         }
         try (Arena arena = Arena.ofConfined()) {
-            SymbolLookup lookup = SymbolLookup.libraryLookup(WasmtimeP3BridgeApi.findLibrary(), arena);
-            WasmtimeP3BridgeApi api = new WasmtimeP3BridgeApi(Linker.nativeLinker(), lookup);
-            api.executionCancellationCancel.invokeExact(MemorySegment.ofAddress(handle));
+            WasmtimeP3BridgeApi api = WasmtimeP3BridgeApi.shared();
+            api.executionCancellationCancel.invokeExact(handle);
         } catch (IllegalCallerException e) {
             throw new WasmEngineException(
                     "Wasmtime Preview3 component bridge needs JVM native access enabled " +
@@ -687,9 +682,8 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
             return false;
         }
         try (Arena arena = Arena.ofConfined()) {
-            SymbolLookup lookup = SymbolLookup.libraryLookup(WasmtimeP3BridgeApi.findLibrary(), arena);
-            WasmtimeP3BridgeApi api = new WasmtimeP3BridgeApi(Linker.nativeLinker(), lookup);
-            byte cancelled = (byte) api.executionCancellationIsCancelled.invokeExact(MemorySegment.ofAddress(handle));
+            WasmtimeP3BridgeApi api = WasmtimeP3BridgeApi.shared();
+            byte cancelled = (byte) api.executionCancellationIsCancelled.invokeExact(handle);
             return cancelled != 0;
         } catch (IllegalCallerException e) {
             throw new WasmEngineException(
@@ -707,9 +701,8 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
             return;
         }
         try (Arena arena = Arena.ofConfined()) {
-            SymbolLookup lookup = SymbolLookup.libraryLookup(WasmtimeP3BridgeApi.findLibrary(), arena);
-            WasmtimeP3BridgeApi api = new WasmtimeP3BridgeApi(Linker.nativeLinker(), lookup);
-            api.executionCancellationFree.invokeExact(MemorySegment.ofAddress(handle));
+            WasmtimeP3BridgeApi api = WasmtimeP3BridgeApi.shared();
+            api.executionCancellationFree.invokeExact(handle);
         } catch (IllegalCallerException e) {
             throw new WasmEngineException(
                     "Wasmtime Preview3 component bridge needs JVM native access enabled " +
@@ -841,8 +834,7 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
             );
         }
         try (Arena arena = Arena.ofConfined()) {
-            SymbolLookup lookup = SymbolLookup.libraryLookup(WasmtimeP3BridgeApi.findLibrary(), arena);
-            WasmtimeP3BridgeApi api = new WasmtimeP3BridgeApi(Linker.nativeLinker(), lookup);
+            WasmtimeP3BridgeApi api = WasmtimeP3BridgeApi.shared();
             MemorySegment componentBytes = arena.allocate(precompiledComponentBytes.length);
             componentBytes.copyFrom(MemorySegment.ofArray(precompiledComponentBytes));
             MemorySegment hostRoots = allocateCStringArray(arena, hostPreopenRoots);
@@ -858,8 +850,6 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
             }
             MemorySegment resultOut = arena.allocate(ValueLayout.ADDRESS);
             resultOut.set(ValueLayout.ADDRESS, 0, MemorySegment.NULL);
-            MemorySegment cancellationHandle =
-                    executionCancellationHandle == 0L ? MemorySegment.NULL : MemorySegment.ofAddress(executionCancellationHandle);
             MemorySegment error = (MemorySegment) api.precompiledComponentCallString.invokeExact(
                     componentBytes,
                     (long) precompiledComponentBytes.length,
@@ -887,7 +877,7 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
                     maxMemories,
                     maxFuel,
                     executionTimeoutMillis,
-                    cancellationHandle,
+                    executionCancellationHandle,
                     resultOut
             );
             if (!error.equals(MemorySegment.NULL)) {
@@ -968,8 +958,7 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
             return "Wasmtime Preview3 component bridge requires matching non-null argument, environment, and network policy arrays";
         }
         try (Arena arena = Arena.ofConfined()) {
-            SymbolLookup lookup = SymbolLookup.libraryLookup(WasmtimeP3BridgeApi.findLibrary(), arena);
-            WasmtimeP3BridgeApi api = new WasmtimeP3BridgeApi(Linker.nativeLinker(), lookup);
+            WasmtimeP3BridgeApi api = WasmtimeP3BridgeApi.shared();
             MemorySegment componentBytes = arena.allocate(precompiledComponentBytes.length);
             componentBytes.copyFrom(MemorySegment.ofArray(precompiledComponentBytes));
             MemorySegment hostRoots = allocateCStringArray(arena, hostPreopenRoots);
@@ -1133,7 +1122,7 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
             MemorySegment instance = arena.allocate(16);
             MemorySegment trapOut = arena.allocate(ValueLayout.ADDRESS);
             long importCount = module.importSection().importCount();
-            requireNoErrorOrTrap(
+            requireNoErrorOrInstantiationTrap(
                     api,
                     (MemorySegment) api.instanceNew.invokeExact(context, wasmtimeModule, importExterns, importCount, instance, trapOut),
                     trapOut,
@@ -1474,11 +1463,12 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
     ) throws Throwable {
         MemorySegment item = arena.allocate(WASMTIME_EXTERN_SIZE);
         MemorySegment nameSegment = arena.allocateFrom(name);
+        long nameByteLength = name.getBytes(StandardCharsets.UTF_8).length;
         byte found = (byte) api.instanceExportGet.invokeExact(
                 context,
                 instance,
                 nameSegment,
-                (long) name.length(),
+                nameByteLength,
                 item
         );
         if (found == 0 || item.get(C_BYTE, 0) != WASMTIME_EXTERN_MEMORY) {
@@ -1650,11 +1640,12 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
         for (FunctionExport export : functionsByName.values()) {
             MemorySegment item = arena.allocate(WASMTIME_EXTERN_SIZE);
             MemorySegment name = arena.allocateFrom(export.name);
+            long nameByteLength = export.name.getBytes(StandardCharsets.UTF_8).length;
             byte found = (byte) api.instanceExportGet.invokeExact(
                     context,
                     instance,
                     name,
-                    (long) export.name.length(),
+                    nameByteLength,
                     item
             );
             if (found == 0 || item.get(C_BYTE, 0) != WASMTIME_EXTERN_FUNC) {
@@ -1827,7 +1818,8 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
         }
         try (Arena arena = Arena.ofConfined()) {
             MemorySegment text = arena.allocateFrom(message);
-            return (MemorySegment) trapNew.invokeExact(text, (long) message.length());
+            long messageByteLength = message.getBytes(StandardCharsets.UTF_8).length;
+            return (MemorySegment) trapNew.invokeExact(text, messageByteLength);
         } catch (Throwable ignored) {
             return MemorySegment.NULL;
         }
@@ -1932,6 +1924,19 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
         MemorySegment trap = trapOut.get(ValueLayout.ADDRESS, 0);
         if (!trap.equals(MemorySegment.NULL)) {
             throw new TrapException(label + ": " + api.consumeTrapMessage(trap));
+        }
+    }
+
+    private static void requireNoErrorOrInstantiationTrap(
+            WasmtimeApi api,
+            MemorySegment error,
+            MemorySegment trapOut,
+            String label
+    ) throws Throwable {
+        requireNoError(api, error, label);
+        MemorySegment trap = trapOut.get(ValueLayout.ADDRESS, 0);
+        if (!trap.equals(MemorySegment.NULL)) {
+            throw new UninstantiableException(label + ": " + api.consumeTrapMessage(trap));
         }
     }
 
@@ -2524,6 +2529,7 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
     }
 
     private static final class WasmtimeP3BridgeApi {
+        private static volatile WasmtimeP3BridgeApi sharedApi;
         private static final String P3_BRIDGE_CANCELLATION_CREATE_SYMBOL =
                 "krwa_wasmtime_p3_execution_cancellation_create";
         private static final String P3_BRIDGE_CANCELLATION_CANCEL_SYMBOL =
@@ -2556,30 +2562,47 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
         private final MethodHandle precompiledComponentCallString;
         private final MethodHandle precompiledCommandRunUnavailableReason;
 
+        private static WasmtimeP3BridgeApi shared() {
+            WasmtimeP3BridgeApi result = sharedApi;
+            if (result != null) {
+                return result;
+            }
+            synchronized (WasmtimeP3BridgeApi.class) {
+                result = sharedApi;
+                if (result == null) {
+                    SymbolLookup lookup =
+                            SymbolLookup.libraryLookup(findLibrary(), Arena.global());
+                    result = new WasmtimeP3BridgeApi(Linker.nativeLinker(), lookup);
+                    sharedApi = result;
+                }
+                return result;
+            }
+        }
+
         private WasmtimeP3BridgeApi(Linker linker, SymbolLookup lookup) {
             executionCancellationCreate = downcall(
                     linker,
                     lookup,
                     P3_BRIDGE_CANCELLATION_CREATE_SYMBOL,
-                    FunctionDescriptor.of(ValueLayout.ADDRESS)
+                    FunctionDescriptor.of(ValueLayout.JAVA_LONG)
             );
             executionCancellationCancel = downcall(
                     linker,
                     lookup,
                     P3_BRIDGE_CANCELLATION_CANCEL_SYMBOL,
-                    FunctionDescriptor.ofVoid(ValueLayout.ADDRESS)
+                    FunctionDescriptor.ofVoid(ValueLayout.JAVA_LONG)
             );
             executionCancellationIsCancelled = downcall(
                     linker,
                     lookup,
                     P3_BRIDGE_CANCELLATION_IS_CANCELLED_SYMBOL,
-                    FunctionDescriptor.of(C_BOOL, ValueLayout.ADDRESS)
+                    FunctionDescriptor.of(C_BOOL, ValueLayout.JAVA_LONG)
             );
             executionCancellationFree = downcall(
                     linker,
                     lookup,
                     P3_BRIDGE_CANCELLATION_FREE_SYMBOL,
-                    FunctionDescriptor.ofVoid(ValueLayout.ADDRESS)
+                    FunctionDescriptor.ofVoid(ValueLayout.JAVA_LONG)
             );
             precompiledComponentInstantiateUnavailableReason = downcall(
                     linker,
@@ -2744,7 +2767,7 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
                             ValueLayout.JAVA_LONG,
                             ValueLayout.JAVA_LONG,
                             ValueLayout.JAVA_LONG,
-                            ValueLayout.ADDRESS,
+                            ValueLayout.JAVA_LONG,
                             ValueLayout.ADDRESS
                     )
             );

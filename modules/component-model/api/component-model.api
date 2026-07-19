@@ -107,6 +107,19 @@ public class uk/shusek/krwa/component/ComponentModelException : java/lang/Runtim
 	public fun <init> (Ljava/lang/String;Ljava/lang/Throwable;)V
 }
 
+public final class uk/shusek/krwa/component/CoreHostImportId {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;)Luk/shusek/krwa/component/CoreHostImportId;
+	public static synthetic fun copy$default (Luk/shusek/krwa/component/CoreHostImportId;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Luk/shusek/krwa/component/CoreHostImportId;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getFunctionName ()Ljava/lang/String;
+	public final fun getModuleName ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public abstract interface class uk/shusek/krwa/component/HostHandler {
 	public abstract fun apply (Ljava/util/List;)Ljava/lang/Object;
 }
@@ -171,6 +184,9 @@ public final class uk/shusek/krwa/component/KtorWasiHttpClient : uk/shusek/krwa/
 	public fun sendSuspending (Luk/shusek/krwa/component/WasiHttpRequest;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 }
 
+public abstract interface annotation class uk/shusek/krwa/component/UnsafeComponentModelApi : java/lang/annotation/Annotation {
+}
+
 public abstract interface class uk/shusek/krwa/component/WasiComponentInvoker {
 	public abstract fun call (Ljava/lang/String;[Ljava/lang/Object;)Ljava/lang/Object;
 }
@@ -179,10 +195,12 @@ public abstract interface class uk/shusek/krwa/component/WasiHostImportBuilder {
 	public abstract fun withHostImport (Ljava/lang/String;Ljava/lang/String;Luk/shusek/krwa/component/HostHandler;)Luk/shusek/krwa/component/WasiHostImportBuilder;
 	public abstract fun withHostImport (Ljava/lang/String;Luk/shusek/krwa/component/HostHandler;)Luk/shusek/krwa/component/WasiHostImportBuilder;
 	public fun withWasiPreview3CanonicalIntrinsics (Luk/shusek/krwa/component/WasiPreview3CanonicalIntrinsics;)Luk/shusek/krwa/component/WasiHostImportBuilder;
+	public fun withWitHostImport (Luk/shusek/krwa/component/WitHostImportId;Luk/shusek/krwa/component/HostHandler;)Luk/shusek/krwa/component/WasiHostImportBuilder;
 }
 
 public final class uk/shusek/krwa/component/WasiHostImportBuilder$DefaultImpls {
 	public static fun withWasiPreview3CanonicalIntrinsics (Luk/shusek/krwa/component/WasiHostImportBuilder;Luk/shusek/krwa/component/WasiPreview3CanonicalIntrinsics;)Luk/shusek/krwa/component/WasiHostImportBuilder;
+	public static fun withWitHostImport (Luk/shusek/krwa/component/WasiHostImportBuilder;Luk/shusek/krwa/component/WitHostImportId;Luk/shusek/krwa/component/HostHandler;)Luk/shusek/krwa/component/WasiHostImportBuilder;
 }
 
 public abstract interface class uk/shusek/krwa/component/WasiHttpClient {
@@ -202,6 +220,29 @@ public final class uk/shusek/krwa/component/WasiHttpHeader {
 	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
 	public final fun getName ()Ljava/lang/String;
 	public final fun getValue ()Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/component/WasiHttpNetworkEndpoint {
+	public fun <init> (Luk/shusek/krwa/component/WasiHttpNetworkProtocol;Ljava/lang/String;I)V
+	public final fun component1 ()Luk/shusek/krwa/component/WasiHttpNetworkProtocol;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()I
+	public final fun copy (Luk/shusek/krwa/component/WasiHttpNetworkProtocol;Ljava/lang/String;I)Luk/shusek/krwa/component/WasiHttpNetworkEndpoint;
+	public static synthetic fun copy$default (Luk/shusek/krwa/component/WasiHttpNetworkEndpoint;Luk/shusek/krwa/component/WasiHttpNetworkProtocol;Ljava/lang/String;IILjava/lang/Object;)Luk/shusek/krwa/component/WasiHttpNetworkEndpoint;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getHost ()Ljava/lang/String;
+	public final fun getPort ()I
+	public final fun getProtocol ()Luk/shusek/krwa/component/WasiHttpNetworkProtocol;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/component/WasiHttpNetworkProtocol : java/lang/Enum {
+	public static final field Http Luk/shusek/krwa/component/WasiHttpNetworkProtocol;
+	public static final field Https Luk/shusek/krwa/component/WasiHttpNetworkProtocol;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Luk/shusek/krwa/component/WasiHttpNetworkProtocol;
+	public static fun values ()[Luk/shusek/krwa/component/WasiHttpNetworkProtocol;
 }
 
 public final class uk/shusek/krwa/component/WasiHttpRequest {
@@ -224,6 +265,34 @@ public final class uk/shusek/krwa/component/WasiHttpResponse {
 
 public abstract interface class uk/shusek/krwa/component/WasiMemoryRawSource : kotlinx/io/RawSource {
 	public abstract fun readAtMostToMemory (Luk/shusek/krwa/component/WasiPreview3CanonicalContext;II)I
+}
+
+public final class uk/shusek/krwa/component/WasiNetworkEndpoint {
+	public fun <init> (Ljava/lang/String;I)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()I
+	public final fun copy (Ljava/lang/String;I)Luk/shusek/krwa/component/WasiNetworkEndpoint;
+	public static synthetic fun copy$default (Luk/shusek/krwa/component/WasiNetworkEndpoint;Ljava/lang/String;IILjava/lang/Object;)Luk/shusek/krwa/component/WasiNetworkEndpoint;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getHost ()Ljava/lang/String;
+	public final fun getPort ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/component/WasiNetworkPolicy {
+	public static final field Companion Luk/shusek/krwa/component/WasiNetworkPolicy$Companion;
+	public fun <init> ()V
+	public fun <init> (Ljava/util/Set;Ljava/util/Set;)V
+	public synthetic fun <init> (Ljava/util/Set;Ljava/util/Set;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun allowsHttp (Luk/shusek/krwa/component/WasiHttpNetworkProtocol;Ljava/lang/String;I)Z
+	public final fun allowsRawSocket (Ljava/lang/String;I)Z
+	public final fun getHttpEndpoints ()Ljava/util/Set;
+	public final fun getRawSocketEndpoints ()Ljava/util/Set;
+}
+
+public final class uk/shusek/krwa/component/WasiNetworkPolicy$Companion {
+	public final fun getDENY_ALL ()Luk/shusek/krwa/component/WasiNetworkPolicy;
 }
 
 public final class uk/shusek/krwa/component/WasiPreview : java/lang/Enum {
@@ -258,12 +327,13 @@ public final class uk/shusek/krwa/component/WasiPreview$Stability : java/lang/En
 	public static fun values ()[Luk/shusek/krwa/component/WasiPreview$Stability;
 }
 
-public final class uk/shusek/krwa/component/WasiPreview2 {
+public final class uk/shusek/krwa/component/WasiPreview2 : java/lang/AutoCloseable {
 	public static final field Companion Luk/shusek/krwa/component/WasiPreview2$Companion;
 	public static final field DEFAULT_VERSION Ljava/lang/String;
 	public static final field KOTLIN_COMPONENT_MODEL_VERSION Ljava/lang/String;
 	public final fun arguments ()Ljava/util/List;
 	public static final fun builder ()Luk/shusek/krwa/component/WasiPreview2$Builder;
+	public fun close ()V
 	public final fun environment ()Ljava/util/Map;
 	public final fun handleHttpRequest (Luk/shusek/krwa/component/WasiComponentInvoker;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;[B)Luk/shusek/krwa/component/WasiPreview2$HttpResponseSnapshot;
 	public final fun handleHttpRequest (Luk/shusek/krwa/component/WasiComponentInvoker;Luk/shusek/krwa/component/WasiPreview2$HttpRequestSnapshot;)Luk/shusek/krwa/component/WasiPreview2$HttpResponseSnapshot;
@@ -486,7 +556,15 @@ public final class uk/shusek/krwa/component/WasiPreview2$WasiInputStream {
 public final class uk/shusek/krwa/component/WasiPreview2$WasiOutputStream {
 }
 
-public final class uk/shusek/krwa/component/WasiPreview3 : uk/shusek/krwa/component/WasiPreview3CanonicalIntrinsics {
+public final class uk/shusek/krwa/component/WasiPreview2HostOwnership : java/lang/Enum {
+	public static final field BORROWED Luk/shusek/krwa/component/WasiPreview2HostOwnership;
+	public static final field OWNED Luk/shusek/krwa/component/WasiPreview2HostOwnership;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Luk/shusek/krwa/component/WasiPreview2HostOwnership;
+	public static fun values ()[Luk/shusek/krwa/component/WasiPreview2HostOwnership;
+}
+
+public final class uk/shusek/krwa/component/WasiPreview3 : java/lang/AutoCloseable, uk/shusek/krwa/component/WasiPreview3CanonicalIntrinsics {
 	public static final field Companion Luk/shusek/krwa/component/WasiPreview3$Companion;
 	public static final field DEFAULT_VERSION Ljava/lang/String;
 	public final fun acceptTcpConnection (J)Luk/shusek/krwa/component/WitResult;
@@ -501,7 +579,7 @@ public final class uk/shusek/krwa/component/WasiPreview3 : uk/shusek/krwa/compon
 	public final fun byteStream (Lkotlinx/coroutines/flow/Flow;)Luk/shusek/krwa/component/WitStream;
 	public final fun byteStream ([B)Luk/shusek/krwa/component/WitStream;
 	public final fun cancel ()V
-	public final fun close ()V
+	public fun close ()V
 	public final fun completeFuture (JLjava/lang/Object;)V
 	public final fun completeFuture (Luk/shusek/krwa/component/WitFuture;Ljava/lang/Object;)V
 	public final fun completedFuture (Ljava/lang/Object;)Luk/shusek/krwa/component/WitFuture;
@@ -573,7 +651,6 @@ public final class uk/shusek/krwa/component/WasiPreview3$Builder {
 	public final fun getMaxWaitables ()I
 	public final fun getMonotonicClock ()Lkotlin/jvm/functions/Function0;
 	public final fun getMonotonicResolutionNanos ()J
-	public final fun getNetworkingEnabled ()Z
 	public final fun getSecureRandom ()Lorg/kotlincrypto/random/CryptoRand;
 	public final fun getStderr ()Lkotlinx/io/RawSink;
 	public final fun getStdin ()Lkotlinx/io/RawSource;
@@ -600,7 +677,6 @@ public final class uk/shusek/krwa/component/WasiPreview3$Builder {
 	public final fun setMaxWaitables (I)V
 	public final fun setMonotonicClock (Lkotlin/jvm/functions/Function0;)V
 	public final fun setMonotonicResolutionNanos (J)V
-	public final fun setNetworkingEnabled (Z)V
 	public final fun setSecureRandom (Lorg/kotlincrypto/random/CryptoRand;)V
 	public final fun setStderr (Lkotlinx/io/RawSink;)V
 	public final fun setStdin (Lkotlinx/io/RawSource;)V
@@ -630,6 +706,7 @@ public final class uk/shusek/krwa/component/WasiPreview3$Builder {
 	public final fun withInsecureSeed (JJ)Luk/shusek/krwa/component/WasiPreview3$Builder;
 	public final fun withMonotonicClock (Lkotlin/jvm/functions/Function0;)Luk/shusek/krwa/component/WasiPreview3$Builder;
 	public final fun withMonotonicResolutionNanos (J)Luk/shusek/krwa/component/WasiPreview3$Builder;
+	public final fun withNetworkPolicy (Luk/shusek/krwa/component/WasiNetworkPolicy;)Luk/shusek/krwa/component/WasiPreview3$Builder;
 	public final fun withNetworking ()Luk/shusek/krwa/component/WasiPreview3$Builder;
 	public final fun withNetworking (Z)Luk/shusek/krwa/component/WasiPreview3$Builder;
 	public final fun withPreopenedDirectory (Ljava/lang/String;Ljava/lang/String;)Luk/shusek/krwa/component/WasiPreview3$Builder;
@@ -711,6 +788,14 @@ public final class uk/shusek/krwa/component/WasiPreview3CanonicalIntrinsics$Defa
 	public static fun completedFutureHandle (Luk/shusek/krwa/component/WasiPreview3CanonicalIntrinsics;Ljava/lang/Object;)J
 }
 
+public final class uk/shusek/krwa/component/WasiPreview3HostOwnership : java/lang/Enum {
+	public static final field BORROWED Luk/shusek/krwa/component/WasiPreview3HostOwnership;
+	public static final field OWNED Luk/shusek/krwa/component/WasiPreview3HostOwnership;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Luk/shusek/krwa/component/WasiPreview3HostOwnership;
+	public static fun values ()[Luk/shusek/krwa/component/WasiPreview3HostOwnership;
+}
+
 public final class uk/shusek/krwa/component/WasiPreviewJvmPlatformKt {
 	public static final fun withInsecureRandom (Luk/shusek/krwa/component/WasiPreview2$Builder;Ljava/util/Random;)Luk/shusek/krwa/component/WasiPreview2$Builder;
 	public static final fun withInsecureRandom (Luk/shusek/krwa/component/WasiPreview3$Builder;Ljava/util/Random;)Luk/shusek/krwa/component/WasiPreview3$Builder;
@@ -781,6 +866,7 @@ public final class uk/shusek/krwa/component/WasmPlugin$Builder : uk/shusek/krwa/
 	public final fun withComponent ([B)Luk/shusek/krwa/component/WasmPlugin$Builder;
 	public final fun withComponentModule (Lokio/Path;Ljava/lang/String;)Luk/shusek/krwa/component/WasmPlugin$Builder;
 	public final fun withComponentModule ([BLjava/lang/String;)Luk/shusek/krwa/component/WasmPlugin$Builder;
+	public final fun withCoreHostImport (Luk/shusek/krwa/component/CoreHostImportId;Luk/shusek/krwa/wasm/types/FunctionType;Luk/shusek/krwa/runtime/WasmFunctionHandle;)Luk/shusek/krwa/component/WasmPlugin$Builder;
 	public final fun withExecutionBackend (Luk/shusek/krwa/runtime/ExecutionBackend;)Luk/shusek/krwa/component/WasmPlugin$Builder;
 	public final fun withExecutionPolicy (Luk/shusek/krwa/runtime/WasmExecutionPolicy;)Luk/shusek/krwa/component/WasmPlugin$Builder;
 	public final fun withHost (Ljava/lang/Object;)Luk/shusek/krwa/component/WasmPlugin$Builder;
@@ -788,7 +874,9 @@ public final class uk/shusek/krwa/component/WasmPlugin$Builder : uk/shusek/krwa/
 	public fun withHostImport (Ljava/lang/String;Ljava/lang/String;Luk/shusek/krwa/component/HostHandler;)Luk/shusek/krwa/component/WasmPlugin$Builder;
 	public synthetic fun withHostImport (Ljava/lang/String;Luk/shusek/krwa/component/HostHandler;)Luk/shusek/krwa/component/WasiHostImportBuilder;
 	public fun withHostImport (Ljava/lang/String;Luk/shusek/krwa/component/HostHandler;)Luk/shusek/krwa/component/WasmPlugin$Builder;
+	public final fun withLegacyModuleImportDiscovery ()Luk/shusek/krwa/component/WasmPlugin$Builder;
 	public final fun withMaxMemoryPages (Ljava/lang/Integer;)Luk/shusek/krwa/component/WasmPlugin$Builder;
+	public final fun withMemoryPolicy (Luk/shusek/krwa/runtime/WasmMemoryPolicy;)Luk/shusek/krwa/component/WasmPlugin$Builder;
 	public final fun withModule (Lokio/Path;)Luk/shusek/krwa/component/WasmPlugin$Builder;
 	public final fun withModule (Luk/shusek/krwa/wasm/WasmModule;)Luk/shusek/krwa/component/WasmPlugin$Builder;
 	public final fun withModule ([B)Luk/shusek/krwa/component/WasmPlugin$Builder;
@@ -796,10 +884,14 @@ public final class uk/shusek/krwa/component/WasmPlugin$Builder : uk/shusek/krwa/
 	public static synthetic fun withResourceBudget$default (Luk/shusek/krwa/component/WasmPlugin$Builder;IIILjava/lang/Object;)Luk/shusek/krwa/component/WasmPlugin$Builder;
 	public final fun withWasiPreview1 (Luk/shusek/krwa/wasi/WasiPreview1;)Luk/shusek/krwa/component/WasmPlugin$Builder;
 	public final fun withWasiPreview2 (Luk/shusek/krwa/component/WasiPreview2;)Luk/shusek/krwa/component/WasmPlugin$Builder;
+	public final fun withWasiPreview2 (Luk/shusek/krwa/component/WasiPreview2;Luk/shusek/krwa/component/WasiPreview2HostOwnership;)Luk/shusek/krwa/component/WasmPlugin$Builder;
 	public final fun withWasiPreview3 (Luk/shusek/krwa/component/WasiPreview3;)Luk/shusek/krwa/component/WasmPlugin$Builder;
+	public final fun withWasiPreview3 (Luk/shusek/krwa/component/WasiPreview3;Luk/shusek/krwa/component/WasiPreview3HostOwnership;)Luk/shusek/krwa/component/WasmPlugin$Builder;
 	public synthetic fun withWasiPreview3CanonicalIntrinsics (Luk/shusek/krwa/component/WasiPreview3CanonicalIntrinsics;)Luk/shusek/krwa/component/WasiHostImportBuilder;
 	public fun withWasiPreview3CanonicalIntrinsics (Luk/shusek/krwa/component/WasiPreview3CanonicalIntrinsics;)Luk/shusek/krwa/component/WasmPlugin$Builder;
 	public final fun withWasmtimeExecutionConfig (Luk/shusek/krwa/runtime/WasmtimeExecutionConfig;)Luk/shusek/krwa/component/WasmPlugin$Builder;
+	public synthetic fun withWitHostImport (Luk/shusek/krwa/component/WitHostImportId;Luk/shusek/krwa/component/HostHandler;)Luk/shusek/krwa/component/WasiHostImportBuilder;
+	public fun withWitHostImport (Luk/shusek/krwa/component/WitHostImportId;Luk/shusek/krwa/component/HostHandler;)Luk/shusek/krwa/component/WasmPlugin$Builder;
 	public final fun withWorld (Ljava/lang/String;)Luk/shusek/krwa/component/WasmPlugin$Builder;
 }
 
@@ -867,6 +959,19 @@ public final class uk/shusek/krwa/component/WitFuture$Handle : uk/shusek/krwa/co
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class uk/shusek/krwa/component/WitHostImportId {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;)Luk/shusek/krwa/component/WitHostImportId;
+	public static synthetic fun copy$default (Luk/shusek/krwa/component/WitHostImportId;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Luk/shusek/krwa/component/WitHostImportId;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getFunctionName ()Ljava/lang/String;
+	public final fun getInterfaceName ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class uk/shusek/krwa/component/WitNames {
 	public static final field INSTANCE Luk/shusek/krwa/component/WitNames;
 	public static final fun enumName (Ljava/lang/String;)Ljava/lang/String;
@@ -885,6 +990,7 @@ public final class uk/shusek/krwa/component/WitPackage {
 	public final fun interfaces ()Ljava/util/List;
 	public final fun packageName ()Ljava/lang/String;
 	public static final fun parse (Ljava/lang/String;)Luk/shusek/krwa/component/WitPackage;
+	public static final fun parse (Ljava/lang/String;Luk/shusek/krwa/component/WitParserLimits;)Luk/shusek/krwa/component/WitPackage;
 	public final fun worlds ()Ljava/util/List;
 }
 
@@ -896,6 +1002,7 @@ public final class uk/shusek/krwa/component/WitPackage$Case {
 
 public final class uk/shusek/krwa/component/WitPackage$Companion {
 	public final fun parse (Ljava/lang/String;)Luk/shusek/krwa/component/WitPackage;
+	public final fun parse (Ljava/lang/String;Luk/shusek/krwa/component/WitParserLimits;)Luk/shusek/krwa/component/WitPackage;
 }
 
 public abstract interface class uk/shusek/krwa/component/WitPackage$Declaration {
@@ -1072,6 +1179,40 @@ public final class uk/shusek/krwa/component/WitParseException : uk/shusek/krwa/c
 	public fun <init> (Ljava/lang/String;Ljava/lang/Throwable;)V
 }
 
+public final class uk/shusek/krwa/component/WitParseLimitException : java/lang/IllegalArgumentException {
+	public fun <init> (Ljava/lang/String;JJ)V
+	public final fun getActual ()J
+	public final fun getConfiguredLimit ()J
+	public final fun getLimitName ()Ljava/lang/String;
+}
+
+public final class uk/shusek/krwa/component/WitParserLimits {
+	public fun <init> ()V
+	public fun <init> (IIIIIIII)V
+	public synthetic fun <init> (IIIIIIIIILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()I
+	public final fun component2 ()I
+	public final fun component3 ()I
+	public final fun component4 ()I
+	public final fun component5 ()I
+	public final fun component6 ()I
+	public final fun component7 ()I
+	public final fun component8 ()I
+	public final fun copy (IIIIIIII)Luk/shusek/krwa/component/WitParserLimits;
+	public static synthetic fun copy$default (Luk/shusek/krwa/component/WitParserLimits;IIIIIIIIILjava/lang/Object;)Luk/shusek/krwa/component/WitParserLimits;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getMaxDeclarations ()I
+	public final fun getMaxExpandedWorldItems ()I
+	public final fun getMaxIncludeDepth ()I
+	public final fun getMaxMembersPerDeclaration ()I
+	public final fun getMaxPackageNesting ()I
+	public final fun getMaxSourceChars ()I
+	public final fun getMaxTokens ()I
+	public final fun getMaxTypeNesting ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class uk/shusek/krwa/component/WitReflection {
 	public static final field INSTANCE Luk/shusek/krwa/component/WitReflection;
 	public static final fun exports (Luk/shusek/krwa/component/WasmPlugin;Ljava/lang/Class;)Ljava/lang/Object;
@@ -1092,9 +1233,13 @@ public final class uk/shusek/krwa/component/WitResource {
 
 public final class uk/shusek/krwa/component/WitResourceTable {
 	public fun <init> ()V
+	public fun <init> (I)V
+	public synthetic fun <init> (IILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun clear ()V
+	public final fun close ()Ljava/util/List;
 	public final fun contains (J)Z
 	public final fun contains (Luk/shusek/krwa/component/WitResource;)Z
+	public final fun drain ()Ljava/util/List;
 	public final fun get (J)Ljava/lang/Object;
 	public final fun get (Luk/shusek/krwa/component/WitResource;)Ljava/lang/Object;
 	public final fun insert (Ljava/lang/Object;)Luk/shusek/krwa/component/WitResource;

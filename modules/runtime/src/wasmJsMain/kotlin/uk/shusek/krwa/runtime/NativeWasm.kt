@@ -46,8 +46,9 @@ class NativeWasmInstance
 internal constructor(
     private val module: WasmModule,
     private val imports: NativeWasmImports,
-    private val definedMemoryLimits: MemoryLimits? = null,
+    definedMemoryLimits: Array<MemoryLimits>? = null,
 ) {
+    private val definedMemoryLimits: Array<MemoryLimits>? = definedMemoryLimits?.copyOf()
     private lateinit var jsInstance: JsWebAssemblyInstance
     internal val references = NativeWasmReferences()
     private val exportsByName =
@@ -197,8 +198,9 @@ internal constructor(
             throw InvalidException("unknown memory $memoryIndex")
         }
         val declaredLimits = memorySection.getMemory(definedIndex).limits()
-        return if (definedIndex == 0 && definedMemoryLimits != null) {
-            declaredLimits.cappedBy(definedMemoryLimits)
+        val hostLimits = definedMemoryLimits?.getOrNull(definedIndex)
+        return if (hostLimits != null) {
+            declaredLimits.cappedBy(hostLimits)
         } else {
             declaredLimits
         }
@@ -272,12 +274,21 @@ internal constructor(
             imports: NativeWasmImports = NativeWasmImports.empty(),
             memoryLimits: MemoryLimits? = null,
         ): NativeWasmInstance {
+            val definedMemoryLimits = memoryLimits?.let(::arrayOf)
+            return instantiate(module, imports, definedMemoryLimits)
+        }
+
+        internal fun instantiate(
+            module: WasmModule,
+            imports: NativeWasmImports,
+            definedMemoryLimits: Array<MemoryLimits>?,
+        ): NativeWasmInstance {
             val bytes =
                 module.originalBytes()
                     ?: throw IllegalArgumentException(
                         "Native WebAssembly execution needs original module bytes. Parse the module from complete bytes with WasmParser.parse(bytes)."
                     )
-            return instantiate(bytes, module, imports, memoryLimits)
+            return instantiateWithDefinedMemoryLimits(bytes, module, imports, definedMemoryLimits)
         }
 
         fun instantiate(
@@ -286,19 +297,39 @@ internal constructor(
             imports: NativeWasmImports = NativeWasmImports.empty(),
             memoryLimits: MemoryLimits? = null,
         ): NativeWasmInstance {
+            return instantiateWithDefinedMemoryLimits(
+                bytes,
+                module,
+                imports,
+                memoryLimits?.let(::arrayOf),
+            )
+        }
+
+        private fun instantiateWithDefinedMemoryLimits(
+            bytes: ByteArray,
+            module: WasmModule,
+            imports: NativeWasmImports,
+            definedMemoryLimits: Array<MemoryLimits>?,
+        ): NativeWasmInstance {
             validateImports(module, imports)
-            val moduleBytes = bytes.withCappedDefinedMemory(memoryLimits)
-            val nativeInstance = NativeWasmInstance(module, imports, memoryLimits)
+            val moduleBytes = bytes.withCappedDefinedMemories(definedMemoryLimits)
+            val nativeInstance = NativeWasmInstance(module, imports, definedMemoryLimits)
             val compiledModule = compileWebAssemblyModule(moduleBytes.toUint8Array())
             val jsImports = imports.toJsImportObject(nativeInstance)
             nativeInstance.bind(instantiateWebAssemblyOrThrow(compiledModule, jsImports))
             return nativeInstance
         }
 
-        private fun ByteArray.withCappedDefinedMemory(memoryLimits: MemoryLimits?): ByteArray {
+        private fun ByteArray.withCappedDefinedMemories(
+            memoryLimits: Array<MemoryLimits>?
+        ): ByteArray {
             memoryLimits ?: return this
-            if (memoryLimits.initialPages() > memoryLimits.maximumPages()) {
-                throw NativeWasmRuntimeException("native WebAssembly memory limit is smaller than the initial memory size")
+            for (limits in memoryLimits) {
+                if (limits.initialPages() > limits.maximumPages()) {
+                    throw NativeWasmRuntimeException(
+                        "native WebAssembly memory limit is smaller than the initial memory size"
+                    )
+                }
             }
             if (size < WasmHeaderSize || !startsWithWasmHeader()) {
                 throw NativeWasmRuntimeException("native WebAssembly execution needs a complete module")
@@ -320,7 +351,7 @@ internal constructor(
                     sectionId,
                     if (sectionId == WasmMemorySectionId) {
                         rewritten = true
-                        contents.withCappedFirstMemory(memoryLimits)
+                        contents.withCappedMemories(memoryLimits)
                     } else {
                         contents
                     },
@@ -330,7 +361,9 @@ internal constructor(
             return if (rewritten) writer.bytes() else this
         }
 
-        private fun ByteArray.withCappedFirstMemory(memoryLimits: MemoryLimits): ByteArray {
+        private fun ByteArray.withCappedMemories(
+            memoryLimits: Array<MemoryLimits>
+        ): ByteArray {
             var offset = 0
             val memoryCount = readVarUInt32(offset)
             offset = memoryCount.nextOffset
@@ -354,8 +387,9 @@ internal constructor(
                         MemoryLimits.MAX_PAGES
                     }
 
-                if (index == 0) {
-                    val cappedMaximum = minOf(declaredMaximum, memoryLimits.maximumPages())
+                val selectedLimits = memoryLimits.getOrNull(index)
+                if (selectedLimits != null) {
+                    val cappedMaximum = minOf(declaredMaximum, selectedLimits.maximumPages())
                     if (initial.value > cappedMaximum) {
                         throw NativeWasmRuntimeException(
                             "native WebAssembly memory initial pages ${initial.value} exceed host limit $cappedMaximum"

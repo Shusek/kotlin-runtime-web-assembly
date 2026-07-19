@@ -41,6 +41,6 @@ class WasmtimePreview3JvmReflectionTest {
         )
 
     private fun assertUnsupportedTarget(message: String?) {
-        assertContains(message.orEmpty(), "supports only $WasmtimeNativeTarget")
+        assertContains(message.orEmpty(), "supports only $WasmtimePulleyTarget")
     }
 }

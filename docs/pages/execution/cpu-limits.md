@@ -80,12 +80,13 @@ closing a WASI Preview 3 host scope can cancel suspending host work, but they do
 not preempt CPU-bound Wasm execution unless the Wasm call or resume is running
 under the runtime interruption policy above.
 
-WASI Preview 3 host tasks and coroutine-scheduled P3 resumes run on the
-configured `CoroutineScope` or `CoroutineDispatcher`. A dispatcher with
-parallelism greater than one can use multiple CPU cores, so billing based only
-on elapsed wall time may under-count work. If one-core accounting is required,
-use `withResourceBudget(parallelism = 1)` so dispatcher parallelism and the P3
-async resource limits are set together.
+WASI Preview 3 host tasks and coroutine-scheduled P3 resumes run in a host-owned
+child job of the configured `CoroutineScope` or `CoroutineDispatcher`. Closing
+the host cancels that child work without cancelling a caller-supplied scope. A
+dispatcher with parallelism greater than one can use multiple CPU cores, so
+billing based only on elapsed wall time may under-count work. If one-core
+accounting is required, use `withResourceBudget(parallelism = 1)` so dispatcher
+parallelism and the P3 async resource limits are set together.
 
 `withResourceBudget(...)` is not a CPU meter. Its `parallelism` value is the
 maximum amount of P3 work KRWA may run at the same time, not a measurement of

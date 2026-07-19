@@ -3,7 +3,6 @@
 package uk.shusek.krwa.runtime
 
 import kotlinx.cinterop.ByteVar
-import kotlinx.cinterop.COpaquePointer
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.CPointerVarOf
 import kotlinx.cinterop.ExperimentalForeignApi
@@ -201,10 +200,18 @@ actual fun wasmtimePreview3ComponentCallString(
 )
 
 class WasmtimePreview3ExecutionCancellation : AutoCloseable {
-    internal val handle: COpaquePointer =
-        krwa_wasmtime_p3_execution_cancellation_create()
-            ?: throw WasmEngineException("Wasmtime Preview3 cancellation handle allocation failed")
+    private val handle: ULong =
+        krwa_wasmtime_p3_execution_cancellation_create().also { created ->
+            if (created == 0uL) {
+                throw WasmEngineException("Wasmtime Preview3 cancellation handle allocation failed")
+            }
+        }
     private var closed: Boolean = false
+
+    internal fun requireOpenHandle(): ULong {
+        check(!closed) { "Wasmtime Preview3 execution cancellation is closed" }
+        return handle
+    }
 
     fun cancel() {
         if (!closed) {
@@ -260,7 +267,7 @@ fun wasmtimePreview3ComponentCallString(
             call.maxMemories,
             call.maxFuel,
             call.executionTimeoutMillis,
-            cancellation?.handle,
+            cancellation?.requireOpenHandle() ?: 0uL,
             resultOut.ptr,
         )
         if (error != null) {
@@ -313,8 +320,8 @@ private inline fun <T> WasmtimePreview3ComponentConfig.withIosPreview3Call(
     val arguments = allocCStringArray(arguments)
     val environmentKeys = allocCStringArray(environmentEntries.map { entry -> entry.key })
     val environmentValues = allocCStringArray(environmentEntries.map { entry -> entry.value })
-    val allowedHosts = allocCStringArray(networkPolicy.allowedHosts)
-    val blockedHosts = allocCStringArray(networkPolicy.blockedHosts)
+    val allowedHosts = allocCStringArray(networkPolicy.encodedHttpEndpoints())
+    val blockedHosts = allocCStringArray(emptyList())
     val writablePreopens = allocWritablePreopens(preopens)
 
     precompiledComponentBytes.usePinned { pinned ->
@@ -331,7 +338,7 @@ private inline fun <T> WasmtimePreview3ComponentConfig.withIosPreview3Call(
                 environmentValues = environmentValues,
                 allowedHosts = allowedHosts,
                 blockedHosts = blockedHosts,
-                allowPrivateNetwork = if (networkPolicy.allowPrivateNetwork) 1u else 0u,
+                allowPrivateNetwork = 0u,
                 maxMemoryBytes = maxMemoryBytes.toULong(),
                 maxWasmStackBytes = maxWasmStackBytes.toULong(),
                 maxTableElements = maxTableElements,
@@ -396,7 +403,7 @@ private fun MemScope.allocWritablePreopens(preopens: List<WasmtimePreview3Preope
 }
 
 private fun iosWasmtimePreview3TargetUnavailableReason(target: String): String? =
-    when (target) {
+    when (iosWasmtimeTarget(target)) {
         WasmtimePulleyTarget -> null
         else -> "Wasmtime Preview3 iOS bridge only supports target $WasmtimePulleyTarget, got $target"
     }

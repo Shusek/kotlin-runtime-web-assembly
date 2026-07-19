@@ -15,7 +15,12 @@ typedef int32_t (*krwa_pulley_host_callback_t)(
     size_t result_count
 );
 
+#define KRWA_PULLEY_ERROR_KIND_ENGINE 0
+#define KRWA_PULLEY_ERROR_KIND_UNINSTANTIABLE 1
+
 const char *krwa_pulley_last_error(void);
+int32_t krwa_pulley_last_error_kind(void);
+void krwa_pulley_report_host_callback_error(const uint8_t *message, size_t message_size);
 const char *krwa_pulley_unavailable_reason(void);
 const char *krwa_wasmtime_component_wasi_unavailable_reason(void);
 const char *krwa_wasmtime_module_compiler_unavailable_reason(const char *target, uint64_t max_wasm_stack_bytes);
@@ -29,10 +34,10 @@ const char *krwa_wasmtime_compile_module_to_cwasm(
 );
 void krwa_wasmtime_compiled_module_free(const uint8_t *module_bytes);
 
-void *krwa_wasmtime_p3_execution_cancellation_create(void);
-void krwa_wasmtime_p3_execution_cancellation_cancel(void *handle);
-uint8_t krwa_wasmtime_p3_execution_cancellation_is_cancelled(const void *handle);
-void krwa_wasmtime_p3_execution_cancellation_free(void *handle);
+uint64_t krwa_wasmtime_p3_execution_cancellation_create(void);
+void krwa_wasmtime_p3_execution_cancellation_cancel(uint64_t handle);
+uint8_t krwa_wasmtime_p3_execution_cancellation_is_cancelled(uint64_t handle);
+void krwa_wasmtime_p3_execution_cancellation_free(uint64_t handle);
 
 const char *krwa_wasmtime_p3_precompiled_component_instantiate_unavailable_reason(
     const uint8_t *component_bytes,
@@ -172,7 +177,7 @@ const char *krwa_wasmtime_p3_precompiled_component_call_string(
     int64_t max_memories,
     int64_t max_fuel,
     uint64_t execution_timeout_millis,
-    const void *execution_cancellation,
+    uint64_t execution_cancellation,
     uintptr_t *result_out
 );
 
@@ -224,8 +229,8 @@ int64_t krwa_pulley_create(
 );
 void krwa_pulley_destroy(int64_t native_handle);
 
-int64_t krwa_pulley_bind_function(int64_t native_handle, const char *name, size_t name_size);
-int64_t krwa_pulley_bind_memory(int64_t native_handle, const char *name, size_t name_size);
+int64_t krwa_pulley_bind_function(int64_t native_handle, const uint8_t *name, size_t name_size);
+int64_t krwa_pulley_bind_memory(int64_t native_handle, const uint8_t *name, size_t name_size);
 
 int32_t krwa_pulley_call(
     int64_t native_handle,

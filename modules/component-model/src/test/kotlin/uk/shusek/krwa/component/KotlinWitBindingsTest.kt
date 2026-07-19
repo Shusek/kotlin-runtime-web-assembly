@@ -1,10 +1,15 @@
 package uk.shusek.krwa.component
 
 import java.nio.charset.StandardCharsets
+import java.nio.file.Files
+import java.nio.file.Path
+import okio.Path.Companion.toPath
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
 
 class KotlinWitBindingsTest {
     @Test
@@ -647,5 +652,50 @@ class KotlinWitBindingsTest {
         assertTrue(
             kotlin.contains("public fun guest(plugin: uk.shusek.krwa.component.WasmPlugin): Guest")
         )
+    }
+
+    @Test
+    fun rejectsInvalidPackageNamesBeforeTouchingTheOutputDirectory(@TempDir tempDir: Path) {
+        val witPackage =
+            WitPackage.parse(
+                """
+                package example:plugin;
+                world plugin {}
+                """
+                    .trimIndent()
+            )
+        val outputDirectory = tempDir.resolve("generated")
+        val outsideDirectory = tempDir.resolve("outside")
+        val sentinel = outsideDirectory.resolve("keep.txt")
+        Files.createDirectories(outsideDirectory)
+        Files.writeString(sentinel, "keep")
+
+        val invalidPackageNames =
+            listOf(
+                "",
+                " ",
+                outsideDirectory.toString(),
+                "../outside",
+                "example/generated",
+                ".example",
+                "example.",
+                "example..generated",
+                "example.9generated",
+                "example.generated-name",
+                "example.when",
+            )
+
+        for (packageName in invalidPackageNames) {
+            assertThrows(IllegalArgumentException::class.java) {
+                KotlinWitBindings.builder(witPackage)
+                    .withPackageName(packageName)
+                    .build()
+                    .writeToDirectory(outputDirectory.toString().toPath(normalize = true))
+            }
+        }
+
+        assertFalse(Files.exists(outputDirectory))
+        assertTrue(Files.exists(sentinel))
+        assertEquals("keep", Files.readString(sentinel))
     }
 }

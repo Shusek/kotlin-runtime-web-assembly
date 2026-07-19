@@ -29,7 +29,12 @@ fun androidWasmtimePreview3ComponentCallString(
 
 class AndroidWasmtimePreview3ExecutionCancellation : AutoCloseable {
     private val closed = AtomicBoolean(false)
-    internal val handle: Long = AndroidWasmtimePreview3Native.executionCancellationCreate()
+    private val handle: Long = AndroidWasmtimePreview3Native.executionCancellationCreate()
+
+    internal fun requireOpenHandle(): Long {
+        check(!closed.get()) { "Wasmtime Preview3 execution cancellation is closed" }
+        return handle
+    }
 
     fun cancel() {
         if (!closed.get()) {
@@ -98,7 +103,7 @@ fun androidWasmtimePreview3CommandRunString(
 }
 
 private fun androidWasmtimePreview3TargetUnavailableReason(target: String): String? =
-    when (target) {
+    when (androidWasmtimeTarget(target)) {
         WasmtimePulleyTarget -> null
         else -> "Wasmtime Preview3 Android bridge only supports target $WasmtimePulleyTarget, got $target"
     }
@@ -113,9 +118,9 @@ private fun WasmtimePreview3ComponentConfig.toAndroidPreview3Call(): AndroidPrev
         arguments = arguments.toTypedArray(),
         environmentKeys = environmentEntries.map { entry -> entry.key }.toTypedArray(),
         environmentValues = environmentEntries.map { entry -> entry.value }.toTypedArray(),
-        allowedHosts = networkPolicy.allowedHosts.toTypedArray(),
-        blockedHosts = networkPolicy.blockedHosts.toTypedArray(),
-        allowPrivateNetwork = networkPolicy.allowPrivateNetwork,
+        allowedHosts = networkPolicy.encodedHttpEndpoints().toTypedArray(),
+        blockedHosts = emptyArray<String>(),
+        allowPrivateNetwork = false,
         maxMemoryBytes = maxMemoryBytes,
         maxWasmStackBytes = maxWasmStackBytes,
         maxTableElements = maxTableElements,
@@ -206,7 +211,7 @@ private object AndroidWasmtimePreview3Native {
             call.maxMemories,
             call.maxFuel,
             call.executionTimeoutMillis,
-            cancellation?.handle ?: 0L,
+            cancellation?.requireOpenHandle() ?: 0L,
         )
     }
 
@@ -292,7 +297,7 @@ private object AndroidWasmtimePreview3Native {
             call.maxFuel,
             maxOutputBytes,
             call.executionTimeoutMillis,
-            cancellation?.handle ?: 0L,
+            cancellation?.requireOpenHandle() ?: 0L,
         )
     }
 

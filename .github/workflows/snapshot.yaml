@@ -107,10 +107,19 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6
 
-      - name: Verify native toolchain
+      - name: Install and verify pinned native toolchain
         run: |
-          cargo --version
+          set -euo pipefail
+          rust_version="$(sed -n 's/^rustRelease = "\(.*\)"$/\1/p' gradle/libs.versions.toml)"
+          rust_commit="$(sed -n 's/^rustReleaseCommit = "\(.*\)"$/\1/p' gradle/libs.versions.toml)"
+          test -n "$rust_version"
+          test -n "$rust_commit"
           rustup --version
+          rustup toolchain install "$rust_version" --profile minimal
+          rustc_metadata="$(rustup run "$rust_version" rustc -vV)"
+          test "$(printf '%s\n' "$rustc_metadata" | sed -n 's/^release: //p')" = "$rust_version"
+          test "$(printf '%s\n' "$rustc_metadata" | sed -n 's/^commit-hash: //p')" = "$rust_commit"
+          cargo "+$rust_version" --version
           cmake --version
           xcrun --sdk iphoneos --find clang++
           xcrun --sdk iphonesimulator --find clang++

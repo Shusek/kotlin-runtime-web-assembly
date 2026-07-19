@@ -9,13 +9,15 @@ variants are compiled for Java 25.
 
 ## Project Status
 
-This project is experimental and under active development. Every push to `main`
-publishes immutable `0.3.0-dev.<12-character-commit>` artifacts for evaluation and integration work;
-production use [should wait](https://youtube.com/shorts/xODPOxVDzFE) for
-reviewed releases and pinned versions. Public APIs in experimental modules may
-change while the Kotlin Multiplatform and Component Model surfaces settle. If
-you still decide to run it in production, who am I to judge? Pin versions
-carefully and expect breaking changes.
+`0.3.0-rc.1` is the pre-public release candidate. Its security boundaries,
+multiplatform behavior, ABI, Gradle plugins, and local Maven artifacts are
+verified by the repository release gate. The candidate is intended for pinned
+Suvio V4 integration testing; it is not a general-availability release.
+
+The public API may still change before `1.0.0`, but every published candidate is
+immutable. A fix after publication receives a new candidate version instead of
+reusing an existing coordinate. See the [changelog](CHANGELOG.md) and
+[release process](RELEASING.md).
 
 Special thanks to [dylibso/chicory](https://github.com/dylibso/chicory) for the
 solid foundations this project builds on.
@@ -33,10 +35,16 @@ Start with:
 - [CPU limits](docs/pages/execution/cpu-limits.md)
 - [WASI Preview 1](docs/pages/wasi/preview1.md)
 - [Component Model](docs/pages/components/index.md)
+- [Security guidance](docs/pages/guides/security.md)
+- [Release process](RELEASING.md)
 
 ## Quick Start
 
-Snapshots are published to the public GitHub Pages Maven repository:
+The current candidate version is `0.3.0-rc.1`. Before public promotion, consume
+this checkout with the composite build described under
+[Local Development](#local-development), or run `releaseGate` and point the
+consumer at `build/release-staging-repository`. Published candidates use the
+following Maven repository:
 
 ```kotlin
 // settings.gradle.kts
@@ -53,7 +61,7 @@ Use the BOM and add the runtime:
 
 ```kotlin
 // build.gradle.kts
-val runtimeVersion = "0.3.0-dev.<12-character-commit>"
+val runtimeVersion = "0.3.0-rc.1"
 
 dependencies {
     implementation(platform("uk.shusek.krwa:bom:$runtimeVersion"))
@@ -92,7 +100,17 @@ Use `wasi-preview3` when you want the Kotlin-first WASI 0.3 facade:
 
 ```kotlin
 val runtime = KotlinWasiPreview3.builder()
-    .withNetworking()
+    .withNetworkPolicy(
+        WasiNetworkPolicy(
+            httpEndpoints = setOf(
+                WasiHttpNetworkEndpoint(
+                    protocol = WasiHttpNetworkProtocol.Https,
+                    host = "api.example.com",
+                    port = 443,
+                ),
+            ),
+        ),
+    )
     .withResourceBudget(
         parallelism = 1,
         streamBufferCapacity = 64 * 1024,
@@ -104,6 +122,9 @@ val future = runtime.completed("ready")
 val value = runtime.await(future)
 runtime.close()
 ```
+
+Networking is deny-by-default. HTTP grants match scheme, canonical host, and
+port exactly; raw-socket grants are declared separately.
 
 The facade keeps canonical `WitFuture<T>` and `WitStream<T>` handles at the
 boundary, while adding coroutine adapters, typed stream helpers, Kotlin clock

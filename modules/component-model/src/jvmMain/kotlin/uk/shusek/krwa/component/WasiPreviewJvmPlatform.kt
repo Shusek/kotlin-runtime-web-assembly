@@ -24,13 +24,14 @@ import kotlinx.io.asSource
 import okio.FileSystem
 import okio.Path
 
-internal actual fun defaultWasiHttpClient(): WasiHttpClient =
-    KtorWasiHttpClient(
+internal actual fun defaultWasiHttpClient(): WasiHttpClient {
+    val client =
         KtorHttpClient(CIO) {
             install(HttpTimeout)
-            followRedirects = true
+            followRedirects = false
         }
-    )
+    return ownedWasiHttpClient(KtorWasiHttpClient(client), client::close)
+}
 
 internal actual fun ktorWasiHttpClient(httpClient: KtorHttpClient): WasiHttpClient =
     KtorWasiHttpClient(httpClient)
@@ -127,9 +128,17 @@ internal actual inline fun <T> withWasiPreviewLock(
 internal actual fun <T> wasiRunBlockingOrNull(block: suspend () -> T): T? =
     runBlocking { block() }
 
+/**
+ * Uses a caller-owned Ktor HTTP client. Closing the built [WasiPreview2] does not close
+ * [httpClient].
+ */
 public fun WasiPreview2.Builder.withKtorHttpClient(httpClient: KtorHttpClient): WasiPreview2.Builder =
     withHttpClient(KtorWasiHttpClient(httpClient))
 
+/**
+ * Uses a caller-owned Ktor HTTP client. Closing the built [WasiPreview3] does not close
+ * [httpClient].
+ */
 public fun WasiPreview3.Builder.withKtorHttpClient(httpClient: KtorHttpClient): WasiPreview3.Builder =
     withHttpClient(KtorWasiHttpClient(httpClient))
 

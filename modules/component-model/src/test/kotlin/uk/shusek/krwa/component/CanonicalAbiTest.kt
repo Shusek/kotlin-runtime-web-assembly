@@ -124,6 +124,58 @@ class CanonicalAbiTest {
     }
 
     @Test
+    fun resolvesQualifiedDuplicateTypeNamesByInterface() {
+        val witPackage =
+            WitPackage.parse(
+                """
+                package example:duplicate-records@1.0.0;
+
+                interface text {
+                  record shared {
+                    value: string,
+                  }
+
+                  load: func() -> shared;
+                }
+
+                interface binary {
+                  record shared {
+                    value: list<u8>,
+                    sequence: u64,
+                  }
+
+                  load: func() -> shared;
+                }
+                """
+                    .trimIndent()
+            )
+        val textType =
+            witPackage.interfaces().first { it.name() == "text" }.functions().single()
+                .results().single().type()
+        val binaryType =
+            witPackage.interfaces().first { it.name() == "binary" }.functions().single()
+                .results().single().type()
+        val abi = CanonicalAbi.of(witPackage)
+
+        assertEquals(8, abi.elementSize(textType))
+        assertEquals(4, abi.alignment(textType))
+        assertEquals(
+            listOf(CanonicalAbi.CoreValType.I32, CanonicalAbi.CoreValType.I32),
+            abi.flattenType(textType),
+        )
+        assertEquals(16, abi.elementSize(binaryType))
+        assertEquals(8, abi.alignment(binaryType))
+        assertEquals(
+            listOf(
+                CanonicalAbi.CoreValType.I32,
+                CanonicalAbi.CoreValType.I32,
+                CanonicalAbi.CoreValType.I64,
+            ),
+            abi.flattenType(binaryType),
+        )
+    }
+
+    @Test
     fun lowersResourceWrappersByHandleAccessor() {
         val witPackage =
             WitPackage.parse(

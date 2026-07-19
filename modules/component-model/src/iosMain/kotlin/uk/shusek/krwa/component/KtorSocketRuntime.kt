@@ -16,7 +16,12 @@ import io.ktor.utils.io.availableForRead
 import io.ktor.utils.io.cancel
 import io.ktor.utils.io.readAvailable
 import io.ktor.utils.io.writeFully
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.io.Buffer
@@ -24,8 +29,13 @@ import kotlinx.io.RawSink
 import kotlinx.io.RawSource
 import kotlinx.io.readByteArray
 
-internal class KtorSocketRuntime : WasiSuspendingSocketRuntime, WasiSuspendingTcpListenRuntime {
+internal class KtorSocketRuntime :
+    WasiSuspendingSocketRuntime,
+    WasiSuspendingTcpListenRuntime,
+    WasiPreview3TransportResource {
     private val selector = SelectorManager(Dispatchers.Default)
+    private val lifecycleLock = WasiPreviewLock()
+    private var closed: Boolean = false
 
     override fun connectTcp(
         remoteAddress: InetSocketAddress,
@@ -43,6 +53,7 @@ internal class KtorSocketRuntime : WasiSuspendingSocketRuntime, WasiSuspendingTc
         receiveBufferSize: Int,
         sendBufferSize: Int,
     ): WasiTcpConnection {
+        ensureOpen()
         val socket =
             aSocket(selector).tcp().connect(remoteAddress) {
                 this.keepAlive = keepAlive
@@ -61,8 +72,12 @@ internal class KtorSocketRuntime : WasiSuspendingSocketRuntime, WasiSuspendingTc
         localAddress: InetSocketAddress,
         backlogSize: Int,
     ): WasiTcpListener {
+        ensureOpen()
         val server =
-            aSocket(selector).tcp().bind(localAddress) { this.backlogSize = backlogSize }
+            aSocket(selector).tcp().bind(localAddress) {
+                this.backlogSize = backlogSize
+                reuseAddress = true
+            }
         return KtorTcpListener(server)
     }
 
@@ -71,6 +86,7 @@ internal class KtorSocketRuntime : WasiSuspendingSocketRuntime, WasiSuspendingTc
         receiveBufferSize: Int,
         sendBufferSize: Int,
     ): WasiUdpEndpoint = runBlocking {
+        ensureOpen()
         val socket =
             aSocket(selector).udp().bind(localAddress) {
                 this.receiveBufferSize = receiveBufferSize
@@ -78,22 +94,135 @@ internal class KtorSocketRuntime : WasiSuspendingSocketRuntime, WasiSuspendingTc
             }
         KtorUdpEndpoint(socket)
     }
+
+    override fun close() {
+        val shouldClose =
+            withWasiPreviewLock(lifecycleLock) {
+                if (closed) {
+                    false
+                } else {
+                    closed = true
+                    true
+                }
+            }
+        if (shouldClose) {
+            selector.close()
+        }
+    }
+
+    private fun ensureOpen() {
+        withWasiPreviewLock(lifecycleLock) {
+            check(!closed) { "WASI Preview 3 socket runtime is closed" }
+        }
+    }
 }
 
 private class KtorTcpListener(private val server: ServerSocket) : WasiTcpListener {
+    private val acceptScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val lifecycleLock = WasiPreviewLock()
+    private var pendingAccept: Deferred<WasiTcpConnection>? = null
+    private var closed: Boolean = false
+
     override val localAddress: InetSocketAddress
         get() = server.localAddress.toKtorInetSocketAddress()
 
     override fun accept(timeoutMillis: Long): WasiTcpConnection? = runBlocking {
-        withTimeoutOrNull(timeoutMillis) { accept() }
+        awaitPendingAccept(timeoutMillis)
     }
 
-    override suspend fun accept(): WasiTcpConnection = KtorTcpConnection(server.accept())
+    override suspend fun accept(): WasiTcpConnection =
+        checkNotNull(awaitPendingAccept(timeoutMillis = null))
 
     override fun isOpen(): Boolean = !server.socketContext.isCompleted
 
     override fun close() {
-        server.close()
+        var shouldClose = false
+        val pending =
+            withWasiPreviewLock(lifecycleLock) {
+                if (!closed) {
+                    closed = true
+                    shouldClose = true
+                }
+                pendingAccept.also { pendingAccept = null }
+            }
+        if (!shouldClose) {
+            return
+        }
+        var failure: Throwable? = null
+        try {
+            server.close()
+        } catch (closeFailure: Throwable) {
+            failure = closeFailure
+        }
+        acceptScope.cancel()
+        val accepted =
+            pending?.let { deferred ->
+                runBlocking {
+                    try {
+                        deferred.await()
+                    } catch (_: Throwable) {
+                        null
+                    }
+                }
+            }
+        if (accepted != null) {
+            try {
+                accepted.close()
+            } catch (closeFailure: Throwable) {
+                val previous = failure
+                if (previous == null) {
+                    failure = closeFailure
+                } else {
+                    previous.addSuppressed(closeFailure)
+                }
+            }
+        }
+        failure?.let { throw it }
+    }
+
+    private suspend fun awaitPendingAccept(timeoutMillis: Long?): WasiTcpConnection? {
+        while (true) {
+            val pending =
+                withWasiPreviewLock(lifecycleLock) {
+                    check(!closed) { "WASI TCP listener is closed" }
+                    pendingAccept
+                        ?: acceptScope
+                            .async { KtorTcpConnection(server.accept()) }
+                            .also { pendingAccept = it }
+                }
+            val accepted =
+                try {
+                    if (timeoutMillis == null) {
+                        pending.await()
+                    } else {
+                        withTimeoutOrNull(timeoutMillis) { pending.await() }
+                    }
+                } catch (failure: Throwable) {
+                    if (pending.isCancelled) {
+                        withWasiPreviewLock(lifecycleLock) {
+                            if (pendingAccept === pending) {
+                                pendingAccept = null
+                            }
+                        }
+                    }
+                    throw failure
+                }
+            if (accepted == null) {
+                return null
+            }
+            val claimed =
+                withWasiPreviewLock(lifecycleLock) {
+                    if (pendingAccept === pending) {
+                        pendingAccept = null
+                        true
+                    } else {
+                        false
+                    }
+                }
+            if (claimed) {
+                return accepted
+            }
+        }
     }
 }
 

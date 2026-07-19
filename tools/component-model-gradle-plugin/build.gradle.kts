@@ -28,6 +28,7 @@ extensions.configure<BasePluginExtension> {
 
 java {
     withSourcesJar()
+    withJavadocJar()
 }
 
 extensions.configure<KotlinJvmProjectExtension> {
@@ -76,6 +77,7 @@ tasks.withType<Test>().configureEach {
     useJUnitPlatform()
     maxHeapSize = "2g"
     jvmArgs("--enable-native-access=ALL-UNNAMED")
+    systemProperty("org.gradle.testkit.dir", gradle.gradleUserHomeDir.absolutePath)
 }
 
 tasks.withType<Jar>().configureEach {

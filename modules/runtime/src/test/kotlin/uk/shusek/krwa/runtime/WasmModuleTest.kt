@@ -277,6 +277,19 @@ class WasmModuleTest {
     }
 
     @Test
+    fun shouldResolveMultibyteUtf8PulleyExportNames() {
+        val module = Parser.parse(MULTIBYTE_EXPORTS_WASM)
+        val instance = tryBuildPulley(module) ?: return
+
+        instance.use {
+            assertEquals(42L, instance.export(MULTIBYTE_FUNCTION_EXPORT).apply()[0])
+            val memory = instance.exports().memory(MULTIBYTE_MEMORY_EXPORT)
+            memory.writeByte(0, 42)
+            assertEquals(42, memory.read(0).toInt())
+        }
+    }
+
+    @Test
     fun shouldBridgePulleyHostFunctionAndMemoryWhenLinked() {
         val count = AtomicInteger()
         val expected = "Hello, World!"
@@ -461,7 +474,7 @@ class WasmModuleTest {
     @Test
     fun shouldTrapOnUnreachable() {
         val instanceBuilder = Instance.builder(loadModule("compiled/trap.wat.wasm"))
-        assertThrows(TrapException::class.java) { instanceBuilder.build() }
+        assertThrows(UninstantiableException::class.java) { instanceBuilder.build() }
     }
 
     @Test
@@ -1344,6 +1357,24 @@ class WasmModuleTest {
         private fun section(id: Int, body: ByteArray): ByteArray = b(id, body.size) + body
 
         private fun b(vararg bytes: Int): ByteArray = bytes.map { it.toByte() }.toByteArray()
+
+        private const val MULTIBYTE_FUNCTION_EXPORT = "ꠀ"
+        private const val MULTIBYTE_MEMORY_EXPORT = "記憶"
+        private val MULTIBYTE_EXPORTS_WASM =
+            byteArrayOf(
+                0x00, 0x61, 0x73, 0x6D,
+                0x01, 0x00, 0x00, 0x00,
+                0x01, 0x05, 0x01, 0x60, 0x00, 0x01, 0x7F,
+                0x03, 0x02, 0x01, 0x00,
+                0x05, 0x03, 0x01, 0x00, 0x01,
+                0x07, 0x10, 0x02,
+                0x03, 0xEA.toByte(), 0xA0.toByte(), 0x80.toByte(), 0x00, 0x00,
+                0x06,
+                0xE8.toByte(), 0xA8.toByte(), 0x98.toByte(),
+                0xE6.toByte(), 0x86.toByte(), 0xB6.toByte(),
+                0x02, 0x00,
+                0x0A, 0x06, 0x01, 0x04, 0x00, 0x41, 0x2A, 0x0B,
+            )
 
         private fun factorial(number: Int): Long {
             var result = 1L

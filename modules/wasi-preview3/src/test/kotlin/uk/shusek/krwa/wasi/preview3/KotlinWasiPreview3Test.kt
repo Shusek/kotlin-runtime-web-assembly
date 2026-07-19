@@ -317,75 +317,83 @@ class KotlinWasiPreview3Test {
 
     @Test
     fun byteChunkFlowToWitStreamWritesProgressivelyWithBackpressure() = runBlocking {
-        val runtime =
-            KotlinWasiPreview3.builder()
-                .withResourceBudget(parallelism = 1, streamBufferCapacity = 1)
-                .withCoroutineScope(this)
-                .build()
-        val secondChunkWritten = CompletableDeferred<Unit>()
-        val stream =
-            flow {
-                emit(byteArrayOf(1))
-                emit(byteArrayOf(2))
-                secondChunkWritten.complete(Unit)
+        KotlinWasiPreview3
+            .builder()
+            .withResourceBudget(parallelism = 1, streamBufferCapacity = 1)
+            .withCoroutineScope(this)
+            .build()
+            .use { runtime ->
+                val secondChunkWritten = CompletableDeferred<Unit>()
+                val stream =
+                    flow {
+                        emit(byteArrayOf(1))
+                        emit(byteArrayOf(2))
+                        secondChunkWritten.complete(Unit)
+                    }
+                        .toWitByteStream(runtime.wasi)
+
+                delay(1)
+
+                assertFalse(secondChunkWritten.isCompleted)
+                assertArrayEquals(byteArrayOf(1), runtime.wasi.readByteStreamChunk(stream, 1))
+                assertEquals(Unit, secondChunkWritten.await())
+                assertArrayEquals(byteArrayOf(2), runtime.wasi.readByteStreamChunk(stream, 1))
+                assertNull(runtime.wasi.readByteStreamChunk(stream, 1))
             }
-                .toWitByteStream(runtime.wasi)
-
-        delay(1)
-
-        assertFalse(secondChunkWritten.isCompleted)
-        assertArrayEquals(byteArrayOf(1), runtime.wasi.readByteStreamChunk(stream, 1))
-        assertEquals(Unit, secondChunkWritten.await())
-        assertArrayEquals(byteArrayOf(2), runtime.wasi.readByteStreamChunk(stream, 1))
-        assertNull(runtime.wasi.readByteStreamChunk(stream, 1))
     }
 
     @Test
     fun kotlinxIoHelpersBridgeRawSourceAndRawSink() = runBlocking {
-        val runtime =
-            KotlinWasiPreview3.builder()
-                .withCoroutineScope(this)
-                .build()
-        var sourceClosed = false
-        val source =
-            object : RawSource {
-                private val chunks = ArrayDeque(listOf(byteArrayOf(1), byteArrayOf(2, 3)))
+        KotlinWasiPreview3
+            .builder()
+            .withCoroutineScope(this)
+            .build()
+            .use { runtime ->
+                var sourceClosed = false
+                val source =
+                    object : RawSource {
+                        private val chunks =
+                            ArrayDeque(listOf(byteArrayOf(1), byteArrayOf(2, 3)))
 
-                override fun readAtMostTo(sink: KotlinxBuffer, byteCount: Long): Long {
-                    val chunk = chunks.removeFirstOrNull() ?: return -1L
-                    sink.write(chunk)
-                    return chunk.size.toLong()
-                }
+                        override fun readAtMostTo(
+                            sink: KotlinxBuffer,
+                            byteCount: Long,
+                        ): Long {
+                            val chunk = chunks.removeFirstOrNull() ?: return -1L
+                            sink.write(chunk)
+                            return chunk.size.toLong()
+                        }
 
-                override fun close() {
-                    sourceClosed = true
-                }
+                        override fun close() {
+                            sourceClosed = true
+                        }
+                    }
+                val written = ArrayList<Byte>()
+                var sinkFlushed = false
+                var sinkClosed = false
+                val sink =
+                    object : RawSink {
+                        override fun write(source: KotlinxBuffer, byteCount: Long) {
+                            written += source.readByteArray().toList()
+                        }
+
+                        override fun flush() {
+                            sinkFlushed = true
+                        }
+
+                        override fun close() {
+                            sinkClosed = true
+                        }
+                    }
+
+                val stream = source.toWitByteStream(runtime.wasi, chunkSize = 2)
+                stream.writeTo(sink, runtime.wasi, chunkSize = 1, closeSink = true)
+
+                assertEquals(listOf(1.toByte(), 2.toByte(), 3.toByte()), written)
+                assertTrue(sourceClosed)
+                assertTrue(sinkFlushed)
+                assertTrue(sinkClosed)
             }
-        val written = ArrayList<Byte>()
-        var sinkFlushed = false
-        var sinkClosed = false
-        val sink =
-            object : RawSink {
-                override fun write(source: KotlinxBuffer, byteCount: Long) {
-                    written += source.readByteArray().toList()
-                }
-
-                override fun flush() {
-                    sinkFlushed = true
-                }
-
-                override fun close() {
-                    sinkClosed = true
-                }
-            }
-
-        val stream = source.toWitByteStream(runtime.wasi, chunkSize = 2)
-        stream.writeTo(sink, runtime.wasi, chunkSize = 1, closeSink = true)
-
-        assertEquals(listOf(1.toByte(), 2.toByte(), 3.toByte()), written)
-        assertTrue(sourceClosed)
-        assertTrue(sinkFlushed)
-        assertTrue(sinkClosed)
     }
 
     @Test

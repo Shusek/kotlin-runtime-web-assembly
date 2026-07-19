@@ -1,6 +1,5 @@
 package uk.shusek.krwa.runtime
 
-import uk.shusek.krwa.wasm.WasmEngineException
 import uk.shusek.krwa.wasm.WasmModule
 
 internal actual object PulleyExecution {
@@ -9,12 +8,11 @@ internal actual object PulleyExecution {
         imports: ImportValues,
         hostInstance: Instance,
     ): PlatformInstanceExecution =
-        PulleyExecutionProviders.installed()?.createCheckedPulleyExecution(module, imports, hostInstance)
-            ?: throw WasmEngineException(UnavailableReason)
+        provider().createCheckedPulleyExecution(module, imports, hostInstance)
 
     actual fun availability(): ExecutionBackendAvailability =
-        PulleyExecutionProviders.installed()?.availability()
-            ?: ExecutionBackendAvailability(available = false, reason = UnavailableReason)
+        provider().availability()
 
-    private const val UnavailableReason = "Wasmtime Pulley execution is not linked on this iOS runtime"
+    private fun provider(): PulleyExecutionProvider =
+        PulleyExecutionProviders.installed() ?: IosPulleyExecutionProvider
 }

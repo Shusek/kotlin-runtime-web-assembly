@@ -1,0 +1,22 @@
+# KRWA-1: exact Wasmtime/Pulley bridge exclusions; wildcards are forbidden.
+SpecV1BrTableTest.test147
+SpecV1BrTableTest.test148
+SpecV1BrTableTest.test149
+SpecV1BulkTest.test75
+# Non-function imports are outside the current Wasmtime/Pulley host bridge.
+SpecV1MemoryGrowTest.instantiate_Mgim1Instance
+SpecV1MemoryGrowTest.register_Mgim1Instance
+SpecV1MemoryGrowTest.test94
+SpecV1MemoryGrowTest.instantiate_Mgim2Instance
+SpecV1MemoryGrowTest.test96
+SpecV1TableTest.instantiate_testModule8Instance
+# Reference values are intentionally rejected at the numeric-only host boundary.
+SpecV1SelectTest.test29
+SpecV1SelectTest.test30
+SpecV1SelectTest.test35
+SpecV1SelectTest.test36
+SpecV1TableGetTest.test1
+SpecV1TableGetTest.test2
+SpecV1TableGetTest.test3
+SpecV1TableGetTest.test4
+SpecV1TableGetTest.test6

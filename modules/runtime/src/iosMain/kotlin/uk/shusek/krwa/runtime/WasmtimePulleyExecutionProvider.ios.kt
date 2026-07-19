@@ -37,17 +37,20 @@ import uk.shusek.krwa.runtime.TrapException
 import uk.shusek.krwa.runtime.WasmFunctionHandle
 import uk.shusek.krwa.runtime.WasmRuntimeException
 import uk.shusek.krwa.wasm.InvalidException
+import uk.shusek.krwa.wasm.UninstantiableException
 import uk.shusek.krwa.wasm.WasmEngineException
 import uk.shusek.krwa.wasm.WasmModule
 import uk.shusek.krwa.wasm.types.DataSegment
 import uk.shusek.krwa.wasm.types.ExternalType
 import uk.shusek.krwa.wasm.types.FunctionType
+import uk.shusek.krwa.runtime.wasmtimepulley.KRWA_PULLEY_ERROR_KIND_UNINSTANTIABLE
 import uk.shusek.krwa.runtime.wasmtimepulley.krwa_pulley_bind_function
 import uk.shusek.krwa.runtime.wasmtimepulley.krwa_pulley_bind_memory
 import uk.shusek.krwa.runtime.wasmtimepulley.krwa_pulley_call
 import uk.shusek.krwa.runtime.wasmtimepulley.krwa_pulley_create
 import uk.shusek.krwa.runtime.wasmtimepulley.krwa_pulley_destroy
 import uk.shusek.krwa.runtime.wasmtimepulley.krwa_pulley_last_error
+import uk.shusek.krwa.runtime.wasmtimepulley.krwa_pulley_last_error_kind
 import uk.shusek.krwa.runtime.wasmtimepulley.krwa_pulley_memory_byte_size
 import uk.shusek.krwa.runtime.wasmtimepulley.krwa_pulley_memory_fill
 import uk.shusek.krwa.runtime.wasmtimepulley.krwa_pulley_memory_grow
@@ -65,18 +68,22 @@ import uk.shusek.krwa.runtime.wasmtimepulley.krwa_pulley_memory_write_i16
 import uk.shusek.krwa.runtime.wasmtimepulley.krwa_pulley_memory_write_i32
 import uk.shusek.krwa.runtime.wasmtimepulley.krwa_pulley_memory_write_i64
 import uk.shusek.krwa.runtime.wasmtimepulley.krwa_pulley_memory_write_u8
+import uk.shusek.krwa.runtime.wasmtimepulley.krwa_pulley_report_host_callback_error
 
 actual fun installWasmtimePulleyExecutionProviderIfAvailable() {
     PulleyExecutionProviders.install(IosPulleyExecutionProvider)
 }
 
-actual fun wasmtimeTargetUnavailableReason(target: String): String? = when (target) {
+actual fun wasmtimeTargetUnavailableReason(target: String): String? = when (iosWasmtimeTarget(target)) {
     WasmtimePulleyTarget -> iosWasmtimePulleyUnavailableReason()
     WasmtimeNativeTarget -> "Wasmtime native AOT target $target is not supported on iOS"
     else -> "Wasmtime target $target is not supported on iOS"
 }
 
-private object IosPulleyExecutionProvider : PulleyExecutionProvider {
+internal fun iosWasmtimeTarget(target: String): String =
+    if (target == WasmtimeAutomaticTarget) WasmtimePulleyTarget else target
+
+internal object IosPulleyExecutionProvider : PulleyExecutionProvider {
     override fun availability(): ExecutionBackendAvailability =
         wasmtimeTargetUnavailableReason(WasmtimePulleyTarget)?.let { reason ->
             ExecutionBackendAvailability(available = false, reason = reason)
@@ -680,7 +687,11 @@ private fun createNativePulleyExecution(
                 staticCFunction(::invokeIosHostFunction),
             )
         if (handle == 0L) {
-            throw WasmEngineException(lastPulleyError())
+            val message = lastPulleyError()
+            if (krwa_pulley_last_error_kind() == KRWA_PULLEY_ERROR_KIND_UNINSTANTIABLE) {
+                throw UninstantiableException(message)
+            }
+            throw WasmEngineException(message)
         }
         handle
     }
@@ -726,16 +737,36 @@ private fun callNativePulleyFunction(
     results
 }
 
-private fun bindFunction(nativeHandle: Long, name: String): Long {
-    val nativeFunction = krwa_pulley_bind_function(nativeHandle, name, name.encodeToByteArray().size.convert())
+private fun bindFunction(nativeHandle: Long, name: String): Long = memScoped {
+    val nameUtf8 = name.encodeToByteArray()
+    val namePointer = allocArray<UByteVar>(nameUtf8.size.coerceAtLeast(1))
+    for (i in nameUtf8.indices) {
+        namePointer[i] = nameUtf8[i].toUByte()
+    }
+    val nativeFunction =
+        krwa_pulley_bind_function(
+            nativeHandle,
+            namePointer,
+            nameUtf8.size.convert(),
+        )
     if (nativeFunction == 0L) {
         throw WasmEngineException(lastPulleyError())
     }
-    return nativeFunction
+    nativeFunction
 }
 
-private fun bindMemory(nativeHandle: Long, name: String): Long =
-    krwa_pulley_bind_memory(nativeHandle, name, name.encodeToByteArray().size.convert())
+private fun bindMemory(nativeHandle: Long, name: String): Long = memScoped {
+    val nameUtf8 = name.encodeToByteArray()
+    val namePointer = allocArray<UByteVar>(nameUtf8.size.coerceAtLeast(1))
+    for (i in nameUtf8.indices) {
+        namePointer[i] = nameUtf8[i].toUByte()
+    }
+    krwa_pulley_bind_memory(
+        nativeHandle,
+        namePointer,
+        nameUtf8.size.convert(),
+    )
+}
 
 private fun invokeIosHostFunction(
     callbackId: Long,
@@ -751,8 +782,37 @@ private fun invokeIosHostFunction(
         results?.set(i, resultValues[i])
     }
     0
-} catch (_: Throwable) {
+} catch (failure: Throwable) {
+    reportIosHostCallbackFailure(failure)
     -1
+}
+
+private fun reportIosHostCallbackFailure(failure: Throwable) {
+    val message =
+        buildString {
+            var current: Throwable? = failure
+            var depth = 0
+            while (current != null && depth < MAX_HOST_CALLBACK_CAUSE_DEPTH) {
+                if (depth > 0) append("\nCaused by: ")
+                append(current)
+                current = current.cause
+                depth += 1
+            }
+        }
+            .encodeToByteArray()
+            .let { bytes ->
+                if (bytes.size <= MAX_HOST_CALLBACK_ERROR_BYTES) {
+                    bytes
+                } else {
+                    bytes.copyOf(MAX_HOST_CALLBACK_ERROR_BYTES)
+                }
+            }
+    message.usePinned { pinned ->
+        krwa_pulley_report_host_callback_error(
+            pinned.addressOf(0).reinterpret<UByteVar>(),
+            message.size.convert(),
+        )
+    }
 }
 
 private fun MemScope.allocIntArray(values: IntArray): CPointer<IntVar>? {
@@ -789,3 +849,6 @@ private fun checkMemoryStatus(status: Int) {
 }
 
 private fun lastPulleyError(): String = krwa_pulley_last_error()?.toKString() ?: "Wasmtime Pulley bridge failed"
+
+private const val MAX_HOST_CALLBACK_CAUSE_DEPTH = 8
+private const val MAX_HOST_CALLBACK_ERROR_BYTES = 16 * 1024

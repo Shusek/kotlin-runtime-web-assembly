@@ -20,6 +20,7 @@ internal actual object PulleyExecution {
 }
 
 actual fun wasmtimeTargetUnavailableReason(target: String): String? = when (target) {
+    WasmtimeAutomaticTarget -> "Wasmtime execution is not available on wasmJs"
     WasmtimeNativeTarget -> "Wasmtime native AOT target $target is not available on wasmJs"
     WasmtimePulleyTarget -> "Wasmtime Pulley execution is not available on wasmJs"
     else -> "Wasmtime target $target is not supported on wasmJs"

@@ -39,6 +39,60 @@ private const val SOCKETS_PACKAGE: String = "wasi:sockets"
 private const val MAX_IO_CHUNK: Int = 4096
 private const val MAX_UDP_DATAGRAM: Int = 65_535
 
+private object DefaultWasiPreview2HttpClient : WasiHttpClient {
+    override fun send(request: WasiHttpRequest): WasiHttpResponse =
+        error("The default WASI Preview 2 HTTP client is created by Builder.build()")
+}
+
+private class WasiPreview2Transports(
+    val httpClient: WasiHttpClient,
+    val socketRuntime: WasiSocketRuntime,
+    ownedHttpClient: WasiPreview2TransportResource?,
+    ownedSocketRuntime: WasiPreview2TransportResource?,
+) : WasiPreview2TransportResource {
+    private val lifecycleLock = WasiPreviewLock()
+    private val ownedResources: List<WasiPreview2TransportResource> =
+        listOfNotNull(ownedSocketRuntime, ownedHttpClient)
+    private var closed: Boolean = false
+
+    override fun close() {
+        val resources =
+            withWasiPreviewLock(lifecycleLock) {
+                if (closed) {
+                    emptyList()
+                } else {
+                    closed = true
+                    ownedResources
+                }
+            }
+        var failure: Throwable? = null
+        for (resource in resources) {
+            try {
+                resource.close()
+            } catch (closeFailure: Throwable) {
+                val previous = failure
+                if (previous == null) {
+                    failure = closeFailure
+                } else {
+                    previous.addSuppressed(closeFailure)
+                }
+            }
+        }
+        failure?.let { throw it }
+    }
+}
+
+private fun closeWasiPreview2TransportAfterFailure(
+    failure: Throwable,
+    resource: WasiPreview2TransportResource,
+) {
+    try {
+        resource.close()
+    } catch (closeFailure: Throwable) {
+        failure.addSuppressed(closeFailure)
+    }
+}
+
 private fun defaultMonotonicClock(): () -> Long {
     val mark = TimeSource.Monotonic.markNow()
     return { mark.elapsedNow().inWholeNanoseconds }
@@ -108,7 +162,11 @@ private fun camelCaseMemberName(name: String): String {
     return out.toString()
 }
 
-class WasiPreview2 private constructor(builder: Builder) {
+class WasiPreview2
+private constructor(
+    builder: Builder,
+    private val transports: WasiPreview2Transports,
+) : AutoCloseable {
 
     companion object {
         const val DEFAULT_VERSION: String = "0.2.11"
@@ -148,6 +206,7 @@ class WasiPreview2 private constructor(builder: Builder) {
     private val httpClient: WasiHttpClient
     private val fileSystem: FileSystem
     private val socketRuntime: WasiSocketRuntime
+    private val lifecycleLock = WasiPreviewLock()
     private val inputStreams: WitResourceTable<WasiInputStream> = WitResourceTable()
     private val outputStreams: WitResourceTable<WasiOutputStream> = WitResourceTable()
     private val descriptors: WitResourceTable<FilesystemDescriptor> = WitResourceTable()
@@ -176,6 +235,7 @@ class WasiPreview2 private constructor(builder: Builder) {
     private val outgoingBodies: WitResourceTable<OutgoingBody> = WitResourceTable()
     private val futureIncomingResponses: WitResourceTable<FutureIncomingResponse> =
         WitResourceTable()
+    private var closed: Boolean = false
 
     init {
         this.version = builder.version
@@ -200,9 +260,9 @@ class WasiPreview2 private constructor(builder: Builder) {
         this.terminalStdout = builder.terminalStdout
         this.terminalStderr = builder.terminalStderr
         this.networkingEnabled = builder.networkingEnabled
-        this.httpClient = builder.httpClient
+        this.httpClient = transports.httpClient
         this.fileSystem = builder.fileSystem
-        this.socketRuntime = builder.socketRuntime
+        this.socketRuntime = transports.socketRuntime
     }
 
     fun version(): String {
@@ -219,6 +279,106 @@ class WasiPreview2 private constructor(builder: Builder) {
 
     fun initialCwd(): String? {
         return initialCwd
+    }
+
+    /**
+     * Closes every resource owned by this host.
+     *
+     * Transports supplied to [Builder.withHttpClient] remain caller-owned. Internally created
+     * transports are closed exactly once.
+     */
+    override fun close() {
+        val shouldClose =
+            withWasiPreviewLock(lifecycleLock) {
+                if (closed) {
+                    false
+                } else {
+                    closed = true
+                    true
+                }
+            }
+        if (!shouldClose) {
+            return
+        }
+        try {
+            closeResources()
+        } catch (failure: Throwable) {
+            closeWasiPreview2TransportAfterFailure(failure, transports)
+            throw failure
+        }
+        transports.close()
+    }
+
+    private fun closeResources() {
+        val inputStreamsToClose = inputStreams.close()
+        val outputStreamsToClose = outputStreams.close()
+        val tcpSocketsToClose = tcpSockets.close()
+        val udpSocketsToClose = udpSockets.close()
+        val incomingResponsesToClose = incomingResponses.close()
+        val incomingBodiesToClose = incomingBodies.close()
+        val futureIncomingResponsesToClose = futureIncomingResponses.close()
+
+        descriptors.close()
+        directoryEntryStreams.close()
+        errors.close()
+        pollables.close()
+        terminalInputs.close()
+        terminalOutputs.close()
+        networks.close()
+        resolveAddressStreams.close()
+        incomingDatagramStreams.close()
+        outgoingDatagramStreams.close()
+        httpFields.close()
+        incomingRequests.close()
+        outgoingRequests.close()
+        requestOptions.close()
+        responseOutparams.close()
+        futureTrailers.close()
+        outgoingResponses.close()
+        outgoingBodies.close()
+
+        for (stream in inputStreamsToClose) {
+            if (stream !== stdin) {
+                closePreview2ResourceIgnoringFailure { stream.close() }
+            }
+        }
+        for (stream in outputStreamsToClose) {
+            if (stream !== stdout && stream !== stderr) {
+                closePreview2ResourceIgnoringFailure { stream.close() }
+            }
+        }
+        for (socket in tcpSocketsToClose) {
+            closePreview2ResourceIgnoringFailure { socket.connection?.close() }
+            socket.connection = null
+            closePreview2ResourceIgnoringFailure { socket.listener?.close() }
+            socket.listener = null
+        }
+        for (socket in udpSocketsToClose) {
+            closePreview2ResourceIgnoringFailure { socket.endpoint?.close() }
+            socket.endpoint = null
+        }
+        for (response in incomingResponsesToClose) {
+            if (!response.bodyConsumed) {
+                closePreview2ResourceIgnoringFailure { response.body.close() }
+            }
+        }
+        for (body in incomingBodiesToClose) {
+            if (!body.streamTaken) {
+                closePreview2ResourceIgnoringFailure { body.body.close() }
+            }
+        }
+        for (future in futureIncomingResponsesToClose) {
+            if (!future.consumed && !future.response.bodyConsumed) {
+                closePreview2ResourceIgnoringFailure { future.response.body.close() }
+            }
+        }
+    }
+
+    private fun closePreview2ResourceIgnoringFailure(block: () -> Unit) {
+        try {
+            block()
+        } catch (_: Throwable) {
+        }
     }
 
     fun inputStreams(): WitResourceTable<WasiInputStream> {
@@ -3943,8 +4103,16 @@ class WasiPreview2 private constructor(builder: Builder) {
         var terminalStdout: Boolean = false
         var terminalStderr: Boolean = false
         var networkingEnabled: Boolean = false
-        var httpClient: WasiHttpClient = defaultWasiHttpClient()
-        internal var socketRuntime: WasiSocketRuntime = defaultWasiSocketRuntime()
+        /**
+         * HTTP transport used by this host.
+         *
+         * Assigning a client transfers no ownership: the caller remains responsible for closing it.
+         * The internally created default transport is owned and closed by the built host.
+         */
+        var httpClient: WasiHttpClient = DefaultWasiPreview2HttpClient
+        internal var defaultHttpClientFactory: () -> WasiHttpClient = ::defaultWasiHttpClient
+        internal var socketRuntime: WasiSocketRuntime? = null
+        internal var socketRuntimeFactory: () -> WasiSocketRuntime = ::defaultWasiSocketRuntime
 
         constructor() {}
 
@@ -4081,11 +4249,18 @@ class WasiPreview2 private constructor(builder: Builder) {
             return this
         }
 
+        /**
+         * Uses a caller-owned HTTP transport. [WasiPreview2.close] never closes the supplied client.
+         */
         fun withHttpClient(httpClient: WasiHttpClient): Builder {
             this.httpClient = requirePresent(httpClient, "httpClient")
             return this
         }
 
+        /**
+         * Uses a caller-owned Ktor HTTP client. [WasiPreview2.close] never closes the supplied
+         * client.
+         */
         fun withHttpClient(httpClient: io.ktor.client.HttpClient): Builder =
             withHttpClient(ktorWasiHttpClient(requirePresent(httpClient, "httpClient")))
 
@@ -4149,7 +4324,55 @@ class WasiPreview2 private constructor(builder: Builder) {
         }
 
         fun build(): WasiPreview2 {
-            return WasiPreview2(this)
+            val ownsHttpClient = httpClient === DefaultWasiPreview2HttpClient
+            var ownedHttpClient: WasiPreview2TransportResource? = null
+            var ownedSocketRuntime: WasiPreview2TransportResource? = null
+            var selectedTransports: WasiPreview2Transports? = null
+            try {
+                val selectedHttpClient =
+                    if (ownsHttpClient) {
+                        defaultHttpClientFactory().also { client ->
+                            ownedHttpClient =
+                                client as? WasiPreview2TransportResource
+                                    ?: error(
+                                        "The default WASI Preview 2 HTTP client must be closeable"
+                                    )
+                        }
+                    } else {
+                        httpClient
+                    }
+                val selectedSocketRuntime =
+                    socketRuntime
+                        ?: socketRuntimeFactory().also { runtime ->
+                            ownedSocketRuntime =
+                                runtime as? WasiPreview2TransportResource
+                                    ?: error(
+                                        "The default WASI Preview 2 socket runtime must be closeable"
+                                    )
+                        }
+                val transports =
+                    WasiPreview2Transports(
+                        selectedHttpClient,
+                        selectedSocketRuntime,
+                        ownedHttpClient,
+                        ownedSocketRuntime,
+                    )
+                selectedTransports = transports
+                return WasiPreview2(this, transports)
+            } catch (failure: Throwable) {
+                val transports = selectedTransports
+                if (transports != null) {
+                    closeWasiPreview2TransportAfterFailure(failure, transports)
+                } else {
+                    ownedSocketRuntime?.let { resource ->
+                        closeWasiPreview2TransportAfterFailure(failure, resource)
+                    }
+                    ownedHttpClient?.let { resource ->
+                        closeWasiPreview2TransportAfterFailure(failure, resource)
+                    }
+                }
+                throw failure
+            }
         }
 
         private fun requireNanos(name: String, value: Long): Long {
@@ -4194,6 +4417,9 @@ class WasiPreview2 private constructor(builder: Builder) {
         private val source: RawSource,
         private val available: (() -> Int)? = null,
     ) {
+        private val lifecycleLock = WasiPreviewLock()
+        private var closed: Boolean = false
+
         @Throws(IOException::class)
         internal fun readBytes(len: Int, blocking: Boolean): ByteArray {
             var count = len
@@ -4227,7 +4453,18 @@ class WasiPreview2 private constructor(builder: Builder) {
 
         @Throws(IOException::class)
         internal fun close() {
-            source.close()
+            val shouldClose =
+                withWasiPreviewLock(lifecycleLock) {
+                    if (closed) {
+                        false
+                    } else {
+                        closed = true
+                        true
+                    }
+                }
+            if (shouldClose) {
+                source.close()
+            }
         }
 
         internal companion object {
@@ -4242,6 +4479,9 @@ class WasiPreview2 private constructor(builder: Builder) {
     }
 
     class WasiOutputStream internal constructor(private val sink: RawSink) {
+        private val lifecycleLock = WasiPreviewLock()
+        private var closed: Boolean = false
+
         @Throws(IOException::class)
         internal fun write(bytes: ByteArray) {
             val buffer = Buffer()
@@ -4256,7 +4496,18 @@ class WasiPreview2 private constructor(builder: Builder) {
 
         @Throws(IOException::class)
         internal fun close() {
-            sink.close()
+            val shouldClose =
+                withWasiPreviewLock(lifecycleLock) {
+                    if (closed) {
+                        false
+                    } else {
+                        closed = true
+                        true
+                    }
+                }
+            if (shouldClose) {
+                sink.close()
+            }
         }
     }
 

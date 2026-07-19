@@ -136,6 +136,33 @@ val wit = WitPackage.parse("""
 val kotlin = KotlinWitBindings.generate(wit, "example.plugins")
 ```
 
+`WitPackage.parse(source)` uses finite default resource limits. For untrusted
+WIT, pass `WitParserLimits` explicitly and choose bounds appropriate for the
+largest contract the host accepts:
+
+```kotlin
+val wit =
+    WitPackage.parse(
+        source,
+        WitParserLimits(
+            maxSourceChars = 256 * 1024,
+            maxTokens = 50_000,
+            maxDeclarations = 5_000,
+            maxMembersPerDeclaration = 1_000,
+            maxTypeNesting = 64,
+            maxPackageNesting = 32,
+            maxIncludeDepth = 32,
+            maxExpandedWorldItems = 10_000,
+        ),
+    )
+```
+
+The limits apply while tokenizing, parsing nested package blocks, following
+world includes, and expanding included world items. A violation throws
+`WitParseLimitException`; its `limitName`, `configuredLimit`, and `actual`
+properties identify the rejected budget. Cyclic world includes remain invalid
+independently of the configured depth limit.
+
 For a self-contained generated file, use
 `KotlinWitBindings.builder(wit).withRuntimeTypes(true).build().generate()`.
 Build scripts can write generated Kotlin contracts directly from a WIT file or
@@ -348,7 +375,7 @@ Loading a plugin world:
 val plugin = WasmPlugin.builder(wit)
     .withWorld("plugin")
     .withModule(wasmBytes)
-    .withHostImport("host", "log") { arguments ->
+    .withWitHostImport(WitHostImportId("host", "log")) { arguments ->
         println(arguments[1])
         null
     }
@@ -375,9 +402,13 @@ val wasi = WasiPreview2.builder()
 val plugin = WasmPlugin.builder(wit)
     .withWorld("plugin")
     .withModule(wasmBytes)
-    .withWasiPreview2(wasi)
+    .withWasiPreview2(wasi, WasiPreview2HostOwnership.OWNED)
     .build()
 ```
+
+`OWNED` transfers the Preview 2 host to the plugin, so `plugin.close()` also closes the
+host-created HTTP and socket transports. Use `BORROWED` when the caller keeps the host and closes
+it directly. HTTP clients passed through `withHttpClient` always remain caller-owned.
 
 Inline world interfaces are supported too:
 

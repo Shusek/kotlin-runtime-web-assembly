@@ -22,4 +22,4 @@ The GitHub Pages workflow copies them into one artifact:
 
 - `site/` becomes the root documentation site,
 - `build/dokka/html/` becomes `/api/`,
-- snapshot Maven artifacts are published under `/maven/`.
+- immutable commit-derived development artifacts are published under `/maven/`.

@@ -483,6 +483,90 @@ class KotlinWitBindingsCompileTest {
     }
 
     @Test
+    fun guestExportBindingsDisambiguateSameNamedRecordsAcrossInterfaces() {
+        val witPackage =
+            WitPackage.parse(
+                """
+                package example:duplicate-records@1.0.0;
+
+                interface text {
+                  record shared {
+                    value: string,
+                    extra: string,
+                  }
+                }
+
+                interface binary {
+                  record shared {
+                    value: list<u8>,
+                  }
+
+                  record envelope {
+                    values: list<shared>,
+                  }
+
+                  load: func() -> envelope;
+                }
+
+                world plugin {
+                  export binary;
+                }
+                """
+                    .trimIndent()
+            )
+        val generated =
+            KotlinWitBindings.builder(witPackage)
+                .withPackageName("example.generated.duplicaterecords")
+                .withGuestExportAdapters(true)
+                .build()
+                .generate()
+        assertTrue(
+            generated.contains(
+                "private fun krwaStoreShared2(ptr: Int, value: Binary.Shared)"
+            ),
+            generated,
+        )
+        assertTrue(
+            generated.contains(
+                "private fun krwaStoreSharedList2(value: List<Binary.Shared>): Int {\n" +
+                    "  val ptr = krwaAlloc(8 * value.size)"
+            ),
+            generated,
+        )
+        assertTrue(generated.contains("krwaStoreSharedList2(value.values)"), generated)
+        assertFalse(
+            generated.contains(
+                "private fun krwaStoreShared2(ptr: Int, value: Text.Shared)"
+            ),
+            generated,
+        )
+        val usage =
+            """
+            @file:OptIn(kotlin.ExperimentalUnsignedTypes::class)
+
+            package example.generated.duplicaterecords
+
+            object DuplicateRecordGuest : Plugin.Guest {
+              override val binary: Binary = object : Binary {
+                override fun load(): Binary.Envelope =
+                  Binary.Envelope(
+                    values = listOf(
+                      Binary.Shared(ubyteArrayOf(1u.toUByte())),
+                    ),
+                  )
+              }
+            }
+
+            fun installDuplicateRecordGuest() {
+              KrwaGuestExports.installPlugin(DuplicateRecordGuest)
+            }
+            """
+                .trimIndent()
+
+        compileWasmWasi(generated, usage)
+    }
+
+    @Test
     fun generatedGuestBindingsPackageAndRunAsComponent() {
         val witSource =
             """
@@ -1267,12 +1351,13 @@ class KotlinWitBindingsCompileTest {
         val outputFile = projectDir.resolve("gradle-output.log")
         val process =
             ProcessBuilder(
-                    gradlew.toString(),
-                    "--no-daemon",
+                nestedGradleCommand(
+                    gradlew,
                     "--stacktrace",
                     "-q",
                     taskName,
-                )
+                ),
+            )
                 .directory(projectDir.toFile())
                 .redirectErrorStream(true)
                 .redirectOutput(outputFile.toFile())

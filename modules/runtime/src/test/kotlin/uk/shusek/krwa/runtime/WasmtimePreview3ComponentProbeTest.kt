@@ -16,6 +16,27 @@ import uk.shusek.krwa.wasm.WasmEngineException
 
 class WasmtimePreview3ComponentProbeTest {
     @Test
+    fun jvmPreview3CancellationRejectsClosedWrappersAndIgnoresStaleNativeTokens() {
+        assumeTrue(System.getProperty("krwa.wasmtime.p3.bridge.integration") == "true")
+        val cancellation = WasmtimePreview3ExecutionCancellation()
+
+        cancellation.close()
+        cancellation.cancel()
+        assertFalse(cancellation.isCancellationRequested)
+        assertFailsWith<IllegalStateException> {
+            cancellation.requireOpenHandle()
+        }
+
+        val staleHandle = WasmtimePulleyExecution.preview3ExecutionCancellationCreate()
+        WasmtimePulleyExecution.preview3ExecutionCancellationFree(staleHandle)
+        WasmtimePulleyExecution.preview3ExecutionCancellationCancel(staleHandle)
+        assertFalse(
+            WasmtimePulleyExecution.preview3ExecutionCancellationIsCancelled(staleHandle),
+        )
+        WasmtimePulleyExecution.preview3ExecutionCancellationFree(staleHandle)
+    }
+
+    @Test
     fun jvmPreview3ComponentProbeLoadsBuiltBridge() {
         assumeTrue(System.getProperty("krwa.wasmtime.p3.bridge.integration") == "true")
         val bridgeLibraryPath = Path.of(System.getProperty("krwa.wasmtime.p3.bridge.library"))

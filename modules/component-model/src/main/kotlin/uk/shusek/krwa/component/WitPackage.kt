@@ -1,5 +1,39 @@
 package uk.shusek.krwa.component
 
+/** Resource limits applied while parsing and expanding an untrusted WIT source. */
+data class WitParserLimits(
+    val maxSourceChars: Int = 4 * 1024 * 1024,
+    val maxTokens: Int = 500_000,
+    val maxDeclarations: Int = 50_000,
+    val maxMembersPerDeclaration: Int = 10_000,
+    val maxTypeNesting: Int = 128,
+    val maxPackageNesting: Int = 128,
+    val maxIncludeDepth: Int = 128,
+    val maxExpandedWorldItems: Int = 100_000,
+) {
+    init {
+        requireNonNegative("maxSourceChars", maxSourceChars)
+        requireNonNegative("maxTokens", maxTokens)
+        requireNonNegative("maxDeclarations", maxDeclarations)
+        requireNonNegative("maxMembersPerDeclaration", maxMembersPerDeclaration)
+        requireNonNegative("maxTypeNesting", maxTypeNesting)
+        requireNonNegative("maxPackageNesting", maxPackageNesting)
+        requireNonNegative("maxIncludeDepth", maxIncludeDepth)
+        requireNonNegative("maxExpandedWorldItems", maxExpandedWorldItems)
+    }
+
+    private fun requireNonNegative(name: String, value: Int) {
+        require(value >= 0) { "$name must be non-negative" }
+    }
+}
+
+/** Parsing stopped because a configured WIT resource limit was exceeded. */
+class WitParseLimitException(
+    val limitName: String,
+    val configuredLimit: Long,
+    val actual: Long,
+) : IllegalArgumentException("WIT parser limit '$limitName' exceeded: $actual > $configuredLimit")
+
 class WitPackage
 private constructor(private val packageName: String?, declarations: List<Declaration>) {
     private val declarations: List<Declaration> = immutableList(declarations)
@@ -335,8 +369,12 @@ private constructor(private val packageName: String?, declarations: List<Declara
         }
     }
 
-    private class Parser(source: String) {
-        private val tokens: List<Token> = Tokenizer(source).tokenize()
+    private class Parser(
+        source: String,
+        private val limits: WitParserLimits,
+    ) {
+        private val budget = ParseBudget(limits)
+        private val tokens: List<Token> = Tokenizer(source, limits).tokenize()
         private val syntheticDeclarations = ArrayList<Declaration>()
         private val typeScopes = ArrayList<TypeScope>()
         private var pos = 0
@@ -344,12 +382,15 @@ private constructor(private val packageName: String?, declarations: List<Declara
         private var currentPackageName: String? = null
 
         fun parse(): WitPackage {
-            val declarations = parseDeclarationsUntil(null)
+            val declarations = parseDeclarationsUntil(null, packageDepth = 0)
             declarations.addAll(syntheticDeclarations)
             return WitPackage(packageName, resolveWorldIncludes(declarations))
         }
 
-        private fun parseDeclarationsUntil(closingToken: String?): ArrayList<Declaration> {
+        private fun parseDeclarationsUntil(
+            closingToken: String?,
+            packageDepth: Int,
+        ): ArrayList<Declaration> {
             val declarations = ArrayList<Declaration>()
             while (!eof()) {
                 skipAttributes()
@@ -357,7 +398,7 @@ private constructor(private val packageName: String?, declarations: List<Declara
                     return declarations
                 }
                 if (consume("package")) {
-                    parsePackageDeclaration(declarations)
+                    parsePackageDeclaration(declarations, packageDepth)
                     continue
                 }
                 if (consume("use")) {
@@ -378,17 +419,27 @@ private constructor(private val packageName: String?, declarations: List<Declara
             return declarations
         }
 
-        private fun parsePackageDeclaration(declarations: MutableList<Declaration>) {
+        private fun parsePackageDeclaration(
+            declarations: MutableList<Declaration>,
+            packageDepth: Int,
+        ) {
             val name = collectPackageName()
             if (name.isNotEmpty() && packageName == null) {
                 packageName = name
             }
             if (consume("{")) {
+                val nestedPackageDepth = packageDepth + 1
+                budget.requirePackageDepth(nestedPackageDepth)
                 val previousPackageName = currentPackageName
                 if (name.isNotEmpty()) {
                     currentPackageName = name
                 }
-                declarations.addAll(parseDeclarationsUntil("}"))
+                declarations.addAll(
+                    parseDeclarationsUntil(
+                        closingToken = "}",
+                        packageDepth = nestedPackageDepth,
+                    ),
+                )
                 currentPackageName = previousPackageName
             } else {
                 if (name.isNotEmpty()) {
@@ -410,7 +461,15 @@ private constructor(private val packageName: String?, declarations: List<Declara
             val result = ArrayList<Declaration>()
             for (declaration in declarations) {
                 if (declaration is WorldDeclaration) {
-                    result.add(resolveWorldInclude(declaration, worlds, cache, LinkedHashSet()))
+                    result.add(
+                        resolveWorldInclude(
+                            declaration,
+                            worlds,
+                            cache,
+                            LinkedHashSet(),
+                            includeDepth = 0,
+                        )
+                    )
                 } else {
                     result.add(declaration)
                 }
@@ -423,47 +482,68 @@ private constructor(private val packageName: String?, declarations: List<Declara
             worlds: Map<String, WorldDeclaration>,
             cache: MutableMap<String, WorldDeclaration>,
             resolving: MutableSet<String>,
+            includeDepth: Int,
         ): WorldDeclaration {
             val cacheKey = worldCacheKey(world)
+            if (resolving.contains(cacheKey)) {
+                throw error("cyclic WIT world include involving " + world.qualifiedName())
+            }
+            budget.requireIncludeDepth(includeDepth)
             val cached = cache[cacheKey]
             if (cached != null) {
                 return cached
             }
-            if (!resolving.add(cacheKey)) {
-                throw error("cyclic WIT world include involving " + world.qualifiedName())
-            }
+            resolving.add(cacheKey)
 
-            val declarations = ArrayList<Declaration>()
-            val imports = ArrayList<WorldItem>()
-            val exports = ArrayList<WorldItem>()
-            for (include in world.includeDeclarations()) {
-                val included = findIncludedWorld(worlds, world, include.path())
-                if (included == null) {
-                    throw error(
-                        "unknown included WIT world " + include.path() + " in " + world.name()
+            try {
+                val declarations = ArrayList<Declaration>()
+                val imports = ArrayList<WorldItem>()
+                val exports = ArrayList<WorldItem>()
+                for (include in world.includeDeclarations()) {
+                    val included = findIncludedWorld(worlds, world, include.path())
+                    if (included == null) {
+                        throw error(
+                            "unknown included WIT world " + include.path() + " in " + world.name()
+                        )
+                    }
+                    val resolved =
+                        resolveWorldInclude(
+                            included,
+                            worlds,
+                            cache,
+                            resolving,
+                            includeDepth + 1,
+                        )
+                    budget.addExpandedWorldItems(resolved.declarations().size)
+                    declarations.addAll(
+                        remapIncludedDeclarations(resolved.declarations(), include)
                     )
+                    budget.addExpandedWorldItems(resolved.imports().size)
+                    imports.addAll(remapIncludedItems(resolved.imports(), include))
+                    budget.addExpandedWorldItems(resolved.exports().size)
+                    exports.addAll(remapIncludedItems(resolved.exports(), include))
                 }
-                val resolved = resolveWorldInclude(included, worlds, cache, resolving)
-                declarations.addAll(remapIncludedDeclarations(resolved.declarations(), include))
-                imports.addAll(remapIncludedItems(resolved.imports(), include))
-                exports.addAll(remapIncludedItems(resolved.exports(), include))
-            }
-            declarations.addAll(world.declarations())
-            imports.addAll(world.imports())
-            exports.addAll(world.exports())
+                budget.addExpandedWorldItems(world.declarations().size)
+                declarations.addAll(world.declarations())
+                budget.addExpandedWorldItems(world.imports().size)
+                imports.addAll(world.imports())
+                budget.addExpandedWorldItems(world.exports().size)
+                exports.addAll(world.exports())
 
-            resolving.remove(cacheKey)
-            val resolved =
-                WorldDeclaration(
-                    world.packageName(),
-                    world.name(),
-                    world.includeDeclarations(),
-                    declarations,
-                    imports,
-                    exports,
-                )
-            cache[cacheKey] = resolved
-            return resolved
+                val resolved =
+                    WorldDeclaration(
+                        world.packageName(),
+                        world.name(),
+                        world.includeDeclarations(),
+                        declarations,
+                        imports,
+                        exports,
+                    )
+                cache[cacheKey] = resolved
+                return resolved
+            } finally {
+                resolving.remove(cacheKey)
+            }
         }
 
         private fun worldCacheKey(world: WorldDeclaration): String {
@@ -593,9 +673,11 @@ private constructor(private val packageName: String?, declarations: List<Declara
 
         private fun parseDeclaration(): Declaration? {
             if (consume("interface")) {
+                budget.reserveDeclaration()
                 return parseInterface()
             }
             if (consume("world")) {
+                budget.reserveDeclaration()
                 return parseWorld()
             }
             return parseTypeDeclaration()
@@ -618,6 +700,7 @@ private constructor(private val packageName: String?, declarations: List<Declara
                         throw error("unterminated interface $name")
                     }
                     if (consume("use")) {
+                        budget.requireMemberCount(members.size + 1)
                         val use = parseUseDeclaration()
                         scope.addUse(use)
                         members.add(use)
@@ -625,6 +708,7 @@ private constructor(private val packageName: String?, declarations: List<Declara
                     }
                     val type = parseTypeDeclaration()
                     if (type != null) {
+                        budget.requireMemberCount(members.size + 1)
                         scope.addType(type.name())
                         members.add(type)
                         continue
@@ -633,6 +717,7 @@ private constructor(private val packageName: String?, declarations: List<Declara
                     if (consume(":")) {
                         val function = parseFunctionAfterColon(memberName)
                         if (function != null) {
+                            budget.requireMemberCount(members.size + 1)
                             members.add(function)
                         } else {
                             skipUntil(";")
@@ -660,15 +745,18 @@ private constructor(private val packageName: String?, declarations: List<Declara
                     throw error("unterminated world $name")
                 }
                 if (consume("use")) {
+                    requireWorldMemberSlot(includes, declarations, imports, exports)
                     declarations.add(parseUseDeclaration())
                     continue
                 }
                 if (consume("include")) {
+                    requireWorldMemberSlot(includes, declarations, imports, exports)
                     val includePath = collectIncludePath()
                     val includeItems = ArrayList<IncludeItem>()
                     if (consume("with")) {
                         expect("{")
                         while (!consume("}")) {
+                            budget.requireMemberCount(includeItems.size + 1)
                             val itemName = collectIncludeItemName()
                             expect("as")
                             includeItems.add(IncludeItem(itemName, collectIncludeItemName()))
@@ -682,6 +770,7 @@ private constructor(private val packageName: String?, declarations: List<Declara
 
                 val declaration = parseTypeDeclaration()
                 if (declaration != null) {
+                    requireWorldMemberSlot(includes, declarations, imports, exports)
                     declarations.add(declaration)
                     continue
                 }
@@ -695,6 +784,7 @@ private constructor(private val packageName: String?, declarations: List<Declara
                         skipUntil(";")
                         continue
                     }
+                requireWorldMemberSlot(includes, declarations, imports, exports)
 
                 var itemName = expectIdentifier()
                 var function: Function? = null
@@ -702,6 +792,7 @@ private constructor(private val packageName: String?, declarations: List<Declara
                 if (consume(":")) {
                     if (consume("interface")) {
                         val inlineInterfaceName = inlineInterfaceName(name, itemName)
+                        budget.reserveDeclaration()
                         syntheticDeclarations.add(parseInterfaceBody(inlineInterfaceName))
                         type = TypeRef.named(inlineInterfaceName)
                     } else {
@@ -741,14 +832,27 @@ private constructor(private val packageName: String?, declarations: List<Declara
             )
         }
 
+        private fun requireWorldMemberSlot(
+            includes: List<IncludeDeclaration>,
+            declarations: List<Declaration>,
+            imports: List<WorldItem>,
+            exports: List<WorldItem>,
+        ) {
+            budget.requireMemberCount(
+                includes.size + declarations.size + imports.size + exports.size + 1
+            )
+        }
+
         private fun inlineInterfaceName(worldName: String, itemName: String): String =
             "$worldName-$itemName"
 
         private fun parseUseDeclaration(): UseDeclaration {
+            budget.reserveDeclaration()
             val path = collectUsePath()
             val items = ArrayList<UseItem>()
             if (consume("{")) {
                 while (!consume("}")) {
+                    budget.requireMemberCount(items.size + 1)
                     val itemName = expectIdentifier()
                     var alias: String? = null
                     if (consume("as")) {
@@ -758,6 +862,7 @@ private constructor(private val packageName: String?, declarations: List<Declara
                     consume(",")
                 }
             } else {
+                budget.requireMemberCount(1)
                 var alias: String? = null
                 if (consume("as")) {
                     alias = expectIdentifier()
@@ -807,21 +912,27 @@ private constructor(private val packageName: String?, declarations: List<Declara
 
         private fun parseTypeDeclaration(): TypeDeclaration? {
             if (consume("record")) {
+                budget.reserveDeclaration()
                 return parseRecord()
             }
             if (consume("variant")) {
+                budget.reserveDeclaration()
                 return parseVariant()
             }
             if (consume("enum")) {
+                budget.reserveDeclaration()
                 return parseEnum()
             }
             if (consume("flags")) {
+                budget.reserveDeclaration()
                 return parseFlags()
             }
             if (consume("resource")) {
+                budget.reserveDeclaration()
                 return parseResource()
             }
             if (consume("type")) {
+                budget.reserveDeclaration()
                 return parseAlias()
             }
             return null
@@ -833,6 +944,7 @@ private constructor(private val packageName: String?, declarations: List<Declara
             val fields = ArrayList<Field>()
             while (!consume("}")) {
                 skipAttributes()
+                budget.requireMemberCount(fields.size + 1)
                 val fieldName = expectIdentifier()
                 expect(":")
                 fields.add(Field(fieldName, parseTypeRef()))
@@ -848,6 +960,7 @@ private constructor(private val packageName: String?, declarations: List<Declara
             val cases = ArrayList<Case>()
             while (!consume("}")) {
                 skipAttributes()
+                budget.requireMemberCount(cases.size + 1)
                 val caseName = expectIdentifier()
                 var type: TypeRef? = null
                 if (consume("(")) {
@@ -873,6 +986,7 @@ private constructor(private val packageName: String?, declarations: List<Declara
             val cases = ArrayList<Case>()
             while (!consume("}")) {
                 skipAttributes()
+                budget.requireMemberCount(cases.size + 1)
                 cases.add(Case(expectIdentifier(), null))
                 consume(",")
                 consume(";")
@@ -890,10 +1004,12 @@ private constructor(private val packageName: String?, declarations: List<Declara
                         throw error("unterminated resource $name")
                     }
                     if (consume("constructor")) {
+                        budget.requireMemberCount(functions.size + 1)
+                        budget.reserveDeclaration()
                         functions.add(
                             Function(
                                 "constructor",
-                                parseFieldsInParens("arg"),
+                                parseFieldsInParens("arg", existingMemberCount = 0),
                                 emptyList(),
                                 false,
                                 false,
@@ -907,6 +1023,7 @@ private constructor(private val packageName: String?, declarations: List<Declara
                     if (consume(":")) {
                         val function = parseFunctionAfterColon(functionName)
                         if (function != null) {
+                            budget.requireMemberCount(functions.size + 1)
                             functions.add(function)
                         } else {
                             skipUntil(";")
@@ -943,12 +1060,18 @@ private constructor(private val packageName: String?, declarations: List<Declara
         }
 
         private fun parseFunction(name: String, async: Boolean, staticFunction: Boolean): Function {
-            val params = parseFieldsInParens("arg")
+            val params = parseFieldsInParens("arg", existingMemberCount = 0)
             val results = ArrayList<Field>()
             if (consume("->")) {
                 if (peek("(")) {
-                    results.addAll(parseFieldsInParens("result"))
+                    results.addAll(
+                        parseFieldsInParens(
+                            "result",
+                            existingMemberCount = params.size,
+                        )
+                    )
                 } else {
+                    budget.requireMemberCount(params.size + 1)
                     results.add(Field("result", parseTypeRef()))
                 }
             }
@@ -971,13 +1094,18 @@ private constructor(private val packageName: String?, declarations: List<Declara
             if (!consume("func")) {
                 return null
             }
+            budget.reserveDeclaration()
             return parseFunction(name, async, staticFunction)
         }
 
-        private fun parseFieldsInParens(prefix: String): ArrayList<Field> {
+        private fun parseFieldsInParens(
+            prefix: String,
+            existingMemberCount: Int,
+        ): ArrayList<Field> {
             expect("(")
             val fields = ArrayList<Field>()
             while (!consume(")")) {
+                budget.requireMemberCount(existingMemberCount + fields.size + 1)
                 val first = expectIdentifier()
                 val type: TypeRef
                 val name: String
@@ -986,6 +1114,7 @@ private constructor(private val packageName: String?, declarations: List<Declara
                     type = parseTypeRef()
                 } else {
                     name = prefix + fields.size
+                    budget.requireTypeDepth(1)
                     type = typeFromName(first)
                 }
                 fields.add(Field(name, type))
@@ -994,15 +1123,17 @@ private constructor(private val packageName: String?, declarations: List<Declara
             return fields
         }
 
-        private fun parseTypeRef(): TypeRef {
+        private fun parseTypeRef(depth: Int = 1): TypeRef {
+            budget.requireTypeDepth(depth)
             if (consume("(")) {
                 val types = ArrayList<TypeRef>()
                 while (!consume(")")) {
+                    budget.requireMemberCount(types.size + 1)
                     if (lookAheadIsField()) {
                         expectIdentifier()
                         expect(":")
                     }
-                    types.add(parseTypeRef())
+                    types.add(parseTypeRef(depth + 1))
                     consume(",")
                 }
                 return TypeRef.constructed(TypeRef.TypeKind.TUPLE, types)
@@ -1015,14 +1146,16 @@ private constructor(private val packageName: String?, declarations: List<Declara
             if (consume("<")) {
                 val arguments = ArrayList<TypeRef>()
                 while (!consume(">")) {
+                    budget.requireMemberCount(arguments.size + 1)
                     if (consume("_")) {
+                        budget.requireTypeDepth(depth + 1)
                         arguments.add(TypeRef.primitive("unit"))
                     } else if (lookAheadIsField()) {
                         expectIdentifier()
                         expect(":")
-                        arguments.add(parseTypeRef())
+                        arguments.add(parseTypeRef(depth + 1))
                     } else {
-                        arguments.add(parseTypeRef())
+                        arguments.add(parseTypeRef(depth + 1))
                     }
                     consume(",")
                 }
@@ -1213,7 +1346,10 @@ private constructor(private val packageName: String?, declarations: List<Declara
             IllegalArgumentException(message)
     }
 
-    private class Tokenizer(source: String) {
+    private class Tokenizer(
+        source: String,
+        private val limits: WitParserLimits,
+    ) {
         private val source: String = source
         private val tokens = ArrayList<Token>()
         private var pos = 0
@@ -1237,7 +1373,7 @@ private constructor(private val packageName: String?, declarations: List<Declara
         private fun tokenizeNext() {
             for (token in TWO_CHAR_TOKENS) {
                 if (startsWith(token)) {
-                    tokens.add(Token(token))
+                    addToken(token)
                     pos += token.length
                     return
                 }
@@ -1245,7 +1381,7 @@ private constructor(private val packageName: String?, declarations: List<Declara
 
             val ch = source[pos]
             if (ONE_CHAR_TOKENS.indexOf(ch) >= 0) {
-                tokens.add(Token(ch.toString()))
+                addToken(ch.toString())
                 pos++
                 return
             }
@@ -1255,11 +1391,20 @@ private constructor(private val packageName: String?, declarations: List<Declara
                 pos++
             }
             if (start == pos) {
-                tokens.add(Token(ch.toString()))
+                addToken(ch.toString())
                 pos++
             } else {
-                tokens.add(Token(source.substring(start, pos)))
+                addToken(source.substring(start, pos))
             }
+        }
+
+        private fun addToken(text: String) {
+            requireWithinWitLimit(
+                "maxTokens",
+                limits.maxTokens.toLong(),
+                tokens.size.toLong() + 1,
+            )
+            tokens.add(Token(text))
         }
 
         private fun isIdentifierChar(ch: Char): Boolean =
@@ -1300,7 +1445,18 @@ private constructor(private val packageName: String?, declarations: List<Declara
     }
 
     companion object {
-        @ComponentModelJvmStatic fun parse(source: String): WitPackage = Parser(source).parse()
+        @ComponentModelJvmStatic
+        fun parse(source: String): WitPackage = parse(source, WitParserLimits())
+
+        @ComponentModelJvmStatic
+        fun parse(source: String, limits: WitParserLimits): WitPackage {
+            requireWithinWitLimit(
+                "maxSourceChars",
+                limits.maxSourceChars.toLong(),
+                source.length.toLong(),
+            )
+            return Parser(source, limits).parse()
+        }
 
         private fun requireName(name: String): String {
             val result = name.trim()
@@ -1321,5 +1477,72 @@ private constructor(private val packageName: String?, declarations: List<Declara
         private fun <T> immutableList(values: List<T>): List<T> = values.toList()
 
         private fun <K, V> immutableMap(values: Map<K, V>): Map<K, V> = values.toMap()
+    }
+}
+
+private class ParseBudget(private val limits: WitParserLimits) {
+    private var declarationCount = 0L
+    private var expandedWorldItemCount = 0L
+
+    fun reserveDeclaration() {
+        val actual = declarationCount + 1
+        requireWithinWitLimit(
+            "maxDeclarations",
+            limits.maxDeclarations.toLong(),
+            actual,
+        )
+        declarationCount = actual
+    }
+
+    fun requireMemberCount(actual: Int) {
+        requireWithinWitLimit(
+            "maxMembersPerDeclaration",
+            limits.maxMembersPerDeclaration.toLong(),
+            actual.toLong(),
+        )
+    }
+
+    fun requireTypeDepth(actual: Int) {
+        requireWithinWitLimit(
+            "maxTypeNesting",
+            limits.maxTypeNesting.toLong(),
+            actual.toLong(),
+        )
+    }
+
+    fun requirePackageDepth(actual: Int) {
+        requireWithinWitLimit(
+            "maxPackageNesting",
+            limits.maxPackageNesting.toLong(),
+            actual.toLong(),
+        )
+    }
+
+    fun requireIncludeDepth(actual: Int) {
+        requireWithinWitLimit(
+            "maxIncludeDepth",
+            limits.maxIncludeDepth.toLong(),
+            actual.toLong(),
+        )
+    }
+
+    fun addExpandedWorldItems(count: Int) {
+        val actual = expandedWorldItemCount + count
+        requireWithinWitLimit(
+            "maxExpandedWorldItems",
+            limits.maxExpandedWorldItems.toLong(),
+            actual,
+        )
+        expandedWorldItemCount = actual
+    }
+}
+
+private fun requireWithinWitLimit(
+    limitName: String,
+    configuredLimit: Long,
+    actual: Long,
+) {
+    if (actual > configuredLimit) {
+        throw WitParseLimitException(limitName, configuredLimit, actual)
     }
 }

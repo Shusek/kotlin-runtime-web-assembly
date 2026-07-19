@@ -49,4 +49,55 @@ class WitRuntimeTypesTest {
 
         assertFailsWith<NullPointerException> { table.insert(null) }
     }
+
+    @Test
+    fun resourceTableEnforcesItsEntryLimitWithoutPartialBatchInsertion() {
+        assertFailsWith<IllegalArgumentException> { WitResourceTable<String>(0) }
+
+        val table = WitResourceTable<String>(2)
+        val first = table.insert("first")
+
+        assertFailsWith<ComponentModelException> {
+            table.insertResourceHandles(listOf("second", "third"))
+        }
+        assertEquals(listOf("first"), table.snapshot())
+
+        val second = table.insert("second")
+        assertFailsWith<ComponentModelException> { table.insert("third") }
+
+        assertEquals("first", table.remove(first))
+        assertEquals(3L, table.insert("third").handle())
+        assertEquals(listOf("second", "third"), table.snapshot())
+        assertTrue(table.contains(second))
+    }
+
+    @Test
+    fun resourceTableDrainKeepsTableOpenWhileCloseRejectsNewEntries() {
+        val table = WitResourceTable<String>(3)
+        table.insert("first")
+        table.insert("second")
+
+        assertEquals(listOf("first", "second"), table.drain())
+        assertEquals(0, table.size())
+
+        table.insert("third")
+        assertEquals(listOf("third"), table.close())
+        assertEquals(emptyList(), table.close())
+        assertEquals(0, table.size())
+        assertFailsWith<ComponentModelException> { table.insert("after-close") }
+    }
+
+    @Test
+    fun wasiPreviewLockSupportsRecursiveEntry() {
+        val lock = WasiPreviewLock()
+
+        assertEquals(
+            "locked",
+            withWasiPreviewLock(lock) {
+                withWasiPreviewLock(lock) {
+                    "locked"
+                }
+            },
+        )
+    }
 }

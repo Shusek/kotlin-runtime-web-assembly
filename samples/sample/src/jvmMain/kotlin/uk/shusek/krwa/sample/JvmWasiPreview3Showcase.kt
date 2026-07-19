@@ -89,7 +89,9 @@ private fun wasiPreview3Sockets() {
                         tcpPort = tcpServer.localPort,
                         udpPort = udpServer.localPort,
                     )
-                )
+                ),
+                tcpPort = tcpServer.localPort,
+                udpPort = udpServer.localPort,
             )
             val packet = DatagramPacket(ByteArray(16), 16)
             udpServer.receive(packet)

@@ -42,8 +42,12 @@ private const val WS_UDP_BIND_TIMEOUT_MILLIS: Long = 5_000L
 
 internal class WasmJsKtorSocketRuntime(
     private val udpProxyUrl: String? = null,
-) : WasiSuspendingSocketRuntime, WasiSuspendingTcpListenRuntime {
+) : WasiSuspendingSocketRuntime,
+    WasiSuspendingTcpListenRuntime,
+    WasiPreview3TransportResource {
     private val selector = SelectorManager()
+    private val lifecycleLock = WasiPreviewLock()
+    private var closed: Boolean = false
 
     override fun connectTcp(
         remoteAddress: InetSocketAddress,
@@ -59,6 +63,7 @@ internal class WasmJsKtorSocketRuntime(
         receiveBufferSize: Int,
         sendBufferSize: Int,
     ): WasiTcpConnection {
+        ensureOpen()
         val socket =
             aSocket(selector).tcp().connect(remoteAddress) {
                 this.keepAlive = keepAlive
@@ -75,6 +80,7 @@ internal class WasmJsKtorSocketRuntime(
         localAddress: InetSocketAddress,
         backlogSize: Int,
     ): WasiTcpListener {
+        ensureOpen()
         val server =
             aSocket(selector).tcp().bind(localAddress) { this.backlogSize = backlogSize }
         return WasmJsKtorTcpListener(server)
@@ -85,6 +91,7 @@ internal class WasmJsKtorSocketRuntime(
         receiveBufferSize: Int,
         sendBufferSize: Int,
     ): WasiUdpEndpoint {
+        ensureOpen()
         val proxyUrl =
             udpProxyUrl
                 ?: throw UnsupportedOperationException(
@@ -97,6 +104,27 @@ internal class WasmJsKtorSocketRuntime(
             receiveBufferSize,
             sendBufferSize,
         )
+    }
+
+    override fun close() {
+        val shouldClose =
+            withWasiPreviewLock(lifecycleLock) {
+                if (closed) {
+                    false
+                } else {
+                    closed = true
+                    true
+                }
+            }
+        if (shouldClose) {
+            selector.close()
+        }
+    }
+
+    private fun ensureOpen() {
+        withWasiPreviewLock(lifecycleLock) {
+            check(!closed) { "WASI Preview 3 socket runtime is closed" }
+        }
     }
 }
 

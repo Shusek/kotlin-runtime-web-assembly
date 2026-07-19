@@ -28,6 +28,7 @@ extensions.configure<KotlinMultiplatformExtension> {
             api(libs.okio)
             api(libs.kotlinCryptoRand)
             api(libs.kotlinxCoroutinesCore)
+            api(krwa("runtime"))
         }
     }
     sourceSets.named("jvmMain") {

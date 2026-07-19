@@ -14,7 +14,7 @@ internal actual object RuntimePlatform {
         imports: ImportValues,
         backend: ExecutionBackend,
         hostInstance: Instance,
-        memoryLimits: MemoryLimits?,
+        definedMemoryLimits: Array<MemoryLimits>?,
     ): PlatformInstanceExecution? {
         if (backend == ExecutionBackend.PULLEY) {
             return PulleyExecution.create(module, imports, hostInstance)
@@ -28,7 +28,7 @@ internal actual object RuntimePlatform {
             NativeWasmInstance.instantiate(
                 module,
                 NativeWasmImports.fromImportValues(imports, hostInstance),
-                memoryLimits,
+                definedMemoryLimits,
             ),
         )
     }

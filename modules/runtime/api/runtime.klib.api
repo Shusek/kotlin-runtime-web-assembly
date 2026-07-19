@@ -30,6 +30,17 @@ final enum class uk.shusek.krwa.runtime/ExecutionBackend : kotlin/Enum<uk.shusek
     final fun values(): kotlin/Array<uk.shusek.krwa.runtime/ExecutionBackend> // uk.shusek.krwa.runtime/ExecutionBackend.values|values#static(){}[0]
 }
 
+final enum class uk.shusek.krwa.runtime/WasmtimePreview3HttpProtocol : kotlin/Enum<uk.shusek.krwa.runtime/WasmtimePreview3HttpProtocol> { // uk.shusek.krwa.runtime/WasmtimePreview3HttpProtocol|null[0]
+    enum entry Http // uk.shusek.krwa.runtime/WasmtimePreview3HttpProtocol.Http|null[0]
+    enum entry Https // uk.shusek.krwa.runtime/WasmtimePreview3HttpProtocol.Https|null[0]
+
+    final val entries // uk.shusek.krwa.runtime/WasmtimePreview3HttpProtocol.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<uk.shusek.krwa.runtime/WasmtimePreview3HttpProtocol> // uk.shusek.krwa.runtime/WasmtimePreview3HttpProtocol.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): uk.shusek.krwa.runtime/WasmtimePreview3HttpProtocol // uk.shusek.krwa.runtime/WasmtimePreview3HttpProtocol.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<uk.shusek.krwa.runtime/WasmtimePreview3HttpProtocol> // uk.shusek.krwa.runtime/WasmtimePreview3HttpProtocol.values|values#static(){}[0]
+}
+
 abstract fun interface uk.shusek.krwa.runtime/ExportFunction { // uk.shusek.krwa.runtime/ExportFunction|null[0]
     abstract fun apply(kotlin/LongArray...): kotlin/LongArray // uk.shusek.krwa.runtime/ExportFunction.apply|apply(kotlin.LongArray...){}[0]
 }
@@ -183,39 +194,48 @@ abstract interface uk.shusek.krwa.runtime/PulleyExecutionProvider { // uk.shusek
 
 sealed interface uk.shusek.krwa.runtime/WasmExecutionPolicy { // uk.shusek.krwa.runtime/WasmExecutionPolicy|null[0]
     final class Automatic : uk.shusek.krwa.runtime/WasmExecutionPolicy { // uk.shusek.krwa.runtime/WasmExecutionPolicy.Automatic|null[0]
-        constructor <init>(kotlin/Long? = ...) // uk.shusek.krwa.runtime/WasmExecutionPolicy.Automatic.<init>|<init>(kotlin.Long?){}[0]
+        constructor <init>(kotlin/Long? = ..., uk.shusek.krwa.runtime/WasmMemoryPolicy? = ...) // uk.shusek.krwa.runtime/WasmExecutionPolicy.Automatic.<init>|<init>(kotlin.Long?;uk.shusek.krwa.runtime.WasmMemoryPolicy?){}[0]
 
         final val maxMemoryBytes // uk.shusek.krwa.runtime/WasmExecutionPolicy.Automatic.maxMemoryBytes|{}maxMemoryBytes[0]
             final fun <get-maxMemoryBytes>(): kotlin/Long? // uk.shusek.krwa.runtime/WasmExecutionPolicy.Automatic.maxMemoryBytes.<get-maxMemoryBytes>|<get-maxMemoryBytes>(){}[0]
+        final val memoryPolicy // uk.shusek.krwa.runtime/WasmExecutionPolicy.Automatic.memoryPolicy|{}memoryPolicy[0]
+            final fun <get-memoryPolicy>(): uk.shusek.krwa.runtime/WasmMemoryPolicy? // uk.shusek.krwa.runtime/WasmExecutionPolicy.Automatic.memoryPolicy.<get-memoryPolicy>|<get-memoryPolicy>(){}[0]
 
         final fun component1(): kotlin/Long? // uk.shusek.krwa.runtime/WasmExecutionPolicy.Automatic.component1|component1(){}[0]
-        final fun copy(kotlin/Long? = ...): uk.shusek.krwa.runtime/WasmExecutionPolicy.Automatic // uk.shusek.krwa.runtime/WasmExecutionPolicy.Automatic.copy|copy(kotlin.Long?){}[0]
+        final fun component2(): uk.shusek.krwa.runtime/WasmMemoryPolicy? // uk.shusek.krwa.runtime/WasmExecutionPolicy.Automatic.component2|component2(){}[0]
+        final fun copy(kotlin/Long? = ..., uk.shusek.krwa.runtime/WasmMemoryPolicy? = ...): uk.shusek.krwa.runtime/WasmExecutionPolicy.Automatic // uk.shusek.krwa.runtime/WasmExecutionPolicy.Automatic.copy|copy(kotlin.Long?;uk.shusek.krwa.runtime.WasmMemoryPolicy?){}[0]
         final fun equals(kotlin/Any?): kotlin/Boolean // uk.shusek.krwa.runtime/WasmExecutionPolicy.Automatic.equals|equals(kotlin.Any?){}[0]
         final fun hashCode(): kotlin/Int // uk.shusek.krwa.runtime/WasmExecutionPolicy.Automatic.hashCode|hashCode(){}[0]
         final fun toString(): kotlin/String // uk.shusek.krwa.runtime/WasmExecutionPolicy.Automatic.toString|toString(){}[0]
     }
 
     final class HostWebAssembly : uk.shusek.krwa.runtime/WasmExecutionPolicy { // uk.shusek.krwa.runtime/WasmExecutionPolicy.HostWebAssembly|null[0]
-        constructor <init>(kotlin/Long? = ...) // uk.shusek.krwa.runtime/WasmExecutionPolicy.HostWebAssembly.<init>|<init>(kotlin.Long?){}[0]
+        constructor <init>(kotlin/Long? = ..., uk.shusek.krwa.runtime/WasmMemoryPolicy? = ...) // uk.shusek.krwa.runtime/WasmExecutionPolicy.HostWebAssembly.<init>|<init>(kotlin.Long?;uk.shusek.krwa.runtime.WasmMemoryPolicy?){}[0]
 
         final val maxMemoryBytes // uk.shusek.krwa.runtime/WasmExecutionPolicy.HostWebAssembly.maxMemoryBytes|{}maxMemoryBytes[0]
             final fun <get-maxMemoryBytes>(): kotlin/Long? // uk.shusek.krwa.runtime/WasmExecutionPolicy.HostWebAssembly.maxMemoryBytes.<get-maxMemoryBytes>|<get-maxMemoryBytes>(){}[0]
+        final val memoryPolicy // uk.shusek.krwa.runtime/WasmExecutionPolicy.HostWebAssembly.memoryPolicy|{}memoryPolicy[0]
+            final fun <get-memoryPolicy>(): uk.shusek.krwa.runtime/WasmMemoryPolicy? // uk.shusek.krwa.runtime/WasmExecutionPolicy.HostWebAssembly.memoryPolicy.<get-memoryPolicy>|<get-memoryPolicy>(){}[0]
 
         final fun component1(): kotlin/Long? // uk.shusek.krwa.runtime/WasmExecutionPolicy.HostWebAssembly.component1|component1(){}[0]
-        final fun copy(kotlin/Long? = ...): uk.shusek.krwa.runtime/WasmExecutionPolicy.HostWebAssembly // uk.shusek.krwa.runtime/WasmExecutionPolicy.HostWebAssembly.copy|copy(kotlin.Long?){}[0]
+        final fun component2(): uk.shusek.krwa.runtime/WasmMemoryPolicy? // uk.shusek.krwa.runtime/WasmExecutionPolicy.HostWebAssembly.component2|component2(){}[0]
+        final fun copy(kotlin/Long? = ..., uk.shusek.krwa.runtime/WasmMemoryPolicy? = ...): uk.shusek.krwa.runtime/WasmExecutionPolicy.HostWebAssembly // uk.shusek.krwa.runtime/WasmExecutionPolicy.HostWebAssembly.copy|copy(kotlin.Long?;uk.shusek.krwa.runtime.WasmMemoryPolicy?){}[0]
         final fun equals(kotlin/Any?): kotlin/Boolean // uk.shusek.krwa.runtime/WasmExecutionPolicy.HostWebAssembly.equals|equals(kotlin.Any?){}[0]
         final fun hashCode(): kotlin/Int // uk.shusek.krwa.runtime/WasmExecutionPolicy.HostWebAssembly.hashCode|hashCode(){}[0]
         final fun toString(): kotlin/String // uk.shusek.krwa.runtime/WasmExecutionPolicy.HostWebAssembly.toString|toString(){}[0]
     }
 
     final class Wasmtime : uk.shusek.krwa.runtime/WasmExecutionPolicy { // uk.shusek.krwa.runtime/WasmExecutionPolicy.Wasmtime|null[0]
-        constructor <init>(uk.shusek.krwa.runtime/WasmtimeExecutionConfig) // uk.shusek.krwa.runtime/WasmExecutionPolicy.Wasmtime.<init>|<init>(uk.shusek.krwa.runtime.WasmtimeExecutionConfig){}[0]
+        constructor <init>(uk.shusek.krwa.runtime/WasmtimeExecutionConfig, uk.shusek.krwa.runtime/WasmMemoryPolicy? = ...) // uk.shusek.krwa.runtime/WasmExecutionPolicy.Wasmtime.<init>|<init>(uk.shusek.krwa.runtime.WasmtimeExecutionConfig;uk.shusek.krwa.runtime.WasmMemoryPolicy?){}[0]
 
         final val config // uk.shusek.krwa.runtime/WasmExecutionPolicy.Wasmtime.config|{}config[0]
             final fun <get-config>(): uk.shusek.krwa.runtime/WasmtimeExecutionConfig // uk.shusek.krwa.runtime/WasmExecutionPolicy.Wasmtime.config.<get-config>|<get-config>(){}[0]
+        final val memoryPolicy // uk.shusek.krwa.runtime/WasmExecutionPolicy.Wasmtime.memoryPolicy|{}memoryPolicy[0]
+            final fun <get-memoryPolicy>(): uk.shusek.krwa.runtime/WasmMemoryPolicy? // uk.shusek.krwa.runtime/WasmExecutionPolicy.Wasmtime.memoryPolicy.<get-memoryPolicy>|<get-memoryPolicy>(){}[0]
 
         final fun component1(): uk.shusek.krwa.runtime/WasmtimeExecutionConfig // uk.shusek.krwa.runtime/WasmExecutionPolicy.Wasmtime.component1|component1(){}[0]
-        final fun copy(uk.shusek.krwa.runtime/WasmtimeExecutionConfig = ...): uk.shusek.krwa.runtime/WasmExecutionPolicy.Wasmtime // uk.shusek.krwa.runtime/WasmExecutionPolicy.Wasmtime.copy|copy(uk.shusek.krwa.runtime.WasmtimeExecutionConfig){}[0]
+        final fun component2(): uk.shusek.krwa.runtime/WasmMemoryPolicy? // uk.shusek.krwa.runtime/WasmExecutionPolicy.Wasmtime.component2|component2(){}[0]
+        final fun copy(uk.shusek.krwa.runtime/WasmtimeExecutionConfig = ..., uk.shusek.krwa.runtime/WasmMemoryPolicy? = ...): uk.shusek.krwa.runtime/WasmExecutionPolicy.Wasmtime // uk.shusek.krwa.runtime/WasmExecutionPolicy.Wasmtime.copy|copy(uk.shusek.krwa.runtime.WasmtimeExecutionConfig;uk.shusek.krwa.runtime.WasmMemoryPolicy?){}[0]
         final fun equals(kotlin/Any?): kotlin/Boolean // uk.shusek.krwa.runtime/WasmExecutionPolicy.Wasmtime.equals|equals(kotlin.Any?){}[0]
         final fun hashCode(): kotlin/Int // uk.shusek.krwa.runtime/WasmExecutionPolicy.Wasmtime.hashCode|hashCode(){}[0]
         final fun toString(): kotlin/String // uk.shusek.krwa.runtime/WasmExecutionPolicy.Wasmtime.toString|toString(){}[0]
@@ -361,6 +381,7 @@ final class uk.shusek.krwa.runtime/Instance : kotlin/AutoCloseable { // uk.shuse
         final fun withExecutionPolicy(uk.shusek.krwa.runtime/WasmExecutionPolicy): uk.shusek.krwa.runtime/Instance.Builder // uk.shusek.krwa.runtime/Instance.Builder.withExecutionPolicy|withExecutionPolicy(uk.shusek.krwa.runtime.WasmExecutionPolicy){}[0]
         final fun withImportValues(uk.shusek.krwa.runtime/ImportValues): uk.shusek.krwa.runtime/Instance.Builder // uk.shusek.krwa.runtime/Instance.Builder.withImportValues|withImportValues(uk.shusek.krwa.runtime.ImportValues){}[0]
         final fun withMemoryLimits(uk.shusek.krwa.wasm.types/MemoryLimits): uk.shusek.krwa.runtime/Instance.Builder // uk.shusek.krwa.runtime/Instance.Builder.withMemoryLimits|withMemoryLimits(uk.shusek.krwa.wasm.types.MemoryLimits){}[0]
+        final fun withMemoryPolicy(uk.shusek.krwa.runtime/WasmMemoryPolicy): uk.shusek.krwa.runtime/Instance.Builder // uk.shusek.krwa.runtime/Instance.Builder.withMemoryPolicy|withMemoryPolicy(uk.shusek.krwa.runtime.WasmMemoryPolicy){}[0]
         final fun withWasmtimeExecutionConfig(uk.shusek.krwa.runtime/WasmtimeExecutionConfig?): uk.shusek.krwa.runtime/Instance.Builder // uk.shusek.krwa.runtime/Instance.Builder.withWasmtimeExecutionConfig|withWasmtimeExecutionConfig(uk.shusek.krwa.runtime.WasmtimeExecutionConfig?){}[0]
 
         final object Companion // uk.shusek.krwa.runtime/Instance.Builder.Companion|null[0]
@@ -514,6 +535,27 @@ final class uk.shusek.krwa.runtime/WasmI31Ref : uk.shusek.krwa.runtime/WasmGcRef
     final fun value(): kotlin/Int // uk.shusek.krwa.runtime/WasmI31Ref.value|value(){}[0]
 }
 
+final class uk.shusek.krwa.runtime/WasmMemoryPolicy { // uk.shusek.krwa.runtime/WasmMemoryPolicy|null[0]
+    constructor <init>(kotlin/Long = ..., kotlin/Long = ..., kotlin/Int = ...) // uk.shusek.krwa.runtime/WasmMemoryPolicy.<init>|<init>(kotlin.Long;kotlin.Long;kotlin.Int){}[0]
+
+    final val maxBytesPerMemory // uk.shusek.krwa.runtime/WasmMemoryPolicy.maxBytesPerMemory|{}maxBytesPerMemory[0]
+        final fun <get-maxBytesPerMemory>(): kotlin/Long // uk.shusek.krwa.runtime/WasmMemoryPolicy.maxBytesPerMemory.<get-maxBytesPerMemory>|<get-maxBytesPerMemory>(){}[0]
+    final val maxMemories // uk.shusek.krwa.runtime/WasmMemoryPolicy.maxMemories|{}maxMemories[0]
+        final fun <get-maxMemories>(): kotlin/Int // uk.shusek.krwa.runtime/WasmMemoryPolicy.maxMemories.<get-maxMemories>|<get-maxMemories>(){}[0]
+    final val maxTotalBytes // uk.shusek.krwa.runtime/WasmMemoryPolicy.maxTotalBytes|{}maxTotalBytes[0]
+        final fun <get-maxTotalBytes>(): kotlin/Long // uk.shusek.krwa.runtime/WasmMemoryPolicy.maxTotalBytes.<get-maxTotalBytes>|<get-maxTotalBytes>(){}[0]
+
+    final fun component1(): kotlin/Long // uk.shusek.krwa.runtime/WasmMemoryPolicy.component1|component1(){}[0]
+    final fun component2(): kotlin/Long // uk.shusek.krwa.runtime/WasmMemoryPolicy.component2|component2(){}[0]
+    final fun component3(): kotlin/Int // uk.shusek.krwa.runtime/WasmMemoryPolicy.component3|component3(){}[0]
+    final fun copy(kotlin/Long = ..., kotlin/Long = ..., kotlin/Int = ...): uk.shusek.krwa.runtime/WasmMemoryPolicy // uk.shusek.krwa.runtime/WasmMemoryPolicy.copy|copy(kotlin.Long;kotlin.Long;kotlin.Int){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // uk.shusek.krwa.runtime/WasmMemoryPolicy.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // uk.shusek.krwa.runtime/WasmMemoryPolicy.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // uk.shusek.krwa.runtime/WasmMemoryPolicy.toString|toString(){}[0]
+
+    final object Companion // uk.shusek.krwa.runtime/WasmMemoryPolicy.Companion|null[0]
+}
+
 final class uk.shusek.krwa.runtime/WasmStruct : uk.shusek.krwa.runtime/WasmGcRef { // uk.shusek.krwa.runtime/WasmStruct|null[0]
     constructor <init>(kotlin/Int, kotlin/LongArray) // uk.shusek.krwa.runtime/WasmStruct.<init>|<init>(kotlin.Int;kotlin.LongArray){}[0]
 
@@ -617,20 +659,36 @@ final class uk.shusek.krwa.runtime/WasmtimePreview3ComponentConfig { // uk.shuse
     final fun toString(): kotlin/String // uk.shusek.krwa.runtime/WasmtimePreview3ComponentConfig.toString|toString(){}[0]
 }
 
+final class uk.shusek.krwa.runtime/WasmtimePreview3HttpEndpoint { // uk.shusek.krwa.runtime/WasmtimePreview3HttpEndpoint|null[0]
+    constructor <init>(uk.shusek.krwa.runtime/WasmtimePreview3HttpProtocol, kotlin/String, kotlin/Int) // uk.shusek.krwa.runtime/WasmtimePreview3HttpEndpoint.<init>|<init>(uk.shusek.krwa.runtime.WasmtimePreview3HttpProtocol;kotlin.String;kotlin.Int){}[0]
+
+    final val host // uk.shusek.krwa.runtime/WasmtimePreview3HttpEndpoint.host|{}host[0]
+        final fun <get-host>(): kotlin/String // uk.shusek.krwa.runtime/WasmtimePreview3HttpEndpoint.host.<get-host>|<get-host>(){}[0]
+    final val normalizedHost // uk.shusek.krwa.runtime/WasmtimePreview3HttpEndpoint.normalizedHost|{}normalizedHost[0]
+        final fun <get-normalizedHost>(): kotlin/String // uk.shusek.krwa.runtime/WasmtimePreview3HttpEndpoint.normalizedHost.<get-normalizedHost>|<get-normalizedHost>(){}[0]
+    final val port // uk.shusek.krwa.runtime/WasmtimePreview3HttpEndpoint.port|{}port[0]
+        final fun <get-port>(): kotlin/Int // uk.shusek.krwa.runtime/WasmtimePreview3HttpEndpoint.port.<get-port>|<get-port>(){}[0]
+    final val protocol // uk.shusek.krwa.runtime/WasmtimePreview3HttpEndpoint.protocol|{}protocol[0]
+        final fun <get-protocol>(): uk.shusek.krwa.runtime/WasmtimePreview3HttpProtocol // uk.shusek.krwa.runtime/WasmtimePreview3HttpEndpoint.protocol.<get-protocol>|<get-protocol>(){}[0]
+
+    final fun component1(): uk.shusek.krwa.runtime/WasmtimePreview3HttpProtocol // uk.shusek.krwa.runtime/WasmtimePreview3HttpEndpoint.component1|component1(){}[0]
+    final fun component2(): kotlin/String // uk.shusek.krwa.runtime/WasmtimePreview3HttpEndpoint.component2|component2(){}[0]
+    final fun component3(): kotlin/Int // uk.shusek.krwa.runtime/WasmtimePreview3HttpEndpoint.component3|component3(){}[0]
+    final fun copy(uk.shusek.krwa.runtime/WasmtimePreview3HttpProtocol = ..., kotlin/String = ..., kotlin/Int = ...): uk.shusek.krwa.runtime/WasmtimePreview3HttpEndpoint // uk.shusek.krwa.runtime/WasmtimePreview3HttpEndpoint.copy|copy(uk.shusek.krwa.runtime.WasmtimePreview3HttpProtocol;kotlin.String;kotlin.Int){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // uk.shusek.krwa.runtime/WasmtimePreview3HttpEndpoint.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // uk.shusek.krwa.runtime/WasmtimePreview3HttpEndpoint.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // uk.shusek.krwa.runtime/WasmtimePreview3HttpEndpoint.toString|toString(){}[0]
+}
+
 final class uk.shusek.krwa.runtime/WasmtimePreview3NetworkPolicy { // uk.shusek.krwa.runtime/WasmtimePreview3NetworkPolicy|null[0]
-    constructor <init>(kotlin.collections/List<kotlin/String> = ..., kotlin.collections/List<kotlin/String> = ..., kotlin/Boolean = ...) // uk.shusek.krwa.runtime/WasmtimePreview3NetworkPolicy.<init>|<init>(kotlin.collections.List<kotlin.String>;kotlin.collections.List<kotlin.String>;kotlin.Boolean){}[0]
+    constructor <init>(kotlin.collections/List<uk.shusek.krwa.runtime/WasmtimePreview3HttpEndpoint> = ...) // uk.shusek.krwa.runtime/WasmtimePreview3NetworkPolicy.<init>|<init>(kotlin.collections.List<uk.shusek.krwa.runtime.WasmtimePreview3HttpEndpoint>){}[0]
 
-    final val allowPrivateNetwork // uk.shusek.krwa.runtime/WasmtimePreview3NetworkPolicy.allowPrivateNetwork|{}allowPrivateNetwork[0]
-        final fun <get-allowPrivateNetwork>(): kotlin/Boolean // uk.shusek.krwa.runtime/WasmtimePreview3NetworkPolicy.allowPrivateNetwork.<get-allowPrivateNetwork>|<get-allowPrivateNetwork>(){}[0]
-    final val allowedHosts // uk.shusek.krwa.runtime/WasmtimePreview3NetworkPolicy.allowedHosts|{}allowedHosts[0]
-        final fun <get-allowedHosts>(): kotlin.collections/List<kotlin/String> // uk.shusek.krwa.runtime/WasmtimePreview3NetworkPolicy.allowedHosts.<get-allowedHosts>|<get-allowedHosts>(){}[0]
-    final val blockedHosts // uk.shusek.krwa.runtime/WasmtimePreview3NetworkPolicy.blockedHosts|{}blockedHosts[0]
-        final fun <get-blockedHosts>(): kotlin.collections/List<kotlin/String> // uk.shusek.krwa.runtime/WasmtimePreview3NetworkPolicy.blockedHosts.<get-blockedHosts>|<get-blockedHosts>(){}[0]
+    final val httpEndpoints // uk.shusek.krwa.runtime/WasmtimePreview3NetworkPolicy.httpEndpoints|{}httpEndpoints[0]
+        final fun <get-httpEndpoints>(): kotlin.collections/List<uk.shusek.krwa.runtime/WasmtimePreview3HttpEndpoint> // uk.shusek.krwa.runtime/WasmtimePreview3NetworkPolicy.httpEndpoints.<get-httpEndpoints>|<get-httpEndpoints>(){}[0]
 
-    final fun component1(): kotlin.collections/List<kotlin/String> // uk.shusek.krwa.runtime/WasmtimePreview3NetworkPolicy.component1|component1(){}[0]
-    final fun component2(): kotlin.collections/List<kotlin/String> // uk.shusek.krwa.runtime/WasmtimePreview3NetworkPolicy.component2|component2(){}[0]
-    final fun component3(): kotlin/Boolean // uk.shusek.krwa.runtime/WasmtimePreview3NetworkPolicy.component3|component3(){}[0]
-    final fun copy(kotlin.collections/List<kotlin/String> = ..., kotlin.collections/List<kotlin/String> = ..., kotlin/Boolean = ...): uk.shusek.krwa.runtime/WasmtimePreview3NetworkPolicy // uk.shusek.krwa.runtime/WasmtimePreview3NetworkPolicy.copy|copy(kotlin.collections.List<kotlin.String>;kotlin.collections.List<kotlin.String>;kotlin.Boolean){}[0]
+    final fun component1(): kotlin.collections/List<uk.shusek.krwa.runtime/WasmtimePreview3HttpEndpoint> // uk.shusek.krwa.runtime/WasmtimePreview3NetworkPolicy.component1|component1(){}[0]
+    final fun copy(kotlin.collections/List<uk.shusek.krwa.runtime/WasmtimePreview3HttpEndpoint> = ...): uk.shusek.krwa.runtime/WasmtimePreview3NetworkPolicy // uk.shusek.krwa.runtime/WasmtimePreview3NetworkPolicy.copy|copy(kotlin.collections.List<uk.shusek.krwa.runtime.WasmtimePreview3HttpEndpoint>){}[0]
+    final fun encodedHttpEndpoints(): kotlin.collections/List<kotlin/String> // uk.shusek.krwa.runtime/WasmtimePreview3NetworkPolicy.encodedHttpEndpoints|encodedHttpEndpoints(){}[0]
     final fun equals(kotlin/Any?): kotlin/Boolean // uk.shusek.krwa.runtime/WasmtimePreview3NetworkPolicy.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // uk.shusek.krwa.runtime/WasmtimePreview3NetworkPolicy.hashCode|hashCode(){}[0]
     final fun toString(): kotlin/String // uk.shusek.krwa.runtime/WasmtimePreview3NetworkPolicy.toString|toString(){}[0]
@@ -947,6 +1005,8 @@ final const val uk.shusek.krwa.runtime/DefaultWasmtimeMaxMemoryBytes // uk.shuse
     final fun <get-DefaultWasmtimeMaxMemoryBytes>(): kotlin/Long // uk.shusek.krwa.runtime/DefaultWasmtimeMaxMemoryBytes.<get-DefaultWasmtimeMaxMemoryBytes>|<get-DefaultWasmtimeMaxMemoryBytes>(){}[0]
 final const val uk.shusek.krwa.runtime/DefaultWasmtimeMaxWasmStackBytes // uk.shusek.krwa.runtime/DefaultWasmtimeMaxWasmStackBytes|{}DefaultWasmtimeMaxWasmStackBytes[0]
     final fun <get-DefaultWasmtimeMaxWasmStackBytes>(): kotlin/Long // uk.shusek.krwa.runtime/DefaultWasmtimeMaxWasmStackBytes.<get-DefaultWasmtimeMaxWasmStackBytes>|<get-DefaultWasmtimeMaxWasmStackBytes>(){}[0]
+final const val uk.shusek.krwa.runtime/WasmtimeAutomaticTarget // uk.shusek.krwa.runtime/WasmtimeAutomaticTarget|{}WasmtimeAutomaticTarget[0]
+    final fun <get-WasmtimeAutomaticTarget>(): kotlin/String // uk.shusek.krwa.runtime/WasmtimeAutomaticTarget.<get-WasmtimeAutomaticTarget>|<get-WasmtimeAutomaticTarget>(){}[0]
 final const val uk.shusek.krwa.runtime/WasmtimeModuleCompilerBuildIdentity // uk.shusek.krwa.runtime/WasmtimeModuleCompilerBuildIdentity|{}WasmtimeModuleCompilerBuildIdentity[0]
     final fun <get-WasmtimeModuleCompilerBuildIdentity>(): kotlin/String // uk.shusek.krwa.runtime/WasmtimeModuleCompilerBuildIdentity.<get-WasmtimeModuleCompilerBuildIdentity>|<get-WasmtimeModuleCompilerBuildIdentity>(){}[0]
 final const val uk.shusek.krwa.runtime/WasmtimeNativeTarget // uk.shusek.krwa.runtime/WasmtimeNativeTarget|{}WasmtimeNativeTarget[0]
@@ -959,6 +1019,7 @@ final const val uk.shusek.krwa.runtime/WasmtimeUnlimitedResourceLimit // uk.shus
 final fun (uk.shusek.krwa.runtime/ExecutionBackend).uk.shusek.krwa.runtime/availability(): uk.shusek.krwa.runtime/ExecutionBackendAvailability // uk.shusek.krwa.runtime/availability|availability@uk.shusek.krwa.runtime.ExecutionBackend(){}[0]
 final fun (uk.shusek.krwa.runtime/ExecutionBackend).uk.shusek.krwa.runtime/isAvailable(): kotlin/Boolean // uk.shusek.krwa.runtime/isAvailable|isAvailable@uk.shusek.krwa.runtime.ExecutionBackend(){}[0]
 final fun (uk.shusek.krwa.runtime/WasmFunctionHandle).uk.shusek.krwa.runtime/apply(uk.shusek.krwa.runtime/Instance, kotlin/LongArray...): kotlin/LongArray? // uk.shusek.krwa.runtime/apply|apply@uk.shusek.krwa.runtime.WasmFunctionHandle(uk.shusek.krwa.runtime.Instance;kotlin.LongArray...){}[0]
+final fun uk.shusek.krwa.runtime/canonicalizeExactNetworkHost(kotlin/String): kotlin/String // uk.shusek.krwa.runtime/canonicalizeExactNetworkHost|canonicalizeExactNetworkHost(kotlin.String){}[0]
 final fun uk.shusek.krwa.runtime/installWasmtimePulleyExecutionProviderIfAvailable() // uk.shusek.krwa.runtime/installWasmtimePulleyExecutionProviderIfAvailable|installWasmtimePulleyExecutionProviderIfAvailable(){}[0]
 final fun uk.shusek.krwa.runtime/wasmtimePreview3CommandRunUnavailableReason(uk.shusek.krwa.runtime/WasmtimePreview3ComponentConfig): kotlin/String? // uk.shusek.krwa.runtime/wasmtimePreview3CommandRunUnavailableReason|wasmtimePreview3CommandRunUnavailableReason(uk.shusek.krwa.runtime.WasmtimePreview3ComponentConfig){}[0]
 final fun uk.shusek.krwa.runtime/wasmtimePreview3ComponentCall0UnavailableReason(uk.shusek.krwa.runtime/WasmtimePreview3ComponentConfig, kotlin/String): kotlin/String? // uk.shusek.krwa.runtime/wasmtimePreview3ComponentCall0UnavailableReason|wasmtimePreview3ComponentCall0UnavailableReason(uk.shusek.krwa.runtime.WasmtimePreview3ComponentConfig;kotlin.String){}[0]

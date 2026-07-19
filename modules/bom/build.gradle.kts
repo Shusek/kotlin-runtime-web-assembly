@@ -17,7 +17,7 @@ extensions.configure<JavaPlatformExtension> {
 
 dependencies {
     constraints {
-        krwaModuleByArtifact.forEach { (artifact, projectPath) ->
+        krwaPublicModuleByArtifact.forEach { (artifact, projectPath) ->
             add("api", project(projectPath))
         }
     }

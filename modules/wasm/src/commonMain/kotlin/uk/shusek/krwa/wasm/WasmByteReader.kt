@@ -4,8 +4,12 @@ internal class WasmByteReader private constructor(
     private val bytes: ByteArray,
     private val end: Int,
     private var currentPosition: Int,
+    internal val limits: WasmParserLimits,
 ) {
-    constructor(bytes: ByteArray) : this(bytes, bytes.size, 0)
+    constructor(
+        bytes: ByteArray,
+        limits: WasmParserLimits = WasmParserLimits(),
+    ) : this(bytes, bytes.size, 0, limits)
 
     fun hasRemaining(): Boolean = currentPosition < end
 
@@ -50,7 +54,7 @@ internal class WasmByteReader private constructor(
             throw MalformedException("length out of bounds")
         }
         requireRemaining(size)
-        val slice = WasmByteReader(bytes, currentPosition + size, currentPosition)
+        val slice = WasmByteReader(bytes, currentPosition + size, currentPosition, limits)
         currentPosition += size
         return slice
     }

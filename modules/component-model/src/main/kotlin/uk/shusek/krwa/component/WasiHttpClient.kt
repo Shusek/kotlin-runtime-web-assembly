@@ -25,6 +25,54 @@ public interface WasiSuspendingHttpClient : WasiHttpClient {
     override suspend fun sendSuspending(request: WasiHttpRequest): WasiHttpResponse
 }
 
+internal interface WasiTransportResource {
+    fun close()
+}
+
+internal typealias WasiPreview2TransportResource = WasiTransportResource
+
+internal typealias WasiPreview3TransportResource = WasiTransportResource
+
+internal fun ownedWasiHttpClient(
+    delegate: WasiHttpClient,
+    closeDelegate: () -> Unit,
+): WasiHttpClient = OwnedWasiHttpClient(delegate, closeDelegate)
+
+private class OwnedWasiHttpClient(
+    private val delegate: WasiHttpClient,
+    private val closeDelegate: () -> Unit,
+) : WasiSuspendingHttpClient, WasiPreview3TransportResource {
+    private val lifecycleLock = WasiPreviewLock()
+    private var closed: Boolean = false
+
+    override fun send(request: WasiHttpRequest): WasiHttpResponse =
+        requireOpenDelegate().send(request)
+
+    override suspend fun sendSuspending(request: WasiHttpRequest): WasiHttpResponse =
+        requireOpenDelegate().sendSuspending(request)
+
+    override fun close() {
+        val shouldClose =
+            withWasiPreviewLock(lifecycleLock) {
+                if (closed) {
+                    false
+                } else {
+                    closed = true
+                    true
+                }
+            }
+        if (shouldClose) {
+            closeDelegate()
+        }
+    }
+
+    private fun requireOpenDelegate(): WasiHttpClient =
+        withWasiPreviewLock(lifecycleLock) {
+            check(!closed) { "WASI HTTP transport is closed" }
+            delegate
+        }
+}
+
 public class WasiHttpRequest(
     public val method: String,
     public val uri: String,

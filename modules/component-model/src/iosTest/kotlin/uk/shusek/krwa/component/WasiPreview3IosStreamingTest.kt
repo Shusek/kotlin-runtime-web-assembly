@@ -2,13 +2,32 @@ package uk.shusek.krwa.component
 
 import kotlin.random.Random
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.fail
 import kotlinx.io.Buffer
 import kotlinx.io.RawSource
 import okio.FileSystem
+import uk.shusek.krwa.wasm.WasmEngineException
 
 class WasiPreview3IosStreamingTest {
+    @Test
+    fun iosPulleyPreservesHostCallbackFailureDetails() {
+        val plugin =
+            WasmPlugin.builder(hostCallbackFailurePackage())
+                .withModule(hostCallbackFailureModule())
+                .withWitHostImport(WitHostImportId("plugin", "boom")) {
+                    throw IllegalStateException(HostCallbackFailureMarker)
+                }
+                .build()
+
+        plugin.use {
+            val failure = assertFailsWith<WasmEngineException> { it.call("api.run") }
+            assertContains(failure.message.orEmpty(), HostCallbackFailureMarker)
+        }
+    }
+
     @Test
     fun preview3HttpStreamCanBeWrittenToPreopenedFileOnIos() {
         val fileSystem = FileSystem.SYSTEM
@@ -35,26 +54,29 @@ class WasiPreview3IosStreamingTest {
                     .withModule(httpToFileProbeModule())
                     .withWasiPreview3(
                         WasiPreview3.builder()
-                            .withNetworking()
+                            .withNetworkPolicy(iosStreamingNetworkPolicy)
                             .withPreopenedDirectory("/", root.toString())
                             .withHttpClient(client)
-                            .build()
+                            .build(),
+                        WasiPreview3HostOwnership.OWNED,
                     )
                     .build()
 
-            val written = plugin.call("api.run")
-            assertEquals(LargeCatalogPayloadBytes.toLong(), written)
-            if (fileSystem.metadataOrNull(output) == null) {
-                fail("expected output file $output, root entries=${fileSystem.list(root)}")
-            }
-            val bytes = fileSystem.read(output) { readByteArray() }
+            plugin.use {
+                val written = it.call("api.run")
+                assertEquals(LargeCatalogPayloadBytes.toLong(), written)
+                if (fileSystem.metadataOrNull(output) == null) {
+                    fail("expected output file $output, root entries=${fileSystem.list(root)}")
+                }
+                val bytes = fileSystem.read(output) { readByteArray() }
 
-            assertEquals(LargeCatalogPayloadBytes, bytes.size)
-            assertEquals(
-                expectedReadCalls(LargeCatalogPayloadBytes, LargeResponseReadChunkSize),
-                source.reads,
-            )
-            assertGeneratedBytes(bytes, LargeResponseReadChunkSize)
+                assertEquals(LargeCatalogPayloadBytes, bytes.size)
+                assertEquals(
+                    expectedReadCalls(LargeCatalogPayloadBytes, LargeResponseReadChunkSize),
+                    source.reads,
+                )
+                assertGeneratedBytes(bytes, LargeResponseReadChunkSize)
+            }
         } finally {
             fileSystem.deleteRecursively(root, mustExist = false)
         }
@@ -86,20 +108,26 @@ class WasiPreview3IosStreamingTest {
                     .withModule(httpScanToFileProbeModule())
                     .withWasiPreview3(
                         WasiPreview3.builder()
-                            .withNetworking()
+                            .withNetworkPolicy(iosStreamingNetworkPolicy)
                             .withPreopenedDirectory("/", root.toString())
                             .withHttpClient(client)
-                            .build()
+                            .build(),
+                        WasiPreview3HostOwnership.OWNED,
                     )
                     .build()
 
-            val scanned = plugin.call("api.run")
-            assertEquals(LargeCatalogPayloadBytes.toLong(), scanned)
-            assertEquals("header\ndone\n", fileSystem.read(output) { readByteArray().decodeToString() })
-            assertEquals(
-                expectedReadCalls(LargeCatalogPayloadBytes, LargeResponseReadChunkSize),
-                source.reads,
-            )
+            plugin.use {
+                val scanned = it.call("api.run")
+                assertEquals(LargeCatalogPayloadBytes.toLong(), scanned)
+                assertEquals(
+                    "header\ndone\n",
+                    fileSystem.read(output) { readByteArray().decodeToString() },
+                )
+                assertEquals(
+                    expectedReadCalls(LargeCatalogPayloadBytes, LargeResponseReadChunkSize),
+                    source.reads,
+                )
+            }
         } finally {
             fileSystem.deleteRecursively(root, mustExist = false)
         }
@@ -124,18 +152,24 @@ class WasiPreview3IosStreamingTest {
                     .withWasiPreview3(
                         WasiPreview3.builder()
                             .withPreopenedDirectory("/", root.toString())
-                            .build()
+                            .build(),
+                        WasiPreview3HostOwnership.OWNED,
                     )
                     .build()
 
-            val written = plugin.call("api.run")
-            assertEquals(ExpectedIndexCycleBytes.encodeToByteArray().size.toLong(), written)
-            assertEquals(ExpectedIndexCycleBytes, fileSystem.read(output) { readByteArray().decodeToString() })
-            if (fileSystem.metadataOrNull(temp) != null) {
-                fail("temporary cache file still exists: $temp")
-            }
-            if (fileSystem.metadataOrNull(run) != null) {
-                fail("temporary run file still exists: $run")
+            plugin.use {
+                val written = it.call("api.run")
+                assertEquals(ExpectedIndexCycleBytes.encodeToByteArray().size.toLong(), written)
+                assertEquals(
+                    ExpectedIndexCycleBytes,
+                    fileSystem.read(output) { readByteArray().decodeToString() },
+                )
+                if (fileSystem.metadataOrNull(temp) != null) {
+                    fail("temporary cache file still exists: $temp")
+                }
+                if (fileSystem.metadataOrNull(run) != null) {
+                    fail("temporary run file still exists: $run")
+                }
             }
         } finally {
             fileSystem.deleteRecursively(root, mustExist = false)
@@ -161,19 +195,25 @@ class WasiPreview3IosStreamingTest {
                     .withWasiPreview3(
                         WasiPreview3.builder()
                             .withPreopenedDirectory("/", root.toString())
-                            .build()
+                            .build(),
+                        WasiPreview3HostOwnership.OWNED,
                     )
                     .build()
 
-            val checksum = plugin.call("api.run")
-            assertEquals(ExpectedLargeIndexCycleChecksum.toLong(), checksum)
-            assertEquals("header\nmerged\n", fileSystem.read(output) { readByteArray().decodeToString() })
-            if (fileSystem.metadataOrNull(temp) != null) {
-                fail("temporary cache file still exists: $temp")
-            }
-            for (run in runs) {
-                if (fileSystem.metadataOrNull(run) != null) {
-                    fail("temporary run file still exists: $run")
+            plugin.use {
+                val checksum = it.call("api.run")
+                assertEquals(ExpectedLargeIndexCycleChecksum.toLong(), checksum)
+                assertEquals(
+                    "header\nmerged\n",
+                    fileSystem.read(output) { readByteArray().decodeToString() },
+                )
+                if (fileSystem.metadataOrNull(temp) != null) {
+                    fail("temporary cache file still exists: $temp")
+                }
+                for (run in runs) {
+                    if (fileSystem.metadataOrNull(run) != null) {
+                        fail("temporary run file still exists: $run")
+                    }
                 }
             }
         } finally {
@@ -181,6 +221,32 @@ class WasiPreview3IosStreamingTest {
         }
     }
 }
+
+private fun hostCallbackFailurePackage(): WitPackage =
+    WitPackage.parse(
+        """
+        package example:ios-host-callback-failure;
+
+        world plugin {
+          import boom: func();
+          export api;
+        }
+
+        interface api {
+          run: func() -> u32;
+        }
+        """
+            .trimIndent()
+    )
+
+private fun hostCallbackFailureModule(): ByteArray =
+    decodeBase64(
+        """
+        AGFzbQEAAAABCAJgAABgAAF/Ag8BBnBsdWdpbgRib29tAAADAgEBBQMBAAEHFAIGbWVtb3J5AgAHYXBpLnJ1bgABCggBBgAQ
+        AEEqCwAmBG5hbWUBDAIABGJvb20BA3J1bgQRAgAEaG9zdAEIcnVuLXR5cGU=
+        """
+            .trimIndent()
+    )
 
 private class GeneratedRawSource(
     private val byteCount: Int,
@@ -601,6 +667,18 @@ private fun assertGeneratedBytes(bytes: ByteArray, chunkSize: Int) {
 
 private const val LargeCatalogPayloadBytes = 7_950_024
 private const val LargeResponseReadChunkSize = 256 * 1024
+private const val HostCallbackFailureMarker = "krwa-ios-host-callback-marker"
+private val iosStreamingNetworkPolicy =
+    WasiNetworkPolicy(
+        httpEndpoints =
+            setOf(
+                WasiHttpNetworkEndpoint(
+                    WasiHttpNetworkProtocol.Http,
+                    "example.invalid",
+                    80,
+                )
+            ),
+    )
 private const val LargeIndexCycleRunCount = 8
 private const val ExpectedLargeIndexCycleChecksum = 534_773_760
 private const val ExpectedIndexCycleBytes =

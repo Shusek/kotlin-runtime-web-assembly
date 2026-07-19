@@ -6,7 +6,18 @@
 // - Show declarations: true
 
 // Library unique name: <uk.shusek.krwa:wasi-preview3>
-final class uk.shusek.krwa.wasi.preview3/KotlinWasiPreview3 { // uk.shusek.krwa.wasi.preview3/KotlinWasiPreview3|null[0]
+final enum class uk.shusek.krwa.wasi.preview3/WasiHttpNetworkProtocol : kotlin/Enum<uk.shusek.krwa.wasi.preview3/WasiHttpNetworkProtocol> { // uk.shusek.krwa.wasi.preview3/WasiHttpNetworkProtocol|null[0]
+    enum entry Http // uk.shusek.krwa.wasi.preview3/WasiHttpNetworkProtocol.Http|null[0]
+    enum entry Https // uk.shusek.krwa.wasi.preview3/WasiHttpNetworkProtocol.Https|null[0]
+
+    final val entries // uk.shusek.krwa.wasi.preview3/WasiHttpNetworkProtocol.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<uk.shusek.krwa.wasi.preview3/WasiHttpNetworkProtocol> // uk.shusek.krwa.wasi.preview3/WasiHttpNetworkProtocol.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): uk.shusek.krwa.wasi.preview3/WasiHttpNetworkProtocol // uk.shusek.krwa.wasi.preview3/WasiHttpNetworkProtocol.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<uk.shusek.krwa.wasi.preview3/WasiHttpNetworkProtocol> // uk.shusek.krwa.wasi.preview3/WasiHttpNetworkProtocol.values|values#static(){}[0]
+}
+
+final class uk.shusek.krwa.wasi.preview3/KotlinWasiPreview3 : kotlin/AutoCloseable { // uk.shusek.krwa.wasi.preview3/KotlinWasiPreview3|null[0]
     final val arguments // uk.shusek.krwa.wasi.preview3/KotlinWasiPreview3.arguments|{}arguments[0]
         final fun <get-arguments>(): kotlin.collections/List<kotlin/String> // uk.shusek.krwa.wasi.preview3/KotlinWasiPreview3.arguments.<get-arguments>|<get-arguments>(){}[0]
     final val coroutineScope // uk.shusek.krwa.wasi.preview3/KotlinWasiPreview3.coroutineScope|{}coroutineScope[0]
@@ -35,6 +46,8 @@ final class uk.shusek.krwa.wasi.preview3/KotlinWasiPreview3 { // uk.shusek.krwa.
         final fun <get-monotonicClock>(): kotlin/Function0<kotlin.time/Duration> // uk.shusek.krwa.wasi.preview3/KotlinWasiPreview3.monotonicClock.<get-monotonicClock>|<get-monotonicClock>(){}[0]
     final val monotonicResolution // uk.shusek.krwa.wasi.preview3/KotlinWasiPreview3.monotonicResolution|{}monotonicResolution[0]
         final fun <get-monotonicResolution>(): kotlin.time/Duration // uk.shusek.krwa.wasi.preview3/KotlinWasiPreview3.monotonicResolution.<get-monotonicResolution>|<get-monotonicResolution>(){}[0]
+    final val networkPolicy // uk.shusek.krwa.wasi.preview3/KotlinWasiPreview3.networkPolicy|{}networkPolicy[0]
+        final fun <get-networkPolicy>(): uk.shusek.krwa.wasi.preview3/WasiNetworkPolicy // uk.shusek.krwa.wasi.preview3/KotlinWasiPreview3.networkPolicy.<get-networkPolicy>|<get-networkPolicy>(){}[0]
     final val networkingEnabled // uk.shusek.krwa.wasi.preview3/KotlinWasiPreview3.networkingEnabled|{}networkingEnabled[0]
         final fun <get-networkingEnabled>(): kotlin/Boolean // uk.shusek.krwa.wasi.preview3/KotlinWasiPreview3.networkingEnabled.<get-networkingEnabled>|<get-networkingEnabled>(){}[0]
     final val secureRandom // uk.shusek.krwa.wasi.preview3/KotlinWasiPreview3.secureRandom|{}secureRandom[0]
@@ -77,6 +90,7 @@ final class uk.shusek.krwa.wasi.preview3/KotlinWasiPreview3 { // uk.shusek.krwa.
         final fun withInsecureSeed(kotlin/ULong, kotlin/ULong): uk.shusek.krwa.wasi.preview3/KotlinWasiPreview3.Builder // uk.shusek.krwa.wasi.preview3/KotlinWasiPreview3.Builder.withInsecureSeed|withInsecureSeed(kotlin.ULong;kotlin.ULong){}[0]
         final fun withMonotonicClock(kotlin/Function0<kotlin.time/Duration>): uk.shusek.krwa.wasi.preview3/KotlinWasiPreview3.Builder // uk.shusek.krwa.wasi.preview3/KotlinWasiPreview3.Builder.withMonotonicClock|withMonotonicClock(kotlin.Function0<kotlin.time.Duration>){}[0]
         final fun withMonotonicResolution(kotlin.time/Duration): uk.shusek.krwa.wasi.preview3/KotlinWasiPreview3.Builder // uk.shusek.krwa.wasi.preview3/KotlinWasiPreview3.Builder.withMonotonicResolution|withMonotonicResolution(kotlin.time.Duration){}[0]
+        final fun withNetworkPolicy(uk.shusek.krwa.wasi.preview3/WasiNetworkPolicy): uk.shusek.krwa.wasi.preview3/KotlinWasiPreview3.Builder // uk.shusek.krwa.wasi.preview3/KotlinWasiPreview3.Builder.withNetworkPolicy|withNetworkPolicy(uk.shusek.krwa.wasi.preview3.WasiNetworkPolicy){}[0]
         final fun withNetworking(): uk.shusek.krwa.wasi.preview3/KotlinWasiPreview3.Builder // uk.shusek.krwa.wasi.preview3/KotlinWasiPreview3.Builder.withNetworking|withNetworking(){}[0]
         final fun withNetworking(kotlin/Boolean): uk.shusek.krwa.wasi.preview3/KotlinWasiPreview3.Builder // uk.shusek.krwa.wasi.preview3/KotlinWasiPreview3.Builder.withNetworking|withNetworking(kotlin.Boolean){}[0]
         final fun withPreopenedDirectory(kotlin/String, kotlin/String): uk.shusek.krwa.wasi.preview3/KotlinWasiPreview3.Builder // uk.shusek.krwa.wasi.preview3/KotlinWasiPreview3.Builder.withPreopenedDirectory|withPreopenedDirectory(kotlin.String;kotlin.String){}[0]
@@ -175,6 +189,25 @@ final class uk.shusek.krwa.wasi.preview3/WasiFileSystem { // uk.shusek.krwa.wasi
     }
 }
 
+final class uk.shusek.krwa.wasi.preview3/WasiHttpNetworkEndpoint { // uk.shusek.krwa.wasi.preview3/WasiHttpNetworkEndpoint|null[0]
+    constructor <init>(uk.shusek.krwa.wasi.preview3/WasiHttpNetworkProtocol, kotlin/String, kotlin/Int) // uk.shusek.krwa.wasi.preview3/WasiHttpNetworkEndpoint.<init>|<init>(uk.shusek.krwa.wasi.preview3.WasiHttpNetworkProtocol;kotlin.String;kotlin.Int){}[0]
+
+    final val host // uk.shusek.krwa.wasi.preview3/WasiHttpNetworkEndpoint.host|{}host[0]
+        final fun <get-host>(): kotlin/String // uk.shusek.krwa.wasi.preview3/WasiHttpNetworkEndpoint.host.<get-host>|<get-host>(){}[0]
+    final val port // uk.shusek.krwa.wasi.preview3/WasiHttpNetworkEndpoint.port|{}port[0]
+        final fun <get-port>(): kotlin/Int // uk.shusek.krwa.wasi.preview3/WasiHttpNetworkEndpoint.port.<get-port>|<get-port>(){}[0]
+    final val protocol // uk.shusek.krwa.wasi.preview3/WasiHttpNetworkEndpoint.protocol|{}protocol[0]
+        final fun <get-protocol>(): uk.shusek.krwa.wasi.preview3/WasiHttpNetworkProtocol // uk.shusek.krwa.wasi.preview3/WasiHttpNetworkEndpoint.protocol.<get-protocol>|<get-protocol>(){}[0]
+
+    final fun component1(): uk.shusek.krwa.wasi.preview3/WasiHttpNetworkProtocol // uk.shusek.krwa.wasi.preview3/WasiHttpNetworkEndpoint.component1|component1(){}[0]
+    final fun component2(): kotlin/String // uk.shusek.krwa.wasi.preview3/WasiHttpNetworkEndpoint.component2|component2(){}[0]
+    final fun component3(): kotlin/Int // uk.shusek.krwa.wasi.preview3/WasiHttpNetworkEndpoint.component3|component3(){}[0]
+    final fun copy(uk.shusek.krwa.wasi.preview3/WasiHttpNetworkProtocol = ..., kotlin/String = ..., kotlin/Int = ...): uk.shusek.krwa.wasi.preview3/WasiHttpNetworkEndpoint // uk.shusek.krwa.wasi.preview3/WasiHttpNetworkEndpoint.copy|copy(uk.shusek.krwa.wasi.preview3.WasiHttpNetworkProtocol;kotlin.String;kotlin.Int){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // uk.shusek.krwa.wasi.preview3/WasiHttpNetworkEndpoint.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // uk.shusek.krwa.wasi.preview3/WasiHttpNetworkEndpoint.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // uk.shusek.krwa.wasi.preview3/WasiHttpNetworkEndpoint.toString|toString(){}[0]
+}
+
 final class uk.shusek.krwa.wasi.preview3/WasiInstant { // uk.shusek.krwa.wasi.preview3/WasiInstant|null[0]
     constructor <init>(kotlin/Long, kotlin/Int = ...) // uk.shusek.krwa.wasi.preview3/WasiInstant.<init>|<init>(kotlin.Long;kotlin.Int){}[0]
 
@@ -196,6 +229,36 @@ final class uk.shusek.krwa.wasi.preview3/WasiInstant { // uk.shusek.krwa.wasi.pr
         final fun fromEpochSeconds(kotlin/Long, kotlin/Int = ...): uk.shusek.krwa.wasi.preview3/WasiInstant // uk.shusek.krwa.wasi.preview3/WasiInstant.Companion.fromEpochSeconds|fromEpochSeconds(kotlin.Long;kotlin.Int){}[0]
         final fun fromKotlinInstant(kotlin.time/Instant): uk.shusek.krwa.wasi.preview3/WasiInstant // uk.shusek.krwa.wasi.preview3/WasiInstant.Companion.fromKotlinInstant|fromKotlinInstant(kotlin.time.Instant){}[0]
         final fun now(kotlin.time/Clock = ...): uk.shusek.krwa.wasi.preview3/WasiInstant // uk.shusek.krwa.wasi.preview3/WasiInstant.Companion.now|now(kotlin.time.Clock){}[0]
+    }
+}
+
+final class uk.shusek.krwa.wasi.preview3/WasiNetworkEndpoint { // uk.shusek.krwa.wasi.preview3/WasiNetworkEndpoint|null[0]
+    constructor <init>(kotlin/String, kotlin/Int) // uk.shusek.krwa.wasi.preview3/WasiNetworkEndpoint.<init>|<init>(kotlin.String;kotlin.Int){}[0]
+
+    final val host // uk.shusek.krwa.wasi.preview3/WasiNetworkEndpoint.host|{}host[0]
+        final fun <get-host>(): kotlin/String // uk.shusek.krwa.wasi.preview3/WasiNetworkEndpoint.host.<get-host>|<get-host>(){}[0]
+    final val port // uk.shusek.krwa.wasi.preview3/WasiNetworkEndpoint.port|{}port[0]
+        final fun <get-port>(): kotlin/Int // uk.shusek.krwa.wasi.preview3/WasiNetworkEndpoint.port.<get-port>|<get-port>(){}[0]
+
+    final fun component1(): kotlin/String // uk.shusek.krwa.wasi.preview3/WasiNetworkEndpoint.component1|component1(){}[0]
+    final fun component2(): kotlin/Int // uk.shusek.krwa.wasi.preview3/WasiNetworkEndpoint.component2|component2(){}[0]
+    final fun copy(kotlin/String = ..., kotlin/Int = ...): uk.shusek.krwa.wasi.preview3/WasiNetworkEndpoint // uk.shusek.krwa.wasi.preview3/WasiNetworkEndpoint.copy|copy(kotlin.String;kotlin.Int){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // uk.shusek.krwa.wasi.preview3/WasiNetworkEndpoint.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // uk.shusek.krwa.wasi.preview3/WasiNetworkEndpoint.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // uk.shusek.krwa.wasi.preview3/WasiNetworkEndpoint.toString|toString(){}[0]
+}
+
+final class uk.shusek.krwa.wasi.preview3/WasiNetworkPolicy { // uk.shusek.krwa.wasi.preview3/WasiNetworkPolicy|null[0]
+    constructor <init>(kotlin.collections/Set<uk.shusek.krwa.wasi.preview3/WasiHttpNetworkEndpoint> = ..., kotlin.collections/Set<uk.shusek.krwa.wasi.preview3/WasiNetworkEndpoint> = ...) // uk.shusek.krwa.wasi.preview3/WasiNetworkPolicy.<init>|<init>(kotlin.collections.Set<uk.shusek.krwa.wasi.preview3.WasiHttpNetworkEndpoint>;kotlin.collections.Set<uk.shusek.krwa.wasi.preview3.WasiNetworkEndpoint>){}[0]
+
+    final val httpEndpoints // uk.shusek.krwa.wasi.preview3/WasiNetworkPolicy.httpEndpoints|{}httpEndpoints[0]
+        final fun <get-httpEndpoints>(): kotlin.collections/Set<uk.shusek.krwa.wasi.preview3/WasiHttpNetworkEndpoint> // uk.shusek.krwa.wasi.preview3/WasiNetworkPolicy.httpEndpoints.<get-httpEndpoints>|<get-httpEndpoints>(){}[0]
+    final val rawSocketEndpoints // uk.shusek.krwa.wasi.preview3/WasiNetworkPolicy.rawSocketEndpoints|{}rawSocketEndpoints[0]
+        final fun <get-rawSocketEndpoints>(): kotlin.collections/Set<uk.shusek.krwa.wasi.preview3/WasiNetworkEndpoint> // uk.shusek.krwa.wasi.preview3/WasiNetworkPolicy.rawSocketEndpoints.<get-rawSocketEndpoints>|<get-rawSocketEndpoints>(){}[0]
+
+    final object Companion { // uk.shusek.krwa.wasi.preview3/WasiNetworkPolicy.Companion|null[0]
+        final val DENY_ALL // uk.shusek.krwa.wasi.preview3/WasiNetworkPolicy.Companion.DENY_ALL|{}DENY_ALL[0]
+            final fun <get-DENY_ALL>(): uk.shusek.krwa.wasi.preview3/WasiNetworkPolicy // uk.shusek.krwa.wasi.preview3/WasiNetworkPolicy.Companion.DENY_ALL.<get-DENY_ALL>|<get-DENY_ALL>(){}[0]
     }
 }
 

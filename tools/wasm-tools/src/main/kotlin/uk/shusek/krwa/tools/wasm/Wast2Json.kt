@@ -72,6 +72,7 @@ private constructor(
                                     .withWasmtimeExecutionConfig(WasmToolsRuntime.executionConfig)
                                     .withImportValues(imports)
                                     .build()
+                                    .use {}
                             }
 
                         java.nio.file.Files.createDirectories(output.toPath())

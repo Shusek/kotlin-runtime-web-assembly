@@ -57,6 +57,11 @@ class Parser private constructor(private val core: WasmParserCore) {
             return this
         }
 
+        fun withLimits(limits: WasmParserLimits): Builder {
+            coreBuilder.withLimits(limits)
+            return this
+        }
+
         fun build(): Parser = Parser(coreBuilder.build())
 
         companion object {
@@ -67,7 +72,9 @@ class Parser private constructor(private val core: WasmParserCore) {
     fun parse(inputStreamSupplier: () -> InputStream): WasmModule {
         val bytes =
             try {
-                inputStreamSupplier().use { input -> InputStreams.readAllBytes(input) }
+                inputStreamSupplier().use { input ->
+                    InputStreams.readAllBytes(input, core.parserLimits().maxModuleBytes)
+                }
             } catch (e: IOException) {
                 throw WasmEngineException(e)
             }
@@ -92,7 +99,7 @@ class Parser private constructor(private val core: WasmParserCore) {
 
     private fun parse(input: InputStream, listener: ParserListener, decode: Boolean) {
         try {
-            val bytes = InputStreams.readAllBytes(input)
+            val bytes = InputStreams.readAllBytes(input, core.parserLimits().maxModuleBytes)
             if (decode) {
                 core.parseBytes(bytes, listener)
             } else {

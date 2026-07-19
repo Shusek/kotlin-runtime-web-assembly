@@ -1,9 +1,8 @@
 package uk.shusek.krwa.wasm
 
+import kotlinx.io.Buffer
 import kotlinx.io.RawSource
-import kotlinx.io.buffered
 import kotlinx.io.readByteArray
-import uk.shusek.krwa.wasm.WasmLimits.MAX_FUNCTION_LOCALS
 import uk.shusek.krwa.wasm.types.ActiveDataSegment
 import uk.shusek.krwa.wasm.types.ActiveElement
 import uk.shusek.krwa.wasm.types.AnnotatedInstruction
@@ -72,12 +71,24 @@ private constructor(
     private val threadsMemory: Boolean,
     private val forwardTypeReferences: Boolean,
     private val localGlobalReferencesInConstantExpressions: Boolean,
+    private val limits: WasmParserLimits,
 ) {
     private val includeSections: Set<Int>? = includeSections?.toSet()
     private val customParsers: Map<String, (ByteArray) -> CustomSection> = customParsers.toMap()
     private var typeSection: TypeSection = TypeSection.builder().build()
 
-    private constructor() : this(null, DEFAULT_CUSTOM_PARSERS, true, true, true, true, true, true)
+    private constructor() :
+        this(
+            null,
+            defaultCustomParsers(WasmParserLimits()),
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            WasmParserLimits(),
+        )
 
     class Builder private constructor() {
         private var customParsers: Map<String, (ByteArray) -> CustomSection>? = null
@@ -88,6 +99,7 @@ private constructor(
         private var threadsMemory = true
         private var forwardTypeReferences = true
         private var localGlobalReferencesInConstantExpressions = true
+        private var limits = WasmParserLimits()
 
         /** @param sectionId the sectionId to be included while parsing, e.g. SectionId.MEMORY */
         fun includeSectionId(sectionId: Int): Builder {
@@ -135,19 +147,23 @@ private constructor(
             return this
         }
 
+        fun withLimits(limits: WasmParserLimits): Builder {
+            this.limits = limits
+            return this
+        }
+
         fun build(): WasmParserCore {
-            if (customParsers == null) {
-                customParsers = DEFAULT_CUSTOM_PARSERS
-            }
+            val configuredCustomParsers = customParsers ?: defaultCustomParsers(limits)
             return WasmParserCore(
                 includeSections,
-                customParsers!!,
+                configuredCustomParsers,
                 validate,
                 multiTable,
                 multiMemory,
                 threadsMemory,
                 forwardTypeReferences,
                 localGlobalReferencesInConstantExpressions,
+                limits,
             )
         }
 
@@ -168,6 +184,8 @@ private constructor(
             parseBytes(bytes, ParserListener { section -> onSection(moduleBuilder, section) })
             moduleBuilder.withDigest(WasmDigest.sha256(bytes))
             moduleBuilder.withOriginalBytes(bytes)
+        } catch (e: WasmParseLimitException) {
+            throw e
         } catch (e: MalformedException) {
             throw MalformedException(
                 "section size mismatch, unexpected end of section or function, " + e.message,
@@ -179,7 +197,7 @@ private constructor(
 
     fun parse(source: RawSource): WasmModule =
         try {
-            parseBytes(source.buffered().readByteArray())
+            parseBytes(readSourceBytes(source))
         } finally {
             source.close()
         }
@@ -201,12 +219,13 @@ private constructor(
     }
 
     private fun parse(source: RawSource, listener: ParserListener, decode: Boolean) {
-        parseBytes(source.buffered().readByteArray(), listener, decode)
+        parseBytes(readSourceBytes(source), listener, decode)
     }
 
     private fun parseBytes(bytes: ByteArray, listener: ParserListener, decode: Boolean = true) {
+        requireWithinLimit("maxModuleBytes", limits.maxModuleBytes, bytes.size.toLong())
         val validator = SectionsValidator()
-        val buffer = WasmByteReader(bytes)
+        val buffer = WasmByteReader(bytes, limits)
 
         val magic = ByteArray(4)
         readBytes(buffer, magic)
@@ -234,6 +253,18 @@ private constructor(
         while (buffer.hasRemaining()) {
             val sectionId = readByte(buffer)
             val sectionSize = readVarUInt32(buffer)
+            requireWithinLimit(
+                "maxSectionBytes",
+                limits.maxSectionBytes.toLong(),
+                sectionSize,
+            )
+            if (sectionId.toInt() == SectionId.CUSTOM) {
+                requireWithinLimit(
+                    "maxCustomSectionBytes",
+                    limits.maxCustomSectionBytes.toLong(),
+                    sectionSize,
+                )
+            }
 
             validator.validateSectionType(sectionId)
 
@@ -309,6 +340,27 @@ private constructor(
         }
     }
 
+    internal fun parserLimits(): WasmParserLimits = limits
+
+    private fun readSourceBytes(source: RawSource): ByteArray {
+        val output = Buffer()
+        val chunk = Buffer()
+        var total = 0L
+        while (true) {
+            val requested = minOf(SOURCE_READ_CHUNK_SIZE, limits.maxModuleBytes - total + 1)
+            val read = source.readAtMostTo(chunk, requested)
+            if (read == -1L) {
+                return output.readByteArray()
+            }
+            if (read == 0L) {
+                throw WasmEngineException("RawSource returned no data before reaching end of input")
+            }
+            total += read
+            requireWithinLimit("maxModuleBytes", limits.maxModuleBytes, total)
+            output.write(chunk, read)
+        }
+    }
+
     private class SectionsValidator {
         private val sectionsOrder =
             arrayListOf(
@@ -365,8 +417,12 @@ private constructor(
         val MAGIC_BYTES: ByteArray = byteArrayOf(0x00, 0x61, 0x73, 0x6D)
         val VERSION_BYTES: ByteArray = byteArrayOf(0x01, 0x00, 0x00, 0x00)
 
-        private val DEFAULT_CUSTOM_PARSERS: Map<String, (ByteArray) -> CustomSection> =
-            mapOf("name" to { bytes -> NameCustomSection.parse(bytes) })
+        private const val SOURCE_READ_CHUNK_SIZE = 8L * 1024
+
+        private fun defaultCustomParsers(
+            limits: WasmParserLimits
+        ): Map<String, (ByteArray) -> CustomSection> =
+            mapOf("name" to { bytes -> NameCustomSection.parse(bytes, limits) })
 
         fun builder(): Builder = Builder.create()
 
@@ -438,7 +494,12 @@ private constructor(
             ArrayType.builder().withFieldType(parseFieldType(buffer)).build()
 
         private fun parseStructType(buffer: WasmByteReader): StructType {
-            val count = readVarUInt32(buffer).toInt()
+            val count =
+                readVectorSize(
+                    buffer,
+                    "maxStructFields",
+                    buffer.limits.maxStructFields,
+                )
             val builder = StructType.builder()
             for (i in 0 until count) {
                 builder.addFieldType(parseFieldType(buffer))
@@ -447,13 +508,23 @@ private constructor(
         }
 
         private fun parseFunctionType(buffer: WasmByteReader): FunctionType {
-            val paramCount = readVarUInt32(buffer).toInt()
+            val paramCount =
+                readVectorSize(
+                    buffer,
+                    "maxFunctionParams",
+                    buffer.limits.maxFunctionParams,
+                )
             val paramsBuilder = ArrayList<ValType>(paramCount)
             for (i in 0 until paramCount) {
                 paramsBuilder.add(readValueTypeBuilder(buffer).build())
             }
 
-            val returnCount = readVarUInt32(buffer).toInt()
+            val returnCount =
+                readVectorSize(
+                    buffer,
+                    "maxFunctionResults",
+                    buffer.limits.maxFunctionResults,
+                )
             val returnsBuilder = ArrayList<ValType>(returnCount)
             for (i in 0 until returnCount) {
                 returnsBuilder.add(readValueTypeBuilder(buffer).build())
@@ -481,7 +552,12 @@ private constructor(
 
         private fun parseSubType(id: Int, buffer: WasmByteReader): SubType =
             if (id == 0x50 || id == 0x4F) {
-                val count = readVarUInt32(buffer).toInt()
+                val count =
+                    readVectorSize(
+                        buffer,
+                        "maxSupertypes",
+                        buffer.limits.maxSupertypes,
+                    )
                 val typeIdxs = IntArray(count)
                 for (i in 0 until count) {
                     typeIdxs[i] = readVarUInt32(buffer).toInt()
@@ -499,10 +575,23 @@ private constructor(
                     .build()
             }
 
-        private fun parseRecType(buffer: WasmByteReader): RecType {
+        private fun parseRecType(
+            buffer: WasmByteReader,
+            parsedTypeCount: Int,
+        ): RecType {
             val discriminator = readVarUInt32(buffer).toInt()
             return if (discriminator == 0x4E) {
-                val count = readVarUInt32(buffer).toInt()
+                val count =
+                    readVectorSize(
+                        buffer,
+                        "maxRecGroupTypes",
+                        buffer.limits.maxRecGroupTypes,
+                    )
+                requireWithinLimit(
+                    "maxTypes",
+                    buffer.limits.maxTypes.toLong(),
+                    parsedTypeCount.toLong() + count,
+                )
                 val subTypes = arrayOfNulls<SubType>(count)
                 for (i in 0 until count) {
                     subTypes[i] = parseSubType(readVarUInt32(buffer).toInt(), buffer)
@@ -510,6 +599,11 @@ private constructor(
                 @Suppress("UNCHECKED_CAST")
                 RecType.builder().withSubTypes(subTypes as Array<SubType>).build()
             } else {
+                requireWithinLimit(
+                    "maxTypes",
+                    buffer.limits.maxTypes.toLong(),
+                    parsedTypeCount.toLong() + 1,
+                )
                 RecType.builder().withSubTypes(arrayOf(parseSubType(discriminator, buffer))).build()
             }
         }
@@ -518,10 +612,18 @@ private constructor(
             buffer: WasmByteReader,
             forwardTypeReferences: Boolean,
         ): TypeSection {
-            val typeCount = readVarUInt32(buffer).toInt()
+            val typeCount =
+                readVectorSize(
+                    buffer,
+                    "maxTypes",
+                    buffer.limits.maxTypes,
+                )
             val typeSectionBuilder = TypeSection.builder()
+            var parsedTypeCount = 0
             for (i in 0 until typeCount) {
-                typeSectionBuilder.addRecType(parseRecType(buffer))
+                val recType = parseRecType(buffer, parsedTypeCount)
+                parsedTypeCount += recType.subTypes().size
+                typeSectionBuilder.addRecType(recType)
             }
 
             val typeSection = typeSectionBuilder.build()
@@ -646,9 +748,14 @@ private constructor(
             typeSection: TypeSection,
             threadsMemory: Boolean,
         ): ImportSection {
-            val importCount = readVarUInt32(buffer)
+            val importCount =
+                readVectorSize(
+                    buffer,
+                    "maxImports",
+                    buffer.limits.maxImports,
+                )
             val importSection = ImportSection.builder()
-            for (i in 0 until importCount.toInt()) {
+            for (i in 0 until importCount) {
                 val moduleName = readName(buffer)
                 val importName = readName(buffer)
                 val descType =
@@ -722,9 +829,14 @@ private constructor(
         }
 
         private fun parseFunctionSection(buffer: WasmByteReader): FunctionSection {
-            val functionCount = readVarUInt32(buffer)
+            val functionCount =
+                readVectorSize(
+                    buffer,
+                    "maxFunctions",
+                    buffer.limits.maxFunctions,
+                )
             val functionSection = FunctionSection.builder()
-            for (i in 0 until functionCount.toInt()) {
+            for (i in 0 until functionCount) {
                 functionSection.addFunctionType(readVarUInt32(buffer).toInt())
             }
             return functionSection.build()
@@ -744,9 +856,14 @@ private constructor(
             typeSection: TypeSection,
             multiMemory: Boolean,
         ): TableSection {
-            val tableCount = readVarUInt32(buffer)
+            val tableCount =
+                readVectorSize(
+                    buffer,
+                    "maxTables",
+                    buffer.limits.maxTables,
+                )
             val tableSection = TableSection.builder()
-            for (i in 0 until tableCount.toInt()) {
+            for (i in 0 until tableCount) {
                 val firstByte = readVarUInt32(buffer).toInt()
                 if (firstByte == 0x40) {
                     val secondByte = readVarUInt32(buffer)
@@ -768,9 +885,14 @@ private constructor(
             buffer: WasmByteReader,
             threadsMemory: Boolean,
         ): MemorySection {
-            val memoryCount = readVarUInt32(buffer)
+            val memoryCount =
+                readVectorSize(
+                    buffer,
+                    "maxMemories",
+                    buffer.limits.maxMemories,
+                )
             val memorySection = MemorySection.builder()
-            for (i in 0 until memoryCount.toInt()) {
+            for (i in 0 until memoryCount) {
                 memorySection.addMemory(Memory(parseMemoryLimits(buffer, threadsMemory)))
             }
             return memorySection.build()
@@ -813,9 +935,14 @@ private constructor(
             typeSection: TypeSection,
             multiMemory: Boolean,
         ): GlobalSection {
-            val globalCount = readVarUInt32(buffer)
+            val globalCount =
+                readVectorSize(
+                    buffer,
+                    "maxGlobals",
+                    buffer.limits.maxGlobals,
+                )
             val globalSection = GlobalSection.builder()
-            for (i in 0 until globalCount.toInt()) {
+            for (i in 0 until globalCount) {
                 val valueType = readValueType(buffer, typeSection)
                 val mutabilityType = MutabilityType.forId(readByte(buffer).toInt())
                 val init = parseExpression(buffer, multiMemory)
@@ -825,9 +952,14 @@ private constructor(
         }
 
         private fun parseExportSection(buffer: WasmByteReader): ExportSection {
-            val exportCount = readVarUInt32(buffer)
+            val exportCount =
+                readVectorSize(
+                    buffer,
+                    "maxExports",
+                    buffer.limits.maxExports,
+                )
             val exportSection = ExportSection.builder()
-            for (i in 0 until exportCount.toInt()) {
+            for (i in 0 until exportCount) {
                 val name = readName(buffer, false)
                 val exportType = ExternalType.byId(readVarUInt32(buffer).toInt())
                 val index = readVarUInt32(buffer).toInt()
@@ -846,9 +978,14 @@ private constructor(
             multiMemory: Boolean,
         ): ElementSection {
             val initialPosition = buffer.position()
-            val elementCount = readVarUInt32(buffer)
+            val elementCount =
+                readVectorSize(
+                    buffer,
+                    "maxElementSegments",
+                    buffer.limits.maxElementSegments,
+                )
             val elementSection = ElementSection.builder()
-            for (i in 0 until elementCount.toInt()) {
+            for (i in 0 until elementCount) {
                 elementSection.addElement(parseSingleElement(buffer, typeSection, multiMemory))
             }
             if (buffer.position().toLong() != initialPosition.toLong() + sectionSize) {
@@ -912,7 +1049,7 @@ private constructor(
                     valueType
                 }
 
-            val initCnt = readVarUInt32(buffer).toBoundedInt()
+            val initCnt = readVectorSize(buffer)
             val inits = ArrayList<List<Instruction>>(initCnt)
             if (exprInit) {
                 for (i in 0 until initCnt) {
@@ -942,15 +1079,26 @@ private constructor(
             buffer: WasmByteReader,
             typeSection: TypeSection,
         ): List<ValType> {
-            val distinctTypesCount = readVarUInt32(buffer)
+            val distinctTypesCount = readVectorSize(buffer)
             val locals = ArrayList<ValType>()
-            for (i in 0 until distinctTypesCount.toInt()) {
-                val numberOfLocals = readVarUInt32(buffer)
-                if (numberOfLocals > MAX_FUNCTION_LOCALS) {
-                    throw MalformedException("too many locals")
-                }
+            var totalLocals = 0L
+            for (i in 0 until distinctTypesCount) {
+                val numberOfLocals =
+                    readVectorSize(
+                        buffer,
+                        "maxFunctionLocals",
+                        buffer.limits.maxFunctionLocals,
+                        specificationReason = "too many locals",
+                    )
+                totalLocals += numberOfLocals
+                requireWithinLimit(
+                    "maxFunctionLocals",
+                    buffer.limits.maxFunctionLocals.toLong(),
+                    totalLocals,
+                    specificationReason = "too many locals",
+                )
                 val type = readValueType(buffer, typeSection)
-                for (j in 0 until numberOfLocals.toInt()) {
+                for (j in 0 until numberOfLocals) {
                     locals.add(type)
                 }
             }
@@ -962,18 +1110,37 @@ private constructor(
             typeSection: TypeSection,
             multiMemory: Boolean,
         ): CodeSection {
-            val funcBodyCount = readVarUInt32(buffer)
+            val funcBodyCount =
+                readVectorSize(
+                    buffer,
+                    "maxFunctions",
+                    buffer.limits.maxFunctions,
+                )
             val root = ControlTree()
             val codeSection = CodeSection.builder()
-            for (i in 0 until funcBodyCount.toInt()) {
+            for (i in 0 until funcBodyCount) {
                 val blockScope = ArrayDeque<Instruction>()
                 var depth = 0
-                val funcEndPoint = readVarUInt32(buffer) + buffer.position()
+                val functionBodySize =
+                    readLimitedSize(
+                        buffer,
+                        "maxFunctionBytes",
+                        buffer.limits.maxFunctionBytes,
+                    )
+                if (functionBodySize > buffer.remaining()) {
+                    throw MalformedException("length out of bounds")
+                }
+                val funcEndPoint = buffer.position() + functionBodySize
                 val locals = parseCodeSectionLocalTypes(buffer, typeSection)
                 val instructions = ArrayList<AnnotatedInstruction.Builder>()
                 var lastInstruction: Boolean
                 var currentControlFlow: ControlTree? = null
                 do {
+                    requireWithinLimit(
+                        "maxInstructionsPerFunction",
+                        buffer.limits.maxInstructionsPerFunction.toLong(),
+                        instructions.size.toLong() + 1,
+                    )
                     val baseInstruction = parseInstruction(buffer, multiMemory)
                     val instruction = AnnotatedInstruction.builder().from(baseInstruction)
                     lastInstruction = buffer.position() >= funcEndPoint
@@ -992,6 +1159,11 @@ private constructor(
                         OpCode.LOOP,
                         OpCode.IF,
                         OpCode.TRY_TABLE -> {
+                            requireWithinLimit(
+                                "maxControlDepth",
+                                buffer.limits.maxControlDepth.toLong(),
+                                depth.toLong() + 1,
+                            )
                             depth++
                             instruction.withDepth(depth)
                             blockScope.addFirst(baseInstruction)
@@ -1139,26 +1311,28 @@ private constructor(
         }
 
         private fun parseDataSection(buffer: WasmByteReader, multiMemory: Boolean): DataSection {
-            val dataSegmentCount = readVarUInt32(buffer)
+            val dataSegmentCount =
+                readVectorSize(
+                    buffer,
+                    "maxDataSegments",
+                    buffer.limits.maxDataSegments,
+                )
             val dataSection = DataSection.builder()
-            for (i in 0 until dataSegmentCount.toInt()) {
+            for (i in 0 until dataSegmentCount) {
                 when (val mode = readVarUInt32(buffer)) {
                     0L -> {
                         val offset = parseExpression(buffer, multiMemory)
-                        val data = ByteArray(readVarUInt32(buffer).toInt())
-                        readBytes(buffer, data)
+                        val data = readDataBytes(buffer)
                         dataSection.addDataSegment(ActiveDataSegment(0, offset.toList(), data))
                     }
                     1L -> {
-                        val data = ByteArray(readVarUInt32(buffer).toInt())
-                        readBytes(buffer, data)
+                        val data = readDataBytes(buffer)
                         dataSection.addDataSegment(PassiveDataSegment(data))
                     }
                     2L -> {
                         val memoryId = readVarUInt32(buffer)
                         val offset = parseExpression(buffer, multiMemory)
-                        val data = ByteArray(readVarUInt32(buffer).toInt())
-                        readBytes(buffer, data)
+                        val data = readDataBytes(buffer)
                         dataSection.addDataSegment(
                             ActiveDataSegment(memoryId, offset.toList(), data)
                         )
@@ -1172,13 +1346,39 @@ private constructor(
             return dataSection.build()
         }
 
+        private fun readDataBytes(buffer: WasmByteReader): ByteArray {
+            val size =
+                readLimitedSize(
+                    buffer,
+                    "maxSectionBytes",
+                    buffer.limits.maxSectionBytes,
+                )
+            if (size > buffer.remaining()) {
+                throw MalformedException("length out of bounds")
+            }
+            return ByteArray(size).also { readBytes(buffer, it) }
+        }
+
         private fun parseDataCountSection(buffer: WasmByteReader): DataCountSection =
-            DataCountSection.builder().withDataCount(readVarUInt32(buffer).toInt()).build()
+            DataCountSection.builder()
+                .withDataCount(
+                    readLimitedSize(
+                        buffer,
+                        "maxDataSegments",
+                        buffer.limits.maxDataSegments,
+                    )
+                )
+                .build()
 
         private fun parseTagSection(buffer: WasmByteReader): TagSection {
-            val tagsCount = readVarUInt32(buffer)
+            val tagsCount =
+                readVectorSize(
+                    buffer,
+                    "maxTags",
+                    buffer.limits.maxTags,
+                )
             val tagSection = TagSection.builder()
-            for (i in 0 until tagsCount.toInt()) {
+            for (i in 0 until tagsCount) {
                 val attribute = readByte(buffer)
                 val typeIdx = readVarUInt32(buffer).toInt()
                 tagSection.addTagType(TagType(attribute, typeIdx))
@@ -1233,15 +1433,15 @@ private constructor(
                     uk.shusek.krwa.wasm.types.WasmEncoding.FLOAT64 -> operands.add(readFloat64(buffer))
                     uk.shusek.krwa.wasm.types.WasmEncoding.FLOAT32 -> operands.add(readFloat32(buffer))
                     uk.shusek.krwa.wasm.types.WasmEncoding.VEC_VARUINT -> {
-                        val vcount = readVarUInt32(buffer).toInt()
+                        val vcount = readVectorSize(buffer)
                         for (j in 0 until vcount) {
                             operands.add(readVarUInt32(buffer))
                         }
                     }
                     uk.shusek.krwa.wasm.types.WasmEncoding.VEC_CATCH -> {
-                        val n = readVarUInt32(buffer)
-                        operands.add(n)
-                        for (j in 0 until n.toInt()) {
+                        val n = readVectorSize(buffer)
+                        operands.add(n.toLong())
+                        for (j in 0 until n) {
                             val catchOp = readByte(buffer)
                             operands.add(0L or catchOp.toLong())
                             when (CatchOpCode.byOpCode(catchOp.toInt())) {
@@ -1274,7 +1474,7 @@ private constructor(
                         }
                     }
                     uk.shusek.krwa.wasm.types.WasmEncoding.VEC_VALUE_TYPE -> {
-                        val vcount = readVarUInt32(buffer).toInt()
+                        val vcount = readVectorSize(buffer)
                         for (j in 0 until vcount) {
                             operands.add(readValueTypeBuilder(buffer).id())
                         }
@@ -1404,8 +1604,15 @@ private constructor(
             multiMemory: Boolean,
         ): Array<Instruction> {
             val expr = ArrayList<Instruction>()
+            var instructionCount = 0
             while (buffer.hasRemaining()) {
+                requireWithinLimit(
+                    "maxInstructionsPerFunction",
+                    buffer.limits.maxInstructionsPerFunction.toLong(),
+                    instructionCount.toLong() + 1,
+                )
                 val instruction = parseInstruction(buffer, multiMemory)
+                instructionCount++
                 if (instruction.opcode() == OpCode.END) {
                     return expr.toTypedArray()
                 }

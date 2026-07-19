@@ -25,6 +25,7 @@ import kotlinx.io.RawSource
 import okio.FileSystem
 import okio.IOException
 import okio.Path
+import platform.Foundation.NSRecursiveLock
 import platform.posix.errno
 import platform.posix.link
 import platform.posix.lstat
@@ -36,13 +37,14 @@ import platform.posix.utimes
 
 private const val DST_PROBE_SECONDS: Long = 183L * 24L * 60L * 60L
 
-internal actual fun defaultWasiHttpClient(): WasiHttpClient =
-    KtorWasiHttpClient(
+internal actual fun defaultWasiHttpClient(): WasiHttpClient {
+    val client =
         KtorHttpClient(Darwin) {
             install(HttpTimeout)
-            followRedirects = true
+            followRedirects = false
         }
-    )
+    return ownedWasiHttpClient(KtorWasiHttpClient(client), client::close)
+}
 
 internal actual fun ktorWasiHttpClient(httpClient: KtorHttpClient): WasiHttpClient =
     KtorWasiHttpClient(httpClient)
@@ -195,12 +197,21 @@ internal actual fun wasiDelay(duration: Duration) {
     runBlocking { delay(duration) }
 }
 
-internal actual class WasiPreviewLock
+internal actual class WasiPreviewLock {
+    @PublishedApi internal val delegate = NSRecursiveLock()
+}
 
 internal actual inline fun <T> withWasiPreviewLock(
     lock: WasiPreviewLock,
     block: () -> T,
-): T = block()
+): T {
+    lock.delegate.lock()
+    return try {
+        block()
+    } finally {
+        lock.delegate.unlock()
+    }
+}
 
 internal actual fun <T> wasiRunBlockingOrNull(block: suspend () -> T): T? =
     runBlocking { block() }

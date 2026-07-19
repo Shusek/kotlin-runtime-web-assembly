@@ -1,5 +1,6 @@
 package uk.shusek.krwa.testgen
 
+import java.util.concurrent.ConcurrentHashMap
 import uk.shusek.krwa.testgen.StringUtils.Companion.capitalize
 import uk.shusek.krwa.testgen.StringUtils.Companion.escapedCamelCase
 import uk.shusek.krwa.testgen.wast.ActionType
@@ -17,12 +18,32 @@ class KotlinTestGen(
     private val excludedInvalidWasts: List<String>,
     private val excludedUninstantiableWasts: List<String>,
     private val excludedUnlinkableWasts: List<String>,
+    private val excludedRuntimeTests: List<String> = emptyList(),
 ) {
-    fun generate(name: String, wast: Wast, wasmClasspath: String): GeneratedKotlinSource {
+    private val matchedExcludedTests = ConcurrentHashMap.newKeySet<String>()
+    private val matchedExcludedRuntimeTests = ConcurrentHashMap.newKeySet<String>()
+
+    init {
+        val overlappingExclusions =
+            (excludedTests.toSet() intersect excludedRuntimeTests.toSet()).sorted()
+        require(overlappingExclusions.isEmpty()) {
+            "excludedTests and excludedRuntimeTests must be disjoint: $overlappingExclusions"
+        }
+    }
+
+    fun generate(
+        name: String,
+        spec: String,
+        wast: Wast,
+        wasmClasspath: String,
+    ): GeneratedKotlinSource {
         val packageName = "uk.shusek.krwa.test.gen"
         val testName = "SpecV1" + capitalize(escapedCamelCase(name)) + "Test"
         val fields =
-            mutableListOf("private val store = Store().addImportValues(Spectest.toImportValues())")
+            mutableListOf(
+                "private val store = Store().addImportValues(Spectest.toImportValues())",
+                "private val instances = mutableListOf<Instance>()",
+            )
         val methods = mutableListOf<TestMethod>()
 
         var testNumber = 0
@@ -30,10 +51,16 @@ class KotlinTestGen(
         var lastModuleVarName: String? = null
         var fallbackVarNumber = 0
 
-        val excludedMethods =
+        val parserExcludedMethods =
             excludedTests
-                .filter { test -> test.startsWith(testName) }
+                .filter { test -> test.startsWith("$testName.") }
                 .map { test -> test.substring(testName.length + 1) }
+                .toSet()
+        val runtimeExcludedMethods =
+            excludedRuntimeTests
+                .filter { test -> test.startsWith("$testName.") }
+                .map { test -> test.substring(testName.length + 1) }
+                .toSet()
 
         var currentWasmFile: String?
         for (cmd in wast.commands()!!) {
@@ -65,8 +92,9 @@ class KotlinTestGen(
                                     "$lastInstanceVarName = " +
                                         generateModuleInstantiation(
                                             currentWasmFile,
-                                            getExcluded(CommandType.ASSERT_INVALID, name),
-                                        )
+                                            getExcluded(CommandType.ASSERT_INVALID, spec),
+                                        ) +
+                                        ".also(instances::add)"
                                 ),
                         )
                 }
@@ -80,7 +108,6 @@ class KotlinTestGen(
                             wast.sourceFilename()!!.name,
                             cmd,
                             testNumber++,
-                            excludedMethods,
                         )
 
                     val baseVarName = escapedCamelCase(cmd.action()!!.field()!!)
@@ -122,19 +149,28 @@ class KotlinTestGen(
                             wast.sourceFilename()!!.name,
                             cmd,
                             testNumber++,
-                            excludedMethods,
                         )
                     generateAssertThrows(
                         wasmClasspath,
                         cmd,
                         method,
-                        getExcluded(cmd.type()!!, name),
+                        getExcluded(cmd.type()!!, spec),
                         getExceptionType(cmd.type()!!),
                     )
                     methods += method
                 }
                 else ->
                     throw IllegalArgumentException("command type not yet supported ${cmd.type()}")
+            }
+        }
+        for (method in methods) {
+            if (method.name in parserExcludedMethods) {
+                method.disabled = true
+                matchedExcludedTests += "$testName.${method.name}"
+            }
+            if (method.name in runtimeExcludedMethods) {
+                method.disabled = true
+                matchedExcludedRuntimeTests += "$testName.${method.name}"
             }
         }
 
@@ -145,12 +181,12 @@ class KotlinTestGen(
         )
     }
 
-    private fun getExcluded(typ: CommandType, name: String): Boolean =
+    private fun getExcluded(typ: CommandType, spec: String): Boolean =
         when (typ) {
-            CommandType.ASSERT_MALFORMED -> excludedMalformedWasts.contains("$name.wast")
-            CommandType.ASSERT_INVALID -> excludedInvalidWasts.contains("$name.wast")
-            CommandType.ASSERT_UNINSTANTIABLE -> excludedUninstantiableWasts.contains("$name.wast")
-            CommandType.ASSERT_UNLINKABLE -> excludedUnlinkableWasts.contains("$name.wast")
+            CommandType.ASSERT_MALFORMED -> excludedMalformedWasts.contains(spec)
+            CommandType.ASSERT_INVALID -> excludedInvalidWasts.contains(spec)
+            CommandType.ASSERT_UNINSTANTIABLE -> excludedUninstantiableWasts.contains(spec)
+            CommandType.ASSERT_UNLINKABLE -> excludedUnlinkableWasts.contains(spec)
             CommandType.ASSERT_EXHAUSTION,
             CommandType.ASSERT_TRAP,
             CommandType.ASSERT_EXCEPTION -> false
@@ -173,15 +209,35 @@ class KotlinTestGen(
         wastName: String,
         cmd: Command,
         testNumber: Int,
-        excludedTests: List<String>,
-    ): TestMethod {
-        val methodName = "test$testNumber"
-        return TestMethod(
-            name = methodName,
+    ): TestMethod =
+        TestMethod(
+            name = "test$testNumber",
             order = testNumber,
             displayName = formatWastFileCoordinates(wastName, cmd.line(), cmd.filename()),
-            disabled = excludedTests.contains(methodName),
         )
+
+    fun validateExcludedTestsMatched() {
+        validateExclusionsMatched(
+            excludedTests,
+            matchedExcludedTests,
+            "excludedTests",
+        )
+        validateExclusionsMatched(
+            excludedRuntimeTests,
+            matchedExcludedRuntimeTests,
+            "excludedRuntimeTests",
+        )
+    }
+
+    private fun validateExclusionsMatched(
+        configured: List<String>,
+        matched: Set<String>,
+        name: String,
+    ) {
+        val staleExclusions = (configured.toSet() - matched).sorted()
+        check(staleExclusions.isEmpty()) {
+            "Configured WebAssembly $name did not match generated tests: $staleExclusions"
+        }
     }
 
     private fun generateFieldExport(varName: String, cmd: Command, moduleName: String): String? {
@@ -306,7 +362,7 @@ class KotlinTestGen(
         exceptionType: String,
     ) {
         val wasmFile = getWasmFile(cmd, wasmClasspath)
-        val invocation = generateModuleInstantiation(wasmFile, false)
+        val invocation = generateModuleInstantiation(wasmFile, false) + ".use {}"
 
         val assertThrows =
             (if (cmd.text() != null) "val exception = " else "") +
@@ -336,6 +392,7 @@ class KotlinTestGen(
     ): String = buildString {
         appendLine("package $packageName")
         appendLine()
+        appendLine("import org.junit.jupiter.api.AfterAll")
         appendLine("import org.junit.jupiter.api.Assertions.assertArrayEquals")
         appendLine("import org.junit.jupiter.api.Assertions.assertDoesNotThrow")
         appendLine("import org.junit.jupiter.api.Assertions.assertEquals")
@@ -377,6 +434,13 @@ class KotlinTestGen(
             append(method.render().prependIndent(TAB))
         }
         appendLine()
+        appendLine("@AfterAll".prependIndent(TAB))
+        appendLine("fun closeInstances() {".prependIndent(TAB))
+        appendLine(
+            "instances.asReversed().forEach(Instance::close)".prependIndent(TAB.repeat(2))
+        )
+        appendLine("}".prependIndent(TAB))
+        appendLine()
         appendLine("}")
     }
 
@@ -389,7 +453,10 @@ class KotlinTestGen(
     ) {
         fun render(): String = buildString {
             if (disabled) {
-                appendLine("@Disabled(\"Test excluded\")")
+                appendLine(
+                    "@Disabled(\"KRWA-1: WebAssembly spec exclusion tracked in " +
+                        "docs/testing-exclusions.md\")",
+                )
             }
             appendLine("@Test")
             appendLine("@Order($order)")

@@ -13,7 +13,7 @@ internal actual object PulleyExecution {
         hostInstance: Instance,
     ): PlatformInstanceExecution {
         provider()?.let { return it.createCheckedPulleyExecution(module, imports, hostInstance) }
-        if (isAndroidRuntime()) {
+        if (isJvmAndroidRuntime()) {
             throw WasmEngineException(AndroidUnavailableReason)
         }
         return invokeWasmtimeCreate(module, imports, hostInstance)
@@ -21,7 +21,7 @@ internal actual object PulleyExecution {
 
     actual fun availability(): ExecutionBackendAvailability {
         provider()?.let { return it.availability() }
-        if (isAndroidRuntime()) {
+        if (isJvmAndroidRuntime()) {
             return ExecutionBackendAvailability(available = false, reason = AndroidUnavailableReason)
         }
         return invokeWasmtimeUnavailableReason(DefaultWasmtimeTarget)?.let { reason ->
@@ -67,7 +67,7 @@ internal actual object PulleyExecution {
                 module,
                 imports,
                 hostInstance,
-                config.target,
+                jvmWasmtimeTarget(config.target),
                 config.precompiledModuleBytes,
                 config.maxMemoryBytes,
                 config.maxWasmStackBytes,
@@ -87,7 +87,7 @@ internal actual object PulleyExecution {
             val type = wasmtimePulleyExecutionClass()
             val method = type.getDeclaredMethod("unavailableReason", String::class.java)
             method.isAccessible = true
-            method.invoke(null, target) as String?
+            method.invoke(null, jvmWasmtimeTarget(target)) as String?
         } catch (e: InvocationTargetException) {
             e.targetException.toUnavailableReason()
         } catch (e: Throwable) {
@@ -102,14 +102,9 @@ internal actual object PulleyExecution {
         return "Wasmtime Pulley execution is not linked on this JVM runtime: $message"
     }
 
-    private fun isAndroidRuntime(): Boolean =
-        System.getProperty("java.runtime.name")
-            ?.contains("Android", ignoreCase = true) == true ||
-            runCatching { Class.forName("android.os.Build") }.isSuccess
-
     private const val AndroidUnavailableReason =
         "Wasmtime Pulley execution is not linked on this Android runtime"
-    private const val DefaultWasmtimeTarget = WasmtimeNativeTarget
+    private const val DefaultWasmtimeTarget = WasmtimeAutomaticTarget
     private const val WasmtimePulleyExecutionClassName =
         "uk.shusek.krwa.runtime.WasmtimePulleyExecution"
 }
@@ -119,7 +114,7 @@ actual fun wasmtimeTargetUnavailableReason(target: String): String? =
         val type = Class.forName("uk.shusek.krwa.runtime.WasmtimePulleyExecution")
         val method = type.getDeclaredMethod("unavailableReason", String::class.java)
         method.isAccessible = true
-        method.invoke(null, target) as String?
+        method.invoke(null, jvmWasmtimeTarget(target)) as String?
     } catch (e: InvocationTargetException) {
         e.targetException.toWasmtimeUnavailableReason()
     } catch (e: Throwable) {
@@ -163,10 +158,10 @@ actual fun wasmtimePreview3ComponentUnavailableReason(config: WasmtimePreview3Co
             config.arguments.toTypedArray(),
             environment.map { entry -> entry.key }.toTypedArray(),
             environment.map { entry -> entry.value }.toTypedArray(),
-            networkPolicy.allowedHosts.toTypedArray(),
-            networkPolicy.blockedHosts.toTypedArray(),
-            networkPolicy.allowPrivateNetwork,
-            config.target,
+            networkPolicy.encodedHttpEndpoints().toTypedArray(),
+            emptyArray<String>(),
+            false,
+            jvmWasmtimePreview3Target(config.target),
             config.maxMemoryBytes,
             config.maxWasmStackBytes,
             config.maxTableElements,
@@ -222,10 +217,10 @@ actual fun wasmtimePreview3ComponentCall0UnavailableReason(
             config.arguments.toTypedArray(),
             environment.map { entry -> entry.key }.toTypedArray(),
             environment.map { entry -> entry.value }.toTypedArray(),
-            networkPolicy.allowedHosts.toTypedArray(),
-            networkPolicy.blockedHosts.toTypedArray(),
-            networkPolicy.allowPrivateNetwork,
-            config.target,
+            networkPolicy.encodedHttpEndpoints().toTypedArray(),
+            emptyArray<String>(),
+            false,
+            jvmWasmtimePreview3Target(config.target),
             exportName,
             config.maxMemoryBytes,
             config.maxWasmStackBytes,
@@ -286,10 +281,10 @@ actual fun wasmtimePreview3ComponentCallS32UnavailableReason(
             config.arguments.toTypedArray(),
             environment.map { entry -> entry.key }.toTypedArray(),
             environment.map { entry -> entry.value }.toTypedArray(),
-            networkPolicy.allowedHosts.toTypedArray(),
-            networkPolicy.blockedHosts.toTypedArray(),
-            networkPolicy.allowPrivateNetwork,
-            config.target,
+            networkPolicy.encodedHttpEndpoints().toTypedArray(),
+            emptyArray<String>(),
+            false,
+            jvmWasmtimePreview3Target(config.target),
             exportName,
             argument,
             expectedResult,
@@ -352,10 +347,10 @@ actual fun wasmtimePreview3ComponentCallStringUnavailableReason(
             config.arguments.toTypedArray(),
             environment.map { entry -> entry.key }.toTypedArray(),
             environment.map { entry -> entry.value }.toTypedArray(),
-            networkPolicy.allowedHosts.toTypedArray(),
-            networkPolicy.blockedHosts.toTypedArray(),
-            networkPolicy.allowPrivateNetwork,
-            config.target,
+            networkPolicy.encodedHttpEndpoints().toTypedArray(),
+            emptyArray<String>(),
+            false,
+            jvmWasmtimePreview3Target(config.target),
             exportName,
             argument,
             expectedResult,
@@ -386,7 +381,12 @@ actual fun wasmtimePreview3ComponentCallString(
 
 class WasmtimePreview3ExecutionCancellation : AutoCloseable {
     private val closed = AtomicBoolean(false)
-    internal val handle: Long = WasmtimePulleyExecution.preview3ExecutionCancellationCreate()
+    private val handle: Long = WasmtimePulleyExecution.preview3ExecutionCancellationCreate()
+
+    internal fun requireOpenHandle(): Long {
+        check(!closed.get()) { "Wasmtime Preview3 execution cancellation is closed" }
+        return handle
+    }
 
     fun cancel() {
         if (!closed.get()) {
@@ -450,10 +450,10 @@ fun wasmtimePreview3ComponentCallString(
             config.arguments.toTypedArray(),
             environment.map { entry -> entry.key }.toTypedArray(),
             environment.map { entry -> entry.value }.toTypedArray(),
-            networkPolicy.allowedHosts.toTypedArray(),
-            networkPolicy.blockedHosts.toTypedArray(),
-            networkPolicy.allowPrivateNetwork,
-            config.target,
+            networkPolicy.encodedHttpEndpoints().toTypedArray(),
+            emptyArray<String>(),
+            false,
+            jvmWasmtimePreview3Target(config.target),
             exportName,
             argument,
             config.maxMemoryBytes,
@@ -464,7 +464,7 @@ fun wasmtimePreview3ComponentCallString(
             config.maxMemories,
             config.maxFuel,
             config.executionTimeoutMillis,
-            cancellation?.handle ?: 0L,
+            cancellation?.requireOpenHandle() ?: 0L,
         ) as String
     } catch (e: InvocationTargetException) {
         throw e.targetException
@@ -511,10 +511,10 @@ actual fun wasmtimePreview3CommandRunUnavailableReason(config: WasmtimePreview3C
             config.arguments.toTypedArray(),
             environment.map { entry -> entry.key }.toTypedArray(),
             environment.map { entry -> entry.value }.toTypedArray(),
-            networkPolicy.allowedHosts.toTypedArray(),
-            networkPolicy.blockedHosts.toTypedArray(),
-            networkPolicy.allowPrivateNetwork,
-            config.target,
+            networkPolicy.encodedHttpEndpoints().toTypedArray(),
+            emptyArray<String>(),
+            false,
+            jvmWasmtimePreview3Target(config.target),
             config.maxMemoryBytes,
             config.maxWasmStackBytes,
             config.maxTableElements,
@@ -558,3 +558,18 @@ private fun Throwable.toWasmtimeComponentWasiUnavailableReason(): String {
 }
 
 actual fun installWasmtimePulleyExecutionProviderIfAvailable() = Unit
+
+private fun jvmWasmtimeTarget(target: String): String =
+    when {
+        target != WasmtimeAutomaticTarget -> target
+        isJvmAndroidRuntime() -> WasmtimePulleyTarget
+        else -> WasmtimeNativeTarget
+    }
+
+private fun jvmWasmtimePreview3Target(target: String): String =
+    if (target == WasmtimeAutomaticTarget) WasmtimePulleyTarget else target
+
+private fun isJvmAndroidRuntime(): Boolean =
+    System.getProperty("java.runtime.name")
+        ?.contains("Android", ignoreCase = true) == true ||
+        runCatching { Class.forName("android.os.Build") }.isSuccess

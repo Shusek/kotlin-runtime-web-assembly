@@ -19,6 +19,21 @@ open annotation class uk.shusek.krwa.component/ComponentModelJvmSuppressWildcard
     constructor <init>() // uk.shusek.krwa.component/ComponentModelJvmSuppressWildcards.<init>|<init>(){}[1]
 }
 
+open annotation class uk.shusek.krwa.component/UnsafeComponentModelApi : kotlin/Annotation { // uk.shusek.krwa.component/UnsafeComponentModelApi|null[0]
+    constructor <init>() // uk.shusek.krwa.component/UnsafeComponentModelApi.<init>|<init>(){}[0]
+}
+
+final enum class uk.shusek.krwa.component/WasiHttpNetworkProtocol : kotlin/Enum<uk.shusek.krwa.component/WasiHttpNetworkProtocol> { // uk.shusek.krwa.component/WasiHttpNetworkProtocol|null[0]
+    enum entry Http // uk.shusek.krwa.component/WasiHttpNetworkProtocol.Http|null[0]
+    enum entry Https // uk.shusek.krwa.component/WasiHttpNetworkProtocol.Https|null[0]
+
+    final val entries // uk.shusek.krwa.component/WasiHttpNetworkProtocol.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<uk.shusek.krwa.component/WasiHttpNetworkProtocol> // uk.shusek.krwa.component/WasiHttpNetworkProtocol.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): uk.shusek.krwa.component/WasiHttpNetworkProtocol // uk.shusek.krwa.component/WasiHttpNetworkProtocol.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<uk.shusek.krwa.component/WasiHttpNetworkProtocol> // uk.shusek.krwa.component/WasiHttpNetworkProtocol.values|values#static(){}[0]
+}
+
 final enum class uk.shusek.krwa.component/WasiPreview : kotlin/Enum<uk.shusek.krwa.component/WasiPreview> { // uk.shusek.krwa.component/WasiPreview|null[0]
     enum entry PREVIEW1 // uk.shusek.krwa.component/WasiPreview.PREVIEW1|null[0]
     enum entry PREVIEW2 // uk.shusek.krwa.component/WasiPreview.PREVIEW2|null[0]
@@ -58,6 +73,28 @@ final enum class uk.shusek.krwa.component/WasiPreview : kotlin/Enum<uk.shusek.kr
         final fun valueOf(kotlin/String): uk.shusek.krwa.component/WasiPreview.Stability // uk.shusek.krwa.component/WasiPreview.Stability.valueOf|valueOf#static(kotlin.String){}[0]
         final fun values(): kotlin/Array<uk.shusek.krwa.component/WasiPreview.Stability> // uk.shusek.krwa.component/WasiPreview.Stability.values|values#static(){}[0]
     }
+}
+
+final enum class uk.shusek.krwa.component/WasiPreview2HostOwnership : kotlin/Enum<uk.shusek.krwa.component/WasiPreview2HostOwnership> { // uk.shusek.krwa.component/WasiPreview2HostOwnership|null[0]
+    enum entry BORROWED // uk.shusek.krwa.component/WasiPreview2HostOwnership.BORROWED|null[0]
+    enum entry OWNED // uk.shusek.krwa.component/WasiPreview2HostOwnership.OWNED|null[0]
+
+    final val entries // uk.shusek.krwa.component/WasiPreview2HostOwnership.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<uk.shusek.krwa.component/WasiPreview2HostOwnership> // uk.shusek.krwa.component/WasiPreview2HostOwnership.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): uk.shusek.krwa.component/WasiPreview2HostOwnership // uk.shusek.krwa.component/WasiPreview2HostOwnership.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<uk.shusek.krwa.component/WasiPreview2HostOwnership> // uk.shusek.krwa.component/WasiPreview2HostOwnership.values|values#static(){}[0]
+}
+
+final enum class uk.shusek.krwa.component/WasiPreview3HostOwnership : kotlin/Enum<uk.shusek.krwa.component/WasiPreview3HostOwnership> { // uk.shusek.krwa.component/WasiPreview3HostOwnership|null[0]
+    enum entry BORROWED // uk.shusek.krwa.component/WasiPreview3HostOwnership.BORROWED|null[0]
+    enum entry OWNED // uk.shusek.krwa.component/WasiPreview3HostOwnership.OWNED|null[0]
+
+    final val entries // uk.shusek.krwa.component/WasiPreview3HostOwnership.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<uk.shusek.krwa.component/WasiPreview3HostOwnership> // uk.shusek.krwa.component/WasiPreview3HostOwnership.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): uk.shusek.krwa.component/WasiPreview3HostOwnership // uk.shusek.krwa.component/WasiPreview3HostOwnership.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<uk.shusek.krwa.component/WasiPreview3HostOwnership> // uk.shusek.krwa.component/WasiPreview3HostOwnership.values|values#static(){}[0]
 }
 
 abstract fun interface uk.shusek.krwa.component/HostHandler { // uk.shusek.krwa.component/HostHandler|null[0]
@@ -145,6 +182,7 @@ abstract interface uk.shusek.krwa.component/WasiHostImportBuilder { // uk.shusek
     abstract fun withHostImport(kotlin/String, uk.shusek.krwa.component/HostHandler): uk.shusek.krwa.component/WasiHostImportBuilder // uk.shusek.krwa.component/WasiHostImportBuilder.withHostImport|withHostImport(kotlin.String;uk.shusek.krwa.component.HostHandler){}[0]
     abstract fun withHostImport(kotlin/String?, kotlin/String?, uk.shusek.krwa.component/HostHandler): uk.shusek.krwa.component/WasiHostImportBuilder // uk.shusek.krwa.component/WasiHostImportBuilder.withHostImport|withHostImport(kotlin.String?;kotlin.String?;uk.shusek.krwa.component.HostHandler){}[0]
     open fun withWasiPreview3CanonicalIntrinsics(uk.shusek.krwa.component/WasiPreview3CanonicalIntrinsics): uk.shusek.krwa.component/WasiHostImportBuilder // uk.shusek.krwa.component/WasiHostImportBuilder.withWasiPreview3CanonicalIntrinsics|withWasiPreview3CanonicalIntrinsics(uk.shusek.krwa.component.WasiPreview3CanonicalIntrinsics){}[0]
+    open fun withWitHostImport(uk.shusek.krwa.component/WitHostImportId, uk.shusek.krwa.component/HostHandler): uk.shusek.krwa.component/WasiHostImportBuilder // uk.shusek.krwa.component/WasiHostImportBuilder.withWitHostImport|withWitHostImport(uk.shusek.krwa.component.WitHostImportId;uk.shusek.krwa.component.HostHandler){}[0]
 }
 
 abstract interface uk.shusek.krwa.component/WasiHttpClient { // uk.shusek.krwa.component/WasiHttpClient|null[0]
@@ -232,11 +270,13 @@ final class <#A: kotlin/Any> uk.shusek.krwa.component/ComponentModelJvmClass { /
 }
 
 final class <#A: kotlin/Any?> uk.shusek.krwa.component/WitResourceTable { // uk.shusek.krwa.component/WitResourceTable|null[0]
-    constructor <init>() // uk.shusek.krwa.component/WitResourceTable.<init>|<init>(){}[0]
+    constructor <init>(kotlin/Int = ...) // uk.shusek.krwa.component/WitResourceTable.<init>|<init>(kotlin.Int){}[0]
 
     final fun clear() // uk.shusek.krwa.component/WitResourceTable.clear|clear(){}[0]
+    final fun close(): kotlin.collections/List<#A> // uk.shusek.krwa.component/WitResourceTable.close|close(){}[0]
     final fun contains(kotlin/Long): kotlin/Boolean // uk.shusek.krwa.component/WitResourceTable.contains|contains(kotlin.Long){}[0]
     final fun contains(uk.shusek.krwa.component/WitResource<*>): kotlin/Boolean // uk.shusek.krwa.component/WitResourceTable.contains|contains(uk.shusek.krwa.component.WitResource<*>){}[0]
+    final fun drain(): kotlin.collections/List<#A> // uk.shusek.krwa.component/WitResourceTable.drain|drain(){}[0]
     final fun get(kotlin/Long): #A // uk.shusek.krwa.component/WitResourceTable.get|get(kotlin.Long){}[0]
     final fun get(uk.shusek.krwa.component/WitResource<*>): #A // uk.shusek.krwa.component/WitResourceTable.get|get(uk.shusek.krwa.component.WitResource<*>){}[0]
     final fun insert(#A): uk.shusek.krwa.component/WitResource<#A> // uk.shusek.krwa.component/WitResourceTable.insert|insert(1:0){}[0]
@@ -528,6 +568,22 @@ final class uk.shusek.krwa.component/CanonicalAbi { // uk.shusek.krwa.component/
     }
 }
 
+final class uk.shusek.krwa.component/CoreHostImportId { // uk.shusek.krwa.component/CoreHostImportId|null[0]
+    constructor <init>(kotlin/String, kotlin/String) // uk.shusek.krwa.component/CoreHostImportId.<init>|<init>(kotlin.String;kotlin.String){}[0]
+
+    final val functionName // uk.shusek.krwa.component/CoreHostImportId.functionName|{}functionName[0]
+        final fun <get-functionName>(): kotlin/String // uk.shusek.krwa.component/CoreHostImportId.functionName.<get-functionName>|<get-functionName>(){}[0]
+    final val moduleName // uk.shusek.krwa.component/CoreHostImportId.moduleName|{}moduleName[0]
+        final fun <get-moduleName>(): kotlin/String // uk.shusek.krwa.component/CoreHostImportId.moduleName.<get-moduleName>|<get-moduleName>(){}[0]
+
+    final fun component1(): kotlin/String // uk.shusek.krwa.component/CoreHostImportId.component1|component1(){}[0]
+    final fun component2(): kotlin/String // uk.shusek.krwa.component/CoreHostImportId.component2|component2(){}[0]
+    final fun copy(kotlin/String = ..., kotlin/String = ...): uk.shusek.krwa.component/CoreHostImportId // uk.shusek.krwa.component/CoreHostImportId.copy|copy(kotlin.String;kotlin.String){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // uk.shusek.krwa.component/CoreHostImportId.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // uk.shusek.krwa.component/CoreHostImportId.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // uk.shusek.krwa.component/CoreHostImportId.toString|toString(){}[0]
+}
+
 final class uk.shusek.krwa.component/WasiHttpHeader { // uk.shusek.krwa.component/WasiHttpHeader|null[0]
     constructor <init>(kotlin/String, kotlin/String) // uk.shusek.krwa.component/WasiHttpHeader.<init>|<init>(kotlin.String;kotlin.String){}[0]
 
@@ -535,6 +591,25 @@ final class uk.shusek.krwa.component/WasiHttpHeader { // uk.shusek.krwa.componen
         final fun <get-name>(): kotlin/String // uk.shusek.krwa.component/WasiHttpHeader.name.<get-name>|<get-name>(){}[0]
     final val value // uk.shusek.krwa.component/WasiHttpHeader.value|{}value[0]
         final fun <get-value>(): kotlin/String // uk.shusek.krwa.component/WasiHttpHeader.value.<get-value>|<get-value>(){}[0]
+}
+
+final class uk.shusek.krwa.component/WasiHttpNetworkEndpoint { // uk.shusek.krwa.component/WasiHttpNetworkEndpoint|null[0]
+    constructor <init>(uk.shusek.krwa.component/WasiHttpNetworkProtocol, kotlin/String, kotlin/Int) // uk.shusek.krwa.component/WasiHttpNetworkEndpoint.<init>|<init>(uk.shusek.krwa.component.WasiHttpNetworkProtocol;kotlin.String;kotlin.Int){}[0]
+
+    final val host // uk.shusek.krwa.component/WasiHttpNetworkEndpoint.host|{}host[0]
+        final fun <get-host>(): kotlin/String // uk.shusek.krwa.component/WasiHttpNetworkEndpoint.host.<get-host>|<get-host>(){}[0]
+    final val port // uk.shusek.krwa.component/WasiHttpNetworkEndpoint.port|{}port[0]
+        final fun <get-port>(): kotlin/Int // uk.shusek.krwa.component/WasiHttpNetworkEndpoint.port.<get-port>|<get-port>(){}[0]
+    final val protocol // uk.shusek.krwa.component/WasiHttpNetworkEndpoint.protocol|{}protocol[0]
+        final fun <get-protocol>(): uk.shusek.krwa.component/WasiHttpNetworkProtocol // uk.shusek.krwa.component/WasiHttpNetworkEndpoint.protocol.<get-protocol>|<get-protocol>(){}[0]
+
+    final fun component1(): uk.shusek.krwa.component/WasiHttpNetworkProtocol // uk.shusek.krwa.component/WasiHttpNetworkEndpoint.component1|component1(){}[0]
+    final fun component2(): kotlin/String // uk.shusek.krwa.component/WasiHttpNetworkEndpoint.component2|component2(){}[0]
+    final fun component3(): kotlin/Int // uk.shusek.krwa.component/WasiHttpNetworkEndpoint.component3|component3(){}[0]
+    final fun copy(uk.shusek.krwa.component/WasiHttpNetworkProtocol = ..., kotlin/String = ..., kotlin/Int = ...): uk.shusek.krwa.component/WasiHttpNetworkEndpoint // uk.shusek.krwa.component/WasiHttpNetworkEndpoint.copy|copy(uk.shusek.krwa.component.WasiHttpNetworkProtocol;kotlin.String;kotlin.Int){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // uk.shusek.krwa.component/WasiHttpNetworkEndpoint.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // uk.shusek.krwa.component/WasiHttpNetworkEndpoint.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // uk.shusek.krwa.component/WasiHttpNetworkEndpoint.toString|toString(){}[0]
 }
 
 final class uk.shusek.krwa.component/WasiHttpRequest { // uk.shusek.krwa.component/WasiHttpRequest|null[0]
@@ -566,9 +641,43 @@ final class uk.shusek.krwa.component/WasiHttpResponse { // uk.shusek.krwa.compon
     final fun consumeBodySource(): kotlinx.io/RawSource // uk.shusek.krwa.component/WasiHttpResponse.consumeBodySource|consumeBodySource(){}[0]
 }
 
-final class uk.shusek.krwa.component/WasiPreview2 { // uk.shusek.krwa.component/WasiPreview2|null[0]
+final class uk.shusek.krwa.component/WasiNetworkEndpoint { // uk.shusek.krwa.component/WasiNetworkEndpoint|null[0]
+    constructor <init>(kotlin/String, kotlin/Int) // uk.shusek.krwa.component/WasiNetworkEndpoint.<init>|<init>(kotlin.String;kotlin.Int){}[0]
+
+    final val host // uk.shusek.krwa.component/WasiNetworkEndpoint.host|{}host[0]
+        final fun <get-host>(): kotlin/String // uk.shusek.krwa.component/WasiNetworkEndpoint.host.<get-host>|<get-host>(){}[0]
+    final val port // uk.shusek.krwa.component/WasiNetworkEndpoint.port|{}port[0]
+        final fun <get-port>(): kotlin/Int // uk.shusek.krwa.component/WasiNetworkEndpoint.port.<get-port>|<get-port>(){}[0]
+
+    final fun component1(): kotlin/String // uk.shusek.krwa.component/WasiNetworkEndpoint.component1|component1(){}[0]
+    final fun component2(): kotlin/Int // uk.shusek.krwa.component/WasiNetworkEndpoint.component2|component2(){}[0]
+    final fun copy(kotlin/String = ..., kotlin/Int = ...): uk.shusek.krwa.component/WasiNetworkEndpoint // uk.shusek.krwa.component/WasiNetworkEndpoint.copy|copy(kotlin.String;kotlin.Int){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // uk.shusek.krwa.component/WasiNetworkEndpoint.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // uk.shusek.krwa.component/WasiNetworkEndpoint.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // uk.shusek.krwa.component/WasiNetworkEndpoint.toString|toString(){}[0]
+}
+
+final class uk.shusek.krwa.component/WasiNetworkPolicy { // uk.shusek.krwa.component/WasiNetworkPolicy|null[0]
+    constructor <init>(kotlin.collections/Set<uk.shusek.krwa.component/WasiHttpNetworkEndpoint> = ..., kotlin.collections/Set<uk.shusek.krwa.component/WasiNetworkEndpoint> = ...) // uk.shusek.krwa.component/WasiNetworkPolicy.<init>|<init>(kotlin.collections.Set<uk.shusek.krwa.component.WasiHttpNetworkEndpoint>;kotlin.collections.Set<uk.shusek.krwa.component.WasiNetworkEndpoint>){}[0]
+
+    final val httpEndpoints // uk.shusek.krwa.component/WasiNetworkPolicy.httpEndpoints|{}httpEndpoints[0]
+        final fun <get-httpEndpoints>(): kotlin.collections/Set<uk.shusek.krwa.component/WasiHttpNetworkEndpoint> // uk.shusek.krwa.component/WasiNetworkPolicy.httpEndpoints.<get-httpEndpoints>|<get-httpEndpoints>(){}[0]
+    final val rawSocketEndpoints // uk.shusek.krwa.component/WasiNetworkPolicy.rawSocketEndpoints|{}rawSocketEndpoints[0]
+        final fun <get-rawSocketEndpoints>(): kotlin.collections/Set<uk.shusek.krwa.component/WasiNetworkEndpoint> // uk.shusek.krwa.component/WasiNetworkPolicy.rawSocketEndpoints.<get-rawSocketEndpoints>|<get-rawSocketEndpoints>(){}[0]
+
+    final fun allowsHttp(uk.shusek.krwa.component/WasiHttpNetworkProtocol, kotlin/String, kotlin/Int): kotlin/Boolean // uk.shusek.krwa.component/WasiNetworkPolicy.allowsHttp|allowsHttp(uk.shusek.krwa.component.WasiHttpNetworkProtocol;kotlin.String;kotlin.Int){}[0]
+    final fun allowsRawSocket(kotlin/String, kotlin/Int): kotlin/Boolean // uk.shusek.krwa.component/WasiNetworkPolicy.allowsRawSocket|allowsRawSocket(kotlin.String;kotlin.Int){}[0]
+
+    final object Companion { // uk.shusek.krwa.component/WasiNetworkPolicy.Companion|null[0]
+        final val DENY_ALL // uk.shusek.krwa.component/WasiNetworkPolicy.Companion.DENY_ALL|{}DENY_ALL[0]
+            final fun <get-DENY_ALL>(): uk.shusek.krwa.component/WasiNetworkPolicy // uk.shusek.krwa.component/WasiNetworkPolicy.Companion.DENY_ALL.<get-DENY_ALL>|<get-DENY_ALL>(){}[0]
+    }
+}
+
+final class uk.shusek.krwa.component/WasiPreview2 : kotlin/AutoCloseable { // uk.shusek.krwa.component/WasiPreview2|null[0]
     final fun <#A1: uk.shusek.krwa.component/WasiHostImportBuilder> install(#A1): #A1 // uk.shusek.krwa.component/WasiPreview2.install|install(0:0){0§<uk.shusek.krwa.component.WasiHostImportBuilder>}[0]
     final fun arguments(): kotlin.collections/List<kotlin/String> // uk.shusek.krwa.component/WasiPreview2.arguments|arguments(){}[0]
+    final fun close() // uk.shusek.krwa.component/WasiPreview2.close|close(){}[0]
     final fun environment(): kotlin.collections/Map<kotlin/String, kotlin/String> // uk.shusek.krwa.component/WasiPreview2.environment|environment(){}[0]
     final fun handleHttpRequest(uk.shusek.krwa.component/WasiComponentInvoker, kotlin/String, kotlin/String, kotlin/String, kotlin/String, kotlin.collections/Map<kotlin/String, kotlin.collections/List<kotlin/ByteArray>>, kotlin/ByteArray): uk.shusek.krwa.component/WasiPreview2.HttpResponseSnapshot // uk.shusek.krwa.component/WasiPreview2.handleHttpRequest|handleHttpRequest(uk.shusek.krwa.component.WasiComponentInvoker;kotlin.String;kotlin.String;kotlin.String;kotlin.String;kotlin.collections.Map<kotlin.String,kotlin.collections.List<kotlin.ByteArray>>;kotlin.ByteArray){}[0]
     final fun handleHttpRequest(uk.shusek.krwa.component/WasiComponentInvoker, uk.shusek.krwa.component/WasiPreview2.HttpRequestSnapshot): uk.shusek.krwa.component/WasiPreview2.HttpResponseSnapshot // uk.shusek.krwa.component/WasiPreview2.handleHttpRequest|handleHttpRequest(uk.shusek.krwa.component.WasiComponentInvoker;uk.shusek.krwa.component.WasiPreview2.HttpRequestSnapshot){}[0]
@@ -793,7 +902,7 @@ final class uk.shusek.krwa.component/WasiPreview2 { // uk.shusek.krwa.component/
     }
 }
 
-final class uk.shusek.krwa.component/WasiPreview3 : uk.shusek.krwa.component/WasiPreview3CanonicalIntrinsics { // uk.shusek.krwa.component/WasiPreview3|null[0]
+final class uk.shusek.krwa.component/WasiPreview3 : kotlin/AutoCloseable, uk.shusek.krwa.component/WasiPreview3CanonicalIntrinsics { // uk.shusek.krwa.component/WasiPreview3|null[0]
     final fun <#A1: kotlin/Any?> completedFutureOf(#A1): uk.shusek.krwa.component/WitFuture<#A1> // uk.shusek.krwa.component/WasiPreview3.completedFutureOf|completedFutureOf(0:0){0§<kotlin.Any?>}[0]
     final fun <#A1: kotlin/Any?> pendingFuture(): uk.shusek.krwa.component/WitFuture<#A1> // uk.shusek.krwa.component/WasiPreview3.pendingFuture|pendingFuture(){0§<kotlin.Any?>}[0]
     final fun <#A1: kotlin/Any?> streamOf(kotlin.collections/Iterable<#A1>): uk.shusek.krwa.component/WitStream<#A1> // uk.shusek.krwa.component/WasiPreview3.streamOf|streamOf(kotlin.collections.Iterable<0:0>){0§<kotlin.Any?>}[0]
@@ -905,9 +1014,6 @@ final class uk.shusek.krwa.component/WasiPreview3 : uk.shusek.krwa.component/Was
         final var monotonicResolutionNanos // uk.shusek.krwa.component/WasiPreview3.Builder.monotonicResolutionNanos|{}monotonicResolutionNanos[0]
             final fun <get-monotonicResolutionNanos>(): kotlin/Long // uk.shusek.krwa.component/WasiPreview3.Builder.monotonicResolutionNanos.<get-monotonicResolutionNanos>|<get-monotonicResolutionNanos>(){}[0]
             final fun <set-monotonicResolutionNanos>(kotlin/Long) // uk.shusek.krwa.component/WasiPreview3.Builder.monotonicResolutionNanos.<set-monotonicResolutionNanos>|<set-monotonicResolutionNanos>(kotlin.Long){}[0]
-        final var networkingEnabled // uk.shusek.krwa.component/WasiPreview3.Builder.networkingEnabled|{}networkingEnabled[0]
-            final fun <get-networkingEnabled>(): kotlin/Boolean // uk.shusek.krwa.component/WasiPreview3.Builder.networkingEnabled.<get-networkingEnabled>|<get-networkingEnabled>(){}[0]
-            final fun <set-networkingEnabled>(kotlin/Boolean) // uk.shusek.krwa.component/WasiPreview3.Builder.networkingEnabled.<set-networkingEnabled>|<set-networkingEnabled>(kotlin.Boolean){}[0]
         final var secureRandom // uk.shusek.krwa.component/WasiPreview3.Builder.secureRandom|{}secureRandom[0]
             final fun <get-secureRandom>(): org.kotlincrypto.random/CryptoRand // uk.shusek.krwa.component/WasiPreview3.Builder.secureRandom.<get-secureRandom>|<get-secureRandom>(){}[0]
             final fun <set-secureRandom>(org.kotlincrypto.random/CryptoRand) // uk.shusek.krwa.component/WasiPreview3.Builder.secureRandom.<set-secureRandom>|<set-secureRandom>(org.kotlincrypto.random.CryptoRand){}[0]
@@ -962,6 +1068,7 @@ final class uk.shusek.krwa.component/WasiPreview3 : uk.shusek.krwa.component/Was
         final fun withInsecureSeed(kotlin/Long, kotlin/Long): uk.shusek.krwa.component/WasiPreview3.Builder // uk.shusek.krwa.component/WasiPreview3.Builder.withInsecureSeed|withInsecureSeed(kotlin.Long;kotlin.Long){}[0]
         final fun withMonotonicClock(kotlin/Function0<kotlin/Long>): uk.shusek.krwa.component/WasiPreview3.Builder // uk.shusek.krwa.component/WasiPreview3.Builder.withMonotonicClock|withMonotonicClock(kotlin.Function0<kotlin.Long>){}[0]
         final fun withMonotonicResolutionNanos(kotlin/Long): uk.shusek.krwa.component/WasiPreview3.Builder // uk.shusek.krwa.component/WasiPreview3.Builder.withMonotonicResolutionNanos|withMonotonicResolutionNanos(kotlin.Long){}[0]
+        final fun withNetworkPolicy(uk.shusek.krwa.component/WasiNetworkPolicy): uk.shusek.krwa.component/WasiPreview3.Builder // uk.shusek.krwa.component/WasiPreview3.Builder.withNetworkPolicy|withNetworkPolicy(uk.shusek.krwa.component.WasiNetworkPolicy){}[0]
         final fun withNetworking(): uk.shusek.krwa.component/WasiPreview3.Builder // uk.shusek.krwa.component/WasiPreview3.Builder.withNetworking|withNetworking(){}[0]
         final fun withNetworking(kotlin/Boolean): uk.shusek.krwa.component/WasiPreview3.Builder // uk.shusek.krwa.component/WasiPreview3.Builder.withNetworking|withNetworking(kotlin.Boolean){}[0]
         final fun withPreopenedDirectory(kotlin/String, kotlin/String): uk.shusek.krwa.component/WasiPreview3.Builder // uk.shusek.krwa.component/WasiPreview3.Builder.withPreopenedDirectory|withPreopenedDirectory(kotlin.String;kotlin.String){}[0]
@@ -1019,21 +1126,27 @@ final class uk.shusek.krwa.component/WasmPlugin : kotlin/AutoCloseable, uk.shuse
         final fun withComponent(okio/Path): uk.shusek.krwa.component/WasmPlugin.Builder // uk.shusek.krwa.component/WasmPlugin.Builder.withComponent|withComponent(okio.Path){}[0]
         final fun withComponentModule(kotlin/ByteArray, kotlin/String): uk.shusek.krwa.component/WasmPlugin.Builder // uk.shusek.krwa.component/WasmPlugin.Builder.withComponentModule|withComponentModule(kotlin.ByteArray;kotlin.String){}[0]
         final fun withComponentModule(okio/Path, kotlin/String): uk.shusek.krwa.component/WasmPlugin.Builder // uk.shusek.krwa.component/WasmPlugin.Builder.withComponentModule|withComponentModule(okio.Path;kotlin.String){}[0]
+        final fun withCoreHostImport(uk.shusek.krwa.component/CoreHostImportId, uk.shusek.krwa.wasm.types/FunctionType, uk.shusek.krwa.runtime/WasmFunctionHandle): uk.shusek.krwa.component/WasmPlugin.Builder // uk.shusek.krwa.component/WasmPlugin.Builder.withCoreHostImport|withCoreHostImport(uk.shusek.krwa.component.CoreHostImportId;uk.shusek.krwa.wasm.types.FunctionType;uk.shusek.krwa.runtime.WasmFunctionHandle){}[0]
         final fun withExecutionBackend(uk.shusek.krwa.runtime/ExecutionBackend?): uk.shusek.krwa.component/WasmPlugin.Builder // uk.shusek.krwa.component/WasmPlugin.Builder.withExecutionBackend|withExecutionBackend(uk.shusek.krwa.runtime.ExecutionBackend?){}[0]
         final fun withExecutionPolicy(uk.shusek.krwa.runtime/WasmExecutionPolicy): uk.shusek.krwa.component/WasmPlugin.Builder // uk.shusek.krwa.component/WasmPlugin.Builder.withExecutionPolicy|withExecutionPolicy(uk.shusek.krwa.runtime.WasmExecutionPolicy){}[0]
         final fun withHost(kotlin/Any): uk.shusek.krwa.component/WasmPlugin.Builder // uk.shusek.krwa.component/WasmPlugin.Builder.withHost|withHost(kotlin.Any){}[0]
         final fun withHostImport(kotlin/String, uk.shusek.krwa.component/HostHandler): uk.shusek.krwa.component/WasmPlugin.Builder // uk.shusek.krwa.component/WasmPlugin.Builder.withHostImport|withHostImport(kotlin.String;uk.shusek.krwa.component.HostHandler){}[0]
         final fun withHostImport(kotlin/String?, kotlin/String?, uk.shusek.krwa.component/HostHandler): uk.shusek.krwa.component/WasmPlugin.Builder // uk.shusek.krwa.component/WasmPlugin.Builder.withHostImport|withHostImport(kotlin.String?;kotlin.String?;uk.shusek.krwa.component.HostHandler){}[0]
+        final fun withLegacyModuleImportDiscovery(): uk.shusek.krwa.component/WasmPlugin.Builder // uk.shusek.krwa.component/WasmPlugin.Builder.withLegacyModuleImportDiscovery|withLegacyModuleImportDiscovery(){}[0]
         final fun withMaxMemoryPages(kotlin/Int?): uk.shusek.krwa.component/WasmPlugin.Builder // uk.shusek.krwa.component/WasmPlugin.Builder.withMaxMemoryPages|withMaxMemoryPages(kotlin.Int?){}[0]
+        final fun withMemoryPolicy(uk.shusek.krwa.runtime/WasmMemoryPolicy?): uk.shusek.krwa.component/WasmPlugin.Builder // uk.shusek.krwa.component/WasmPlugin.Builder.withMemoryPolicy|withMemoryPolicy(uk.shusek.krwa.runtime.WasmMemoryPolicy?){}[0]
         final fun withModule(kotlin/ByteArray): uk.shusek.krwa.component/WasmPlugin.Builder // uk.shusek.krwa.component/WasmPlugin.Builder.withModule|withModule(kotlin.ByteArray){}[0]
         final fun withModule(okio/Path): uk.shusek.krwa.component/WasmPlugin.Builder // uk.shusek.krwa.component/WasmPlugin.Builder.withModule|withModule(okio.Path){}[0]
         final fun withModule(uk.shusek.krwa.wasm/WasmModule?): uk.shusek.krwa.component/WasmPlugin.Builder // uk.shusek.krwa.component/WasmPlugin.Builder.withModule|withModule(uk.shusek.krwa.wasm.WasmModule?){}[0]
         final fun withResourceBudget(kotlin/Int, kotlin/Int = ...): uk.shusek.krwa.component/WasmPlugin.Builder // uk.shusek.krwa.component/WasmPlugin.Builder.withResourceBudget|withResourceBudget(kotlin.Int;kotlin.Int){}[0]
         final fun withWasiPreview1(uk.shusek.krwa.wasi/WasiPreview1): uk.shusek.krwa.component/WasmPlugin.Builder // uk.shusek.krwa.component/WasmPlugin.Builder.withWasiPreview1|withWasiPreview1(uk.shusek.krwa.wasi.WasiPreview1){}[0]
         final fun withWasiPreview2(uk.shusek.krwa.component/WasiPreview2): uk.shusek.krwa.component/WasmPlugin.Builder // uk.shusek.krwa.component/WasmPlugin.Builder.withWasiPreview2|withWasiPreview2(uk.shusek.krwa.component.WasiPreview2){}[0]
+        final fun withWasiPreview2(uk.shusek.krwa.component/WasiPreview2, uk.shusek.krwa.component/WasiPreview2HostOwnership): uk.shusek.krwa.component/WasmPlugin.Builder // uk.shusek.krwa.component/WasmPlugin.Builder.withWasiPreview2|withWasiPreview2(uk.shusek.krwa.component.WasiPreview2;uk.shusek.krwa.component.WasiPreview2HostOwnership){}[0]
         final fun withWasiPreview3(uk.shusek.krwa.component/WasiPreview3): uk.shusek.krwa.component/WasmPlugin.Builder // uk.shusek.krwa.component/WasmPlugin.Builder.withWasiPreview3|withWasiPreview3(uk.shusek.krwa.component.WasiPreview3){}[0]
+        final fun withWasiPreview3(uk.shusek.krwa.component/WasiPreview3, uk.shusek.krwa.component/WasiPreview3HostOwnership): uk.shusek.krwa.component/WasmPlugin.Builder // uk.shusek.krwa.component/WasmPlugin.Builder.withWasiPreview3|withWasiPreview3(uk.shusek.krwa.component.WasiPreview3;uk.shusek.krwa.component.WasiPreview3HostOwnership){}[0]
         final fun withWasiPreview3CanonicalIntrinsics(uk.shusek.krwa.component/WasiPreview3CanonicalIntrinsics): uk.shusek.krwa.component/WasmPlugin.Builder // uk.shusek.krwa.component/WasmPlugin.Builder.withWasiPreview3CanonicalIntrinsics|withWasiPreview3CanonicalIntrinsics(uk.shusek.krwa.component.WasiPreview3CanonicalIntrinsics){}[0]
         final fun withWasmtimeExecutionConfig(uk.shusek.krwa.runtime/WasmtimeExecutionConfig?): uk.shusek.krwa.component/WasmPlugin.Builder // uk.shusek.krwa.component/WasmPlugin.Builder.withWasmtimeExecutionConfig|withWasmtimeExecutionConfig(uk.shusek.krwa.runtime.WasmtimeExecutionConfig?){}[0]
+        final fun withWitHostImport(uk.shusek.krwa.component/WitHostImportId, uk.shusek.krwa.component/HostHandler): uk.shusek.krwa.component/WasmPlugin.Builder // uk.shusek.krwa.component/WasmPlugin.Builder.withWitHostImport|withWitHostImport(uk.shusek.krwa.component.WitHostImportId;uk.shusek.krwa.component.HostHandler){}[0]
         final fun withWorld(kotlin/String?): uk.shusek.krwa.component/WasmPlugin.Builder // uk.shusek.krwa.component/WasmPlugin.Builder.withWorld|withWorld(kotlin.String?){}[0]
 
         final object Companion // uk.shusek.krwa.component/WasmPlugin.Builder.Companion|null[0]
@@ -1044,6 +1157,22 @@ final class uk.shusek.krwa.component/WasmPlugin : kotlin/AutoCloseable, uk.shuse
         final fun builderFromComponent(kotlin/ByteArray): uk.shusek.krwa.component/WasmPlugin.Builder // uk.shusek.krwa.component/WasmPlugin.Companion.builderFromComponent|builderFromComponent(kotlin.ByteArray){}[0]
         final fun builderFromComponent(okio/Path): uk.shusek.krwa.component/WasmPlugin.Builder // uk.shusek.krwa.component/WasmPlugin.Companion.builderFromComponent|builderFromComponent(okio.Path){}[0]
     }
+}
+
+final class uk.shusek.krwa.component/WitHostImportId { // uk.shusek.krwa.component/WitHostImportId|null[0]
+    constructor <init>(kotlin/String, kotlin/String) // uk.shusek.krwa.component/WitHostImportId.<init>|<init>(kotlin.String;kotlin.String){}[0]
+
+    final val functionName // uk.shusek.krwa.component/WitHostImportId.functionName|{}functionName[0]
+        final fun <get-functionName>(): kotlin/String // uk.shusek.krwa.component/WitHostImportId.functionName.<get-functionName>|<get-functionName>(){}[0]
+    final val interfaceName // uk.shusek.krwa.component/WitHostImportId.interfaceName|{}interfaceName[0]
+        final fun <get-interfaceName>(): kotlin/String // uk.shusek.krwa.component/WitHostImportId.interfaceName.<get-interfaceName>|<get-interfaceName>(){}[0]
+
+    final fun component1(): kotlin/String // uk.shusek.krwa.component/WitHostImportId.component1|component1(){}[0]
+    final fun component2(): kotlin/String // uk.shusek.krwa.component/WitHostImportId.component2|component2(){}[0]
+    final fun copy(kotlin/String = ..., kotlin/String = ...): uk.shusek.krwa.component/WitHostImportId // uk.shusek.krwa.component/WitHostImportId.copy|copy(kotlin.String;kotlin.String){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // uk.shusek.krwa.component/WitHostImportId.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // uk.shusek.krwa.component/WitHostImportId.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // uk.shusek.krwa.component/WitHostImportId.toString|toString(){}[0]
 }
 
 final class uk.shusek.krwa.component/WitPackage { // uk.shusek.krwa.component/WitPackage|null[0]
@@ -1226,12 +1355,58 @@ final class uk.shusek.krwa.component/WitPackage { // uk.shusek.krwa.component/Wi
 
     final object Companion { // uk.shusek.krwa.component/WitPackage.Companion|null[0]
         final fun parse(kotlin/String): uk.shusek.krwa.component/WitPackage // uk.shusek.krwa.component/WitPackage.Companion.parse|parse(kotlin.String){}[0]
+        final fun parse(kotlin/String, uk.shusek.krwa.component/WitParserLimits): uk.shusek.krwa.component/WitPackage // uk.shusek.krwa.component/WitPackage.Companion.parse|parse(kotlin.String;uk.shusek.krwa.component.WitParserLimits){}[0]
     }
 }
 
 final class uk.shusek.krwa.component/WitParseException : uk.shusek.krwa.component/ComponentModelException { // uk.shusek.krwa.component/WitParseException|null[0]
     constructor <init>(kotlin/String?) // uk.shusek.krwa.component/WitParseException.<init>|<init>(kotlin.String?){}[0]
     constructor <init>(kotlin/String?, kotlin/Throwable?) // uk.shusek.krwa.component/WitParseException.<init>|<init>(kotlin.String?;kotlin.Throwable?){}[0]
+}
+
+final class uk.shusek.krwa.component/WitParseLimitException : kotlin/IllegalArgumentException { // uk.shusek.krwa.component/WitParseLimitException|null[0]
+    constructor <init>(kotlin/String, kotlin/Long, kotlin/Long) // uk.shusek.krwa.component/WitParseLimitException.<init>|<init>(kotlin.String;kotlin.Long;kotlin.Long){}[0]
+
+    final val actual // uk.shusek.krwa.component/WitParseLimitException.actual|{}actual[0]
+        final fun <get-actual>(): kotlin/Long // uk.shusek.krwa.component/WitParseLimitException.actual.<get-actual>|<get-actual>(){}[0]
+    final val configuredLimit // uk.shusek.krwa.component/WitParseLimitException.configuredLimit|{}configuredLimit[0]
+        final fun <get-configuredLimit>(): kotlin/Long // uk.shusek.krwa.component/WitParseLimitException.configuredLimit.<get-configuredLimit>|<get-configuredLimit>(){}[0]
+    final val limitName // uk.shusek.krwa.component/WitParseLimitException.limitName|{}limitName[0]
+        final fun <get-limitName>(): kotlin/String // uk.shusek.krwa.component/WitParseLimitException.limitName.<get-limitName>|<get-limitName>(){}[0]
+}
+
+final class uk.shusek.krwa.component/WitParserLimits { // uk.shusek.krwa.component/WitParserLimits|null[0]
+    constructor <init>(kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ...) // uk.shusek.krwa.component/WitParserLimits.<init>|<init>(kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int){}[0]
+
+    final val maxDeclarations // uk.shusek.krwa.component/WitParserLimits.maxDeclarations|{}maxDeclarations[0]
+        final fun <get-maxDeclarations>(): kotlin/Int // uk.shusek.krwa.component/WitParserLimits.maxDeclarations.<get-maxDeclarations>|<get-maxDeclarations>(){}[0]
+    final val maxExpandedWorldItems // uk.shusek.krwa.component/WitParserLimits.maxExpandedWorldItems|{}maxExpandedWorldItems[0]
+        final fun <get-maxExpandedWorldItems>(): kotlin/Int // uk.shusek.krwa.component/WitParserLimits.maxExpandedWorldItems.<get-maxExpandedWorldItems>|<get-maxExpandedWorldItems>(){}[0]
+    final val maxIncludeDepth // uk.shusek.krwa.component/WitParserLimits.maxIncludeDepth|{}maxIncludeDepth[0]
+        final fun <get-maxIncludeDepth>(): kotlin/Int // uk.shusek.krwa.component/WitParserLimits.maxIncludeDepth.<get-maxIncludeDepth>|<get-maxIncludeDepth>(){}[0]
+    final val maxMembersPerDeclaration // uk.shusek.krwa.component/WitParserLimits.maxMembersPerDeclaration|{}maxMembersPerDeclaration[0]
+        final fun <get-maxMembersPerDeclaration>(): kotlin/Int // uk.shusek.krwa.component/WitParserLimits.maxMembersPerDeclaration.<get-maxMembersPerDeclaration>|<get-maxMembersPerDeclaration>(){}[0]
+    final val maxPackageNesting // uk.shusek.krwa.component/WitParserLimits.maxPackageNesting|{}maxPackageNesting[0]
+        final fun <get-maxPackageNesting>(): kotlin/Int // uk.shusek.krwa.component/WitParserLimits.maxPackageNesting.<get-maxPackageNesting>|<get-maxPackageNesting>(){}[0]
+    final val maxSourceChars // uk.shusek.krwa.component/WitParserLimits.maxSourceChars|{}maxSourceChars[0]
+        final fun <get-maxSourceChars>(): kotlin/Int // uk.shusek.krwa.component/WitParserLimits.maxSourceChars.<get-maxSourceChars>|<get-maxSourceChars>(){}[0]
+    final val maxTokens // uk.shusek.krwa.component/WitParserLimits.maxTokens|{}maxTokens[0]
+        final fun <get-maxTokens>(): kotlin/Int // uk.shusek.krwa.component/WitParserLimits.maxTokens.<get-maxTokens>|<get-maxTokens>(){}[0]
+    final val maxTypeNesting // uk.shusek.krwa.component/WitParserLimits.maxTypeNesting|{}maxTypeNesting[0]
+        final fun <get-maxTypeNesting>(): kotlin/Int // uk.shusek.krwa.component/WitParserLimits.maxTypeNesting.<get-maxTypeNesting>|<get-maxTypeNesting>(){}[0]
+
+    final fun component1(): kotlin/Int // uk.shusek.krwa.component/WitParserLimits.component1|component1(){}[0]
+    final fun component2(): kotlin/Int // uk.shusek.krwa.component/WitParserLimits.component2|component2(){}[0]
+    final fun component3(): kotlin/Int // uk.shusek.krwa.component/WitParserLimits.component3|component3(){}[0]
+    final fun component4(): kotlin/Int // uk.shusek.krwa.component/WitParserLimits.component4|component4(){}[0]
+    final fun component5(): kotlin/Int // uk.shusek.krwa.component/WitParserLimits.component5|component5(){}[0]
+    final fun component6(): kotlin/Int // uk.shusek.krwa.component/WitParserLimits.component6|component6(){}[0]
+    final fun component7(): kotlin/Int // uk.shusek.krwa.component/WitParserLimits.component7|component7(){}[0]
+    final fun component8(): kotlin/Int // uk.shusek.krwa.component/WitParserLimits.component8|component8(){}[0]
+    final fun copy(kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ...): uk.shusek.krwa.component/WitParserLimits // uk.shusek.krwa.component/WitParserLimits.copy|copy(kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // uk.shusek.krwa.component/WitParserLimits.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // uk.shusek.krwa.component/WitParserLimits.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // uk.shusek.krwa.component/WitParserLimits.toString|toString(){}[0]
 }
 
 final class uk.shusek.krwa.component/WitValue { // uk.shusek.krwa.component/WitValue|null[0]

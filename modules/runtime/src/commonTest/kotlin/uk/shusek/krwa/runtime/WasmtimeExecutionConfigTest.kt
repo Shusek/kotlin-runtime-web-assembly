@@ -7,6 +7,15 @@ import kotlin.test.assertFailsWith
 
 class WasmtimeExecutionConfigTest {
     @Test
+    fun wasmtimeConfigsDefaultToAutomaticPlatformTarget() {
+        assertEquals(WasmtimeAutomaticTarget, WasmtimeExecutionConfig().target)
+        assertEquals(
+            WasmtimeAutomaticTarget,
+            preview3ComponentConfig().target,
+        )
+    }
+
+    @Test
     fun wasmtimeExecutionConfigCarriesResourceLimits() {
         val config = WasmtimeExecutionConfig(
             maxMemoryBytes = 32L * 1024L * 1024L,
@@ -127,27 +136,98 @@ class WasmtimeExecutionConfigTest {
     fun preview3ComponentConfigCarriesNetworkPolicy() {
         val config = preview3ComponentConfig(
             networkPolicy = WasmtimePreview3NetworkPolicy(
-                allowedHosts = listOf("api.example.test", "*.cdn.example.test"),
-                blockedHosts = listOf("blocked.example.test"),
-                allowPrivateNetwork = true,
+                httpEndpoints =
+                    listOf(
+                        WasmtimePreview3HttpEndpoint(
+                            WasmtimePreview3HttpProtocol.Https,
+                            "api.example.test",
+                            443,
+                        ),
+                        WasmtimePreview3HttpEndpoint(
+                            WasmtimePreview3HttpProtocol.Http,
+                            "127.0.0.1",
+                            8080,
+                        ),
+                    ),
             ),
         )
 
-        assertEquals(listOf("api.example.test", "*.cdn.example.test"), config.networkPolicy.allowedHosts)
-        assertEquals(listOf("blocked.example.test"), config.networkPolicy.blockedHosts)
-        assertEquals(true, config.networkPolicy.allowPrivateNetwork)
+        assertEquals(
+            listOf("https://api.example.test:443", "http://127.0.0.1:8080"),
+            config.networkPolicy.encodedHttpEndpoints(),
+        )
     }
 
     @Test
-    fun preview3NetworkPolicyRejectsInvalidHostPatterns() {
-        listOf("", " api.example.test", "https://api.example.test", "api.example.test/path", "bad\u0000host")
+    fun preview3NetworkPolicyRejectsInvalidOrAmbiguousEndpoints() {
+        listOf(
+            "",
+            " api.example.test",
+            "https://api.example.test",
+            "api.example.test/path",
+            "*.example.test",
+            "user@api.example.test",
+            "api:port",
+            "münich.example",
+            "127.000.0.1",
+            "2001:db8::1::2",
+            "bad\u0000host",
+        )
             .forEach { host ->
                 val error = assertFailsWith<IllegalArgumentException> {
-                    WasmtimePreview3NetworkPolicy(allowedHosts = listOf(host))
+                    WasmtimePreview3HttpEndpoint(
+                        WasmtimePreview3HttpProtocol.Https,
+                        host,
+                        443,
+                    )
                 }
 
-                assertContains(error.message.orEmpty(), "network policy allowed host")
+                assertContains(error.message.orEmpty(), "network host")
             }
+        assertFailsWith<IllegalArgumentException> {
+            WasmtimePreview3HttpEndpoint(
+                WasmtimePreview3HttpProtocol.Https,
+                "api.example.test",
+                0,
+            )
+        }
+        val endpoint =
+            WasmtimePreview3HttpEndpoint(
+                WasmtimePreview3HttpProtocol.Https,
+                "api.example.test",
+                443,
+            )
+        assertFailsWith<IllegalArgumentException> {
+            WasmtimePreview3NetworkPolicy(httpEndpoints = listOf(endpoint, endpoint))
+        }
+        assertEquals(
+            "https://[2001:db8:0:0:0:0:0:1]:443",
+            WasmtimePreview3NetworkPolicy(
+                httpEndpoints = listOf(
+                    WasmtimePreview3HttpEndpoint(
+                        WasmtimePreview3HttpProtocol.Https,
+                        "[2001:DB8::1]",
+                        443,
+                    ),
+                ),
+            ).encodedHttpEndpoints().single(),
+        )
+        assertFailsWith<IllegalArgumentException> {
+            WasmtimePreview3NetworkPolicy(
+                httpEndpoints = listOf(
+                    WasmtimePreview3HttpEndpoint(
+                        WasmtimePreview3HttpProtocol.Https,
+                        "API.EXAMPLE.TEST.",
+                        443,
+                    ),
+                    WasmtimePreview3HttpEndpoint(
+                        WasmtimePreview3HttpProtocol.Https,
+                        "api.example.test",
+                        443,
+                    ),
+                ),
+            )
+        }
     }
 
     @Test

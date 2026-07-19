@@ -20,31 +20,41 @@ For structured plugin contracts, use WIT and the Component Model. The canonical
 ABI still uses linear memory underneath, but the generated bindings own the
 lowering and lifting rules.
 
-## Limits And Factories
+## Instance Memory Policy
 
 WebAssembly memory is measured in 64 KiB pages. `MemoryLimits` stores the
 initial and maximum page counts, with the WebAssembly maximum capped at 65536
 pages.
 
-For JVM, Android, and iOS, set Wasmtime store limits before instantiation:
+Use `WasmMemoryPolicy` when instantiating a module. The policy bounds every
+imported and defined memory, limits the number of memories, and reserves no more
+than the aggregate growth budget:
 
 ```kotlin
+val memoryPolicy =
+    WasmMemoryPolicy(
+        maxBytesPerMemory = 64L * 1024L * 1024L,
+        maxTotalBytes = 96L * 1024L * 1024L,
+        maxMemories = 2,
+    )
+
 val instance =
     Instance.builder(module)
-        .withExecutionBackend(ExecutionBackend.PULLEY)
-        .withWasmtimeExecutionConfig(
-            WasmtimeExecutionConfig(maxMemoryBytes = 64L * 1024L * 1024L),
-        )
+        .withMemoryPolicy(memoryPolicy)
         .build()
 ```
 
-`withMemoryLimits(...)` is still available for targets that can apply a
-host-provided cap to a module's first defined memory, such as the wasmJs native
-path, and for host-created/imported memory objects. It is not a replacement for
-Wasmtime store limits. Imported memories are supplied by the host, so the host
-must apply any limits before passing them to the guest. If a module uses multiple
-memories, validate the module shape before instantiation and reject layouts your
-host is not prepared to provide.
+Both byte limits must be positive multiples of 64 KiB. At build time, imported
+memories are rejected when their current or declared maximum size exceeds the
+per-memory or aggregate budget. Defined memories receive effective maximums
+that respect both budgets, so subsequent `memory.grow` operations cannot exceed
+them. The same policy is applied by the selected platform engine; it is not
+necessary to duplicate it with `WasmtimeExecutionConfig.maxMemoryBytes`.
+
+`withMemoryLimits(...)` remains as a compatibility API for a module with at
+most one defined memory. It does not account for imported memories or aggregate
+growth and rejects modules with multiple defined memories. Prefer
+`withMemoryPolicy(...)` for untrusted or multi-memory modules.
 
 Runtime memory objects are owned by the active platform engine. On JVM, Android,
 and iOS this means the linked Wasmtime backend; on `wasmJs` this means the

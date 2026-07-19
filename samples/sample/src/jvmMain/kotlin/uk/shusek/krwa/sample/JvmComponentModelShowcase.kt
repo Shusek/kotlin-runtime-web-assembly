@@ -9,6 +9,7 @@ import kotlin.time.Instant as KotlinInstant
 import kotlinx.io.Buffer
 import okio.Path.Companion.toPath
 import uk.shusek.krwa.component.WasiPreview2
+import uk.shusek.krwa.component.WasiPreview2HostOwnership
 import uk.shusek.krwa.component.WasmComponentTools
 import uk.shusek.krwa.component.WasmPlugin
 import uk.shusek.krwa.component.withInsecureRandom
@@ -49,16 +50,18 @@ internal fun runComponentModelPluginShowcase(capabilities: ShowcaseCapabilities)
 
     val plugin =
         WasmPlugin.builderFromComponent(componentPath.toOkioPath())
-            .withWasiPreview2(wasi2)
+            .withWasiPreview2(wasi2, WasiPreview2HostOwnership.OWNED)
             .build()
 
-    requireShowcaseValue(6L, plugin.call("api.len", "Kotlin"), "component plugin API")
-    require(plugin.exports().containsKey("api.len")) { "Expected api.len export" }
-    capabilities.demonstrate(
-        "Component Model",
-        "Package and host a component",
-        "The JVM host embeds WIT, builds a component from a core module, wires WASIp2, and calls the exported plugin API through WasmPlugin.",
-    )
+    plugin.use {
+        requireShowcaseValue(6L, plugin.call("api.len", "Kotlin"), "component plugin API")
+        require(plugin.exports().containsKey("api.len")) { "Expected api.len export" }
+        capabilities.demonstrate(
+            "Component Model",
+            "Package and host a component",
+            "The JVM host embeds WIT, builds a component from a core module, wires WASIp2, and calls the exported plugin API through WasmPlugin.",
+        )
+    }
 }
 
 internal fun compileWat(source: String): ByteArray =

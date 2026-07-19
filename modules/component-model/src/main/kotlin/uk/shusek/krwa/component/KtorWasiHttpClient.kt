@@ -1,6 +1,8 @@
 package uk.shusek.krwa.component
 
 import io.ktor.client.HttpClient as KtorHttpClient
+import io.ktor.client.plugins.HttpRedirect
+import io.ktor.client.plugins.pluginOrNull
 import io.ktor.client.plugins.timeout
 import io.ktor.client.request.headers
 import io.ktor.client.request.prepareRequest
@@ -23,47 +25,60 @@ public class KtorWasiHttpClient(private val delegate: KtorHttpClient) : WasiSusp
         runBlocking { sendSuspending(request) }
 
     override suspend fun sendSuspending(request: WasiHttpRequest): WasiHttpResponse {
+        val requestClient = delegate.withoutRedirects()
         val statement =
-            delegate.prepareRequest(request.uri) {
-                method = KtorHttpMethod(request.method)
-                val timeout = request.timeout
-                if (timeout != null) {
-                    timeout {
-                        val millis = maxOf(1L, timeout.inWholeMilliseconds)
-                        requestTimeoutMillis = millis
-                        connectTimeoutMillis = millis
-                        socketTimeoutMillis = millis
+            try {
+                requestClient.prepareRequest(request.uri) {
+                    method = KtorHttpMethod(request.method)
+                    val timeout = request.timeout
+                    if (timeout != null) {
+                        timeout {
+                            val millis = maxOf(1L, timeout.inWholeMilliseconds)
+                            requestTimeoutMillis = millis
+                            connectTimeoutMillis = millis
+                            socketTimeoutMillis = millis
+                        }
                     }
-                }
-                headers {
-                    for (entry in request.headers) {
-                        append(entry.name, entry.value)
+                    headers {
+                        for (entry in request.headers) {
+                            append(entry.name, entry.value)
+                        }
                     }
+                    setBody(request.body)
                 }
-                setBody(request.body)
+            } catch (error: Throwable) {
+                requestClient.close()
+                throw error
             }
         val responseRef = CompletableDeferred<WasiHttpResponse>()
         val job =
             CoroutineScope(Dispatchers.Default).launch {
+                var source: KtorStreamingBodySource? = null
                 try {
                     statement.execute { response ->
-                        val source = KtorStreamingBodySource(response.bodyAsChannel())
+                        val responseSource =
+                            KtorStreamingBodySource(
+                                channel = response.bodyAsChannel(),
+                                onClose = requestClient::close,
+                            )
+                        source = responseSource
                         if (
                             !responseRef.complete(
                                 WasiHttpResponse(
                                     response.status.value,
                                     response.headers.entries()
                                         .associate { entry -> entry.key to entry.value.toList() },
-                                    source,
+                                    responseSource,
                                 )
                             )
                         ) {
-                            source.close()
+                            responseSource.close()
                             return@execute
                         }
-                        source.awaitFinished()
+                        responseSource.awaitFinished()
                     }
                 } catch (error: Throwable) {
+                    source?.close() ?: requestClient.close()
                     responseRef.completeExceptionally(error)
                 }
             }
@@ -72,12 +87,19 @@ public class KtorWasiHttpClient(private val delegate: KtorHttpClient) : WasiSusp
                 job.cancel()
             }
         }
-        return responseRef.await()
+        return try {
+            responseRef.await()
+        } catch (error: Throwable) {
+            job.cancel()
+            requestClient.close()
+            throw error
+        }
     }
 }
 
-private class KtorStreamingBodySource(
+internal class KtorStreamingBodySource(
     private val channel: ByteReadChannel,
+    private val onClose: () -> Unit,
 ) : WasiMemoryRawSource {
     private val finished = CompletableDeferred<Unit>()
     private var buffer = ByteArray(0)
@@ -124,13 +146,20 @@ private class KtorStreamingBodySource(
         }
         closed = true
         finished.complete(Unit)
+        onClose()
     }
 
     private fun readAvailableBlocking(byteCount: Int): Int {
         val target = ensureBuffer(byteCount.coerceAtMost(KTOR_HTTP_BODY_CHUNK_SIZE))
-        val count = runBlocking {
-            channel.readAvailable(target, 0, target.size)
-        }
+        val count =
+            try {
+                runBlocking {
+                    channel.readAvailable(target, 0, target.size)
+                }
+            } catch (error: Throwable) {
+                close()
+                throw error
+            }
         if (count < 0) {
             close()
         }
@@ -143,4 +172,17 @@ private class KtorStreamingBodySource(
         }
         return buffer
     }
+}
+
+private fun KtorHttpClient.withoutRedirects(): KtorHttpClient {
+    val client = config {
+        followRedirects = false
+    }
+    if (client.pluginOrNull(HttpRedirect) != null) {
+        client.close()
+        throw IllegalArgumentException(
+            "Ktor WASI HTTP clients must not install HttpRedirect explicitly."
+        )
+    }
+    return client
 }

@@ -1,5 +1,7 @@
 package uk.shusek.krwa.runtime
 
+/** Selects the safest supported Wasmtime target for the current platform. */
+const val WasmtimeAutomaticTarget: String = "auto"
 
 const val WasmtimeNativeTarget: String = "native"
 
@@ -18,7 +20,7 @@ const val DefaultWasmtimeCoreMaxTables: Long = 128L
 const val DefaultWasmtimeCoreMaxMemories: Long = 16L
 
 data class WasmtimeExecutionConfig(
-    val target: String = WasmtimeNativeTarget,
+    val target: String = WasmtimeAutomaticTarget,
     val precompiledModuleBytes: ByteArray? = null,
     val maxMemoryBytes: Long = DefaultWasmtimeMaxMemoryBytes,
     val maxWasmStackBytes: Long = DefaultWasmtimeMaxWasmStackBytes,
@@ -80,32 +82,46 @@ data class WasmtimePreview3Preopen(
     }
 }
 
-data class WasmtimePreview3NetworkPolicy(
-    val allowedHosts: List<String> = emptyList(),
-    val blockedHosts: List<String> = emptyList(),
-    val allowPrivateNetwork: Boolean = false,
-) {
-    init {
-        validateHostPatterns("allowed", allowedHosts)
-        validateHostPatterns("blocked", blockedHosts)
-    }
+enum class WasmtimePreview3HttpProtocol {
+    Http,
+    Https,
+}
 
-    private fun validateHostPatterns(label: String, hosts: List<String>) {
-        hosts.forEachIndexed { index, host ->
-            require(host.isNotBlank()) {
-                "Wasmtime Preview3 network policy $label host $index must not be blank"
-            }
-            require(host == host.trim()) {
-                "Wasmtime Preview3 network policy $label host $index must not contain surrounding whitespace"
-            }
-            require(!host.contains('\u0000')) {
-                "Wasmtime Preview3 network policy $label host $index must not contain NUL"
-            }
-            require('/' !in host && '\\' !in host && "://" !in host) {
-                "Wasmtime Preview3 network policy $label host $index must be a host pattern"
-            }
+data class WasmtimePreview3HttpEndpoint(
+    val protocol: WasmtimePreview3HttpProtocol,
+    val host: String,
+    val port: Int,
+) {
+    val normalizedHost: String = canonicalizeExactNetworkHost(host)
+
+    init {
+        require(port in 1..65_535) {
+            "Wasmtime Preview3 HTTP endpoint port must be between 1 and 65535"
         }
     }
+
+    internal fun encoded(): String {
+        val authorityHost = if (':' in normalizedHost) "[$normalizedHost]" else normalizedHost
+        val scheme =
+            when (protocol) {
+                WasmtimePreview3HttpProtocol.Http -> "http"
+                WasmtimePreview3HttpProtocol.Https -> "https"
+            }
+        return "$scheme://$authorityHost:$port"
+    }
+}
+
+data class WasmtimePreview3NetworkPolicy(
+    val httpEndpoints: List<WasmtimePreview3HttpEndpoint> = emptyList(),
+) {
+    init {
+        require(httpEndpoints.map(WasmtimePreview3HttpEndpoint::encoded).distinct().size == httpEndpoints.size) {
+            "Wasmtime Preview3 HTTP endpoints must be unique"
+        }
+    }
+
+    fun encodedHttpEndpoints(): List<String> =
+        httpEndpoints.map(WasmtimePreview3HttpEndpoint::encoded)
 }
 
 private fun String.isAbsoluteHostPreopenPath(): Boolean {
@@ -129,7 +145,7 @@ private fun String.hostPathSegments(): List<String> = replace('\\', '/').pathSeg
 private fun String.pathSegments(): List<String> = split('/').filter(String::isNotBlank)
 
 data class WasmtimePreview3ComponentConfig(
-    val target: String = WasmtimeNativeTarget,
+    val target: String = WasmtimeAutomaticTarget,
     val precompiledComponentBytes: ByteArray,
     val preopens: List<WasmtimePreview3Preopen>,
     val arguments: List<String> = emptyList(),
@@ -145,7 +161,7 @@ data class WasmtimePreview3ComponentConfig(
     val maxFuel: Long = WasmtimeUnlimitedResourceLimit,
 ) {
     constructor(
-        target: String = WasmtimeNativeTarget,
+        target: String = WasmtimeAutomaticTarget,
         precompiledComponentBytes: ByteArray,
         hostPreopenRoot: String,
         guestPreopenRoot: String = "/",

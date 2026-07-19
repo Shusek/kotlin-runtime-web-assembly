@@ -18,15 +18,38 @@ Main surfaces:
 Example:
 
 ```kotlin
-val runtime = KotlinWasiPreview3.builder()
-    .withNetworking()
+KotlinWasiPreview3.builder()
+    .withNetworkPolicy(
+        WasiNetworkPolicy(
+            httpEndpoints = setOf(
+                WasiHttpNetworkEndpoint(
+                    WasiHttpNetworkProtocol.Https,
+                    "api.example.com",
+                    443,
+                ),
+            ),
+        ),
+    )
     .withResourceBudget(parallelism = 2, streamBufferCapacity = 64 * 1024)
     .build()
-
-val future = runtime.completed("ready")
-val value = runtime.await(future)
-runtime.close()
+    .use { runtime ->
+        val future = runtime.completed("ready")
+        val value = runtime.await(future)
+    }
 ```
+
+`WasiPreview3` is `AutoCloseable`. Closing it cancels its child coroutine job,
+drains owned WIT and socket resources, and closes internally created transports.
+A `CoroutineScope` passed with `withCoroutineScope` remains caller-owned: the
+host derives a child job from it and never cancels the supplied scope itself.
+
+Networking is deny-by-default. HTTP grants match scheme, canonical host, and
+port exactly. Raw TCP/UDP socket grants are independent and must be listed as
+`WasiNetworkEndpoint` values.
+
+`KtorWasiHttpClient` returns redirect responses without following them. A
+custom `WasiHttpClient` is trusted host code and must likewise reject redirects
+or re-authorize every redirect target before opening the next connection.
 
 When running precompiled Preview 3 components through the Wasmtime
 bridge, `WasmtimePreview3ComponentConfig` carries the same resource limits as
