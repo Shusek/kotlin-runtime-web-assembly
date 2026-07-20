@@ -108,6 +108,23 @@ class KrwaPackageWasmComponentTaskTest {
         assertEquals("keep me", sibling.readText())
     }
 
+    @Test
+    fun `forwards configured Wasmtime library to the isolated worker`() {
+        writeCoreModule()
+        val configuredLibrary = tempDir.resolve("configured-libwasmtime.dylib")
+        configuredLibrary.writeBytes(byteArrayOf(0))
+
+        val result = runner()
+            .withReleaseGateArguments(
+                "packageKrwaComponent",
+                "--stacktrace",
+                "-Dkrwa.wasmtime.library=$configuredLibrary",
+            )
+            .buildAndFail()
+
+        assertTrue(result.output.contains(configuredLibrary.toString()), result.output)
+    }
+
     private fun runner(): GradleRunner = GradleRunner.create()
         .withProjectDir(tempDir.toFile())
         .withPluginClasspath()

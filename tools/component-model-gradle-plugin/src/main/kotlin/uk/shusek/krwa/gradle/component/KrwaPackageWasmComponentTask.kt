@@ -74,6 +74,9 @@ abstract class KrwaPackageWasmComponentTask : DefaultTask() {
         val queue = workerExecutor.processIsolation { worker ->
             worker.forkOptions.maxHeapSize = componentPackagerWorkerMaxHeap()
             worker.forkOptions.jvmArgs("--enable-native-access=ALL-UNNAMED")
+            configuredWasmtimeLibrary()?.let { library ->
+                worker.forkOptions.systemProperty(WasmtimeLibraryProperty, library)
+            }
             worker.classpath.from(componentPackagerWorkerClasspath())
         }
         queue.submit(KrwaPackageWasmComponentWorkAction::class.java) { parameters ->
@@ -169,6 +172,12 @@ private fun componentPackagerWorkerMaxHeap(): String =
         ?.takeIf { value -> value.matches(Regex("[1-9][0-9]*[kKmMgG]")) }
         ?: DefaultComponentPackagerWorkerMaxHeap
 
+private fun configuredWasmtimeLibrary(): String? =
+    System.getProperty(WasmtimeLibraryProperty)
+        ?.takeIf(String::isNotBlank)
+        ?: System.getenv(WasmtimeLibraryEnvironmentVariable)
+            ?.takeIf(String::isNotBlank)
+
 private fun replaceOutput(stagedOutput: File, output: File) {
     try {
         Files.move(
@@ -184,6 +193,8 @@ private fun replaceOutput(stagedOutput: File, output: File) {
 
 private const val ComponentPackagerWorkerMaxHeapProperty = "krwa.component.packager.workerMaxHeap"
 private const val DefaultComponentPackagerWorkerMaxHeap = "1g"
+private const val WasmtimeLibraryProperty = "krwa.wasmtime.library"
+private const val WasmtimeLibraryEnvironmentVariable = "KRWA_WASMTIME_LIBRARY"
 
 private val ComponentPackagerWorkerClassNames = listOf(
     KrwaPackageWasmComponentWorkAction::class.java.name,

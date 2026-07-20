@@ -18,7 +18,7 @@ concurrency:
 jobs:
   publish:
     name: Verify, sign, and publish
-    runs-on: macos-15-intel
+    runs-on: macos-latest
     timeout-minutes: 180
     if: github.repository == 'Shusek/kotlin-runtime-web-assembly'
 
