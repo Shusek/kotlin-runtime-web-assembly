@@ -158,17 +158,32 @@ jobs:
           echo "KRWA_TEST_SIMULATOR_ID=$device_id" >> "$GITHUB_ENV"
 
       - name: Test build logic
-        run: ./gradlew -p buildSrc --no-daemon test
+        run: >-
+          ./gradlew -p buildSrc --no-daemon --max-workers=2
+          -Pkotlin.compiler.execution.strategy=in-process test
         env:
           GRADLE_OPTS: "-ea"
 
       - name: Prepare pinned release dependencies
-        run: ./gradlew --no-daemon prepareReleaseDependencies
+        run: >-
+          ./gradlew --no-daemon --max-workers=2
+          -Pkotlin.compiler.execution.strategy=in-process
+          prepareReleaseDependencies
+        env:
+          GRADLE_OPTS: "-ea"
+
+      - name: Test component model Gradle plugin in isolation
+        run: >-
+          ./gradlew --no-daemon --offline --max-workers=2
+          -Pkotlin.compiler.execution.strategy=in-process
+          :component-model-gradle-plugin:test --stacktrace
         env:
           GRADLE_OPTS: "-ea"
 
       - name: Run complete release gate offline
-        run: ./gradlew --no-daemon --offline releaseGate
+        run: >-
+          ./gradlew --no-daemon --offline --max-workers=2
+          -Pkotlin.compiler.execution.strategy=in-process releaseGate
         env:
           GRADLE_OPTS: "-ea"
 
