@@ -5,6 +5,8 @@ const val WasmtimeAutomaticTarget: String = "auto"
 
 const val WasmtimeNativeTarget: String = "native"
 
+const val WasmtimePulley32Target: String = "pulley32"
+
 const val WasmtimePulleyTarget: String = "pulley64"
 
 const val DefaultWasmtimeMaxMemoryBytes: Long = 256L * 1024L * 1024L

@@ -5,7 +5,10 @@ the local gate never publishes outside its task-owned staging directory.
 
 ## Candidate checklist
 
-1. Set an immutable semantic version in `gradle.properties` and update `CHANGELOG.md`.
+1. Set an immutable semantic version in `gradle.properties` and update `CHANGELOG.md`. Kendive
+   remains on the configured `0.3.x` compatibility line: advance only the patch or prerelease
+   portion, leaving the `0.3` major/minor pair unchanged. `verifyImmutablePublicationVersion`
+   enforces this before staging or publication.
 2. Provision Java 25, Node, rustup/Cargo, CMake, Xcode, and the Gradle dependency caches. The exact
    Rust release and compiler commit are the `rustRelease` and `rustReleaseCommit` entries in
    `gradle/libs.versions.toml`; do not substitute the moving `stable` alias.

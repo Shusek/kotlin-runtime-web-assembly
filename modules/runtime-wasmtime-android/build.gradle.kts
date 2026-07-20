@@ -20,32 +20,82 @@ extensions.configure<BasePluginExtension> {
     archivesName.set("runtime-wasmtime-android")
 }
 
+data class AndroidAbiConfig(
+    val jniDirectory: String,
+    val rustTarget: String,
+    val ndkClangTarget: String,
+    val elfClass: Int,
+    val elfMachine: Int,
+) {
+    val cargoTargetSuffix: String = rustTarget.replace("-", "_").uppercase()
+    val compilerEnvironmentSuffix: String = rustTarget.replace("-", "_")
+}
+
+val arm64V8a = AndroidAbiConfig(
+    jniDirectory = "arm64-v8a",
+    rustTarget = "aarch64-linux-android",
+    ndkClangTarget = "aarch64-linux-android",
+    elfClass = 2,
+    elfMachine = 183,
+)
+val armeabiV7a = AndroidAbiConfig(
+    jniDirectory = "armeabi-v7a",
+    rustTarget = "armv7-linux-androideabi",
+    ndkClangTarget = "armv7a-linux-androideabi",
+    elfClass = 1,
+    elfMachine = 40,
+)
+val androidAbis = listOf(arm64V8a, armeabiV7a)
 val wasmtimePulleyVersion = libs.versions.wasmtime.get()
 val rustReleaseVersion = libs.versions.rustRelease.get()
 val rustReleaseCommitHash = libs.versions.rustReleaseCommit.get()
+val wasmtimePulleyFeatures =
+    "pulley,cranelift,gc,gc-drc,gc-null,all-arch,component-model,component-model-async,wasi,wasi-http,disable-logging"
 val wasmtimePulleyAndroidArchiveName =
     "wasmtime-v$wasmtimePulleyVersion-aarch64-android-c-api.tar.xz"
 val wasmtimePulleyAndroidArchiveSha256 =
     "94b75abf63c6e16fa8c47189e3c5c569ecc34f3f3814ec5541dcf29268a03661"
 val wasmtimePulleyAndroidLibSha256 =
     "74141aa32ef91b12c0ed743d515f7384a6bcf35317b434a63aaba7b0511aaeb3"
+
+fun androidJniLib(abi: AndroidAbiConfig, name: String) =
+    layout.projectDirectory.file("src/androidMain/jniLibs/${abi.jniDirectory}/$name")
+
 val wasmtimePulleyAndroidJniLib =
-    layout.projectDirectory.file("src/androidMain/jniLibs/arm64-v8a/libwasmtime.so")
+    androidJniLib(arm64V8a, "libwasmtime.so")
+val wasmtimePulleyArmeabiV7aJniLib =
+    androidJniLib(armeabiV7a, "libwasmtime.so")
 val krwaPulleyAndroidJniLib =
-    layout.projectDirectory.file("src/androidMain/jniLibs/arm64-v8a/libkrwa_pulley_android.so")
+    androidJniLib(arm64V8a, "libkrwa_pulley_android.so")
+val krwaPulleyArmeabiV7aJniLib =
+    androidJniLib(armeabiV7a, "libkrwa_pulley_android.so")
 val krwaWasmtimeP3BridgeAndroidJniLib =
-    layout.projectDirectory.file("src/androidMain/jniLibs/arm64-v8a/libkrwa_wasmtime_p3_bridge.so")
+    androidJniLib(arm64V8a, "libkrwa_wasmtime_p3_bridge.so")
+val krwaWasmtimeP3BridgeArmeabiV7aJniLib =
+    androidJniLib(armeabiV7a, "libkrwa_wasmtime_p3_bridge.so")
 val krwaWasmtimeP3AndroidJniLib =
-    layout.projectDirectory.file("src/androidMain/jniLibs/arm64-v8a/libkrwa_wasmtime_p3_android.so")
-val androidJniLibs =
+    androidJniLib(arm64V8a, "libkrwa_wasmtime_p3_android.so")
+val krwaWasmtimeP3ArmeabiV7aJniLib =
+    androidJniLib(armeabiV7a, "libkrwa_wasmtime_p3_android.so")
+val androidJniLibsByAbi =
     listOf(
-        wasmtimePulleyAndroidJniLib,
-        krwaPulleyAndroidJniLib,
-        krwaWasmtimeP3BridgeAndroidJniLib,
-        krwaWasmtimeP3AndroidJniLib,
+        arm64V8a to wasmtimePulleyAndroidJniLib,
+        arm64V8a to krwaPulleyAndroidJniLib,
+        arm64V8a to krwaWasmtimeP3BridgeAndroidJniLib,
+        arm64V8a to krwaWasmtimeP3AndroidJniLib,
+        armeabiV7a to wasmtimePulleyArmeabiV7aJniLib,
+        armeabiV7a to krwaPulleyArmeabiV7aJniLib,
+        armeabiV7a to krwaWasmtimeP3BridgeArmeabiV7aJniLib,
+        armeabiV7a to krwaWasmtimeP3ArmeabiV7aJniLib,
     )
+val androidJniLibs = androidJniLibsByAbi.map { (_, jniLib) -> jniLib }
+val wasmtimePulleySourceDirectory = project(":runtime").layout.buildDirectory.dir("wasmtime-pulley/source")
 val wasmtimeP3BridgeDirectory = project(":runtime").layout.projectDirectory.dir("src/wasmtime-p3-bridge")
 val wasmtimeP3BridgeAndroidTargetDirectory = layout.buildDirectory.dir("wasmtime-p3-bridge-android/target")
+val wasmtimeP3BridgeArmeabiV7aTargetDirectory =
+    layout.buildDirectory.dir("wasmtime-p3-bridge-android-armeabi-v7a/target")
+val wasmtimePulleyArmeabiV7aTargetDirectory =
+    layout.buildDirectory.dir("wasmtime-pulley-android-armeabi-v7a/target")
 val androidNdkVersion = libs.versions.android.ndk.get()
 val androidMinSdk = libs.versions.android.minSdk.get().toInt()
 val android16KbPageSize = 16 * 1024
@@ -101,6 +151,15 @@ fun localCodexRustExecutable(name: String): File? =
 
 fun cargoBinary(): File? = executableFromEnvOrPath("CARGO", "cargo") ?: localCodexRustExecutable("cargo")
 
+fun cmakeBinary(): File? = executableFromEnvOrPath("CMAKE", "cmake")
+    ?: androidSdkDirectory()
+        .resolve("cmake")
+        .listFiles()
+        ?.asSequence()
+        ?.map { cmakeVersionDirectory -> cmakeVersionDirectory.resolve("bin/cmake") }
+        ?.filter { executable -> executable.isFile && executable.canExecute() }
+        ?.maxByOrNull { executable -> executable.parentFile.parentFile.name }
+
 fun cargoReleaseCommand(cargo: File): List<String> {
     val path = cargo.absolutePath.replace('\\', '/')
     return if ("/toolchains/" in path) {
@@ -154,6 +213,43 @@ fun codexRustEnvironmentFor(executable: File): Map<String, String> {
     }
 }
 
+fun androidToolchainBin(): File =
+    androidNdkDirectory().resolve("toolchains/llvm/prebuilt/${androidNdkHostTag()}/bin")
+
+fun androidClang(abi: AndroidAbiConfig, cxx: Boolean = false): File =
+    androidToolchainBin().resolve(
+        "${abi.ndkClangTarget}$androidMinSdk-clang${if (cxx) "++" else ""}",
+    )
+
+fun androidRustEnvironment(
+    cargo: File,
+    abi: AndroidAbiConfig,
+    rustFlags: String = android16KbElfRustFlags,
+): Map<String, String> {
+    val clang = androidClang(abi)
+    val clangxx = androidClang(abi, cxx = true)
+    val ar = androidToolchainBin().resolve("llvm-ar")
+    check(clang.isFile) {
+        "Expected Android NDK clang at ${clang.invariantSeparatorsPath}."
+    }
+    check(clangxx.isFile) {
+        "Expected Android NDK clang++ at ${clangxx.invariantSeparatorsPath}."
+    }
+    check(ar.isFile) {
+        "Expected Android NDK llvm-ar at ${ar.invariantSeparatorsPath}."
+    }
+    return localCodexRustEnvironment() +
+        codexRustEnvironmentFor(cargo) +
+        mapOf(
+            "CC_${abi.compilerEnvironmentSuffix}" to clang.absolutePath,
+            "CXX_${abi.compilerEnvironmentSuffix}" to clangxx.absolutePath,
+            "AR_${abi.compilerEnvironmentSuffix}" to ar.absolutePath,
+            "CARGO_TARGET_${abi.cargoTargetSuffix}_LINKER" to clang.absolutePath,
+            "CARGO_TARGET_${abi.cargoTargetSuffix}_AR" to ar.absolutePath,
+            "CARGO_TARGET_${abi.cargoTargetSuffix}_RUSTFLAGS" to rustFlags,
+        )
+}
+
 fun runProcess(command: List<String>, workingDirectory: File, environment: Map<String, String> = emptyMap()) {
     val processBuilder = ProcessBuilder(command)
         .directory(workingDirectory)
@@ -203,6 +299,30 @@ fun elfLoadSegmentAlignments(file: File, llvmObjdump: File): List<Int> {
         .findAll(output)
         .map { match -> 1 shl match.groupValues[1].toInt() }
         .toList()
+}
+
+fun androidElfAbiFailure(abi: AndroidAbiConfig, file: File): String? {
+    val header = ByteArray(20)
+    val bytesRead = file.inputStream().use { input -> input.readNBytes(header, 0, header.size) }
+    if (bytesRead != header.size) {
+        return "${file.invariantSeparatorsPath}: truncated ELF header"
+    }
+    if (
+        header[0] != 0x7f.toByte() ||
+        header[1] != 'E'.code.toByte() ||
+        header[2] != 'L'.code.toByte() ||
+        header[3] != 'F'.code.toByte()
+    ) {
+        return "${file.invariantSeparatorsPath}: not an ELF library"
+    }
+    val elfClass = header[4].toInt() and 0xff
+    val elfData = header[5].toInt() and 0xff
+    val elfMachine = (header[18].toInt() and 0xff) or ((header[19].toInt() and 0xff) shl 8)
+    if (elfClass != abi.elfClass || elfData != 1 || elfMachine != abi.elfMachine) {
+        return "${file.invariantSeparatorsPath}: ELF class=$elfClass, data=$elfData, machine=$elfMachine; " +
+            "expected class=${abi.elfClass}, data=1, machine=${abi.elfMachine} for ${abi.jniDirectory}"
+    }
+    return null
 }
 
 val downloadWasmtimePulleyAndroidJniLib by tasks.registering {
@@ -258,25 +378,89 @@ val downloadWasmtimePulleyAndroidJniLib by tasks.registering {
     }
 }
 
-val buildKrwaPulleyAndroidJniLib by tasks.registering {
-    description = "Builds the KRWA Pulley Android JNI bridge for arm64-v8a."
+val buildWasmtimePulleyArmeabiV7aJniLib by tasks.registering {
+    description = "Builds the pinned Wasmtime Pulley Android C API shared library for armeabi-v7a."
+    notCompatibleWithConfigurationCache("Runs cargo against the pinned Wasmtime source checkout.")
+    dependsOn(project(":runtime").tasks.named("prepareRustReleaseDependencies"))
+    inputs.property("wasmtimePulleyVersion", wasmtimePulleyVersion)
+    inputs.property("wasmtimePulleyFeatures", wasmtimePulleyFeatures)
+    inputs.property("rustReleaseVersion", rustReleaseVersion)
+    inputs.property("rustReleaseCommitHash", rustReleaseCommitHash)
+    inputs.property("androidAbi", armeabiV7a.jniDirectory)
+    inputs.property("androidNdkVersion", androidNdkVersion)
+    inputs.property("androidMinSdk", androidMinSdk)
+    inputs.property("android16KbElfRustFlags", android16KbElfRustFlags)
+    outputs.file(wasmtimePulleyArmeabiV7aJniLib)
+
+    doLast {
+        val cargo = cargoBinary()
+            ?: error("cargo is required to build the Wasmtime Android C API. Install Rust or set CARGO.")
+        val cmake = cmakeBinary()
+            ?: error("cmake is required to build the Wasmtime Android C API. Install CMake or set CMAKE.")
+        val sourceDirectory = wasmtimePulleySourceDirectory.get().asFile
+        val targetDirectory = wasmtimePulleyArmeabiV7aTargetDirectory.get().asFile
+        val environment =
+            androidRustEnvironment(cargo, armeabiV7a) +
+                mapOf(
+                    "CMAKE" to cmake.absolutePath,
+                    "PATH" to cmake.parentFile.absolutePath + File.pathSeparator + System.getenv("PATH").orEmpty(),
+                )
+        runProcess(
+            cargoReleaseCommand(cargo) +
+                listOf("build") +
+                cargoNetworkArguments() +
+                listOf(
+                    "-p",
+                    "wasmtime-c-api",
+                    "--release",
+                    "--target",
+                    armeabiV7a.rustTarget,
+                    "--no-default-features",
+                    "--features",
+                    wasmtimePulleyFeatures,
+                    "--target-dir",
+                    targetDirectory.absolutePath,
+                ),
+            sourceDirectory,
+            environment,
+        )
+
+        val source = targetDirectory.resolve(
+            "${armeabiV7a.rustTarget}/release/libwasmtime.so",
+        )
+        check(source.isFile) {
+            "Expected Wasmtime Android C API library at ${source.invariantSeparatorsPath}"
+        }
+        val output = wasmtimePulleyArmeabiV7aJniLib.asFile
+        output.parentFile.mkdirs()
+        source.copyTo(output, overwrite = true)
+    }
+}
+
+fun registerAndroidCppJniTask(
+    taskName: String,
+    descriptionText: String,
+    abi: AndroidAbiConfig,
+    sourceName: String,
+    output: File,
+    linkLibraries: List<String>,
+) = tasks.register(taskName) {
+    description = descriptionText
+    inputs.property("androidAbi", abi.jniDirectory)
     inputs.property("androidNdkVersion", androidNdkVersion)
     inputs.property("androidMinSdk", androidMinSdk)
     inputs.property("cxxRuntime", "static")
-    inputs.file(layout.projectDirectory.file("src/androidMain/cpp/krwa_pulley_android.cpp"))
-    outputs.file(krwaPulleyAndroidJniLib)
+    val source = layout.projectDirectory.file("src/androidMain/cpp/$sourceName")
+    inputs.file(source)
+    outputs.file(output)
 
     doLast {
-        val ndkDir = androidNdkDirectory()
-        val toolchainBin = ndkDir.resolve("toolchains/llvm/prebuilt/${androidNdkHostTag()}/bin")
-        val clang = toolchainBin.resolve("aarch64-linux-android$androidMinSdk-clang++")
+        val clang = androidClang(abi, cxx = true)
         check(clang.isFile) {
             "Expected Android NDK clang++ at ${clang.invariantSeparatorsPath}."
         }
 
-        val output = krwaPulleyAndroidJniLib.asFile
         output.parentFile.mkdirs()
-        val source = layout.projectDirectory.file("src/androidMain/cpp/krwa_pulley_android.cpp").asFile
         val exitCode =
             ProcessBuilder(
                 clang.absolutePath,
@@ -288,11 +472,10 @@ val buildKrwaPulleyAndroidJniLib by tasks.registering {
                 "-Wextra",
                 "-static-libstdc++",
                 *android16KbElfLinkerFlags.toTypedArray(),
-                source.absolutePath,
+                source.asFile.absolutePath,
                 "-o",
                 output.absolutePath,
-                "-ldl",
-                "-llog",
+                *linkLibraries.toTypedArray(),
             )
                 .inheritIO()
                 .start()
@@ -303,12 +486,35 @@ val buildKrwaPulleyAndroidJniLib by tasks.registering {
     }
 }
 
-val buildKrwaWasmtimeP3BridgeAndroidJniLib by tasks.registering {
-    description = "Builds the KRWA Wasmtime Preview3 bridge for Android arm64-v8a."
+val buildKrwaPulleyAndroidJniLib = registerAndroidCppJniTask(
+    taskName = "buildKrwaPulleyAndroidJniLib",
+    descriptionText = "Builds the KRWA Pulley Android JNI bridge for arm64-v8a.",
+    abi = arm64V8a,
+    sourceName = "krwa_pulley_android.cpp",
+    output = krwaPulleyAndroidJniLib.asFile,
+    linkLibraries = listOf("-ldl", "-llog"),
+)
+val buildKrwaPulleyArmeabiV7aJniLib = registerAndroidCppJniTask(
+    taskName = "buildKrwaPulleyArmeabiV7aJniLib",
+    descriptionText = "Builds the KRWA Pulley Android JNI bridge for armeabi-v7a.",
+    abi = armeabiV7a,
+    sourceName = "krwa_pulley_android.cpp",
+    output = krwaPulleyArmeabiV7aJniLib.asFile,
+    linkLibraries = listOf("-ldl", "-llog"),
+)
+
+fun registerWasmtimeP3BridgeAndroidTask(
+    taskName: String,
+    abi: AndroidAbiConfig,
+    targetDirectory: File,
+    output: File,
+) = tasks.register(taskName) {
+    description = "Builds the KRWA Wasmtime Preview3 bridge for Android ${abi.jniDirectory}."
     notCompatibleWithConfigurationCache("Runs cargo against the pinned Wasmtime source checkout.")
     dependsOn(project(":runtime").tasks.named("prepareRustReleaseDependencies"))
     inputs.property("rustReleaseVersion", rustReleaseVersion)
     inputs.property("rustReleaseCommitHash", rustReleaseCommitHash)
+    inputs.property("androidAbi", abi.jniDirectory)
     inputs.property("androidNdkVersion", androidNdkVersion)
     inputs.property("androidMinSdk", androidMinSdk)
     inputs.property("android16KbElfRustFlags", android16KbElfRustFlags)
@@ -317,37 +523,11 @@ val buildKrwaWasmtimeP3BridgeAndroidJniLib by tasks.registering {
             include("Cargo.toml", "Cargo.lock", "src/**/*.rs")
         },
     )
-    outputs.file(krwaWasmtimeP3BridgeAndroidJniLib)
+    outputs.file(output)
 
     doLast {
         val cargo = cargoBinary()
             ?: error("cargo is required to build the Wasmtime Preview3 Android bridge. Install Rust or set CARGO.")
-        val ndkDir = androidNdkDirectory()
-        val toolchainBin = ndkDir.resolve("toolchains/llvm/prebuilt/${androidNdkHostTag()}/bin")
-        val clang = toolchainBin.resolve("aarch64-linux-android$androidMinSdk-clang")
-        val clangxx = toolchainBin.resolve("aarch64-linux-android$androidMinSdk-clang++")
-        val ar = toolchainBin.resolve("llvm-ar")
-        check(clang.isFile) {
-            "Expected Android NDK clang at ${clang.invariantSeparatorsPath}."
-        }
-        check(clangxx.isFile) {
-            "Expected Android NDK clang++ at ${clangxx.invariantSeparatorsPath}."
-        }
-        check(ar.isFile) {
-            "Expected Android NDK llvm-ar at ${ar.invariantSeparatorsPath}."
-        }
-
-        val environment =
-            localCodexRustEnvironment() +
-                codexRustEnvironmentFor(cargo) +
-                mapOf(
-                    "CC_aarch64_linux_android" to clang.absolutePath,
-                    "CXX_aarch64_linux_android" to clangxx.absolutePath,
-                    "AR_aarch64_linux_android" to ar.absolutePath,
-                    "CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER" to clang.absolutePath,
-                    "CARGO_TARGET_AARCH64_LINUX_ANDROID_AR" to ar.absolutePath,
-                    "CARGO_TARGET_AARCH64_LINUX_ANDROID_RUSTFLAGS" to android16KbElfRustFlags,
-                )
         runProcess(
             cargoReleaseCommand(cargo) +
                 listOf("build") +
@@ -355,90 +535,80 @@ val buildKrwaWasmtimeP3BridgeAndroidJniLib by tasks.registering {
                 listOf(
                     "--release",
                     "--target",
-                    "aarch64-linux-android",
+                    abi.rustTarget,
                     "--manifest-path",
                     wasmtimeP3BridgeDirectory.file("Cargo.toml").asFile.absolutePath,
                     "--target-dir",
-                    wasmtimeP3BridgeAndroidTargetDirectory.get().asFile.absolutePath,
+                    targetDirectory.absolutePath,
                 ),
             projectDir,
-            environment,
+            androidRustEnvironment(cargo, abi),
         )
 
-        val source = wasmtimeP3BridgeAndroidTargetDirectory
-            .get()
-            .asFile
-            .resolve("aarch64-linux-android/release/libkrwa_wasmtime_p3_bridge.so")
+        val source = targetDirectory.resolve(
+            "${abi.rustTarget}/release/libkrwa_wasmtime_p3_bridge.so",
+        )
         check(source.isFile) {
             "Expected Wasmtime Preview3 Android bridge library at ${source.invariantSeparatorsPath}"
         }
-        val output = krwaWasmtimeP3BridgeAndroidJniLib.asFile
         output.parentFile.mkdirs()
         source.copyTo(output, overwrite = true)
     }
 }
 
-val buildKrwaWasmtimeP3AndroidJniLib by tasks.registering {
-    description = "Builds the KRWA Wasmtime Preview3 Android JNI bridge for arm64-v8a."
-    inputs.property("androidNdkVersion", androidNdkVersion)
-    inputs.property("androidMinSdk", androidMinSdk)
-    inputs.property("cxxRuntime", "static")
-    inputs.file(layout.projectDirectory.file("src/androidMain/cpp/krwa_wasmtime_p3_android.cpp"))
-    outputs.file(krwaWasmtimeP3AndroidJniLib)
+val buildKrwaWasmtimeP3BridgeAndroidJniLib = registerWasmtimeP3BridgeAndroidTask(
+    taskName = "buildKrwaWasmtimeP3BridgeAndroidJniLib",
+    abi = arm64V8a,
+    targetDirectory = wasmtimeP3BridgeAndroidTargetDirectory.get().asFile,
+    output = krwaWasmtimeP3BridgeAndroidJniLib.asFile,
+)
+val buildKrwaWasmtimeP3BridgeArmeabiV7aJniLib = registerWasmtimeP3BridgeAndroidTask(
+    taskName = "buildKrwaWasmtimeP3BridgeArmeabiV7aJniLib",
+    abi = armeabiV7a,
+    targetDirectory = wasmtimeP3BridgeArmeabiV7aTargetDirectory.get().asFile,
+    output = krwaWasmtimeP3BridgeArmeabiV7aJniLib.asFile,
+)
 
-    doLast {
-        val ndkDir = androidNdkDirectory()
-        val toolchainBin = ndkDir.resolve("toolchains/llvm/prebuilt/${androidNdkHostTag()}/bin")
-        val clang = toolchainBin.resolve("aarch64-linux-android$androidMinSdk-clang++")
-        check(clang.isFile) {
-            "Expected Android NDK clang++ at ${clang.invariantSeparatorsPath}."
-        }
+val buildKrwaWasmtimeP3AndroidJniLib = registerAndroidCppJniTask(
+    taskName = "buildKrwaWasmtimeP3AndroidJniLib",
+    descriptionText = "Builds the KRWA Wasmtime Preview3 Android JNI bridge for arm64-v8a.",
+    abi = arm64V8a,
+    sourceName = "krwa_wasmtime_p3_android.cpp",
+    output = krwaWasmtimeP3AndroidJniLib.asFile,
+    linkLibraries = listOf("-ldl"),
+)
+val buildKrwaWasmtimeP3ArmeabiV7aJniLib = registerAndroidCppJniTask(
+    taskName = "buildKrwaWasmtimeP3ArmeabiV7aJniLib",
+    descriptionText = "Builds the KRWA Wasmtime Preview3 Android JNI bridge for armeabi-v7a.",
+    abi = armeabiV7a,
+    sourceName = "krwa_wasmtime_p3_android.cpp",
+    output = krwaWasmtimeP3ArmeabiV7aJniLib.asFile,
+    linkLibraries = listOf("-ldl"),
+)
 
-        val output = krwaWasmtimeP3AndroidJniLib.asFile
-        output.parentFile.mkdirs()
-        val source = layout.projectDirectory.file("src/androidMain/cpp/krwa_wasmtime_p3_android.cpp").asFile
-        val exitCode =
-            ProcessBuilder(
-                clang.absolutePath,
-                "-shared",
-                "-fPIC",
-                "-std=c++17",
-                "-O2",
-                "-Wall",
-                "-Wextra",
-                "-static-libstdc++",
-                *android16KbElfLinkerFlags.toTypedArray(),
-                source.absolutePath,
-                "-o",
-                output.absolutePath,
-                "-ldl",
-            )
-                .inheritIO()
-                .start()
-                .waitFor()
-        check(exitCode == 0) {
-            "Failed to build ${output.invariantSeparatorsPath}, clang++ exit code $exitCode"
-        }
-    }
-}
+val androidJniLibBuildTasks =
+    listOf(
+        downloadWasmtimePulleyAndroidJniLib,
+        buildWasmtimePulleyArmeabiV7aJniLib,
+        buildKrwaPulleyAndroidJniLib,
+        buildKrwaPulleyArmeabiV7aJniLib,
+        buildKrwaWasmtimeP3BridgeAndroidJniLib,
+        buildKrwaWasmtimeP3BridgeArmeabiV7aJniLib,
+        buildKrwaWasmtimeP3AndroidJniLib,
+        buildKrwaWasmtimeP3ArmeabiV7aJniLib,
+    )
 
 tasks.matching { task ->
     task.name == "mergeAndroidMainJniLibFolders" ||
         task.name == "copyAndroidMainJniLibsProjectOnly" ||
         task.name == "bundleAndroidMainAar"
 }.configureEach {
-    dependsOn(downloadWasmtimePulleyAndroidJniLib)
-    dependsOn(buildKrwaPulleyAndroidJniLib)
-    dependsOn(buildKrwaWasmtimeP3BridgeAndroidJniLib)
-    dependsOn(buildKrwaWasmtimeP3AndroidJniLib)
+    dependsOn(androidJniLibBuildTasks)
 }
 
 val verifyAndroidJniLib16KbAlignment by tasks.registering {
     description = "Verifies Android JNI libraries use at least 16 KB ELF LOAD segment alignment."
-    dependsOn(downloadWasmtimePulleyAndroidJniLib)
-    dependsOn(buildKrwaPulleyAndroidJniLib)
-    dependsOn(buildKrwaWasmtimeP3BridgeAndroidJniLib)
-    dependsOn(buildKrwaWasmtimeP3AndroidJniLib)
+    dependsOn(androidJniLibBuildTasks)
     inputs.property("androidNdkVersion", androidNdkVersion)
     inputs.property("androidMinLoadSegmentAlignment", android16KbPageSize)
     inputs.files(androidJniLibs)
@@ -472,12 +642,40 @@ val verifyAndroidJniLib16KbAlignment by tasks.registering {
     }
 }
 
+val verifyAndroidJniLibAbis by tasks.registering {
+    description = "Verifies Android JNI libraries match their packaged ABIs."
+    dependsOn(androidJniLibBuildTasks)
+    inputs.property(
+        "androidAbis",
+        androidAbis.joinToString { abi ->
+            "${abi.jniDirectory}:${abi.elfClass}:${abi.elfMachine}"
+        },
+    )
+    inputs.files(androidJniLibs)
+
+    doLast {
+        val failures =
+            androidJniLibsByAbi.mapNotNull { (abi, jniLib) ->
+                val file = jniLib.asFile
+                check(file.isFile) {
+                    "Expected Android JNI library at ${file.invariantSeparatorsPath}."
+                }
+                androidElfAbiFailure(abi, file)
+            }
+        check(failures.isEmpty()) {
+            "Android JNI libraries must match their packaged ABIs:\n" + failures.joinToString("\n")
+        }
+    }
+}
+
 tasks.named("check") {
     dependsOn(verifyAndroidJniLib16KbAlignment)
+    dependsOn(verifyAndroidJniLibAbis)
 }
 
 tasks.matching { task -> task.name == "bundleAndroidMainAar" }.configureEach {
     dependsOn(verifyAndroidJniLib16KbAlignment)
+    dependsOn(verifyAndroidJniLibAbis)
 }
 
 kotlin {

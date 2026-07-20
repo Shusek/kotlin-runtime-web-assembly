@@ -9,15 +9,17 @@ variants are compiled for Java 25.
 
 ## Project Status
 
-`0.3.0-rc.1` is the pre-public release candidate. Its security boundaries,
+`0.3.0-rc.2` is the pre-public release candidate. Its security boundaries,
 multiplatform behavior, ABI, Gradle plugins, and local Maven artifacts are
 verified by the repository release gate. The candidate is intended for pinned
 Suvio V4 integration testing; it is not a general-availability release.
 
 The public API may still change before `1.0.0`, but every published candidate is
 immutable. A fix after publication receives a new candidate version instead of
-reusing an existing coordinate. See the [changelog](CHANGELOG.md) and
-[release process](RELEASING.md).
+reusing an existing coordinate. Kendive stays on the `0.3.x` compatibility line:
+new candidates and compatible releases change only the patch or prerelease
+portion, leaving the `0.3` major/minor pair intact. See the
+[changelog](CHANGELOG.md) and [release process](RELEASING.md).
 
 Special thanks to [dylibso/chicory](https://github.com/dylibso/chicory) for the
 solid foundations this project builds on.
@@ -40,7 +42,7 @@ Start with:
 
 ## Quick Start
 
-The current candidate version is `0.3.0-rc.1`. Before public promotion, consume
+The current candidate version is `0.3.0-rc.2`. Before public promotion, consume
 this checkout with the composite build described under
 [Local Development](#local-development), or run `releaseGate` and point the
 consumer at `build/release-staging-repository`. Published candidates use the
@@ -61,7 +63,7 @@ Use the BOM and add the runtime:
 
 ```kotlin
 // build.gradle.kts
-val runtimeVersion = "0.3.0-rc.1"
+val runtimeVersion = "0.3.0-rc.2"
 
 dependencies {
     implementation(platform("uk.shusek.krwa:bom:$runtimeVersion"))

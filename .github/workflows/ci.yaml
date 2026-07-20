@@ -146,6 +146,15 @@ jobs:
           unzip -p "$aar" classes.jar > "$classes_jar"
           unzip -l "$classes_jar" | grep -F META-INF/LICENSE-WASMTIME
           unzip -l "$classes_jar" | grep -F META-INF/THIRD-PARTY.txt
+          for abi in arm64-v8a armeabi-v7a; do
+            for library in \
+              libwasmtime.so \
+              libkrwa_pulley_android.so \
+              libkrwa_wasmtime_p3_bridge.so \
+              libkrwa_wasmtime_p3_android.so; do
+              unzip -l "$aar" | grep -F "jni/$abi/$library"
+            done
+          done
 
       - name: Delete test simulator
         if: always()
