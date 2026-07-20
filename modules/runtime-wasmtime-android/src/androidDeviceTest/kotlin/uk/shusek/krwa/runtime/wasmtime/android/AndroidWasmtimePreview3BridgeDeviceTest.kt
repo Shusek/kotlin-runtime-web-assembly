@@ -1,5 +1,6 @@
 package uk.shusek.krwa.runtime.wasmtime.android
 
+import android.os.Process
 import android.util.Base64
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -15,8 +16,6 @@ import kotlin.test.assertTrue
 import org.junit.runner.RunWith
 import uk.shusek.krwa.runtime.ExecutionBackend
 import uk.shusek.krwa.runtime.Instance
-import uk.shusek.krwa.runtime.WasmtimeExecutionConfig
-import uk.shusek.krwa.runtime.WasmtimePulleyTarget
 import uk.shusek.krwa.runtime.WasmtimePreview3ComponentConfig
 import uk.shusek.krwa.runtime.WasmtimePreview3Preopen
 import uk.shusek.krwa.wasm.UninstantiableException
@@ -33,9 +32,6 @@ class AndroidWasmtimePreview3BridgeDeviceTest {
         val exception = assertFailsWith<UninstantiableException> {
             Instance.builder(module)
                 .withExecutionBackend(ExecutionBackend.PULLEY)
-                .withWasmtimeExecutionConfig(
-                    WasmtimeExecutionConfig(target = WasmtimePulleyTarget),
-                )
                 .build()
         }
         assertTrue(exception.message.orEmpty().contains("unreachable"))
@@ -48,9 +44,6 @@ class AndroidWasmtimePreview3BridgeDeviceTest {
 
         Instance.builder(module)
             .withExecutionBackend(ExecutionBackend.PULLEY)
-            .withWasmtimeExecutionConfig(
-                WasmtimeExecutionConfig(target = WasmtimePulleyTarget),
-            )
             .build()
             .use { instance ->
                 assertEquals(42L, instance.export(MULTIBYTE_FUNCTION_EXPORT).apply()[0])
@@ -177,11 +170,17 @@ private val MULTIBYTE_EXPORTS_WASM =
     )
 
 private fun minimalWasip2CommandComponentBytes(): ByteArray {
-    val compressedBytes = Base64.decode(MinimalWasip2CommandComponentGzipBase64, Base64.DEFAULT)
+    val encoded =
+        if (Process.is64Bit()) {
+            MinimalWasip2CommandPulley64GzipBase64
+        } else {
+            MinimalWasip2CommandPulley32GzipBase64
+        }
+    val compressedBytes = Base64.decode(encoded, Base64.DEFAULT)
     return GZIPInputStream(ByteArrayInputStream(compressedBytes)).use { input -> input.readBytes() }
 }
 
-private val MinimalWasip2CommandComponentGzipBase64 = """
+private val MinimalWasip2CommandPulley64GzipBase64 = """
 H4sIAKp3PWoC/+2beWBcVdn/z7n3zr5mZrI06ZJKW8rSMNmaFBQ67aQtECj7ap1OJpNmfiQzcWbSTvuCVGj8pdS3C6gV4WUVWQpY
 BEQQQRSwCgiuIEEFXgVFxbIUEYT8vs85Z9JJOm2KL+/vr/vQT557n3vW5+wn4eKOziUa57uYEs7eAvvKi1Ol1QkWiqeFzMPcjGkt
 86cODPb1JdfOb5k3mL4gnVmTHtPJvp66QDa5Kt7Xl0nE4n2rMtlUvrefubviiQvyWfxIpVc5MgP5WF9ydbKPWXIDyWS3I9+Xi/Vn
@@ -323,4 +322,34 @@ icYDJ33gm+hyCYYPKsH93ImXSXD+wdX9IH85Ua7E8z96O5a5mC6T8oIDJ/yx/DqCsYZ8spBnDcX5vwEj
 tj8+UGJJpXsyrCEdxyPZWEM20x3Px9XLWLCufKo07fQqWqYacr0oOrYbrGFMr+0n/TFIbmwvOl4WKn2sPuEaakK45H7if04vH77c
 Oy9jv1jFP/mQA8c/cj/5PzVH6lDwwPFt+4n/0gKpz5qk/tX7id/2KanfnaT+5+wn/r4hy9tPmiT+5ywHTvXY/bWf+j3BevuB43+l
 bN4Qrwy5U91LuEATXaGWnJdINqsr1omyMyDjb3EcOP8N+4l/3FQZ8ppJvPr/AA8zOW4gIAEA
+"""
+
+private val MinimalWasip2CommandPulley32GzipBase64 = """
+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
 """

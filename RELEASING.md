@@ -5,7 +5,10 @@ the local gate never publishes outside its task-owned staging directory.
 
 ## Candidate checklist
 
-1. Set an immutable semantic version in `gradle.properties` and update `CHANGELOG.md`.
+1. Set an immutable semantic version in `gradle.properties` and update `CHANGELOG.md`. Kendive
+   remains on the configured `0.3.x` compatibility line: advance only the patch or prerelease
+   portion, leaving the `0.3` major/minor pair unchanged. `verifyImmutablePublicationVersion`
+   enforces this before staging or publication.
 2. Provision Java 25, Node, rustup/Cargo, CMake, Xcode, and the Gradle dependency caches. The exact
    Rust release and compiler commit are the `rustRelease` and `rustReleaseCommit` entries in
    `gradle/libs.versions.toml`; do not substitute the moving `stable` alias.
@@ -55,8 +58,9 @@ Central upload, the authorized release workflow must additionally:
 
 1. verify every non-POM artifact has matching sources and Javadoc artifacts and that every POM
    contains the project name, description, URL, license, developers, and SCM coordinates;
-2. create an ASCII-armored PGP `.asc` signature for every uploaded file, including checksums and
-   metadata;
+2. create an ASCII-armored PGP `.asc` signature for every payload file, including POM and Gradle
+   module metadata; checksum files do not require signatures, and signatures do not require
+   checksums;
 3. build the Maven Central Publisher Portal bundle from the exact, already verified staging
    contents; and
 4. upload and publish that immutable bundle under a separately reviewed release identity.
@@ -70,6 +74,24 @@ Maven Central requirements:
 
 - <https://central.sonatype.org/publish/requirements/>
 - <https://central.sonatype.org/publish/publish-portal-gradle/>
+
+The public release is performed only from an annotated tag reachable from `main`. Dispatch
+`Publish Maven Central` with the exact tag name, for example `v0.3.0-rc.2`. The workflow reruns
+the complete offline release gate on macOS, verifies `SHA256SUMS`, excludes repository-level
+`maven-metadata.xml` from the version bundle, signs every payload, uploads with automatic
+publishing, and waits for the Publisher Portal to report `PUBLISHED`.
+
+The workflow expects these GitHub Actions secrets:
+
+- `MAVEN_CENTRAL_USERNAME`
+- `MAVEN_CENTRAL_PASSWORD`
+- `MAVEN_SIGNING_KEY` containing exactly one ASCII-armored private PGP key
+- `MAVEN_SIGNING_PASSWORD`
+
+The workflow materializes them as mode `0600` files under the runner's temporary directory only
+after `releaseGate` succeeds. The signing and Publisher Portal processes receive file paths, never
+secret values in command arguments. Temporary credentials and the signed bundle are deleted in an
+`always()` cleanup step; only non-secret checksum and deployment receipt evidence is retained.
 
 ## Failure policy
 

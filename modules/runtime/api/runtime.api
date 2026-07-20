@@ -1056,6 +1056,7 @@ public final class uk/shusek/krwa/runtime/WasmtimeExecutionConfigKt {
 	public static final field DefaultWasmtimeMaxWasmStackBytes J
 	public static final field WasmtimeAutomaticTarget Ljava/lang/String;
 	public static final field WasmtimeNativeTarget Ljava/lang/String;
+	public static final field WasmtimePulley32Target Ljava/lang/String;
 	public static final field WasmtimePulleyTarget Ljava/lang/String;
 	public static final field WasmtimeUnlimitedResourceLimit J
 }

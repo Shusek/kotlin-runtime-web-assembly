@@ -4,6 +4,8 @@ import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.tasks.bundling.Jar
 import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.api.tasks.testing.Test
+import org.gradle.api.tasks.testing.logging.TestExceptionFormat
+import org.gradle.api.tasks.testing.logging.TestLogEvent
 import org.gradle.kotlin.dsl.configure
 import org.gradle.kotlin.dsl.withType
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
@@ -78,6 +80,13 @@ tasks.withType<Test>().configureEach {
     maxHeapSize = "2g"
     jvmArgs("--enable-native-access=ALL-UNNAMED")
     systemProperty("org.gradle.testkit.dir", gradle.gradleUserHomeDir.absolutePath)
+    testLogging {
+        events(TestLogEvent.FAILED)
+        exceptionFormat = TestExceptionFormat.FULL
+        showCauses = true
+        showExceptions = true
+        showStackTraces = true
+    }
 }
 
 tasks.withType<Jar>().configureEach {

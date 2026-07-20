@@ -1673,7 +1673,7 @@ fn p3_engine(limits: P3Limits) -> Result<Engine, String> {
     let max_wasm_stack_size = validate_max_wasm_stack_bytes(limits.max_wasm_stack_bytes)?;
     let mut config = Config::new();
     config
-        .target("pulley64")
+        .target(pulley_target())
         .map_err(|error| format!("failed to configure Wasmtime Pulley target: {error}"))?;
     config.max_wasm_stack(max_wasm_stack_size);
     config.wasm_component_model(true);
@@ -1693,6 +1693,14 @@ fn p3_engine(limits: P3Limits) -> Result<Engine, String> {
     config.epoch_interruption(true);
     Engine::new(&config)
         .map_err(|error| format!("failed to create Wasmtime Preview3 engine: {error}"))
+}
+
+fn pulley_target() -> &'static str {
+    if cfg!(target_pointer_width = "32") {
+        "pulley32"
+    } else {
+        "pulley64"
+    }
 }
 
 fn configure_store_fuel(store: &mut Store<KrwaP3State>, limits: P3Limits) -> Result<(), String> {

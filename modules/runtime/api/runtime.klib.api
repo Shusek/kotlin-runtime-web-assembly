@@ -1011,6 +1011,8 @@ final const val uk.shusek.krwa.runtime/WasmtimeModuleCompilerBuildIdentity // uk
     final fun <get-WasmtimeModuleCompilerBuildIdentity>(): kotlin/String // uk.shusek.krwa.runtime/WasmtimeModuleCompilerBuildIdentity.<get-WasmtimeModuleCompilerBuildIdentity>|<get-WasmtimeModuleCompilerBuildIdentity>(){}[0]
 final const val uk.shusek.krwa.runtime/WasmtimeNativeTarget // uk.shusek.krwa.runtime/WasmtimeNativeTarget|{}WasmtimeNativeTarget[0]
     final fun <get-WasmtimeNativeTarget>(): kotlin/String // uk.shusek.krwa.runtime/WasmtimeNativeTarget.<get-WasmtimeNativeTarget>|<get-WasmtimeNativeTarget>(){}[0]
+final const val uk.shusek.krwa.runtime/WasmtimePulley32Target // uk.shusek.krwa.runtime/WasmtimePulley32Target|{}WasmtimePulley32Target[0]
+    final fun <get-WasmtimePulley32Target>(): kotlin/String // uk.shusek.krwa.runtime/WasmtimePulley32Target.<get-WasmtimePulley32Target>|<get-WasmtimePulley32Target>(){}[0]
 final const val uk.shusek.krwa.runtime/WasmtimePulleyTarget // uk.shusek.krwa.runtime/WasmtimePulleyTarget|{}WasmtimePulleyTarget[0]
     final fun <get-WasmtimePulleyTarget>(): kotlin/String // uk.shusek.krwa.runtime/WasmtimePulleyTarget.<get-WasmtimePulleyTarget>|<get-WasmtimePulleyTarget>(){}[0]
 final const val uk.shusek.krwa.runtime/WasmtimeUnlimitedResourceLimit // uk.shusek.krwa.runtime/WasmtimeUnlimitedResourceLimit|{}WasmtimeUnlimitedResourceLimit[0]

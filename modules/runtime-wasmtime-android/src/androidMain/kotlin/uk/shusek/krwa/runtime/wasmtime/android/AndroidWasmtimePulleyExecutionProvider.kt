@@ -2,6 +2,7 @@
 
 package uk.shusek.krwa.runtime.wasmtime.android
 
+import android.os.Process
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
@@ -19,6 +20,7 @@ import uk.shusek.krwa.runtime.TrapException
 import uk.shusek.krwa.runtime.WasmFunctionHandle
 import uk.shusek.krwa.runtime.WasmtimeAutomaticTarget
 import uk.shusek.krwa.runtime.WasmtimeExecutionConfig
+import uk.shusek.krwa.runtime.WasmtimePulley32Target
 import uk.shusek.krwa.runtime.WasmtimePulleyTarget
 import uk.shusek.krwa.wasm.InvalidException
 import uk.shusek.krwa.wasm.UnlinkableException
@@ -34,7 +36,7 @@ fun installAndroidWasmtimePulleyExecutionProviderIfAvailable() {
 
 private object AndroidPulleyExecutionProvider : PulleyExecutionProvider {
     override fun availability(): ExecutionBackendAvailability =
-        androidWasmtimeTargetUnavailableReason(WasmtimePulleyTarget)?.let { reason ->
+        androidWasmtimeTargetUnavailableReason(androidWasmtimePulleyTarget())?.let { reason ->
             ExecutionBackendAvailability(available = false, reason = reason)
         } ?: ExecutionBackendAvailability(available = true)
 
@@ -98,11 +100,14 @@ private fun androidWasmtimePropertyConfig(): WasmtimeExecutionConfig = WasmtimeE
     target = System.getProperty(AndroidWasmtimeTargetProperty)
         ?.trim()
         ?.takeIf(String::isNotEmpty)
-        ?: WasmtimePulleyTarget,
+        ?: WasmtimeAutomaticTarget,
 )
 
 internal fun androidWasmtimeTarget(target: String): String =
-    if (target == WasmtimeAutomaticTarget) WasmtimePulleyTarget else target
+    if (target == WasmtimeAutomaticTarget) androidWasmtimePulleyTarget() else target
+
+internal fun androidWasmtimePulleyTarget(): String =
+    if (Process.is64Bit()) WasmtimePulleyTarget else WasmtimePulley32Target
 
 private class AndroidWasmtimePulleyExecution(
     private val nativeHandle: Long,

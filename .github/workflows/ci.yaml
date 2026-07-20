@@ -123,17 +123,32 @@ jobs:
           echo "KRWA_TEST_SIMULATOR_ID=$device_id" >> "$GITHUB_ENV"
 
       - name: Test build logic
-        run: ./gradlew -p buildSrc --no-daemon test
+        run: >-
+          ./gradlew -p buildSrc --no-daemon --max-workers=2
+          -Pkotlin.compiler.execution.strategy=in-process test
         env:
           GRADLE_OPTS: "-ea"
 
       - name: Prepare pinned release dependencies
-        run: ./gradlew --no-daemon prepareReleaseDependencies
+        run: >-
+          ./gradlew --no-daemon --max-workers=2
+          -Pkotlin.compiler.execution.strategy=in-process
+          prepareReleaseDependencies
+        env:
+          GRADLE_OPTS: "-ea"
+
+      - name: Test component model Gradle plugin in isolation
+        run: >-
+          ./gradlew --no-daemon --offline --max-workers=2
+          -Pkotlin.compiler.execution.strategy=in-process
+          :component-model-gradle-plugin:test --stacktrace
         env:
           GRADLE_OPTS: "-ea"
 
       - name: Run complete release gate offline
-        run: ./gradlew --no-daemon --offline releaseGate
+        run: >-
+          ./gradlew --no-daemon --offline --max-workers=2
+          -Pkotlin.compiler.execution.strategy=in-process releaseGate
         env:
           GRADLE_OPTS: "-ea"
 
@@ -146,6 +161,15 @@ jobs:
           unzip -p "$aar" classes.jar > "$classes_jar"
           unzip -l "$classes_jar" | grep -F META-INF/LICENSE-WASMTIME
           unzip -l "$classes_jar" | grep -F META-INF/THIRD-PARTY.txt
+          for abi in arm64-v8a armeabi-v7a; do
+            for library in \
+              libwasmtime.so \
+              libkrwa_pulley_android.so \
+              libkrwa_wasmtime_p3_bridge.so \
+              libkrwa_wasmtime_p3_android.so; do
+              unzip -l "$aar" | grep -F "jni/$abi/$library"
+            done
+          done
 
       - name: Delete test simulator
         if: always()
@@ -169,6 +193,9 @@ jobs:
 
       - name: Install Zensical
         run: python -m pip install -r docs/requirements.txt
+
+      - name: Test Maven Central release tooling
+        run: python -m unittest discover -s .github/scripts -p 'test_*.py'
 
       - name: Set up Java
         uses: actions/setup-java@v5

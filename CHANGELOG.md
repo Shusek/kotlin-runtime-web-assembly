@@ -1,9 +1,35 @@
 # Changelog
 
-This project follows semantic versioning. Until `1.0.0`, minor releases may contain intentional
-API changes; release candidates remain immutable once published.
+This project follows semantic versioning. The active compatibility line is fixed at `0.3.x`;
+patch and prerelease identifiers advance without changing the `0.3` major/minor pair. Until
+`1.0.0`, API changes may still be intentional; release candidates remain immutable once
+published.
 
-## 0.3.0-rc.1 (unreleased candidate)
+## 0.3.0-rc.2 (2026-07-20)
+
+### Added
+
+- Android Wasmtime/Pulley execution now ships native `armeabi-v7a` libraries alongside
+  `arm64-v8a`, including Preview 3 support and ABI-aware device fixtures.
+- Release validation now rejects versions outside the configured `0.3.x` compatibility line.
+
+### Changed
+
+- Android selects `pulley32` automatically for 32-bit processes and retains `pulley64` for
+  64-bit processes.
+- CI verifies the complete Android JNI library set for both supported ABIs.
+- Release dependency preparation caches the Maven BOM descriptor required by offline standalone
+  consumer verification.
+- Maven Central releases are built from the verified staging repository, signed in an isolated
+  runner keyring, and automatically published through the Publisher Portal API.
+
+### Compatibility
+
+- Kendive remains on the `0.3.x` release line; subsequent compatible releases advance only the
+  patch or prerelease portion.
+- Consumers should pin the complete `0.3.0-rc.2` version and must not depend on mutable snapshots.
+
+## 0.3.0-rc.1
 
 ### Security
 

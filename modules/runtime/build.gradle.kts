@@ -34,6 +34,11 @@ val wasmtimePulleyIosTargets = listOf(
     "aarch64-apple-ios",
     "aarch64-apple-ios-sim",
 )
+val wasmtimePulleyAndroidSourceTargets = listOf(
+    "armv7-linux-androideabi",
+)
+val wasmtimePulleyAndroidTargets =
+    listOf("aarch64-linux-android") + wasmtimePulleyAndroidSourceTargets
 val wasmtimePulleySourceDirectory = layout.buildDirectory.dir("wasmtime-pulley/source")
 val legacyWasmtimePulleyIosSourceDirectory = layout.buildDirectory.dir("wasmtime-pulley-ios/source")
 val wasmtimePulleyIosTargetDirectory = layout.buildDirectory.dir("wasmtime-pulley-ios/target")
@@ -268,7 +273,7 @@ fun preparePinnedRustToolchain(
             environment,
         ).lineSequence().map(String::trim).filter(String::isNotEmpty).toSet()
     val requiredTargets =
-        (listOf(hostTarget) + wasmtimePulleyIosTargets + "aarch64-linux-android").distinct()
+        (listOf(hostTarget) + wasmtimePulleyIosTargets + wasmtimePulleyAndroidTargets).distinct()
     val missingTargets = requiredTargets.filterNot(installedTargets::contains)
     if (missingTargets.isNotEmpty() && gradle.startParameter.isOffline) {
         throw GradleException(
@@ -450,9 +455,10 @@ val prepareRustReleaseDependencies by tasks.registering {
         val bridgeManifest = wasmtimeP3BridgeDirectory.file("Cargo.toml").asFile
         val fetches =
             listOf(
-                sourceManifest to (listOf(hostTarget) + wasmtimePulleyIosTargets),
+                sourceManifest to
+                    (listOf(hostTarget) + wasmtimePulleyIosTargets + wasmtimePulleyAndroidSourceTargets),
                 bridgeManifest to
-                    (listOf(hostTarget) + wasmtimePulleyIosTargets + "aarch64-linux-android"),
+                    (listOf(hostTarget) + wasmtimePulleyIosTargets + wasmtimePulleyAndroidTargets),
             )
         for ((manifest, targets) in fetches) {
             for (target in targets.distinct()) {

@@ -4,7 +4,6 @@ package uk.shusek.krwa.runtime.wasmtime.android
 
 import uk.shusek.krwa.runtime.WasmtimePreview3ComponentConfig
 import uk.shusek.krwa.runtime.WasmtimePreview3Preopen
-import uk.shusek.krwa.runtime.WasmtimePulleyTarget
 import uk.shusek.krwa.wasm.WasmEngineException
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -102,11 +101,13 @@ fun androidWasmtimePreview3CommandRunString(
     )
 }
 
-private fun androidWasmtimePreview3TargetUnavailableReason(target: String): String? =
-    when (androidWasmtimeTarget(target)) {
-        WasmtimePulleyTarget -> null
-        else -> "Wasmtime Preview3 Android bridge only supports target $WasmtimePulleyTarget, got $target"
+private fun androidWasmtimePreview3TargetUnavailableReason(target: String): String? {
+    val supportedTarget = androidWasmtimePulleyTarget()
+    return when (androidWasmtimeTarget(target)) {
+        supportedTarget -> null
+        else -> "Wasmtime Preview3 Android bridge only supports target $supportedTarget, got $target"
     }
+}
 
 private fun WasmtimePreview3ComponentConfig.toAndroidPreview3Call(): AndroidPreview3Call {
     val environmentEntries = environment.entries.toList()

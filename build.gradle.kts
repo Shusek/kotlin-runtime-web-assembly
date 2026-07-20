@@ -24,6 +24,7 @@ plugins {
 
 group = "uk.shusek.krwa"
 version = providers.gradleProperty("version").get()
+val releaseLine = providers.gradleProperty("krwa.releaseLine")
 val hostOs = providers.gradleProperty("krwa.host.os")
     .orElse(System.getProperty("os.name"))
     .get()
@@ -34,14 +35,23 @@ tasks.register("verifyImmutablePublicationVersion") {
     group = "verification"
     description = "Rejects mutable or malformed versions before publishing repository artifacts."
     val publicationVersion = providers.gradleProperty("version")
+    val requiredReleaseLine = releaseLine
     inputs.property("publicationVersion", publicationVersion)
+    inputs.property("releaseLine", requiredReleaseLine)
     doLast {
         val value = publicationVersion.get()
+        val line = requiredReleaseLine.get()
+        check(Regex("[0-9]+\\.[0-9]+").matches(line)) {
+            "Configured KRWA release line has an unsupported format: $line"
+        }
         check(!value.endsWith("-SNAPSHOT", ignoreCase = true)) {
             "Published KRWA versions must be immutable; got $value"
         }
         check(Regex("[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z]+(?:[.-][0-9A-Za-z]+)*)?").matches(value)) {
             "Published KRWA version has an unsupported format: $value"
+        }
+        check(value.startsWith("$line.")) {
+            "Published KRWA versions must remain in the $line.x release line; got $value"
         }
     }
 }
@@ -299,6 +309,47 @@ val expectedReleasePublicationDescriptors =
         ).joinToString(releasePublicationDescriptorSeparator)
     }
 val actualReleasePublicationDescriptors = mutableListOf<String>()
+val verifyReleasePublicationMatrix =
+    tasks.register("verifyReleasePublicationMatrix") {
+        group = "verification"
+        description =
+            "Verifies that the current release host configures every required Maven publication."
+        inputs.property(
+            "expectedReleasePublications",
+            expectedReleasePublicationDescriptors.sorted(),
+        )
+        inputs.property(
+            "actualReleasePublications",
+            providers.provider { actualReleasePublicationDescriptors.sorted() },
+        )
+        doLast {
+            val expectedReleasePublicationSet = expectedReleasePublicationDescriptors.toSet()
+            val actualReleasePublicationSet = actualReleasePublicationDescriptors.toSet()
+            check(
+                expectedReleasePublicationSet.size == expectedReleasePublicationDescriptors.size
+            ) {
+                "Static release publication matrix contains duplicate descriptors"
+            }
+            check(actualReleasePublicationSet.size == actualReleasePublicationDescriptors.size) {
+                "Configured Maven publications contain duplicate descriptors"
+            }
+            check(actualReleasePublicationSet == expectedReleasePublicationSet) {
+                val missing =
+                    (expectedReleasePublicationSet - actualReleasePublicationSet)
+                        .sorted()
+                        .map { descriptor ->
+                            descriptor.replace(releasePublicationDescriptorSeparator, " | ")
+                        }
+                val unexpected =
+                    (actualReleasePublicationSet - expectedReleasePublicationSet)
+                        .sorted()
+                        .map { descriptor ->
+                            descriptor.replace(releasePublicationDescriptorSeparator, " | ")
+                        }
+                "Release publication matrix mismatch; missing=$missing, unexpected=$unexpected"
+            }
+        }
+    }
 val prepareGradleReleaseDependencies =
     tasks.register("prepareGradleReleaseDependencies") {
         group = "build setup"
@@ -417,6 +468,26 @@ val prepareAndroidSampleReleaseDependencies =
         gradleWrapperPath = "samples/android-tests/$nestedGradleWrapperName",
         allowMissingKrwaModules = true,
     )
+val asmBomVersion = libs.versions.asm.get()
+val releasePomDescriptorDependencies =
+    configurations.detachedConfiguration(
+        dependencies.create("org.ow2.asm:asm-bom:$asmBomVersion@pom"),
+    ).apply {
+        isTransitive = false
+    }
+val prepareReleasePomDescriptorDependencies =
+    tasks.register("prepareReleasePomDescriptorDependencies") {
+        group = "build setup"
+        description =
+            "Downloads Maven POM descriptors referenced by staged publications and offline consumers."
+        inputs.property("asmBomVersion", asmBomVersion)
+        doLast {
+            val descriptors = releasePomDescriptorDependencies.files
+            check(descriptors.any { file -> file.name == "asm-bom-$asmBomVersion.pom" }) {
+                "ASM BOM POM was not prepared for offline release consumers"
+            }
+        }
+    }
 
 val prepareReleaseDependencies =
     tasks.register("prepareReleaseDependencies") {
@@ -425,6 +496,7 @@ val prepareReleaseDependencies =
             "Downloads and verifies pinned external inputs required by an offline releaseGate."
         dependsOn(
             prepareGradleReleaseDependencies,
+            prepareReleasePomDescriptorDependencies,
             ":component-model:downloadWasiPreview1Adapters",
             ":wasm-tools:downloadWasmTools",
             ":runtime:prepareRustReleaseDependencies",
@@ -547,6 +619,7 @@ val releaseGate =
             prepareReleaseDependencies,
             verifyNoUnjustifiedDisabledTests,
             verifySampleDependencyVersions,
+            verifyReleasePublicationMatrix,
             tasks.named("verifyImmutablePublicationVersion"),
         )
     }
@@ -556,6 +629,7 @@ val verifyReleaseStagingRepository =
         group = "verification"
         description =
             "Verifies staged Maven artifacts and writes deterministic SHA-256 evidence."
+        dependsOn(verifyReleasePublicationMatrix)
         val checksumManifest =
             releaseStagingRepository.map { directory -> directory.file("SHA256SUMS") }
         inputs.property("releaseVersion", expectedReleaseVersion)
@@ -1066,31 +1140,6 @@ gradle.projectsEvaluated {
                 actualReleasePublicationDescriptors +=
                     descriptorFields.joinToString(releasePublicationDescriptorSeparator)
             }
-    }
-    val expectedReleasePublicationSet = expectedReleasePublicationDescriptors.toSet()
-    val actualReleasePublicationSet = actualReleasePublicationDescriptors.toSet()
-    check(
-        expectedReleasePublicationSet.size == expectedReleasePublicationDescriptors.size
-    ) {
-        "Static release publication matrix contains duplicate descriptors"
-    }
-    check(actualReleasePublicationSet.size == actualReleasePublicationDescriptors.size) {
-        "Configured Maven publications contain duplicate descriptors"
-    }
-    check(actualReleasePublicationSet == expectedReleasePublicationSet) {
-        val missing =
-            (expectedReleasePublicationSet - actualReleasePublicationSet)
-                .sorted()
-                .map { descriptor ->
-                    descriptor.replace(releasePublicationDescriptorSeparator, " | ")
-                }
-        val unexpected =
-            (actualReleasePublicationSet - expectedReleasePublicationSet)
-                .sorted()
-                .map { descriptor ->
-                    descriptor.replace(releasePublicationDescriptorSeparator, " | ")
-                }
-        "Release publication matrix mismatch; missing=$missing, unexpected=$unexpected"
     }
     val dependencyTaskNames =
         setOf(
