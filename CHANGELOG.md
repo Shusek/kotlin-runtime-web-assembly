@@ -20,6 +20,8 @@ published.
 - CI verifies the complete Android JNI library set for both supported ABIs.
 - Release dependency preparation caches the Maven BOM descriptor required by offline standalone
   consumer verification.
+- Maven Central releases are built from the verified staging repository, signed in an isolated
+  runner keyring, and automatically published through the Publisher Portal API.
 
 ### Compatibility
 

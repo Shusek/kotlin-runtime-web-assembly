@@ -1,22 +1,56 @@
-name: CI
+name: Publish Maven Central
 
 on:
-  push:
-    branches: [ main ]
-  pull_request:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Immutable annotated release tag, for example v0.3.0-rc.2
+        required: true
+        type: string
 
 permissions:
   contents: read
 
+concurrency:
+  group: maven-central-${{ inputs.tag }}
+  cancel-in-progress: false
+
 jobs:
-  gradle-tests:
-    name: Release Gate
+  publish:
+    name: Verify, sign, and publish
     runs-on: macos-latest
-    timeout-minutes: 120
+    timeout-minutes: 180
+    if: github.repository == 'Shusek/kotlin-runtime-web-assembly'
 
     steps:
-      - name: Checkout sources
+      - name: Checkout immutable release tag
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.tag }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify release identity
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_TAG" =~ ^v0\.3\.[0-9]+(-[0-9A-Za-z]+([.-][0-9A-Za-z]+)*)?$ ]]
+          test "$(git cat-file -t "$RELEASE_TAG")" = "tag"
+          test "$(git rev-parse "$RELEASE_TAG^{commit}")" = "$(git rev-parse HEAD)"
+          git fetch --no-tags origin '+refs/heads/main:refs/remotes/origin/main'
+          git merge-base --is-ancestor HEAD refs/remotes/origin/main
+          test "$(grep -c '^version=' gradle.properties)" = "1"
+          version="$(sed -n 's/^version=//p' gradle.properties)"
+          test "$RELEASE_TAG" = "v$version"
+          [[ "$version" =~ ^0\.3\.[0-9]+(-[0-9A-Za-z]+([.-][0-9A-Za-z]+)*)?$ ]]
+          test -z "$(git status --porcelain)"
+          echo "KRWA_RELEASE_VERSION=$version" >> "$GITHUB_ENV"
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
 
       - name: Set up Java
         uses: actions/setup-java@v5
@@ -106,8 +140,9 @@ jobs:
           test "$(printf '%s\n' "$rustc_metadata" | sed -n 's/^commit-hash: //p')" = "$rust_commit"
           cargo "+$rust_version" --version
           cmake --version
-          node --version
+          xcrun --sdk iphoneos --find clang++
           xcrun --sdk iphonesimulator --find clang++
+          gpg --version
 
       - name: Create compatible iOS simulator
         run: |
@@ -115,7 +150,7 @@ jobs:
           runtime="$(xcrun simctl list runtimes | awk '/^iOS / && $0 !~ /unavailable/ { value=$NF } END { gsub(/[()]/, "", value); print value }')"
           device_id=""
           while IFS= read -r device_type; do
-            if device_id="$(xcrun simctl create 'KRWA CI' "$device_type" "$runtime" 2>/dev/null)"; then
+            if device_id="$(xcrun simctl create 'KRWA Maven Central' "$device_type" "$runtime" 2>/dev/null)"; then
               break
             fi
           done < <(xcrun simctl list devicetypes | awk '/^iPhone / { value=$NF; gsub(/[()]/, "", value); print value }')
@@ -137,24 +172,62 @@ jobs:
         env:
           GRADLE_OPTS: "-ea"
 
-      - name: Inspect Android Wasmtime runtime artifact
+      - name: Materialize release credentials
+        env:
+          MAVEN_CENTRAL_USERNAME_VALUE: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          MAVEN_CENTRAL_PASSWORD_VALUE: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          MAVEN_SIGNING_KEY_VALUE: ${{ secrets.MAVEN_SIGNING_KEY }}
+          MAVEN_SIGNING_PASSWORD_VALUE: ${{ secrets.MAVEN_SIGNING_PASSWORD }}
         run: |
           set -euo pipefail
-          aar=modules/runtime-wasmtime-android/build/outputs/aar/runtime-wasmtime-android.aar
-          unzip -p "$aar" proguard.txt | grep -F AndroidWasmtimePulleyNative
-          classes_jar="$RUNNER_TEMP/runtime-wasmtime-android-classes.jar"
-          unzip -p "$aar" classes.jar > "$classes_jar"
-          unzip -l "$classes_jar" | grep -F META-INF/LICENSE-WASMTIME
-          unzip -l "$classes_jar" | grep -F META-INF/THIRD-PARTY.txt
-          for abi in arm64-v8a armeabi-v7a; do
-            for library in \
-              libwasmtime.so \
-              libkrwa_pulley_android.so \
-              libkrwa_wasmtime_p3_bridge.so \
-              libkrwa_wasmtime_p3_android.so; do
-              unzip -l "$aar" | grep -F "jni/$abi/$library"
-            done
-          done
+          umask 077
+          secrets_directory="$RUNNER_TEMP/kendive-maven-central-secrets"
+          install -d -m 700 "$secrets_directory"
+          printf '%s' "$MAVEN_CENTRAL_USERNAME_VALUE" > "$secrets_directory/username"
+          printf '%s' "$MAVEN_CENTRAL_PASSWORD_VALUE" > "$secrets_directory/password"
+          printf '%s' "$MAVEN_SIGNING_KEY_VALUE" > "$secrets_directory/signing-key.asc"
+          printf '%s' "$MAVEN_SIGNING_PASSWORD_VALUE" > "$secrets_directory/signing-password"
+          test -s "$secrets_directory/username"
+          test -s "$secrets_directory/password"
+          test -s "$secrets_directory/signing-key.asc"
+          chmod 600 "$secrets_directory"/*
+          echo "MAVEN_SECRET_DIRECTORY=$secrets_directory" >> "$GITHUB_ENV"
+
+      - name: Build signed Maven Central bundle
+        run: |
+          set -euo pipefail
+          bundle="$RUNNER_TEMP/kendive-${KRWA_RELEASE_VERSION}-central.zip"
+          python .github/scripts/build_maven_central_bundle.py \
+            --repository build/release-staging-repository \
+            --version "$KRWA_RELEASE_VERSION" \
+            --signing-key-file "$MAVEN_SECRET_DIRECTORY/signing-key.asc" \
+            --signing-password-file "$MAVEN_SECRET_DIRECTORY/signing-password" \
+            --output "$bundle"
+          unzip -t "$bundle"
+          mkdir -p build/maven-central-evidence
+          shasum -a 256 "$bundle" > build/maven-central-evidence/central-bundle.sha256
+          cp build/release-staging-repository/SHA256SUMS \
+            build/maven-central-evidence/release-staging-SHA256SUMS
+          echo "MAVEN_CENTRAL_BUNDLE=$bundle" >> "$GITHUB_ENV"
+
+      - name: Upload and automatically publish
+        run: |
+          python .github/scripts/publish_maven_central.py \
+            --bundle "$MAVEN_CENTRAL_BUNDLE" \
+            --username-file "$MAVEN_SECRET_DIRECTORY/username" \
+            --password-file "$MAVEN_SECRET_DIRECTORY/password" \
+            --deployment-name "Kendive ${KRWA_RELEASE_VERSION}" \
+            --receipt build/maven-central-evidence/publisher-receipt.json \
+            --summary "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload non-secret release evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: maven-central-evidence-${{ inputs.tag }}
+          path: build/maven-central-evidence
+          retention-days: 90
+          if-no-files-found: warn
 
       - name: Delete test simulator
         if: always()
@@ -163,37 +236,12 @@ jobs:
             xcrun simctl delete "$KRWA_TEST_SIMULATOR_ID" || true
           fi
 
-  docs:
-    name: Documentation
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout sources
-        uses: actions/checkout@v6
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.12"
-
-      - name: Install Zensical
-        run: python -m pip install -r docs/requirements.txt
-
-      - name: Test Maven Central release tooling
-        run: python -m unittest discover -s .github/scripts -p 'test_*.py'
-
-      - name: Set up Java
-        uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: 25
-          cache: gradle
-
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v6
-
-      - name: Build Zensical docs
-        run: zensical build --clean
-
-      - name: Build Dokka API docs
-        run: ./gradlew --no-daemon :dokkaGenerate
+      - name: Remove release credentials and bundle
+        if: always()
+        run: |
+          if [ -n "${MAVEN_SECRET_DIRECTORY:-}" ]; then
+            rm -rf "$MAVEN_SECRET_DIRECTORY"
+          fi
+          if [ -n "${MAVEN_CENTRAL_BUNDLE:-}" ]; then
+            rm -f "$MAVEN_CENTRAL_BUNDLE"
+          fi

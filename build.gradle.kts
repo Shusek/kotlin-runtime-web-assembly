@@ -309,6 +309,47 @@ val expectedReleasePublicationDescriptors =
         ).joinToString(releasePublicationDescriptorSeparator)
     }
 val actualReleasePublicationDescriptors = mutableListOf<String>()
+val verifyReleasePublicationMatrix =
+    tasks.register("verifyReleasePublicationMatrix") {
+        group = "verification"
+        description =
+            "Verifies that the current release host configures every required Maven publication."
+        inputs.property(
+            "expectedReleasePublications",
+            expectedReleasePublicationDescriptors.sorted(),
+        )
+        inputs.property(
+            "actualReleasePublications",
+            providers.provider { actualReleasePublicationDescriptors.sorted() },
+        )
+        doLast {
+            val expectedReleasePublicationSet = expectedReleasePublicationDescriptors.toSet()
+            val actualReleasePublicationSet = actualReleasePublicationDescriptors.toSet()
+            check(
+                expectedReleasePublicationSet.size == expectedReleasePublicationDescriptors.size
+            ) {
+                "Static release publication matrix contains duplicate descriptors"
+            }
+            check(actualReleasePublicationSet.size == actualReleasePublicationDescriptors.size) {
+                "Configured Maven publications contain duplicate descriptors"
+            }
+            check(actualReleasePublicationSet == expectedReleasePublicationSet) {
+                val missing =
+                    (expectedReleasePublicationSet - actualReleasePublicationSet)
+                        .sorted()
+                        .map { descriptor ->
+                            descriptor.replace(releasePublicationDescriptorSeparator, " | ")
+                        }
+                val unexpected =
+                    (actualReleasePublicationSet - expectedReleasePublicationSet)
+                        .sorted()
+                        .map { descriptor ->
+                            descriptor.replace(releasePublicationDescriptorSeparator, " | ")
+                        }
+                "Release publication matrix mismatch; missing=$missing, unexpected=$unexpected"
+            }
+        }
+    }
 val prepareGradleReleaseDependencies =
     tasks.register("prepareGradleReleaseDependencies") {
         group = "build setup"
@@ -578,6 +619,7 @@ val releaseGate =
             prepareReleaseDependencies,
             verifyNoUnjustifiedDisabledTests,
             verifySampleDependencyVersions,
+            verifyReleasePublicationMatrix,
             tasks.named("verifyImmutablePublicationVersion"),
         )
     }
@@ -587,6 +629,7 @@ val verifyReleaseStagingRepository =
         group = "verification"
         description =
             "Verifies staged Maven artifacts and writes deterministic SHA-256 evidence."
+        dependsOn(verifyReleasePublicationMatrix)
         val checksumManifest =
             releaseStagingRepository.map { directory -> directory.file("SHA256SUMS") }
         inputs.property("releaseVersion", expectedReleaseVersion)
@@ -1097,31 +1140,6 @@ gradle.projectsEvaluated {
                 actualReleasePublicationDescriptors +=
                     descriptorFields.joinToString(releasePublicationDescriptorSeparator)
             }
-    }
-    val expectedReleasePublicationSet = expectedReleasePublicationDescriptors.toSet()
-    val actualReleasePublicationSet = actualReleasePublicationDescriptors.toSet()
-    check(
-        expectedReleasePublicationSet.size == expectedReleasePublicationDescriptors.size
-    ) {
-        "Static release publication matrix contains duplicate descriptors"
-    }
-    check(actualReleasePublicationSet.size == actualReleasePublicationDescriptors.size) {
-        "Configured Maven publications contain duplicate descriptors"
-    }
-    check(actualReleasePublicationSet == expectedReleasePublicationSet) {
-        val missing =
-            (expectedReleasePublicationSet - actualReleasePublicationSet)
-                .sorted()
-                .map { descriptor ->
-                    descriptor.replace(releasePublicationDescriptorSeparator, " | ")
-                }
-        val unexpected =
-            (actualReleasePublicationSet - expectedReleasePublicationSet)
-                .sorted()
-                .map { descriptor ->
-                    descriptor.replace(releasePublicationDescriptorSeparator, " | ")
-                }
-        "Release publication matrix mismatch; missing=$missing, unexpected=$unexpected"
     }
     val dependencyTaskNames =
         setOf(
