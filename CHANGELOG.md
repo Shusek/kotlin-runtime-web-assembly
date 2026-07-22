@@ -5,6 +5,24 @@ patch and prerelease identifiers advance without changing the `0.3` major/minor 
 `1.0.0`, API changes may still be intentional; release candidates remain immutable once
 published.
 
+## 0.3.0-rc.3 (2026-07-22)
+
+### Changed
+
+- Wasmtime was updated from `46.0.1` to `47.0.2`. The update fixes asynchronously delivered
+  future write-closed events in the Preview 3 future/stream execution paths used by KRWA.
+- Wasmtime 47 also corrects call-hook accounting across yields and concurrent component calls.
+  KRWA does not currently enable Wasmtime's `call-hook` Cargo feature or install store call hooks,
+  so that correction does not change current KRWA behavior.
+- The bundled WASI Preview 1 adapters and Android Wasmtime libraries for `arm64-v8a` and
+  `armeabi-v7a` are rebuilt or refreshed from the pinned `v47.0.2` sources and release assets.
+
+### Compatibility
+
+- Wasmtime 47 enables WebAssembly GC and exception handling by default. KRWA already enables both
+  proposals explicitly and does not use the removed `wasi-common` or `wasi-threads` crates, so
+  the upgrade does not silently expand the accepted feature set or require a migration.
+
 ## 0.3.0-rc.2 (2026-07-20)
 
 ### Added

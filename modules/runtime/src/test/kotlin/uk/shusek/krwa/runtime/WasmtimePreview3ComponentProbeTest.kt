@@ -150,6 +150,40 @@ class WasmtimePreview3ComponentProbeTest {
     }
 
     @Test
+    fun jvmPreview3ComponentBridgeDropsFutureWriterAfterAsyncReaderClose() {
+        assumeTrue(System.getProperty("krwa.wasmtime.p3.bridge.integration") == "true")
+        val bridgeLibraryPath = Path.of(System.getProperty("krwa.wasmtime.p3.bridge.library"))
+        assertTrue(Files.isRegularFile(bridgeLibraryPath), "Missing bridge library: $bridgeLibraryPath")
+        val sandbox = Files.createTempDirectory("krwa-wasmtime-p3-future-close")
+        val watSource = checkNotNull(
+            javaClass.getResourceAsStream(
+                "/wasmtime/future-drop-writable-after-notified-drop.wat",
+            ),
+        ).bufferedReader().use { reader -> reader.readText() }
+        val componentBytes = compilePulleyComponent(
+            directory = sandbox,
+            name = "future-drop-writable-after-notified-drop",
+            watSource = watSource,
+        )
+
+        try {
+            val reason = wasmtimePreview3ComponentCall0UnavailableReason(
+                WasmtimePreview3ComponentConfig(
+                    precompiledComponentBytes = componentBytes,
+                    hostPreopenRoot = sandbox.toString(),
+                    guestPreopenRoot = "/",
+                    maxMemoryBytes = 64L * 1024L * 1024L,
+                ),
+                exportName = "run",
+            )
+
+            assertNull(reason)
+        } finally {
+            sandbox.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
     fun jvmPreview3ComponentBridgeCallsPulleyComponentS32Export() {
         assumeTrue(System.getProperty("krwa.wasmtime.p3.bridge.integration") == "true")
         val bridgeLibraryPath = Path.of(System.getProperty("krwa.wasmtime.p3.bridge.library"))
