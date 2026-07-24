@@ -172,13 +172,13 @@ jobs:
         run: echo "KRWA_PUBLISH_VERSION=0.3.0-dev.${GITHUB_SHA:0:12}" >> "$GITHUB_ENV"
 
       - name: Download Pages workspace
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: snapshot-pages
           path: build/pages
 
       - name: Download iOS Maven artifacts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: snapshot-ios-maven
           path: build/ios-maven
