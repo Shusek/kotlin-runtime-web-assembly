@@ -2,7 +2,7 @@
 agp = "9.2.1"
 junitJupiterApi = "5.14.3"
 kotlin = "2.4.0"
-kotlinxIo = "0.9.0"
+kotlinxIo = "0.9.1"
 krwa = "0.3.0-rc.3"
 
 [libraries]
