@@ -7,6 +7,7 @@ import kotlin.io.path.writeText
 import org.gradle.testkit.runner.GradleRunner
 import org.gradle.testkit.runner.TaskOutcome
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -48,6 +49,99 @@ class KrwaComponentModelPluginTest {
 
         assertTrue(result.output.contains("generateKrwaKotlinWitBindings"), result.output)
         assertTrue(result.output.contains("packageKrwaComponent"), result.output)
+    }
+
+    @Test
+    fun `registers isolated tasks for named components`() {
+        tempDir.resolve("settings.gradle.kts").writeText(
+            """
+            pluginManagement { repositories { gradlePluginPortal(); mavenCentral() } }
+            dependencyResolutionManagement { repositories { mavenCentral() } }
+            """.trimIndent(),
+        )
+        tempDir.resolve("build.gradle.kts").writeText(
+            """
+            plugins {
+                id("uk.shusek.krwa.component-model")
+            }
+
+            krwaComponentModel {
+                components {
+                    create("catalog")
+                    create("playback")
+                    create("settings")
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val result = GradleRunner.create()
+            .withProjectDir(tempDir.toFile())
+            .withReleaseGateArguments("tasks", "--group", "krwa")
+            .withPluginClasspath()
+            .build()
+
+        listOf("Catalog", "Playback", "Settings").forEach { surface ->
+            assertTrue(result.output.contains("generate${surface}KrwaKotlinWitBindings"), result.output)
+            assertTrue(result.output.contains("package${surface}KrwaComponent"), result.output)
+        }
+    }
+
+    @Test
+    fun `resolves a named component core module from a Kotlin Wasm target`() {
+        tempDir.resolve("settings.gradle.kts").writeText(
+            """
+            pluginManagement { repositories { gradlePluginPortal(); mavenCentral() } }
+            dependencyResolutionManagement { repositories { mavenCentral() } }
+            """.trimIndent(),
+        )
+        tempDir.resolve("build.gradle.kts").writeText(
+            """
+            import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
+
+            plugins {
+                kotlin("multiplatform") version "2.4.0"
+                id("uk.shusek.krwa.component-model")
+            }
+
+            kotlin {
+                @OptIn(ExperimentalWasmDsl::class)
+                wasmWasi("catalogWasm") {
+                    binaries.executable()
+                }
+            }
+
+            krwaComponentModel {
+                component("catalog") {
+                    coreModule.fromKotlinWasm("catalogWasm")
+                }
+            }
+
+            tasks.register("verifyCatalogCoreModule") {
+                dependsOn("prepareCatalogKrwaCoreModule")
+                doLast {
+                    val core = krwaComponentModel.components.named("catalog").get().coreModule.file.get().asFile
+                    check(core.invariantSeparatorsPath.endsWith("/krwa/core-modules/catalog.wasm")) {
+                        "Unexpected Kotlin/Wasm output: ${'$'}core"
+                    }
+                    check(core.isFile && core.length() > 0L) {
+                        "Prepared Kotlin/Wasm output is missing or empty: ${'$'}core"
+                    }
+                }
+            }
+            """.trimIndent(),
+        )
+        val sourceDirectory = tempDir.resolve("src/commonMain/kotlin")
+        sourceDirectory.toFile().mkdirs()
+        sourceDirectory.resolve("Main.kt").writeText("fun main() = Unit")
+
+        val result = GradleRunner.create()
+            .withProjectDir(tempDir.toFile())
+            .withReleaseGateArguments("verifyCatalogCoreModule", "--stacktrace")
+            .withPluginClasspath()
+            .build()
+
+        assertEquals(TaskOutcome.SUCCESS, result.task(":verifyCatalogCoreModule")?.outcome)
     }
 
     @Test
@@ -173,6 +267,61 @@ class KrwaComponentModelPluginTest {
         assertTrue(Files.exists(generatedPackage.resolve("Api.kt")))
         assertTrue(Files.exists(generatedPackage.resolve("Plugin.kt")))
         assertTrue(Files.exists(generatedPackage.resolve("KrwaGuestExports.kt")))
+    }
+
+    @Test
+    fun `changing bindings package removes generated files from the previous package`() {
+        tempDir.resolve("settings.gradle.kts").writeText(
+            """pluginManagement { repositories { gradlePluginPortal(); mavenCentral() } }""",
+        )
+        val buildFile = tempDir.resolve("build.gradle.kts")
+        fun writeBuild(packageName: String) {
+            buildFile.writeText(
+                """
+                plugins {
+                    id("uk.shusek.krwa.component-model")
+                }
+
+                krwaComponentModel {
+                    witFile.set(layout.projectDirectory.file("plugin.wit"))
+                    bindingsPackage.set("$packageName")
+                    bindingsOutputDirectory.set(layout.buildDirectory.dir("generated/wit-bindings/main/kotlin"))
+                }
+                """.trimIndent(),
+            )
+        }
+        tempDir.resolve("plugin.wit").writeText(
+            """
+            package example:plugin;
+
+            world plugin {
+              export run: func();
+            }
+            """.trimIndent(),
+        )
+        writeBuild("example.generated.old")
+
+        GradleRunner.create()
+            .withProjectDir(tempDir.toFile())
+            .withReleaseGateArguments("generateKrwaKotlinWitBindings", "--stacktrace")
+            .withPluginClasspath()
+            .build()
+
+        val outputRoot = tempDir.resolve("build/generated/wit-bindings/main/kotlin")
+        val oldOutput = outputRoot.resolve("example/generated/old/KrwaComponentBindings.kt")
+        assertTrue(Files.exists(oldOutput))
+
+        writeBuild("example.generated.new")
+        val result = GradleRunner.create()
+            .withProjectDir(tempDir.toFile())
+            .withReleaseGateArguments("generateKrwaKotlinWitBindings", "--stacktrace")
+            .withPluginClasspath()
+            .build()
+
+        val newOutput = outputRoot.resolve("example/generated/new/KrwaComponentBindings.kt")
+        assertEquals(TaskOutcome.SUCCESS, result.task(":generateKrwaKotlinWitBindings")?.outcome)
+        assertFalse(Files.exists(oldOutput))
+        assertTrue(Files.exists(newOutput))
     }
 
     @Test

@@ -60,6 +60,7 @@ abstract class KrwaGenerateKotlinWitBindingsTask : DefaultTask() {
     @TaskAction
     fun generate() {
         val splitFiles = splitFiles.get()
+        outputDirectory.get().asFile.deleteRecursively()
         val output = if (splitFiles) outputDirectory.get().asFile else outputFile.get().asFile
         if (splitFiles) {
             output.mkdirs()

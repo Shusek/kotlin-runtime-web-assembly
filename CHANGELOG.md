@@ -5,6 +5,26 @@ patch and prerelease identifiers advance without changing the `0.3` major/minor 
 `1.0.0`, API changes may still be intentional; release candidates remain immutable once
 published.
 
+## 0.3.0-rc.5 (2026-07-25)
+
+### Added
+
+- The Component Model Gradle plugin can now declare multiple named components with isolated WIT
+  generation and packaging tasks.
+- Named components can select a Kotlin/Wasm target directly; KRWA resolves and normalizes its
+  optimized production executable without exposing compiler output paths to build authors.
+
+### Changed
+
+- Generated binding output directories are cleared before regeneration so package-name changes
+  cannot leave stale Kotlin sources behind.
+- KRWA builds now require JDK 25 explicitly.
+
+### Compatibility
+
+- Existing single-component Gradle configuration remains available. Named components are an
+  additive API used by higher-level build plugins such as the Suvio Plugin SDK.
+
 ## 0.3.0-rc.4 (2026-07-24)
 
 ### Changed

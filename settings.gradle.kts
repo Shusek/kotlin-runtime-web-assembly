@@ -1,3 +1,7 @@
+check(JavaVersion.current().majorVersion == "25") {
+    "KRWA requires JDK 25; current JVM is ${JavaVersion.current()}."
+}
+
 pluginManagement {
     repositories {
         google {
