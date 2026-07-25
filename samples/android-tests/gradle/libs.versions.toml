@@ -3,7 +3,7 @@ agp = "9.3.1"
 junitJupiterApi = "6.1.2"
 kotlin = "2.4.0"
 kotlinxIo = "0.9.1"
-krwa = "0.3.0-rc.5"
+krwa = "0.3.0-rc.6"
 
 [libraries]
 junit-jupiter-api = { module = "org.junit.jupiter:junit-jupiter-api", version.ref = "junitJupiterApi" }

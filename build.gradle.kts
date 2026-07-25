@@ -422,6 +422,7 @@ fun registerNestedReleaseDependencyPreparation(
     nestedBuildPath: String,
     gradleWrapperPath: String,
     allowMissingKrwaModules: Boolean,
+    additionalTasks: List<String> = emptyList(),
 ): TaskProvider<Exec> =
     tasks.register<Exec>(name) {
         group = "build setup"
@@ -447,6 +448,7 @@ fun registerNestedReleaseDependencyPreparation(
                     )
             }
             arguments += "prepareExternalReleaseDependencies"
+            arguments += additionalTasks
             commandLine(
                 layout.projectDirectory.file(gradleWrapperPath).asFile.absolutePath,
                 *arguments.toTypedArray(),
@@ -460,6 +462,7 @@ val prepareStandaloneSampleReleaseDependencies =
         nestedBuildPath = "samples/sample",
         gradleWrapperPath = "samples/sample/$nestedGradleWrapperName",
         allowMissingKrwaModules = true,
+        additionalTasks = listOf("kotlinWasmBinaryenSetup"),
     )
 val prepareAndroidSampleReleaseDependencies =
     registerNestedReleaseDependencyPreparation(

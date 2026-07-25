@@ -5,6 +5,13 @@ patch and prerelease identifiers advance without changing the `0.3` major/minor 
 `1.0.0`, API changes may still be intentional; release candidates remain immutable once
 published.
 
+## 0.3.0-rc.6 (2026-07-25)
+
+### Fixed
+
+- Prepared Kotlin/Wasm Binaryen dependencies before the offline release gate, including nested
+  TestKit builds for named component core modules.
+
 ## 0.3.0-rc.5 (2026-07-25)
 
 ### Added
