@@ -5,6 +5,22 @@ patch and prerelease identifiers advance without changing the `0.3` major/minor 
 `1.0.0`, API changes may still be intentional; release candidates remain immutable once
 published.
 
+## 0.3.0-rc.4 (2026-07-24)
+
+### Changed
+
+- Dependabot now scans the root Gradle build and its version catalog instead of treating the
+  repository root as a Maven build.
+- The Android validation sample now uses Android Gradle Plugin `9.3.1`, JUnit Jupiter API `6.1.2`,
+  and kotlinx-io `0.9.1`.
+- GitHub Actions workflows now use `actions/checkout@v7`, `actions/setup-python@v7`, and
+  `actions/download-artifact@v8`.
+
+### Compatibility
+
+- The published KRWA runtime, component model, WASI, WebAssembly, annotations, and Gradle plugin
+  APIs are unchanged from `0.3.0-rc.3`; this candidate refreshes build and validation tooling.
+
 ## 0.3.0-rc.3 (2026-07-22)
 
 ### Changed
