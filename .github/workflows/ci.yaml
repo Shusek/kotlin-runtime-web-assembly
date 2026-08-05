@@ -65,7 +65,6 @@ jobs:
         run: >-
           ./gradlew --no-daemon --max-workers=4
           -Pkotlin.compiler.execution.strategy=in-process
-          -Pkrwa.runtimeTests.maxParallelForks=3
           ciJvmGate --stacktrace
         env:
           GRADLE_OPTS: "-ea"
@@ -76,6 +75,55 @@ jobs:
         with:
           name: jvm-test-reports
           path: "**/build/reports/tests"
+          retention-days: 7
+          if-no-files-found: ignore
+
+  runtime-spec:
+    name: Wasm runtime spec (${{ matrix.label }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - shard: 0
+            label: 1/4
+          - shard: 1
+            label: 2/4
+          - shard: 2
+            label: 3/4
+          - shard: 3
+            label: 4/4
+
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          persist-credentials: false
+
+      - name: Set up Gradle
+        uses: ./.github/actions/setup-gradle
+
+      - name: Install pinned Wasmtime and wasm-tools
+        run: bash .github/scripts/install_wasm_host_tools.sh
+
+      - name: Run exhaustive Wasm runtime specification-test shard
+        run: >-
+          ./gradlew --no-daemon --max-workers=4
+          -Pkotlin.compiler.execution.strategy=in-process
+          -Pkrwa.runtimeTests.maxParallelForks=3
+          -Pkrwa.runtimeTests.shard=${{ matrix.shard }}/4
+          ciRuntimeSpecGate --stacktrace
+        env:
+          GRADLE_OPTS: "-ea"
+
+      - name: Upload runtime specification-test reports on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: runtime-spec-test-reports-${{ matrix.shard }}
+          path: testing/runtime-tests/build/reports/tests
           retention-days: 7
           if-no-files-found: ignore
 

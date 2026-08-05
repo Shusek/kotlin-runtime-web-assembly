@@ -648,24 +648,38 @@ val stageIosReleasePublications =
 
 val jvmAbiVerificationProjectPaths = jvmReleaseArtifacts.keys.toSortedSet()
 val multiplatformAbiVerificationProjectPaths = multiplatformReleaseArtifacts.keys.toSortedSet()
+val runtimeSpecTestProjectPath = ":runtime-tests"
 
 val ciJvmGate =
     tasks.register("ciJvmGate") {
         group = "verification"
         description = "Runs JVM, build-logic, and ABI verification for CI."
         dependsOn(
-            "verifyNoUnjustifiedDisabledTests",
             "verifySampleDependencyVersions",
             ":bom:check",
             ":component-model-gradle-plugin:check",
             ":component-model-gradle-plugin:validatePlugins",
         )
-        dependsOn(jvmProjectPaths.map { projectPath -> "$projectPath:check" })
+        dependsOn(
+            jvmProjectPaths
+                .filterNot { projectPath -> projectPath == runtimeSpecTestProjectPath }
+                .map { projectPath -> "$projectPath:check" },
+        )
         dependsOn(
             multiplatformTestTasks.keys.map { projectPath -> "$projectPath:jvmTest" },
         )
         dependsOn(
             jvmAbiVerificationProjectPaths.map { projectPath -> "$projectPath:checkKotlinAbi" },
+        )
+    }
+
+val ciRuntimeSpecGate =
+    tasks.register("ciRuntimeSpecGate") {
+        group = "verification"
+        description = "Runs one deterministic shard of the exhaustive JVM Wasm specification tests."
+        dependsOn(
+            "verifyNoUnjustifiedDisabledTests",
+            "$runtimeSpecTestProjectPath:check",
         )
     }
 

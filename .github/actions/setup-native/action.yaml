@@ -17,10 +17,11 @@ runs:
           ~/.cargo/registry/index
           ~/.cargo/registry/cache
           ~/.cargo/git/db
-        key: krwa-native-${{ runner.os }}-${{ inputs.platform }}-${{ hashFiles('gradle/libs.versions.toml', 'modules/runtime/build.gradle.kts', 'modules/runtime-wasmtime-android/build.gradle.kts', '**/Cargo.lock') }}
+          ~/.konan
+        key: krwa-native-${{ runner.os }}-${{ runner.arch }}-${{ inputs.platform }}-${{ hashFiles('gradle/libs.versions.toml', 'modules/runtime/build.gradle.kts', 'modules/runtime-wasmtime-android/build.gradle.kts', '**/Cargo.lock') }}
         restore-keys: |
-          krwa-native-${{ runner.os }}-${{ inputs.platform }}-
-          krwa-native-${{ runner.os }}-
+          krwa-native-${{ runner.os }}-${{ runner.arch }}-${{ inputs.platform }}-
+          krwa-native-${{ runner.os }}-${{ runner.arch }}-
 
     - name: Verify pinned native toolchain
       shell: bash
