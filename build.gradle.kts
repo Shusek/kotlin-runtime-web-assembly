@@ -300,17 +300,42 @@ val expectedReleasePublicationMatrix =
             ),
         )
     }
-val expectedReleaseVersion = project.version.toString()
-val expectedReleasePublicationDescriptors =
-    expectedReleasePublicationMatrix.map { publication ->
-        listOf(
+val iosReleasePublicationNames = setOf("iosArm64", "iosSimulatorArm64")
+// Runtime iOS publications contain a cinterop and are not configured off macOS;
+// the remaining iOS KLIB publications support cross-compilation.
+fun isReleasePublicationAvailableOnHost(
+    projectPath: String,
+    publicationName: String,
+): Boolean =
+    hostIsMacOs ||
+        projectPath != ":runtime" ||
+        publicationName !in iosReleasePublicationNames
+
+val hostAvailableReleasePublications =
+    expectedReleasePublicationMatrix.filter { publication ->
+        isReleasePublicationAvailableOnHost(
             publication.projectPath,
             publication.publicationName,
-            publication.groupId,
-            publication.artifactId,
-            expectedReleaseVersion,
-            publication.primaryExtension,
-        ).joinToString(releasePublicationDescriptorSeparator)
+        )
+    }
+val expectedReleaseVersion = project.version.toString()
+fun ExpectedReleasePublication.descriptor(version: String): String =
+    listOf(
+        projectPath,
+        publicationName,
+        groupId,
+        artifactId,
+        version,
+        primaryExtension,
+    ).joinToString(releasePublicationDescriptorSeparator)
+
+val expectedReleasePublicationDescriptors =
+    expectedReleasePublicationMatrix.map { publication ->
+        publication.descriptor(expectedReleaseVersion)
+    }
+val hostExpectedReleasePublicationDescriptors =
+    hostAvailableReleasePublications.map { publication ->
+        publication.descriptor(expectedReleaseVersion)
     }
 val actualReleasePublicationDescriptors = mutableListOf<String>()
 val verifyReleasePublicationMatrix =
@@ -320,17 +345,18 @@ val verifyReleasePublicationMatrix =
             "Verifies that the current release host configures every required Maven publication."
         inputs.property(
             "expectedReleasePublications",
-            expectedReleasePublicationDescriptors.sorted(),
+            hostExpectedReleasePublicationDescriptors.sorted(),
         )
         inputs.property(
             "actualReleasePublications",
             providers.provider { actualReleasePublicationDescriptors.sorted() },
         )
         doLast {
-            val expectedReleasePublicationSet = expectedReleasePublicationDescriptors.toSet()
+            val expectedReleasePublicationSet = hostExpectedReleasePublicationDescriptors.toSet()
             val actualReleasePublicationSet = actualReleasePublicationDescriptors.toSet()
             check(
-                expectedReleasePublicationSet.size == expectedReleasePublicationDescriptors.size
+                expectedReleasePublicationSet.size ==
+                    hostExpectedReleasePublicationDescriptors.size
             ) {
                 "Static release publication matrix contains duplicate descriptors"
             }
@@ -545,7 +571,6 @@ fun ExpectedReleasePublication.releaseStagingTaskPath(): String {
     return "$projectPath:publish${publicationTaskSegment}PublicationToReleaseStagingRepository"
 }
 
-val iosReleasePublicationNames = setOf("iosArm64", "iosSimulatorArm64")
 val jvmAndWebReleasePublicationNames =
     setOf(
         "kotlinMultiplatform",
@@ -558,10 +583,6 @@ val jvmAndWebReleasePublicationNames =
 val iosReleasePublications =
     expectedReleasePublicationMatrix.filter { publication ->
         publication.publicationName in iosReleasePublicationNames
-    }
-val hostAvailableReleasePublications =
-    expectedReleasePublicationMatrix.filter { publication ->
-        hostIsMacOs || publication.publicationName !in iosReleasePublicationNames
     }
 val androidReleasePublications =
     expectedReleasePublicationMatrix.filter { publication ->
@@ -1327,8 +1348,10 @@ gradle.projectsEvaluated {
                     "Release publication descriptor contains an unsupported separator: " +
                         "${project.path}:${publication.name}"
                 }
-                actualReleasePublicationDescriptors +=
-                    descriptorFields.joinToString(releasePublicationDescriptorSeparator)
+                if (isReleasePublicationAvailableOnHost(project.path, publication.name)) {
+                    actualReleasePublicationDescriptors +=
+                        descriptorFields.joinToString(releasePublicationDescriptorSeparator)
+                }
             }
     }
     val dependencyTaskNames =
