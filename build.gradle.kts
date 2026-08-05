@@ -559,6 +559,10 @@ val iosReleasePublications =
     expectedReleasePublicationMatrix.filter { publication ->
         publication.publicationName in iosReleasePublicationNames
     }
+val hostAvailableReleasePublications =
+    expectedReleasePublicationMatrix.filter { publication ->
+        hostIsMacOs || publication.publicationName !in iosReleasePublicationNames
+    }
 val androidReleasePublications =
     expectedReleasePublicationMatrix.filter { publication ->
         publication.projectPath == ":runtime-wasmtime-android"
@@ -1343,7 +1347,7 @@ gradle.projectsEvaluated {
             task.name == "publishAllPublicationsToReleaseStagingRepository"
         }
     val shardedPublicationTaskPaths =
-        expectedReleasePublicationMatrix
+        hostAvailableReleasePublications
             .map(ExpectedReleasePublication::releaseStagingTaskPath)
             .toSet()
     val shardedPublicationTasks =
@@ -1353,7 +1357,7 @@ gradle.projectsEvaluated {
         val missing =
             shardedPublicationTaskPaths -
                 shardedPublicationTasks.map { task -> task.path }.toSet()
-        "Release publication shard tasks are missing: $missing"
+        "Release publication shard tasks are missing on $hostOs: $missing"
     }
     val verificationTasks = dependencyTasks - publicationTasks.toSet()
     publicationTasks.forEach { task ->
