@@ -646,8 +646,8 @@ val stageIosReleasePublications =
         publications = iosReleasePublications,
     )
 
-val abiVerificationProjectPaths =
-    (multiplatformReleaseArtifacts.keys + jvmReleaseArtifacts.keys).toSortedSet()
+val jvmAbiVerificationProjectPaths = jvmReleaseArtifacts.keys.toSortedSet()
+val multiplatformAbiVerificationProjectPaths = multiplatformReleaseArtifacts.keys.toSortedSet()
 
 val ciJvmGate =
     tasks.register("ciJvmGate") {
@@ -665,7 +665,7 @@ val ciJvmGate =
             multiplatformTestTasks.keys.map { projectPath -> "$projectPath:jvmTest" },
         )
         dependsOn(
-            abiVerificationProjectPaths.map { projectPath -> "$projectPath:checkKotlinAbi" },
+            jvmAbiVerificationProjectPaths.map { projectPath -> "$projectPath:checkKotlinAbi" },
         )
     }
 
@@ -715,6 +715,11 @@ val ciIosGate =
                 "iosSimulatorArm64Test"
                     .takeIf(taskNames::contains)
                     ?.let { taskName -> "$projectPath:$taskName" }
+            },
+        )
+        dependsOn(
+            multiplatformAbiVerificationProjectPaths.map { projectPath ->
+                "$projectPath:checkKotlinAbi"
             },
         )
         dependsOn(stageIosReleasePublications)
