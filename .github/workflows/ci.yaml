@@ -81,19 +81,27 @@ jobs:
   runtime-spec:
     name: Wasm runtime spec (${{ matrix.label }})
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
         include:
           - shard: 0
-            label: 1/4
+            label: 1/8
           - shard: 1
-            label: 2/4
+            label: 2/8
           - shard: 2
-            label: 3/4
+            label: 3/8
           - shard: 3
-            label: 4/4
+            label: 4/8
+          - shard: 4
+            label: 5/8
+          - shard: 5
+            label: 6/8
+          - shard: 6
+            label: 7/8
+          - shard: 7
+            label: 8/8
 
     steps:
       - name: Checkout sources
@@ -113,7 +121,7 @@ jobs:
           ./gradlew --no-daemon --max-workers=4
           -Pkotlin.compiler.execution.strategy=in-process
           -Pkrwa.runtimeTests.maxParallelForks=3
-          -Pkrwa.runtimeTests.shard=${{ matrix.shard }}/4
+          -Pkrwa.runtimeTests.shard=${{ matrix.shard }}/8
           ciRuntimeSpecGate --stacktrace
         env:
           GRADLE_OPTS: "-ea"
@@ -362,8 +370,8 @@ jobs:
         run: >-
           ./gradlew --no-daemon --max-workers=4
           -Pkotlin.compiler.execution.strategy=in-process
-          prepareStandaloneSampleReleaseDependencies
-          prepareAndroidSampleReleaseDependencies
+          prepareMergedStandaloneSampleReleaseDependencies
+          prepareMergedAndroidSampleReleaseDependencies
           prepareReleasePomDescriptorDependencies
         env:
           GRADLE_OPTS: "-ea"

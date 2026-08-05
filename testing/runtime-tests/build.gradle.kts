@@ -74,6 +74,8 @@ dependencies {
 private val runtimeSpecTestShard =
     providers.gradleProperty("krwa.runtimeTests.shard")
         .map(::parseRuntimeSpecTestShard)
+private val runtimeSpecTestCostsFile =
+    layout.projectDirectory.file("runtime-spec-test-costs.txt").asFile
 
 tasks.withType<Test>().configureEach {
     jvmArgs("--enable-native-access=ALL-UNNAMED")
@@ -96,35 +98,45 @@ tasks.withType<Test>().configureEach {
         val includedWasts = profileDirectory.file("included-wasts.txt").asFile.readListFile()
         val weightsFile = profileDirectory.file("test-counts.txt").asFile
         val testWeights = readRuntimeSpecTestWeights(weightsFile.readLines())
+        val costsFile = runtimeSpecTestCostsFile
+        val testCosts = readRuntimeSpecTestWeights(costsFile.readLines())
+        val includedTestClasses = includedWasts.map(::runtimeSpecTestClassName)
         require(testWeights.keys == includedWasts.toSet()) {
             "Runtime specification-test weights must match included-wasts.txt exactly"
         }
         require(testWeights.values.sum() == 27_382) {
             "Expected runtime specification-test weights to cover 27382 tests"
         }
+        require(testCosts.keys == includedTestClasses.toSet()) {
+            "Runtime specification-test costs must match generated test classes exactly"
+        }
         val assignments = List(shard.count) { mutableListOf<String>() }
-        val assignedTestCounts = IntArray(shard.count)
-        includedWasts
-            .map { wastPath -> wastPath to checkNotNull(testWeights[wastPath]) }
+        val assignedTestCosts = IntArray(shard.count)
+        includedTestClasses
+            .map { testClass -> testClass to checkNotNull(testCosts[testClass]) }
             .sortedWith(
-                compareByDescending<Pair<String, Int>> { (_, count) -> count }
+                compareByDescending<Pair<String, Int>> { (_, cost) -> cost }
                     .thenBy { it.first },
             )
-            .forEach { (wastPath, testCount) ->
+            .forEach { (testClass, testCost) ->
                 val lightestShard =
-                    assignedTestCounts.indices.minWith(
-                        compareBy<Int> { index -> assignedTestCounts[index] }
+                    assignedTestCosts.indices.minWith(
+                        compareBy<Int> { index -> assignedTestCosts[index] }
                             .thenBy { index -> index },
                     )
-                assignments[lightestShard] += wastPath
-                assignedTestCounts[lightestShard] += testCount
+                assignments[lightestShard] += testClass
+                assignedTestCosts[lightestShard] += testCost
             }
-        val selectedTestClasses =
-            assignments[shard.index]
-                .map(::runtimeSpecTestClassName)
+        val selectedTestClasses = assignments[shard.index]
         require(selectedTestClasses.isNotEmpty()) {
             "Runtime specification-test shard ${shard.index}/${shard.count} is empty"
         }
+        logger.lifecycle(
+            "Runtime specification-test shard ${shard.index + 1}/${shard.count}: " +
+                "${selectedTestClasses.size} classes, " +
+                "${assignedTestCosts[shard.index]} profiled ms",
+        )
+        inputs.file(costsFile)
         inputs.property("runtimeSpecTestShard", "${shard.index}/${shard.count}")
         inputs.property("runtimeSpecTestClasses", selectedTestClasses)
         filter {
@@ -139,6 +151,8 @@ private val wasmSpecProfileDirectory =
     layout.projectDirectory.dir("src/test-gen/wasm-spec/$wasmSpecProfile").asFile
 private val wasmSpecTestWeights =
     readRuntimeSpecTestWeights(wasmSpecProfileDirectory.resolve("test-counts.txt").readLines())
+private val wasmSpecTestCosts =
+    readRuntimeSpecTestWeights(runtimeSpecTestCostsFile.readLines())
 
 registerWasmSpecTests(wasmSpecProfile)
 
@@ -151,6 +165,7 @@ val verifyGeneratedWasmSpecInventory =
         dependsOn("generateWasmSpecTests")
         inputs.dir(generatedWasmSpecSources)
         inputs.dir(wasmSpecProfileDirectory)
+        inputs.file(runtimeSpecTestCostsFile)
         doLast {
             val includedWasts =
                 wasmSpecProfileDirectory.resolve("included-wasts.txt").readListFile()
@@ -184,6 +199,9 @@ val verifyGeneratedWasmSpecInventory =
             check(wasmSpecTestWeights.values.sum() == testCount) {
                 "Expected test-counts.txt to cover $testCount tests, got " +
                     wasmSpecTestWeights.values.sum()
+            }
+            check(wasmSpecTestCosts.keys == includedWasts.map(::runtimeSpecTestClassName).toSet()) {
+                "Expected test-costs.txt to classify every generated test class exactly once"
             }
 
             check(includedWasts.size == 80) {

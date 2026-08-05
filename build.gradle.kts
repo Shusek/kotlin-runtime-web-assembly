@@ -452,6 +452,7 @@ fun registerNestedReleaseDependencyPreparation(
     nestedBuildPath: String,
     gradleWrapperPath: String,
     allowMissingKrwaModules: Boolean,
+    useReleaseStagingRepository: Boolean = false,
     additionalTasks: List<String> = emptyList(),
 ): TaskProvider<Exec> =
     tasks.register<Exec>(name) {
@@ -470,7 +471,10 @@ fun registerNestedReleaseDependencyPreparation(
                     "--init-script",
                     prepareExternalReleaseDependenciesInitScript.asFile.absolutePath,
                 )
-            if (allowMissingKrwaModules) {
+            if (useReleaseStagingRepository) {
+                arguments +=
+                    "-Pkrwa.releaseRepository=${releaseStagingRepository.get().asFile.absolutePath}"
+            } else if (allowMissingKrwaModules) {
                 arguments +=
                     listOf(
                         "-Pkrwa.releaseRepository=${placeholderRepository.absolutePath}",
@@ -500,6 +504,23 @@ val prepareAndroidSampleReleaseDependencies =
         nestedBuildPath = "samples/android-tests",
         gradleWrapperPath = "samples/android-tests/$nestedGradleWrapperName",
         allowMissingKrwaModules = true,
+    )
+val prepareMergedStandaloneSampleReleaseDependencies =
+    registerNestedReleaseDependencyPreparation(
+        name = "prepareMergedStandaloneSampleReleaseDependencies",
+        nestedBuildPath = "samples/sample",
+        gradleWrapperPath = "samples/sample/$nestedGradleWrapperName",
+        allowMissingKrwaModules = false,
+        useReleaseStagingRepository = true,
+        additionalTasks = listOf("kotlinWasmBinaryenSetup"),
+    )
+val prepareMergedAndroidSampleReleaseDependencies =
+    registerNestedReleaseDependencyPreparation(
+        name = "prepareMergedAndroidSampleReleaseDependencies",
+        nestedBuildPath = "samples/android-tests",
+        gradleWrapperPath = "samples/android-tests/$nestedGradleWrapperName",
+        allowMissingKrwaModules = false,
+        useReleaseStagingRepository = true,
     )
 val asmBomVersion = libs.versions.asm.get()
 val releasePomDescriptorDependencies =
