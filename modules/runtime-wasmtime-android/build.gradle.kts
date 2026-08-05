@@ -390,7 +390,9 @@ val buildWasmtimePulleyArmeabiV7aJniLib by tasks.registering {
     inputs.property("androidNdkVersion", androidNdkVersion)
     inputs.property("androidMinSdk", androidMinSdk)
     inputs.property("android16KbElfRustFlags", android16KbElfRustFlags)
+    inputs.file(project(":runtime").layout.projectDirectory.file("build.gradle.kts"))
     outputs.file(wasmtimePulleyArmeabiV7aJniLib)
+    outputs.cacheIf("pinned Android Wasmtime library is reproducible") { true }
 
     doLast {
         val cargo = cargoBinary()
@@ -453,6 +455,7 @@ fun registerAndroidCppJniTask(
     val source = layout.projectDirectory.file("src/androidMain/cpp/$sourceName")
     inputs.file(source)
     outputs.file(output)
+    outputs.cacheIf("pinned Android C++ bridge is reproducible") { true }
 
     doLast {
         val clang = androidClang(abi, cxx = true)
@@ -524,6 +527,7 @@ fun registerWasmtimeP3BridgeAndroidTask(
         },
     )
     outputs.file(output)
+    outputs.cacheIf("pinned Android Preview3 bridge is reproducible") { true }
 
     doLast {
         val cargo = cargoBinary()

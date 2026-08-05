@@ -1,0 +1,14 @@
+name: Set up KRWA Gradle
+description: Sets up the pinned Java runtime and the shared Gradle build cache.
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Java
+      uses: actions/setup-java@v5
+      with:
+        distribution: temurin
+        java-version: 25
+
+    - name: Set up Gradle
+      uses: gradle/actions/setup-gradle@v6

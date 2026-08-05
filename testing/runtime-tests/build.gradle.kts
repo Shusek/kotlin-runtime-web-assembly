@@ -11,6 +11,16 @@ dependencies {
 tasks.withType<Test>().configureEach {
     jvmArgs("--enable-native-access=ALL-UNNAMED")
     maxHeapSize = "2g"
+    maxParallelForks =
+        providers.gradleProperty("krwa.runtimeTests.maxParallelForks")
+            .map(String::toInt)
+            .map { configuredForks ->
+                require(configuredForks > 0) {
+                    "krwa.runtimeTests.maxParallelForks must be greater than zero"
+                }
+                configuredForks
+            }
+            .getOrElse(1)
     systemProperty("krwa.wasmTools.forceEmbedded", "true")
 }
 

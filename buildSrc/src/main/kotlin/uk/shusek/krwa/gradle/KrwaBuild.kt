@@ -506,6 +506,7 @@ fun Project.registerWasmSpecTests(
             inputs.property("wasmToolsMode", "embedded")
             outputs.dir(generatedSourceDir)
             outputs.dir(compiledWastDir)
+            outputs.cacheIf("generated Wasm specification tests are deterministic") { true }
             mainClass.set("uk.shusek.krwa.testgen.TestGenCli")
             classpath = rootProject.project(":test-gen-lib").mainSourceSet().runtimeClasspath
             systemProperty("krwa.wasmTools.forceEmbedded", "true")

@@ -31,19 +31,14 @@ jobs:
         uses: actions/setup-python@v7
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: docs/requirements.txt
 
       - name: Install Zensical
         run: python -m pip install -r docs/requirements.txt
 
-      - name: Setup Java
-        uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: 25
-          cache: gradle
-
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v6
+        uses: ./.github/actions/setup-gradle
 
       - name: Build Zensical docs
         run: zensical build --clean
@@ -68,9 +63,16 @@ jobs:
             git archive refs/remotes/origin/dev-maven | tar -x -C build/pages/maven
           fi
 
+      - name: Set up Android native toolchain
+        uses: ./.github/actions/setup-native
+        with:
+          platform: android
+
       - name: Publish snapshot artifacts
         run: >-
-          ./gradlew --no-daemon
+          ./gradlew --no-daemon --max-workers=2
+          -Pkotlin.compiler.execution.strategy=in-process
+          -Pkrwa.native.platform=android
           -Pversion="$KRWA_PUBLISH_VERSION"
           -Pkrwa.githubPagesMavenRepository="$PWD/build/pages/maven"
           verifyImmutablePublicationVersion
@@ -97,36 +99,21 @@ jobs:
       - name: Select immutable development version
         run: echo "KRWA_PUBLISH_VERSION=0.3.0-dev.${GITHUB_SHA:0:12}" >> "$GITHUB_ENV"
 
-      - name: Setup Java
-        uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: 25
-          cache: gradle
-
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v6
+        uses: ./.github/actions/setup-gradle
 
-      - name: Install and verify pinned native toolchain
-        run: |
-          set -euo pipefail
-          rust_version="$(sed -n 's/^rustRelease = "\(.*\)"$/\1/p' gradle/libs.versions.toml)"
-          rust_commit="$(sed -n 's/^rustReleaseCommit = "\(.*\)"$/\1/p' gradle/libs.versions.toml)"
-          test -n "$rust_version"
-          test -n "$rust_commit"
-          rustup --version
-          rustup toolchain install "$rust_version" --profile minimal
-          rustc_metadata="$(rustup run "$rust_version" rustc -vV)"
-          test "$(printf '%s\n' "$rustc_metadata" | sed -n 's/^release: //p')" = "$rust_version"
-          test "$(printf '%s\n' "$rustc_metadata" | sed -n 's/^commit-hash: //p')" = "$rust_commit"
-          cargo "+$rust_version" --version
-          cmake --version
-          xcrun --sdk iphoneos --find clang++
-          xcrun --sdk iphonesimulator --find clang++
+      - name: Set up iOS native toolchain
+        uses: ./.github/actions/setup-native
+        with:
+          platform: ios
 
       - name: Publish iOS snapshot artifacts
         run: |
-          ./gradlew --no-daemon -Pkrwa.githubPagesMavenRepository="$PWD/build/ios-maven" \
+          ./gradlew --no-daemon --max-workers=2 \
+            -Pkotlin.compiler.execution.strategy=in-process \
+            -Pkrwa.native.platform=ios \
+            -Pkrwa.appleToolchainIdentity="$KRWA_APPLE_TOOLCHAIN_IDENTITY" \
+            -Pkrwa.githubPagesMavenRepository="$PWD/build/ios-maven" \
             -Pversion="$KRWA_PUBLISH_VERSION" \
             verifyImmutablePublicationVersion \
             :annotations:annotations:publishIosArm64PublicationToGithubPagesRepository \

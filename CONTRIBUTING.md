@@ -125,6 +125,13 @@ Our priority is to focus on implementing [proposals](https://github.com/WebAssem
 
 Because we are all humans, and to ensure Kotlin Runtime Web Assembly evolves in the right direction, all changes must pass continuous integration before being merged. The CI is based on GitHub Actions, which means that pull requests will receive automatic feedback.  Please watch out for the results of these workflows to see if your PR passes all tests.
 
+GitHub Actions runs the release coverage as parallel platform gates instead of invoking the
+single-host `releaseGate`: JVM, host-native, Wasm/publication metadata, Android, and iOS execute on
+appropriate runners. The platform jobs stage disjoint Maven repository shards; a final Linux job
+merges them, verifies the complete publication matrix, and compiles the standalone and Android
+consumers against only the merged repository. Maven Central releases call the same platform gates
+for an immutable tag and add only the final signing and upload step.
+
 ### IntelliJ default limits
 
 Some of the SIMD tests are exceeding the default limits of IntelliJ.

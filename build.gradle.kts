@@ -161,6 +161,10 @@ tasks.register("multiplatformTest") {
 }
 
 val releaseStagingRepository = layout.buildDirectory.dir("release-staging-repository")
+val verifyPrebuiltReleaseStagingRepository =
+    providers.gradleProperty("krwa.release.verifyOnly")
+        .map(String::toBooleanStrict)
+        .orElse(false)
 val releaseJavadocJars = mutableMapOf<String, TaskProvider<Jar>>()
 val releasePublicationDescriptorSeparator = "\u001f"
 data class ExpectedReleasePublication(
@@ -531,6 +535,164 @@ val cleanReleaseStagingRepository =
         }
         delete(releaseStagingRepository)
         outputs.upToDateWhen { false }
+    }
+
+fun ExpectedReleasePublication.releaseStagingTaskPath(): String {
+    val publicationTaskSegment =
+        publicationName.replaceFirstChar { character ->
+            if (character.isLowerCase()) character.titlecase() else character.toString()
+        }
+    return "$projectPath:publish${publicationTaskSegment}PublicationToReleaseStagingRepository"
+}
+
+val iosReleasePublicationNames = setOf("iosArm64", "iosSimulatorArm64")
+val jvmAndWebReleasePublicationNames =
+    setOf(
+        "kotlinMultiplatform",
+        "jvm",
+        "wasmJs",
+        "maven",
+        "pluginMaven",
+        "componentModelPluginMarkerMaven",
+    )
+val iosReleasePublications =
+    expectedReleasePublicationMatrix.filter { publication ->
+        publication.publicationName in iosReleasePublicationNames
+    }
+val androidReleasePublications =
+    expectedReleasePublicationMatrix.filter { publication ->
+        publication.projectPath == ":runtime-wasmtime-android"
+    }
+val jvmAndWebReleasePublications =
+    expectedReleasePublicationMatrix.filter { publication ->
+        publication.projectPath != ":runtime-wasmtime-android" &&
+            publication.publicationName in jvmAndWebReleasePublicationNames
+    }
+val classifiedReleasePublicationList =
+    iosReleasePublications + androidReleasePublications + jvmAndWebReleasePublications
+val classifiedReleasePublications = classifiedReleasePublicationList.toSet()
+check(
+    classifiedReleasePublications == expectedReleasePublicationMatrix.toSet() &&
+        classifiedReleasePublicationList.size == expectedReleasePublicationMatrix.size,
+) {
+    val missing = expectedReleasePublicationMatrix.toSet() - classifiedReleasePublications
+    val duplicated =
+        classifiedReleasePublicationList
+            .groupingBy { publication -> publication }
+            .eachCount()
+            .filterValues { count -> count != 1 }
+            .keys
+    "Every release publication must belong to exactly one CI shard; " +
+        "missing=$missing, duplicated=$duplicated"
+}
+
+fun registerReleasePublicationShard(
+    name: String,
+    descriptionText: String,
+    publications: List<ExpectedReleasePublication>,
+) = tasks.register(name) {
+    group = "publishing"
+    description = descriptionText
+    dependsOn(
+        cleanReleaseStagingRepository,
+        verifyReleasePublicationMatrix,
+        tasks.named("verifyImmutablePublicationVersion"),
+    )
+    dependsOn(publications.map(ExpectedReleasePublication::releaseStagingTaskPath))
+}
+
+val stageJvmAndWebReleasePublications =
+    registerReleasePublicationShard(
+        name = "stageJvmAndWebReleasePublications",
+        descriptionText =
+            "Stages JVM, Wasm JS, KMP metadata, Gradle plugin, and BOM publications.",
+        publications = jvmAndWebReleasePublications,
+    )
+val stageAndroidReleasePublications =
+    registerReleasePublicationShard(
+        name = "stageAndroidReleasePublications",
+        descriptionText = "Stages Android AAR and Android KMP metadata publications.",
+        publications = androidReleasePublications,
+    )
+val stageIosReleasePublications =
+    registerReleasePublicationShard(
+        name = "stageIosReleasePublications",
+        descriptionText = "Stages iOS device and simulator publications.",
+        publications = iosReleasePublications,
+    )
+
+val abiVerificationProjectPaths =
+    (multiplatformReleaseArtifacts.keys + jvmReleaseArtifacts.keys).toSortedSet()
+
+val ciJvmGate =
+    tasks.register("ciJvmGate") {
+        group = "verification"
+        description = "Runs JVM, build-logic, and ABI verification for CI."
+        dependsOn(
+            "verifyNoUnjustifiedDisabledTests",
+            "verifySampleDependencyVersions",
+            ":bom:check",
+            ":component-model-gradle-plugin:check",
+            ":component-model-gradle-plugin:validatePlugins",
+        )
+        dependsOn(jvmProjectPaths.map { projectPath -> "$projectPath:check" })
+        dependsOn(
+            multiplatformTestTasks.keys.map { projectPath -> "$projectPath:jvmTest" },
+        )
+        dependsOn(
+            abiVerificationProjectPaths.map { projectPath -> "$projectPath:checkKotlinAbi" },
+        )
+    }
+
+val ciHostNativeGate =
+    tasks.register("ciHostNativeGate") {
+        group = "verification"
+        description = "Builds and tests the host Wasmtime Preview3 bridge in isolation."
+        dependsOn(
+            ":runtime:testWasmtimeP3Bridge",
+            ":runtime:testWasmtimeP3JvmProbe",
+        )
+    }
+
+val ciWebPublicationGate =
+    tasks.register("ciWebPublicationGate") {
+        group = "verification"
+        description = "Runs browser and Node Wasm tests and stages non-native publications."
+        val wasmTestProjectPaths =
+            multiplatformTestTasks.filterValues { taskNames ->
+                "wasmJsNodeTest" in taskNames
+            }.keys
+        dependsOn(
+            wasmTestProjectPaths.flatMap { projectPath ->
+                listOf(
+                    "$projectPath:wasmJsBrowserTest",
+                    "$projectPath:wasmJsNodeTest",
+                )
+            },
+        )
+        dependsOn(stageJvmAndWebReleasePublications)
+    }
+
+val ciAndroidGate =
+    tasks.register("ciAndroidGate") {
+        group = "verification"
+        description = "Runs Android host/native checks and stages both Android publications."
+        dependsOn(":runtime-wasmtime-android:check")
+        dependsOn(stageAndroidReleasePublications)
+    }
+
+val ciIosGate =
+    tasks.register("ciIosGate") {
+        group = "verification"
+        description = "Runs iOS simulator tests and stages device and simulator publications."
+        dependsOn(
+            multiplatformTestTasks.mapNotNull { (projectPath, taskNames) ->
+                "iosSimulatorArm64Test"
+                    .takeIf(taskNames::contains)
+                    ?.let { taskName -> "$projectPath:$taskName" }
+            },
+        )
+        dependsOn(stageIosReleasePublications)
     }
 
 fun File.isReleaseStagingHostMetadata(): Boolean =
@@ -991,6 +1153,27 @@ val finalizeReleaseStagingRepository =
         }
     }
 
+val verifyMergedReleaseRepository =
+    tasks.register("verifyMergedReleaseRepository") {
+        group = "verification"
+        description =
+            "Verifies and consumer-tests a prebuilt, merged release staging repository."
+        if (verifyPrebuiltReleaseStagingRepository.get()) {
+            dependsOn(
+                tasks.named("verifyImmutablePublicationVersion"),
+                verifySampleDependencyVersions,
+                finalizeReleaseStagingRepository,
+            )
+        } else {
+            doLast {
+                error(
+                    "verifyMergedReleaseRepository requires " +
+                        "-Pkrwa.release.verifyOnly=true",
+                )
+            }
+        }
+    }
+
 subprojects {
     pluginManager.withPlugin("maven-publish") {
         if (path != ":bom") {
@@ -1159,6 +1342,19 @@ gradle.projectsEvaluated {
         dependencyTasks.filter { task ->
             task.name == "publishAllPublicationsToReleaseStagingRepository"
         }
+    val shardedPublicationTaskPaths =
+        expectedReleasePublicationMatrix
+            .map(ExpectedReleasePublication::releaseStagingTaskPath)
+            .toSet()
+    val shardedPublicationTasks =
+        allprojects.flatMap { project -> project.tasks }
+            .filter { task -> task.path in shardedPublicationTaskPaths }
+    check(shardedPublicationTasks.map { task -> task.path }.toSet() == shardedPublicationTaskPaths) {
+        val missing =
+            shardedPublicationTaskPaths -
+                shardedPublicationTasks.map { task -> task.path }.toSet()
+        "Release publication shard tasks are missing: $missing"
+    }
     val verificationTasks = dependencyTasks - publicationTasks.toSet()
     publicationTasks.forEach { task ->
         task.mustRunAfter(
@@ -1169,12 +1365,17 @@ gradle.projectsEvaluated {
             ) + verificationTasks,
         )
     }
+    shardedPublicationTasks.forEach { task ->
+        task.mustRunAfter(cleanReleaseStagingRepository)
+    }
     verifyReleaseStagingRepository.configure {
         inputs.property(
             "expectedReleasePublications",
             expectedReleasePublicationDescriptors.sorted(),
         )
-        dependsOn(publicationTasks)
+        if (!verifyPrebuiltReleaseStagingRepository.get()) {
+            dependsOn(publicationTasks)
+        }
         mustRunAfter(verificationTasks)
     }
     releaseGate.configure {
