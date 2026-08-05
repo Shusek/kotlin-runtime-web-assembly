@@ -1065,6 +1065,11 @@ public final class uk/shusek/krwa/runtime/WasmtimeModuleCompilerBuildIdentityKt 
 	public static final field WasmtimeModuleCompilerBuildIdentity Ljava/lang/String;
 }
 
+public final class uk/shusek/krwa/runtime/WasmtimeNativeImageFeature : org/graalvm/nativeimage/hosted/Feature {
+	public fun <init> ()V
+	public fun duringSetup (Lorg/graalvm/nativeimage/hosted/Feature$DuringSetupAccess;)V
+}
+
 public final class uk/shusek/krwa/runtime/WasmtimePreview3ComponentConfig {
 	public fun <init> (Ljava/lang/String;[BLjava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/util/Map;Luk/shusek/krwa/runtime/WasmtimePreview3NetworkPolicy;JJJJJJJJ)V
 	public synthetic fun <init> (Ljava/lang/String;[BLjava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/util/Map;Luk/shusek/krwa/runtime/WasmtimePreview3NetworkPolicy;JJJJJJJJILkotlin/jvm/internal/DefaultConstructorMarker;)V

@@ -1,5 +1,6 @@
 module uk.shusek.krwa.runtime {
     requires kotlin.stdlib;
+    requires static org.graalvm.nativeimage;
     requires transitive uk.shusek.krwa.wasm;
 
     exports uk.shusek.krwa.runtime;

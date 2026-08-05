@@ -810,6 +810,11 @@ extensions.configure<KotlinMultiplatformExtension> {
             implementation(kotlin("test"))
         }
     }
+    sourceSets.named("jvmMain") {
+        dependencies {
+            compileOnly(libs.graalvmNativeImage)
+        }
+    }
     sourceSets.named("jvmTest") {
         kotlin.srcDir("src/test/kotlin")
         resources.srcDir("src/test/resources")

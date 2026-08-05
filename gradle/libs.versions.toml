@@ -10,6 +10,7 @@ asm = "9.10.1"
 commonsLang = "3.20.0"
 dokka = "2.2.0"
 errorProne = "2.49.0"
+graalvmNativeImage = "25.0.2"
 jacksonAnnotations = "2.22"
 jacksonDatabind = "2.21.4"
 jetbrainsAnnotations = "13.0"
@@ -43,6 +44,7 @@ asmCommons = { module = "org.ow2.asm:asm-commons" }
 asmUtil = { module = "org.ow2.asm:asm-util" }
 commonsLang3 = { module = "org.apache.commons:commons-lang3", version.ref = "commonsLang" }
 errorProneAnnotations = { module = "com.google.errorprone:error_prone_annotations", version.ref = "errorProne" }
+graalvmNativeImage = { module = "org.graalvm.sdk:nativeimage", version.ref = "graalvmNativeImage" }
 jacksonAnnotations = { module = "com.fasterxml.jackson.core:jackson-annotations", version.ref = "jacksonAnnotations" }
 jacksonDatabind = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "jacksonDatabind" }
 jetbrainsAnnotations = { module = "org.jetbrains:annotations", version.ref = "jetbrainsAnnotations" }

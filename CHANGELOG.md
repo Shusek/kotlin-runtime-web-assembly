@@ -5,6 +5,19 @@ patch and prerelease identifiers advance without changing the `0.3` major/minor 
 `1.0.0`, API changes may still be intentional; release candidates remain immutable once
 published.
 
+## 0.3.0-rc.7 (2026-08-05)
+
+### Added
+
+- JVM consumers building with GraalVM Native Image now receive a hosted feature that registers
+  the Wasmtime Foreign Function & Memory downcalls, direct host-function upcall, and reflective
+  execution entrypoints required by the runtime.
+
+### Compatibility
+
+- GraalVM APIs are a compile-only JVM dependency and the feature activates only during Native
+  Image generation, so ordinary JVM and multiplatform consumers retain their existing behavior.
+
 ## 0.3.0-rc.6 (2026-07-25)
 
 ### Fixed

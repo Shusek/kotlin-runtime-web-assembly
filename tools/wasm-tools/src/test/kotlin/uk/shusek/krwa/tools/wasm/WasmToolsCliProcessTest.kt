@@ -248,11 +248,16 @@ class WasmToolsCliProcessTest {
 
     private fun readPid(pidFile: Path): Long {
         val deadline = System.nanoTime() + 10_000_000_000L
-        while (!Files.isRegularFile(pidFile) && System.nanoTime() < deadline) {
+        while (System.nanoTime() < deadline) {
+            if (Files.isRegularFile(pidFile)) {
+                val pid = runCatching { Files.readString(pidFile).trim().toLongOrNull() }.getOrNull()
+                if (pid != null && pid > 0L) {
+                    return pid
+                }
+            }
             Thread.sleep(10L)
         }
-        assertTrue(Files.isRegularFile(pidFile), "child process did not publish its PID")
-        return Files.readString(pidFile).trim().toLong()
+        throw AssertionError("child process did not publish a valid PID")
     }
 
     private fun assertProcessTerminates(pid: Long) {
