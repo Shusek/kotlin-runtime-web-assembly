@@ -2,7 +2,9 @@ package uk.shusek.krwa.gradle
 
 import java.io.File
 import org.gradle.api.Project
+import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.VersionCatalogsExtension
+import org.gradle.api.attributes.Usage
 import org.gradle.api.plugins.BasePluginExtension
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.publish.PublishingExtension
@@ -219,6 +221,23 @@ fun Project.patchJvmModuleInfo() {
 }
 
 fun Project.mainSourceSet() = extensions.getByType<SourceSetContainer>().named("main").get()
+
+private fun Project.toolRuntimeClasspath(
+    name: String,
+    toolProjectPath: String,
+): Configuration =
+    configurations.create(name) {
+        isCanBeConsumed = false
+        isCanBeResolved = true
+        attributes {
+            attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage.JAVA_RUNTIME))
+        }
+    }.also { classpath ->
+        dependencies.add(
+            classpath.name,
+            dependencies.project(mapOf("path" to toolProjectPath)),
+        )
+    }
 
 fun Project.testSourceSet() = extensions.getByType<SourceSetContainer>().named("test").get()
 
@@ -463,6 +482,8 @@ fun Project.registerWasmSpecTests(
     val testsuiteFolder =
         rootProject.layout.buildDirectory.dir("external-testsuites/wasm").get().asFile
     val offline = gradle.startParameter.isOffline
+    val testGeneratorClasspath =
+        toolRuntimeClasspath("wasmSpecTestGeneratorRuntimeClasspath", ":test-gen-lib")
     val writeConfigTask =
         tasks.register("writeWasmSpecTestGenConfig") {
             inputs.dir(configDir)
@@ -506,8 +527,9 @@ fun Project.registerWasmSpecTests(
             inputs.property("wasmToolsMode", "embedded")
             outputs.dir(generatedSourceDir)
             outputs.dir(compiledWastDir)
+            outputs.cacheIf("generated Wasm specification tests are deterministic") { true }
             mainClass.set("uk.shusek.krwa.testgen.TestGenCli")
-            classpath = rootProject.project(":test-gen-lib").mainSourceSet().runtimeClasspath
+            classpath = testGeneratorClasspath
             systemProperty("krwa.wasmTools.forceEmbedded", "true")
             doFirst {
                 project.delete(generatedSourceDir.get().asFile, compiledWastDir.get().asFile)
@@ -544,6 +566,8 @@ fun Project.registerWasiSpecTests() {
             "external-testsuites/wasi-testsuite-$WASI_TEST_SUITE_REVISION.zip"
         )
     val offline = gradle.startParameter.isOffline
+    val testGeneratorClasspath =
+        toolRuntimeClasspath("wasiSpecTestGeneratorRuntimeClasspath", ":wasi-test-gen")
     val writeConfigTask =
         tasks.register("writeWasiSpecTestGenConfig") {
             inputs.dir(configDir)
@@ -578,7 +602,7 @@ fun Project.registerWasiSpecTests() {
                 "The verified specification checkout is durable local state and must survive Gradle version changes.",
             )
             mainClass.set("uk.shusek.krwa.wasitestgen.WasiTestGenPrepareCli")
-            classpath = rootProject.project(":wasi-test-gen").mainSourceSet().runtimeClasspath
+            classpath = testGeneratorClasspath
             doFirst {
                 setArgs(listOf(configFile.get().asFile.absolutePath))
             }
@@ -593,7 +617,7 @@ fun Project.registerWasiSpecTests() {
             outputs.dir(generatedSourceDir)
             outputs.dir(testSuiteFolder)
             mainClass.set("uk.shusek.krwa.wasitestgen.WasiTestGenCli")
-            classpath = rootProject.project(":wasi-test-gen").mainSourceSet().runtimeClasspath
+            classpath = testGeneratorClasspath
             doFirst {
                 project.delete(generatedSourceDir.get().asFile)
                 setArgs(listOf(configFile.get().asFile.absolutePath))

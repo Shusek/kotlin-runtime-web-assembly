@@ -8,6 +8,7 @@ import unittest
 from unittest import mock
 
 import build_maven_central_bundle as bundle
+import merge_maven_repositories as repository_merge
 import publish_maven_central as portal
 
 
@@ -58,6 +59,44 @@ class BundleTests(unittest.TestCase):
             payload = bundle.verify_payload_checksums(root, selected)
 
             self.assertEqual(payload, [payload_path])
+
+
+class RepositoryMergeTests(unittest.TestCase):
+    def test_merges_disjoint_shards_and_accepts_identical_metadata(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            first = root / "first"
+            second = root / "second"
+            output = root / "output"
+            shared = Path("uk/shusek/krwa/example/maven-metadata.xml")
+            first_file = first / shared
+            second_file = second / shared
+            first_file.parent.mkdir(parents=True)
+            second_file.parent.mkdir(parents=True)
+            first_file.write_text("metadata", encoding="utf-8")
+            second_file.write_text("metadata", encoding="utf-8")
+            unique = second / "uk/shusek/krwa/example-ios/0.3.0/example.klib"
+            unique.parent.mkdir(parents=True)
+            unique.write_bytes(b"ios")
+
+            repository_merge.merge(output, [first, second])
+
+            self.assertEqual((output / shared).read_text(encoding="utf-8"), "metadata")
+            self.assertEqual((output / unique.relative_to(second)).read_bytes(), b"ios")
+
+    def test_rejects_conflicting_shard_files(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            first = root / "first"
+            second = root / "second"
+            relative = Path("uk/shusek/krwa/example/maven-metadata.xml")
+            for shard, content in ((first, "first"), (second, "second")):
+                target = shard / relative
+                target.parent.mkdir(parents=True)
+                target.write_text(content, encoding="utf-8")
+
+            with self.assertRaises(SystemExit):
+                repository_merge.merge(root / "output", [first, second])
 
 
 class FakeResponse:

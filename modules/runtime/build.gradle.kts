@@ -55,6 +55,17 @@ val hostOs = providers.gradleProperty("krwa.host.os")
     .get()
     .lowercase()
 val hostIsMacOs = "mac" in hostOs || "darwin" in hostOs
+val nativePlatform =
+    providers.gradleProperty("krwa.native.platform")
+        .orElse("all")
+        .map { configuredPlatform ->
+            require(configuredPlatform in setOf("all", "host", "android", "ios")) {
+                "krwa.native.platform must be one of: all, host, android, ios"
+            }
+            configuredPlatform
+        }
+val appleToolchainIdentity =
+    providers.gradleProperty("krwa.appleToolchainIdentity").orElse("local-apple-toolchain")
 
 fun nativeDynamicLibraryName(baseName: String): String {
     return when {
@@ -191,6 +202,7 @@ fun captureProcess(
 fun preparePinnedRustToolchain(
     rustup: File,
     environment: Map<String, String>,
+    crossTargets: List<String>,
 ): String {
     val toolchains =
         captureProcess(
@@ -272,8 +284,7 @@ fun preparePinnedRustToolchain(
             projectDir,
             environment,
         ).lineSequence().map(String::trim).filter(String::isNotEmpty).toSet()
-    val requiredTargets =
-        (listOf(hostTarget) + wasmtimePulleyIosTargets + wasmtimePulleyAndroidTargets).distinct()
+    val requiredTargets = (listOf(hostTarget) + crossTargets).distinct()
     val missingTargets = requiredTargets.filterNot(installedTargets::contains)
     if (missingTargets.isNotEmpty() && gradle.startParameter.isOffline) {
         throw GradleException(
@@ -429,6 +440,7 @@ val prepareRustReleaseDependencies by tasks.registering {
     inputs.property("wasmtimePulleyGitRevision", wasmtimePulleyGitRevision)
     inputs.property("rustReleaseVersion", rustReleaseVersion)
     inputs.property("rustReleaseCommitHash", rustReleaseCommitHash)
+    inputs.property("nativePlatform", nativePlatform)
     inputs.file(wasmtimePulleySourceDirectory.map { directory -> directory.file("Cargo.toml") })
     inputs.file(wasmtimePulleySourceDirectory.map { directory -> directory.file("Cargo.lock") })
     inputs.files(
@@ -449,16 +461,33 @@ val prepareRustReleaseDependencies by tasks.registering {
                     "rustup is required to prepare the release-pinned Rust toolchain and targets.",
                 )
         val environment = localCodexRustEnvironment() + codexRustEnvironmentFor(cargo)
-        val hostTarget = preparePinnedRustToolchain(rustup, environment)
+        val sourceCrossTargets =
+            when (nativePlatform.get()) {
+                "all" -> wasmtimePulleyIosTargets + wasmtimePulleyAndroidSourceTargets
+                "android" -> wasmtimePulleyAndroidSourceTargets
+                "ios" -> wasmtimePulleyIosTargets
+                else -> emptyList()
+            }
+        val bridgeCrossTargets =
+            when (nativePlatform.get()) {
+                "all" -> wasmtimePulleyIosTargets + wasmtimePulleyAndroidTargets
+                "android" -> wasmtimePulleyAndroidTargets
+                "ios" -> wasmtimePulleyIosTargets
+                else -> emptyList()
+            }
+        val hostTarget =
+            preparePinnedRustToolchain(
+                rustup,
+                environment,
+                (sourceCrossTargets + bridgeCrossTargets).distinct(),
+            )
         val sourceManifest =
             wasmtimePulleySourceDirectory.get().asFile.resolve("Cargo.toml")
         val bridgeManifest = wasmtimeP3BridgeDirectory.file("Cargo.toml").asFile
         val fetches =
             listOf(
-                sourceManifest to
-                    (listOf(hostTarget) + wasmtimePulleyIosTargets + wasmtimePulleyAndroidSourceTargets),
-                bridgeManifest to
-                    (listOf(hostTarget) + wasmtimePulleyIosTargets + wasmtimePulleyAndroidTargets),
+                sourceManifest to (listOf(hostTarget) + sourceCrossTargets),
+                bridgeManifest to (listOf(hostTarget) + bridgeCrossTargets),
             )
         for ((manifest, targets) in fetches) {
             for (target in targets.distinct()) {
@@ -492,11 +521,13 @@ val buildWasmtimePulleyIosLibs by tasks.registering {
     inputs.property("rustReleaseCommitHash", rustReleaseCommitHash)
     inputs.property("wasmtimePulleyFeatures", wasmtimePulleyFeatures)
     inputs.property("wasmtimePulleyIosTargets", wasmtimePulleyIosTargets.joinToString(","))
+    inputs.property("appleToolchainIdentity", appleToolchainIdentity)
     outputs.files(
         wasmtimePulleyIosTargets.map { target ->
             wasmtimePulleyIosLibDirectory.map { directory -> directory.file("$target/libwasmtime.a") }
         },
     )
+    outputs.cacheIf("pinned iOS native libraries are reproducible") { true }
 
     doLast {
         val cargo = cargoBinary()
@@ -549,12 +580,14 @@ val buildKrwaPulleyIosBridgeLibs by tasks.registering {
     description = "Builds KRWA Pulley bridge static libraries for iOS device and simulator."
     notCompatibleWithConfigurationCache("Builds a native bridge through xcrun/clang/ar commands.")
     onlyIf("iOS native bridge libraries require macOS toolchains") { hostIsMacOs }
+    inputs.property("appleToolchainIdentity", appleToolchainIdentity)
     inputs.file(layout.projectDirectory.file("src/iosMain/cpp/krwa_pulley_ios.cpp"))
     outputs.files(
         wasmtimePulleyIosTargets.map { target ->
             krwaPulleyIosBridgeLibDirectory.map { directory -> directory.file("$target/libkrwa_pulley_ios.a") }
         },
     )
+    outputs.cacheIf("pinned iOS native bridges are reproducible") { true }
 
     doLast {
         val source = layout.projectDirectory.file("src/iosMain/cpp/krwa_pulley_ios.cpp").asFile
@@ -602,11 +635,13 @@ val buildWasmtimeP3BridgeIosLibs by tasks.registering {
     inputs.property("rustReleaseVersion", rustReleaseVersion)
     inputs.property("rustReleaseCommitHash", rustReleaseCommitHash)
     inputs.property("wasmtimePulleyIosTargets", wasmtimePulleyIosTargets.joinToString(","))
+    inputs.property("appleToolchainIdentity", appleToolchainIdentity)
     inputs.files(
         fileTree(wasmtimeP3BridgeDirectory) {
             include("Cargo.toml", "Cargo.lock", "src/**/*.rs")
         },
     )
+    outputs.cacheIf("pinned iOS Preview3 libraries are reproducible") { true }
     outputs.files(
         wasmtimePulleyIosTargets.map { target ->
             wasmtimeP3BridgeIosLibDirectory.map { directory ->
@@ -701,6 +736,7 @@ val buildWasmtimeP3BridgeLib by tasks.registering {
         },
     )
     outputs.file(wasmtimeP3BridgeReleaseLibrary)
+    outputs.cacheIf("pinned host Preview3 bridge is reproducible") { true }
 
     doLast {
         val cargo = cargoBinary()

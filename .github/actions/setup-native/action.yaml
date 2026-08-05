@@ -1,0 +1,68 @@
+name: Set up KRWA native toolchain
+description: Restores public native inputs and verifies the pinned Rust and platform toolchains.
+
+inputs:
+  platform:
+    description: Native platform to prepare (host, android, or ios).
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Restore public native inputs
+      uses: actions/cache@v5
+      with:
+        path: |
+          modules/runtime/build/wasmtime-pulley/source
+          ~/.cargo/registry/index
+          ~/.cargo/registry/cache
+          ~/.cargo/git/db
+          ~/.konan
+        key: krwa-native-${{ runner.os }}-${{ runner.arch }}-${{ inputs.platform }}-${{ hashFiles('gradle/libs.versions.toml', 'modules/runtime/build.gradle.kts', 'modules/runtime-wasmtime-android/build.gradle.kts', '**/Cargo.lock') }}
+        restore-keys: |
+          krwa-native-${{ runner.os }}-${{ runner.arch }}-${{ inputs.platform }}-
+          krwa-native-${{ runner.os }}-${{ runner.arch }}-
+
+    - name: Verify pinned native toolchain
+      shell: bash
+      env:
+        KRWA_NATIVE_PLATFORM: ${{ inputs.platform }}
+      run: |
+        set -euo pipefail
+        rust_version="$(sed -n 's/^rustRelease = "\(.*\)"$/\1/p' gradle/libs.versions.toml)"
+        rust_commit="$(sed -n 's/^rustReleaseCommit = "\(.*\)"$/\1/p' gradle/libs.versions.toml)"
+        test -n "$rust_version"
+        test -n "$rust_commit"
+        rustup toolchain install "$rust_version" --profile minimal
+        rustc_metadata="$(rustup run "$rust_version" rustc -vV)"
+        test "$(printf '%s\n' "$rustc_metadata" | sed -n 's/^release: //p')" = "$rust_version"
+        test "$(printf '%s\n' "$rustc_metadata" | sed -n 's/^commit-hash: //p')" = "$rust_commit"
+        cargo "+$rust_version" --version
+        cmake --version
+
+        case "$KRWA_NATIVE_PLATFORM" in
+          host)
+            ;;
+          android)
+            ndk_version="$(sed -n 's/^android-ndk = "\(.*\)"$/\1/p' gradle/libs.versions.toml)"
+            test -n "$ndk_version"
+            sdkmanager_path="$(command -v sdkmanager || true)"
+            if [ -z "$sdkmanager_path" ]; then
+              sdkmanager_path="${ANDROID_HOME:?}/cmdline-tools/latest/bin/sdkmanager"
+            fi
+            test -x "$sdkmanager_path"
+            "$sdkmanager_path" "ndk;$ndk_version"
+            test -d "${ANDROID_HOME:?}/ndk/$ndk_version"
+            ;;
+          ios)
+            xcrun --sdk iphoneos --find clang++
+            xcrun --sdk iphonesimulator --find clang++
+            apple_toolchain_identity="$(xcodebuild -version | tr '\n' ' ')"
+            test -n "$apple_toolchain_identity"
+            printf 'KRWA_APPLE_TOOLCHAIN_IDENTITY=%s\n' "$apple_toolchain_identity" >> "$GITHUB_ENV"
+            ;;
+          *)
+            echo "Unsupported native platform: $KRWA_NATIVE_PLATFORM" >&2
+            exit 1
+            ;;
+        esac

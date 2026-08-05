@@ -2,157 +2,236 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      ref:
+        description: Git ref to verify; defaults to the triggering commit.
+        required: false
+        type: string
+        default: ""
+      artifact-retention-days:
+        description: Retention for intermediate Maven repository shards.
+        required: false
+        type: number
+        default: 1
+      export-verified-repository:
+        description: Upload the merged verified Maven repository for a caller.
+        required: false
+        type: boolean
+        default: false
+      run-docs:
+        description: Build documentation alongside platform gates.
+        required: false
+        type: boolean
+        default: true
 
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.event.pull_request.number || inputs.ref || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
+
 jobs:
-  gradle-tests:
-    name: Release Gate
-    runs-on: macos-latest
-    timeout-minutes: 120
+  jvm:
+    name: JVM
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - name: Checkout sources
         uses: actions/checkout@v7
-
-      - name: Set up Java
-        uses: actions/setup-java@v5
         with:
-          distribution: temurin
-          java-version: 25
-          cache: gradle
+          ref: ${{ inputs.ref || github.sha }}
+          persist-credentials: false
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v6
+        uses: ./.github/actions/setup-gradle
 
-      - name: Install Wasmtime C API
-        run: |
-          set -euo pipefail
-          version="$(grep '^wasmtime = ' gradle/libs.versions.toml | cut -d '"' -f 2)"
-          case "$(uname -m)" in
-            arm64)
-              target="aarch64-macos"
-              api_sha256="c013fe243fd6e13cd63f13dcfa88c3aff5664e356181a2e1bda2c3bf8381fde0"
-              cli_sha256="06d53af42ef3cbef5c7d44c14a6693b3456ac3d9df00950fb202075e27314f3e"
-              ;;
-            x86_64)
-              target="x86_64-macos"
-              api_sha256="5910124fafa760b8dc3444aae034ba224a7454fe1bb7855d1bed5fc118941588"
-              cli_sha256="548b37f774d55e845f1d0407d9d9bbba8799cbabe45d617d5d0127706badd08b"
-              ;;
-            *) echo "Unsupported macOS architecture: $(uname -m)" >&2; exit 1 ;;
-          esac
-          api_archive="$RUNNER_TEMP/wasmtime-c-api.tar.xz"
-          cli_archive="$RUNNER_TEMP/wasmtime-cli.tar.xz"
-          root="$RUNNER_TEMP/wasmtime-c-api"
-          curl --fail --location --output "$api_archive" \
-            "https://github.com/bytecodealliance/wasmtime/releases/download/v${version}/wasmtime-v${version}-${target}-c-api.tar.xz"
-          curl --fail --location --output "$cli_archive" \
-            "https://github.com/bytecodealliance/wasmtime/releases/download/v${version}/wasmtime-v${version}-${target}.tar.xz"
-          test "$(shasum -a 256 "$api_archive" | cut -d ' ' -f 1)" = "$api_sha256"
-          test "$(shasum -a 256 "$cli_archive" | cut -d ' ' -f 1)" = "$cli_sha256"
-          mkdir -p "$root"
-          tar -xJf "$api_archive" -C "$root"
-          tar -xJf "$cli_archive" -C "$root"
-          library="$root/wasmtime-v${version}-${target}-c-api/lib/libwasmtime.dylib"
-          executable="$root/wasmtime-v${version}-${target}/wasmtime"
-          test -f "$library"
-          test -x "$executable"
-          echo "KRWA_WASMTIME_LIBRARY=$library" >> "$GITHUB_ENV"
-          echo "WASMTIME=$executable" >> "$GITHUB_ENV"
-          dirname "$executable" >> "$GITHUB_PATH"
-
-      - name: Install wasm-tools CLI
-        run: |
-          set -euo pipefail
-          version="$(grep '^wasmTools = ' gradle/libs.versions.toml | cut -d '"' -f 2)"
-          case "$(uname -m)" in
-            arm64)
-              target="aarch64-macos"
-              archive_sha256="c4c0f8560d996e47313aadf8df745e4d15eef38090e671384eafcb06d8d135fa"
-              ;;
-            x86_64)
-              target="x86_64-macos"
-              archive_sha256="108759377f47278ec598a994993bf10770d907dd935be5c436ca5cfc01bd008c"
-              ;;
-            *) echo "Unsupported macOS architecture: $(uname -m)" >&2; exit 1 ;;
-          esac
-          archive="$RUNNER_TEMP/wasm-tools.tar.gz"
-          root="$RUNNER_TEMP/wasm-tools"
-          curl --fail --location --output "$archive" \
-            "https://github.com/bytecodealliance/wasm-tools/releases/download/v${version}/wasm-tools-${version}-${target}.tar.gz"
-          test "$(shasum -a 256 "$archive" | cut -d ' ' -f 1)" = "$archive_sha256"
-          mkdir -p "$root"
-          tar -xzf "$archive" -C "$root"
-          executable="$root/wasm-tools-${version}-${target}/wasm-tools"
-          test -x "$executable"
-          echo "KRWA_WASM_TOOLS=$executable" >> "$GITHUB_ENV"
-          dirname "$executable" >> "$GITHUB_PATH"
-
-      - name: Install and verify pinned native toolchain
-        run: |
-          set -euo pipefail
-          rust_version="$(sed -n 's/^rustRelease = "\(.*\)"$/\1/p' gradle/libs.versions.toml)"
-          rust_commit="$(sed -n 's/^rustReleaseCommit = "\(.*\)"$/\1/p' gradle/libs.versions.toml)"
-          test -n "$rust_version"
-          test -n "$rust_commit"
-          rustup --version
-          rustup toolchain install "$rust_version" --profile minimal
-          rustc_metadata="$(rustup run "$rust_version" rustc -vV)"
-          test "$(printf '%s\n' "$rustc_metadata" | sed -n 's/^release: //p')" = "$rust_version"
-          test "$(printf '%s\n' "$rustc_metadata" | sed -n 's/^commit-hash: //p')" = "$rust_commit"
-          cargo "+$rust_version" --version
-          cmake --version
-          node --version
-          xcrun --sdk iphonesimulator --find clang++
-
-      - name: Create compatible iOS simulator
-        run: |
-          set -euo pipefail
-          runtime="$(xcrun simctl list runtimes | awk '/^iOS / && $0 !~ /unavailable/ { value=$NF } END { gsub(/[()]/, "", value); print value }')"
-          device_id=""
-          while IFS= read -r device_type; do
-            if device_id="$(xcrun simctl create 'KRWA CI' "$device_type" "$runtime" 2>/dev/null)"; then
-              break
-            fi
-          done < <(xcrun simctl list devicetypes | awk '/^iPhone / { value=$NF; gsub(/[()]/, "", value); print value }')
-          test -n "$device_id"
-          echo "KRWA_TEST_SIMULATOR_ID=$device_id" >> "$GITHUB_ENV"
+      - name: Install pinned Wasmtime and wasm-tools
+        run: bash .github/scripts/install_wasm_host_tools.sh
 
       - name: Test build logic
         run: >-
-          ./gradlew -p buildSrc --no-daemon --max-workers=2
+          ./gradlew -p buildSrc --no-daemon --max-workers=4
           -Pkotlin.compiler.execution.strategy=in-process test
         env:
           GRADLE_OPTS: "-ea"
 
-      - name: Prepare pinned release dependencies
+      - name: Run JVM and host-native gate
+        run: >-
+          ./gradlew --no-daemon --max-workers=4
+          -Pkotlin.compiler.execution.strategy=in-process
+          ciJvmGate --stacktrace
+        env:
+          GRADLE_OPTS: "-ea"
+
+      - name: Upload JVM test reports on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: jvm-test-reports
+          path: "**/build/reports/tests"
+          retention-days: 7
+          if-no-files-found: ignore
+
+  runtime-spec:
+    name: Wasm runtime spec (${{ matrix.label }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - shard: 0
+            label: 1/8
+          - shard: 1
+            label: 2/8
+          - shard: 2
+            label: 3/8
+          - shard: 3
+            label: 4/8
+          - shard: 4
+            label: 5/8
+          - shard: 5
+            label: 6/8
+          - shard: 6
+            label: 7/8
+          - shard: 7
+            label: 8/8
+
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          persist-credentials: false
+
+      - name: Set up Gradle
+        uses: ./.github/actions/setup-gradle
+
+      - name: Install pinned Wasmtime and wasm-tools
+        run: bash .github/scripts/install_wasm_host_tools.sh
+
+      - name: Run exhaustive Wasm runtime specification-test shard
+        run: >-
+          ./gradlew --no-daemon --max-workers=4
+          -Pkotlin.compiler.execution.strategy=in-process
+          -Pkrwa.runtimeTests.maxParallelForks=3
+          -Pkrwa.runtimeTests.shard=${{ matrix.shard }}/8
+          ciRuntimeSpecGate --stacktrace
+        env:
+          GRADLE_OPTS: "-ea"
+
+      - name: Upload runtime specification-test reports on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: runtime-spec-test-reports-${{ matrix.shard }}
+          path: testing/runtime-tests/build/reports/tests
+          retention-days: 7
+          if-no-files-found: ignore
+
+  host-native:
+    name: Host native bridge
+    if: ${{ github.event_name != 'push' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          persist-credentials: false
+
+      - name: Set up Gradle
+        uses: ./.github/actions/setup-gradle
+
+      - name: Set up host native toolchain
+        uses: ./.github/actions/setup-native
+        with:
+          platform: host
+
+      - name: Install pinned Wasmtime and wasm-tools
+        run: bash .github/scripts/install_wasm_host_tools.sh
+
+      - name: Test host-native bridge
         run: >-
           ./gradlew --no-daemon --max-workers=2
           -Pkotlin.compiler.execution.strategy=in-process
-          prepareReleaseDependencies
+          -Pkrwa.native.platform=host
+          ciHostNativeGate --stacktrace
         env:
           GRADLE_OPTS: "-ea"
 
-      - name: Test component model Gradle plugin in isolation
+  web-publications:
+    name: Wasm and JVM publications
+    if: ${{ github.event_name != 'push' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          persist-credentials: false
+
+      - name: Set up Gradle
+        uses: ./.github/actions/setup-gradle
+
+      - name: Test Wasm and stage non-native publications
         run: >-
-          ./gradlew --no-daemon --offline --max-workers=2
+          ./gradlew --no-daemon --max-workers=4
           -Pkotlin.compiler.execution.strategy=in-process
-          :component-model-gradle-plugin:test --stacktrace
+          ciWebPublicationGate --stacktrace
         env:
           GRADLE_OPTS: "-ea"
 
-      - name: Run complete release gate offline
+      - name: Upload JVM and Wasm Maven shard
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-jvm-web
+          path: build/release-staging-repository
+          retention-days: ${{ inputs.artifact-retention-days || 1 }}
+          compression-level: 0
+          if-no-files-found: error
+
+  android:
+    name: Android
+    if: ${{ github.event_name != 'push' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          persist-credentials: false
+
+      - name: Set up Gradle
+        uses: ./.github/actions/setup-gradle
+
+      - name: Set up Android native toolchain
+        uses: ./.github/actions/setup-native
+        with:
+          platform: android
+
+      - name: Test Android and stage Android publications
         run: >-
-          ./gradlew --no-daemon --offline --max-workers=2
-          -Pkotlin.compiler.execution.strategy=in-process releaseGate
+          ./gradlew --no-daemon --max-workers=2
+          -Pkotlin.compiler.execution.strategy=in-process
+          -Pkrwa.native.platform=android
+          ciAndroidGate --stacktrace
         env:
           GRADLE_OPTS: "-ea"
 
-      - name: Inspect Android Wasmtime runtime artifact
+      - name: Inspect Android runtime artifact
         run: |
           set -euo pipefail
           aar=modules/runtime-wasmtime-android/build/outputs/aar/runtime-wasmtime-android.aar
@@ -171,6 +250,68 @@ jobs:
             done
           done
 
+      - name: Upload Android Maven shard
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-android
+          path: build/release-staging-repository
+          retention-days: ${{ inputs.artifact-retention-days || 1 }}
+          compression-level: 0
+          if-no-files-found: error
+
+  ios:
+    name: iOS device and simulator
+    if: ${{ github.event_name != 'push' }}
+    runs-on: macos-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          persist-credentials: false
+
+      - name: Set up Gradle
+        uses: ./.github/actions/setup-gradle
+
+      - name: Set up iOS native toolchain
+        uses: ./.github/actions/setup-native
+        with:
+          platform: ios
+
+      - name: Create compatible iOS simulator
+        run: |
+          set -euo pipefail
+          runtime="$(xcrun simctl list runtimes | awk '/^iOS / && $0 !~ /unavailable/ { value=$NF } END { gsub(/[()]/, "", value); print value }')"
+          device_id=""
+          while IFS= read -r device_type; do
+            if device_id="$(xcrun simctl create 'KRWA CI' "$device_type" "$runtime" 2>/dev/null)"; then
+              break
+            fi
+          done < <(xcrun simctl list devicetypes | awk '/^iPhone / { value=$NF; gsub(/[()]/, "", value); print value }')
+          test -n "$device_id"
+          echo "KRWA_TEST_SIMULATOR_ID=$device_id" >> "$GITHUB_ENV"
+
+      - name: Test iOS and stage iOS publications
+        run: >-
+          ./gradlew --no-daemon --max-workers=2
+          -Pkotlin.compiler.execution.strategy=in-process
+          -Pkrwa.native.platform=ios
+          -Pkrwa.appleToolchainIdentity="$KRWA_APPLE_TOOLCHAIN_IDENTITY"
+          ciIosGate --stacktrace
+        env:
+          GRADLE_OPTS: "-ea"
+
+      - name: Upload iOS Maven shard
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-ios
+          path: build/release-staging-repository
+          retention-days: ${{ inputs.artifact-retention-days || 1 }}
+          compression-level: 0
+          if-no-files-found: error
+
       - name: Delete test simulator
         if: always()
         run: |
@@ -178,18 +319,101 @@ jobs:
             xcrun simctl delete "$KRWA_TEST_SIMULATOR_ID" || true
           fi
 
-  docs:
-    name: Documentation
+  repository:
+    name: Merged repository and consumers
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [web-publications, android, ios]
 
     steps:
       - name: Checkout sources
         uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          persist-credentials: false
 
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
           python-version: "3.12"
+
+      - name: Set up Gradle
+        uses: ./.github/actions/setup-gradle
+
+      - name: Download JVM and Wasm Maven shard
+        uses: actions/download-artifact@v8
+        with:
+          name: release-jvm-web
+          path: build/repository-shards/jvm-web
+
+      - name: Download Android Maven shard
+        uses: actions/download-artifact@v8
+        with:
+          name: release-android
+          path: build/repository-shards/android
+
+      - name: Download iOS Maven shard
+        uses: actions/download-artifact@v8
+        with:
+          name: release-ios
+          path: build/repository-shards/ios
+
+      - name: Merge Maven repository shards
+        run: >-
+          python .github/scripts/merge_maven_repositories.py
+          --output build/release-staging-repository
+          build/repository-shards/jvm-web
+          build/repository-shards/android
+          build/repository-shards/ios
+
+      - name: Prepare sample consumer dependencies
+        run: >-
+          ./gradlew --no-daemon --max-workers=4
+          -Pkotlin.compiler.execution.strategy=in-process
+          prepareMergedStandaloneSampleReleaseDependencies
+          prepareMergedAndroidSampleReleaseDependencies
+          prepareReleasePomDescriptorDependencies
+        env:
+          GRADLE_OPTS: "-ea"
+
+      - name: Verify merged repository and consumers offline
+        run: >-
+          ./gradlew --no-daemon --offline --max-workers=4
+          -Pkotlin.compiler.execution.strategy=in-process
+          -Pkrwa.release.verifyOnly=true
+          verifyMergedReleaseRepository --stacktrace
+        env:
+          GRADLE_OPTS: "-ea"
+
+      - name: Export verified Maven repository
+        if: ${{ inputs.export-verified-repository }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: verified-release-repository
+          path: build/release-staging-repository
+          retention-days: ${{ inputs.artifact-retention-days || 1 }}
+          compression-level: 0
+          if-no-files-found: error
+
+  docs:
+    name: Documentation
+    if: ${{ github.event_name != 'push' && (inputs.run-docs || inputs.ref == '') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: docs/requirements.txt
 
       - name: Install Zensical
         run: python -m pip install -r docs/requirements.txt
@@ -197,18 +421,11 @@ jobs:
       - name: Test Maven Central release tooling
         run: python -m unittest discover -s .github/scripts -p 'test_*.py'
 
-      - name: Set up Java
-        uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: 25
-          cache: gradle
-
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v6
+        uses: ./.github/actions/setup-gradle
 
       - name: Build Zensical docs
         run: zensical build --clean
 
       - name: Build Dokka API docs
-        run: ./gradlew --no-daemon :dokkaGenerate
+        run: ./gradlew --no-daemon --max-workers=4 :dokkaGenerate
