@@ -1,6 +1,6 @@
 [versions]
-io = "0.9.0"
-kotlin = "2.4.0"
+io = "0.9.1"
+kotlin = "2.4.10"
 serialization = "1.11.0"
 
 [libraries]

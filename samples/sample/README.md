@@ -1,6 +1,6 @@
 # Kotlin Runtime Web Assembly Kotlin/WASI Sample
 
-This is a standalone Gradle project. It uses Kotlin Multiplatform 2.4.0 to build
+This is a standalone Gradle project. It uses Kotlin Multiplatform 2.4.10 to build
 Kotlin Runtime Web Assembly showcase targets for JVM, `wasmWasi`, `wasmJs`, and
 the iOS simulator.
 
@@ -45,7 +45,7 @@ and async/future/stream contracts, and WASIp3 preopened storage backed by the
 iOS simulator sandbox.
 
 The sample uses `includeBuild("../..")`, so Gradle substitutes the
-`uk.shusek.krwa:*:0.3.0-rc.7` dependencies from the repository checkout. It does
+`uk.shusek.krwa:*:0.3.0-rc.8` dependencies from the repository checkout. It does
 not require public Maven artifacts.
 
 The WASI scenario is a Kotlin 2.4 `wasmWasi` app that runs three ways:

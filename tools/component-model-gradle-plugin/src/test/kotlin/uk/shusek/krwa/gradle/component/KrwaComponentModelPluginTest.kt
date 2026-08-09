@@ -100,7 +100,7 @@ class KrwaComponentModelPluginTest {
             import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 
             plugins {
-                kotlin("multiplatform") version "2.4.0"
+                kotlin("multiplatform") version "2.4.10"
                 id("uk.shusek.krwa.component-model")
             }
 
@@ -347,7 +347,7 @@ class KrwaComponentModelPluginTest {
         tempDir.resolve("build.gradle.kts").writeText(
             """
             plugins {
-                kotlin("multiplatform") version "2.4.0"
+                kotlin("multiplatform") version "2.4.10"
                 id("uk.shusek.krwa.component-model")
             }
 
