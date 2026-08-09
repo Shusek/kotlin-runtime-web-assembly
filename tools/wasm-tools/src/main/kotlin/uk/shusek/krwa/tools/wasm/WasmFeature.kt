@@ -8,7 +8,7 @@ package uk.shusek.krwa.tools.wasm
  * reset, then individual features toggle.
  *
  * The flag strings correspond to the `wasm-tools validate --features` CLI flags from wasm-tools
- * v1.252.0.
+ * v1.255.0.
  */
 enum class WasmFeature(private val flag: String) {
     // Feature groups
@@ -51,11 +51,17 @@ enum class WasmFeature(private val flag: String) {
     CM_NESTED_NAMES("cm-nested-names"),
     CM_ASYNC("cm-async"),
     CM_ASYNC_STACKFUL("cm-async-stackful"),
-    CM_ASYNC_BUILTINS("cm-async-builtins"),
+    CM_ASYNC_BUILTINS("cm-more-async-builtins"),
     CM_THREADING("cm-threading"),
     CM_ERROR_CONTEXT("cm-error-context"),
-    CM_FIXED_SIZE_LIST("cm-fixed-size-list"),
+    CM_FIXED_SIZE_LIST("cm-fixed-length-lists"),
     CM_GC("cm-gc"),
+    CUSTOM_DESCRIPTORS("custom-descriptors"),
+    COMPACT_IMPORTS("compact-imports"),
+    CM_MAP("cm-map"),
+    CM64("cm64"),
+    CM_IMPLEMENTS("cm-implements"),
+    CM_CANON_NAMES("cm-canon-names"),
     CALL_INDIRECT_OVERLONG("call-indirect-overlong"),
     BULK_MEMORY_OPT("bulk-memory-opt");
 

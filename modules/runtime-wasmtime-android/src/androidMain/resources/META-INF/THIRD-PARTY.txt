@@ -1,4 +1,4 @@
-KRWA runtime-wasmtime-android includes Wasmtime 47.0.2.
+KRWA runtime-wasmtime-android includes Wasmtime 47.0.3.
 
 Wasmtime is distributed under Apache-2.0 WITH LLVM-exception. The complete
 license text is packaged as META-INF/LICENSE-WASMTIME.

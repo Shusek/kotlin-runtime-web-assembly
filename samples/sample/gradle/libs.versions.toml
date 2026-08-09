@@ -1,9 +1,9 @@
 [versions]
 coroutines = "1.10.2"
-io = "0.9.0"
-kotlin = "2.4.0"
-krwa = "0.3.0-rc.7"
-ktor = "3.5.0"
+io = "0.9.1"
+kotlin = "2.4.10"
+krwa = "0.3.0-rc.8"
+ktor = "3.5.2"
 serialization = "1.11.0"
 
 [libraries]

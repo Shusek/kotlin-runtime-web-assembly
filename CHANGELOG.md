@@ -5,6 +5,32 @@ patch and prerelease identifiers advance without changing the `0.3` major/minor 
 `1.0.0`, API changes may still be intentional; release candidates remain immutable once
 published.
 
+## 0.3.0-rc.8 (2026-08-09)
+
+### Security
+
+- Wasmtime was updated from `47.0.2` to `47.0.3`, incorporating fixes for type-index confusion
+  between engines and for invalid internal VM state after preemption or traps during bulk
+  operations.
+
+### Changed
+
+- `wasm-tools` was updated from `1.252.0` to `1.255.0`; the embedded WASI executable and pinned
+  host tools now use the same release.
+- Standalone samples and component-model test fixtures now follow the root Kotlin `2.4.10`,
+  Ktor `3.5.2`, kotlinx-io `0.9.1`, and Gradle `9.6.1` pins merged for this candidate.
+- Wasm feature flags now use the current `cm-more-async-builtins` and `cm-fixed-length-lists`
+  spellings and expose the component-model and core proposal flags added through `wasm-tools`
+  `1.255.0`.
+
+### Compatibility
+
+- Wasmtime `47.0.3` remains on the Wasmtime 47 release line and requires Rust `1.94.0`; KRWA
+  retains its newer, exactly pinned Rust `1.96.1` toolchain.
+- `kotlinx-coroutines` remains pinned to `1.10.2`; version `1.11.0` triggered nondeterministic
+  WASI Preview3 async-cancellation and TCP socket-reuse failures in the release gate and is
+  ignored by Dependabot until compatibility is restored.
+
 ## 0.3.0-rc.7 (2026-08-05)
 
 ### Added

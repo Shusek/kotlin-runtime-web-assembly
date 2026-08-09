@@ -4,6 +4,10 @@ updates:
     directory: "/"
     schedule:
       interval: daily
+    ignore:
+      - dependency-name: "org.jetbrains.kotlinx:kotlinx-coroutines-*"
+        versions:
+          - "1.11.0"
   - package-ecosystem: gradle
     directory: "/samples/android-tests"
     schedule:

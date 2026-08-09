@@ -128,6 +128,14 @@ class WasmToolsTest {
     }
 
     @Test
+    fun shouldAcceptEveryWasmFeatureFlag() {
+        Validate.builder()
+            .withFeatures(*WasmFeature.entries.toTypedArray())
+            .build()
+            .validateModule("(module)")
+    }
+
+    @Test
     fun shouldRejectSimdModuleWhenDisabled() {
         val validator =
             Validate.builder()
