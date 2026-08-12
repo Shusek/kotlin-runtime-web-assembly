@@ -37,6 +37,7 @@ val krwaPublicModuleByArtifact =
         "cli-experimental" to ":cli",
         "codegen" to ":codegen",
         "component-model-gradle-plugin" to ":component-model-gradle-plugin",
+        "component-model-tooling" to ":component-model-tooling",
         "component-model" to ":component-model",
         "log" to ":log",
         "runtime" to ":runtime",

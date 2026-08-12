@@ -25,7 +25,9 @@ the solid foundations this project builds on.
 - `wasm`: common parser model and Okio-based byte input.
 - `wasi`: WASI Preview 1 host support.
 - `component-model`: WIT parsing, Kotlin WIT bindings, canonical ABI, WASI
-  Preview 2/3 host wiring, and Component Model packaging helpers.
+  Preview 2/3 host wiring, and the lightweight component runtime.
+- `component-model-tooling`: optional JVM WIT normalization and Component Model
+  packaging/unbundling backed by the embedded `wasm-tools` executable.
 - `wasi-preview3`: Kotlin-first WASI Preview 3 facade with coroutine-friendly
   futures, streams, clocks, random, networking, and preopened filesystem APIs.
 - `tools/cli`: command-line entrypoint for local experiments.

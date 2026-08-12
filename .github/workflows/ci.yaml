@@ -174,7 +174,7 @@ jobs:
     name: Wasm and JVM publications
     if: ${{ github.event_name != 'push' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
       - name: Checkout sources
@@ -188,7 +188,7 @@ jobs:
 
       - name: Test Wasm and stage non-native publications
         run: >-
-          ./gradlew --no-daemon --max-workers=4
+          ./gradlew --no-daemon --max-workers=1
           -Pkotlin.compiler.execution.strategy=in-process
           ciWebPublicationGate --stacktrace
         env:

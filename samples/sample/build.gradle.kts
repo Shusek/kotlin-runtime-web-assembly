@@ -82,6 +82,7 @@ kotlin {
                 implementation(libs.krwaWasm)
                 implementation(libs.krwaWasmTools)
                 implementation(libs.krwaComponentModel)
+                runtimeOnly(libs.krwaComponentModelTooling)
             }
         }
         val wasmJsMain by getting {

@@ -66,11 +66,12 @@ gradlePlugin {
 
 dependencies {
     implementation(project(":component-model"))
+    implementation(project(":component-model-tooling"))
 
     testImplementation(gradleTestKit())
-    testImplementation(krwa("wasm-tools"))
     testImplementation(platform(libs.junitBom))
     testImplementation(libs.junitJupiterApi)
+    testImplementation(krwa("wasm-tools"))
     testRuntimeOnly(libs.junitJupiterEngine)
     testRuntimeOnly(libs.junitPlatformLauncher)
 }

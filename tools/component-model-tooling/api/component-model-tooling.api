@@ -1,0 +1,5 @@
+public final class uk/shusek/krwa/component/tooling/DefaultWasmToolsExecutionProvider : uk/shusek/krwa/component/tooling/WasmToolsExecutionProvider {
+	public fun <init> ()V
+	public fun execute (Ljava/util/List;Ljava/util/Map;)Luk/shusek/krwa/component/tooling/WasmToolsExecutionResult;
+}
+

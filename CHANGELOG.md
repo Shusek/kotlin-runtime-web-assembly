@@ -5,6 +5,19 @@ patch and prerelease identifiers advance without changing the `0.3` major/minor 
 `1.0.0`, API changes may still be intentional; release candidates remain immutable once
 published.
 
+## 0.3.0-rc.9 (2026-08-12)
+
+### Added
+
+- Added the JVM-only `component-model-tooling` artifact for WIT normalization, component
+  packaging/unbundling, and other operations backed by `wasm-tools`. The Component Model Gradle
+  plugin includes this artifact automatically.
+
+### Changed
+
+- The `component-model` runtime no longer depends on `wasm-tools`, so hosts that load a core Wasm
+  plugin with an already parsed `WitPackage` do not ship the embedded `wasm-tools.wasm` resource.
+
 ## 0.3.0-rc.8 (2026-08-09)
 
 ### Security

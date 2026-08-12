@@ -199,6 +199,7 @@ private const val WasmtimeLibraryEnvironmentVariable = "KRWA_WASMTIME_LIBRARY"
 private val ComponentPackagerWorkerClassNames = listOf(
     KrwaPackageWasmComponentWorkAction::class.java.name,
     "uk.shusek.krwa.component.WasmComponentPackager",
+    "uk.shusek.krwa.component.tooling.DefaultWasmToolsExecutionProvider",
     "uk.shusek.krwa.log.Logger",
     "uk.shusek.krwa.runtime.Instance",
     "uk.shusek.krwa.tools.wasm.WasmToolsRuntime",

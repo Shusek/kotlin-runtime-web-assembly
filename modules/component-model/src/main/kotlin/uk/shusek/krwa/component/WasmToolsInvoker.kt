@@ -2,76 +2,24 @@ package uk.shusek.krwa.component
 
 import java.nio.charset.StandardCharsets
 import java.util.LinkedHashMap
-import kotlinx.io.Buffer
-import kotlinx.io.readByteArray
+import java.util.ServiceConfigurationError
+import java.util.ServiceLoader
 import okio.Path
-import uk.shusek.krwa.log.Logger
-import uk.shusek.krwa.log.SystemLogger
-import uk.shusek.krwa.runtime.ImportValues
-import uk.shusek.krwa.runtime.Instance
-import uk.shusek.krwa.tools.wasm.WasmToolsCli
-import uk.shusek.krwa.tools.wasm.WasmToolsRuntime
-import uk.shusek.krwa.wasi.WasiExitException
-import uk.shusek.krwa.wasi.WasiOptions
-import uk.shusek.krwa.wasi.WasiPreview1
-import uk.shusek.krwa.wasm.WasmModule
+import uk.shusek.krwa.component.tooling.WasmToolsExecutionProvider
 
 object WasmToolsInvoker {
-    private val LOGGER: Logger =
-        object : SystemLogger() {
-            override fun log(level: Logger.Level, msg: String, throwable: Throwable?) {
-                if (!isLoggable(level)) {
-                    return
-                }
-                System.err.println(msg)
-                throwable?.printStackTrace(System.err)
-            }
-
-            override fun isLoggable(level: Logger.Level): Boolean =
-                java.lang.Boolean.getBoolean("krwa.component.wasmtools.trace")
-        }
-
-    private val MODULE: WasmModule = WasmToolsRuntime.module
+    private val executionProvider: WasmToolsExecutionProvider by lazy(::loadExecutionProvider)
 
     @JvmStatic
     fun run(args: List<String>, directories: Map<String, Path>): Result {
-        val nioDirectories = directories.mapValues { (_, path) -> java.nio.file.Path.of(path.toString()) }
-        WasmToolsCli.run(args, directories = nioDirectories)?.let { cliResult ->
-            val result = Result(cliResult.exitCode, cliResult.stdout(), cliResult.stderr())
-            if (cliResult.exitCode != 0) {
-                throw ComponentModelException(result.stderrText() + result.stdoutText())
-            }
-            return result
-        }
-        val stdin = Buffer()
-        val stdout = Buffer()
-        val stderr = Buffer()
-        val options =
-            WasiOptions.builder()
-                .withStdin(stdin, false)
-                .withStdout(stdout, false)
-                .withStderr(stderr, false)
-                .withArguments(args)
-        for ((guestName, hostPath) in directories) {
-            options.withDirectory(guestName, hostPath)
-        }
-
-        var exitCode = 0
-        try {
-            WasiPreview1.builder().withLogger(LOGGER).withOptions(options.build()).build().use {
-                wasi ->
-                val imports = ImportValues.builder().addFunction(*wasi.toHostFunctions()).build()
-                Instance.builder(MODULE)
-                    .withWasmtimeExecutionConfig(WasmToolsRuntime.executionConfig)
-                    .withImportValues(imports)
-                    .build()
-            }
-        } catch (e: WasiExitException) {
-            exitCode = e.exitCode()
-        }
-
-        val result = Result(exitCode, stdout.readByteArray(), stderr.readByteArray())
-        if (exitCode != 0) {
+        val executionResult = executionProvider.execute(args, directories)
+        val result =
+            Result(
+                executionResult.exitCode(),
+                executionResult.stdout(),
+                executionResult.stderr(),
+            )
+        if (result.exitCode() != 0) {
             throw ComponentModelException(result.stderrText() + result.stdoutText())
         }
         return result
@@ -83,6 +31,30 @@ object WasmToolsInvoker {
         directories[guestName] = hostPath
         return directories
     }
+
+    private fun loadExecutionProvider(): WasmToolsExecutionProvider =
+        try {
+            val providers =
+                ServiceLoader.load(
+                    WasmToolsExecutionProvider::class.java,
+                    WasmToolsInvoker::class.java.classLoader,
+                ).iterator()
+            if (!providers.hasNext()) {
+                throw ComponentModelException(MISSING_TOOLING_MESSAGE)
+            }
+            val provider = providers.next()
+            if (providers.hasNext()) {
+                throw ComponentModelException(
+                    "Multiple wasm-tools execution providers are installed on the JVM classpath",
+                )
+            }
+            provider
+        } catch (error: ServiceConfigurationError) {
+            throw ComponentModelException(
+                "Unable to load the wasm-tools execution provider",
+                error,
+            )
+        }
 
     class Result
     internal constructor(private val exitCode: Int, stdout: ByteArray, stderr: ByteArray) {
@@ -97,4 +69,10 @@ object WasmToolsInvoker {
 
         fun stderrText(): String = String(stderr, StandardCharsets.UTF_8)
     }
+
+    private const val MISSING_TOOLING_MESSAGE =
+        "Wasm component tooling is not installed. Add " +
+            "uk.shusek.krwa:component-model-tooling to the JVM runtime classpath. " +
+            "Loading a plugin with WasmPlugin.builder(witPackage).withModule(module) does not " +
+            "require this tooling artifact."
 }

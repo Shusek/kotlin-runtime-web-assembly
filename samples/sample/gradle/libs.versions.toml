@@ -2,13 +2,14 @@
 coroutines = "1.10.2"
 io = "0.9.1"
 kotlin = "2.4.10"
-krwa = "0.3.0-rc.8"
+krwa = "0.3.0-rc.9"
 ktor = "3.5.2"
 serialization = "1.11.0"
 
 [libraries]
 krwaAnnotations = { module = "uk.shusek.krwa:annotations", version.ref = "krwa" }
 krwaComponentModel = { module = "uk.shusek.krwa:component-model", version.ref = "krwa" }
+krwaComponentModelTooling = { module = "uk.shusek.krwa:component-model-tooling", version.ref = "krwa" }
 krwaRuntime = { module = "uk.shusek.krwa:runtime", version.ref = "krwa" }
 krwaWasi = { module = "uk.shusek.krwa:wasi", version.ref = "krwa" }
 krwaWasiPreview3 = { module = "uk.shusek.krwa:wasi-preview3", version.ref = "krwa" }
