@@ -265,7 +265,7 @@ jobs:
     name: iOS device and simulator
     if: ${{ github.event_name != 'push' }}
     runs-on: macos-latest
-    timeout-minutes: 40
+    timeout-minutes: 60
 
     steps:
       - name: Checkout sources
@@ -297,7 +297,7 @@ jobs:
 
       - name: Test iOS and stage iOS publications
         run: >-
-          ./gradlew --no-daemon --max-workers=2
+          ./gradlew --no-daemon --max-workers=1
           -Pkotlin.compiler.execution.strategy=in-process
           -Pkrwa.native.platform=ios
           -Pkrwa.appleToolchainIdentity="$KRWA_APPLE_TOOLCHAIN_IDENTITY"
