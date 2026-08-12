@@ -11,8 +11,20 @@ The module provides:
 - `WasmPlugin` for loading core Wasm modules and component artifacts,
 - WASI Preview 2 host wiring,
 - WASI Preview 3 canonical support,
-- helpers for `wasm-tools component embed`, `component new`, component
+- optional helpers for `wasm-tools component embed`, `component new`, component
   unbundling, and validation.
+
+The `component-model` runtime does not include `wasm-tools.wasm`. On JVM, add
+`uk.shusek.krwa:component-model-tooling` when using the tooling-backed helpers,
+WIT normalization, or `WasmPlugin.builderFromComponent(...)`. The Component
+Model Gradle plugin includes it automatically. Hosts that already have a parsed
+`WitPackage` and a core `WasmModule` need only `component-model`:
+
+```kotlin
+val plugin = WasmPlugin.builder(witPackage)
+    .withModule(module)
+    .build()
+```
 
 WIT is the stable contract. Generated Kotlin should be treated as build output
 for hosts and guests that implement that contract.

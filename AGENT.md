@@ -41,11 +41,15 @@ wasm (parser, writer, validation-facing types)
   <- runtime (platform execution, Instance, Store, Memory)
        <- wasi (WASI Preview 1)
        <- component-model (WIT and canonical ABI support)
+            <- component-model-tooling (optional JVM wasm-tools integration)
             <- wasi-preview3 (Kotlin-first WASI 0.3 facade)
 ```
 
 Other modules include `annotations`, `annotations:processor`,
 `codegen`, `wasm-tools`, `wabt`, `test-gen-lib`, and `wasi-test-gen`.
+`component-model` must remain free of a runtime dependency on
+`component-model-tooling`/`wasm-tools`; tooling consumers opt in and the
+Component Model Gradle plugin supplies the tooling artifact itself.
 
 ## Building and testing a single module
 
@@ -90,6 +94,7 @@ suites for the surface you changed.
 | `runtime:jvmTest` | Core platform execution, imports, exports, memory, traps |
 | `wasi:jvmTest` | WASI Preview 1 host behavior |
 | `component-model:jvmTest` | WIT, canonical ABI, WASI Preview 2/3, plugin loading |
+| `component-model-tooling:test` | Service-loaded component tooling and embedded wasm-tools execution |
 
 ## Code style
 

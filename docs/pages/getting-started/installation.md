@@ -32,6 +32,22 @@ dependencies {
 `runtime` already depends on `wasm`; add `wasm` directly only when you need the
 parser/model APIs without the runtime.
 
+`component-model` is the lightweight runtime dependency and does not ship the
+embedded `wasm-tools.wasm` executable. JVM applications that call WIT
+normalization, component packaging/unbundling, or
+`WasmPlugin.builderFromComponent(...)` must opt into tooling:
+
+```kotlin
+dependencies {
+    implementation("uk.shusek.krwa:component-model-tooling")
+}
+```
+
+The `uk.shusek.krwa.component-model` Gradle plugin includes this tooling
+artifact automatically. A host that loads a core module with
+`WasmPlugin.builder(witPackage).withModule(module)` needs only
+`component-model`.
+
 ## Kotlin Multiplatform
 
 In Kotlin Multiplatform builds, put portable dependencies in

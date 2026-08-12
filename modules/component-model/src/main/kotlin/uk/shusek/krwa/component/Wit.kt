@@ -8,6 +8,13 @@ import okio.Path
 import okio.Path.Companion.toPath
 import okio.Source
 
+/**
+ * JVM WIT parsing and normalization facade.
+ *
+ * [parse] for a WIT string is self-contained. Operations backed by `wasm-tools`, including
+ * normalization and path/byte component parsing, require the `component-model-tooling` artifact
+ * on the JVM runtime classpath.
+ */
 object Wit {
     private val fileSystem: FileSystem = FileSystem.SYSTEM
 

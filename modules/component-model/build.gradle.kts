@@ -1,6 +1,9 @@
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.artifacts.component.ProjectComponentIdentifier
 import org.gradle.api.plugins.BasePluginExtension
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
+import org.gradle.api.tasks.JavaExec
 import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.api.tasks.testing.Test
 import org.gradle.kotlin.dsl.configure
@@ -135,7 +138,6 @@ extensions.configure<KotlinMultiplatformExtension> {
             implementation(krwa("runtime"))
             implementation(krwa("wasi"))
             implementation(krwa("wasm"))
-            implementation(krwa("wasm-tools"))
             compileOnly(libs.jetbrainsAnnotations)
         }
     }
@@ -164,6 +166,8 @@ extensions.configure<KotlinMultiplatformExtension> {
         dependencies {
             implementation(libs.kotlinCompilerEmbeddable)
             implementation(libs.junitJupiterApi)
+            implementation(krwa("wasm-tools"))
+            runtimeOnly(project(":component-model-tooling"))
             runtimeOnly(libs.junitJupiterEngine)
             runtimeOnly(libs.junitPlatformLauncher)
         }
@@ -204,6 +208,64 @@ tasks.withType<Test>().configureEach {
 }
 tasks.named("jvmProcessResources") {
     dependsOn(downloadWasiPreview1Adapters)
+}
+
+val componentModelRuntimeClasspath = configurations.named("jvmRuntimeClasspath")
+val jvmCompilations =
+    extensions.getByType<KotlinMultiplatformExtension>()
+        .targets
+        .getByName("jvm")
+        .compilations
+val jvmMainCompilation = jvmCompilations.getByName("main")
+val jvmTestCompilation = jvmCompilations.getByName("test")
+val verifyComponentModelRuntimeClasspath =
+    tasks.register("verifyComponentModelRuntimeClasspath") {
+        group = "verification"
+        description = "Verifies that component-model does not ship JVM-only wasm tooling."
+        inputs.files(componentModelRuntimeClasspath)
+        doLast {
+            val forbiddenProjectPaths = setOf(":component-model-tooling", ":wasm-tools")
+            val forbiddenModuleNames = setOf("component-model-tooling", "wasm-tools")
+            val forbiddenComponents =
+                componentModelRuntimeClasspath.get()
+                    .incoming
+                    .resolutionResult
+                    .allComponents
+                    .mapNotNull { component ->
+                        when (val id = component.id) {
+                            is ProjectComponentIdentifier ->
+                                id.projectPath.takeIf { path -> path in forbiddenProjectPaths }
+                            is ModuleComponentIdentifier ->
+                                "${id.group}:${id.module}".takeIf {
+                                    id.group == project.group.toString() &&
+                                        id.module in forbiddenModuleNames
+                                }
+                            else -> null
+                        }
+                    }
+            check(forbiddenComponents.isEmpty()) {
+                "component-model JVM runtime classpath contains optional tooling: " +
+                    forbiddenComponents.joinToString()
+            }
+        }
+    }
+
+val verifyComponentModelLeanRuntime =
+    tasks.register<JavaExec>("verifyComponentModelLeanRuntime") {
+        group = "verification"
+        description = "Runs the core plugin setup without component-model-tooling on the classpath."
+        dependsOn("jvmTestClasses", verifyComponentModelRuntimeClasspath)
+        classpath =
+            files(
+                jvmTestCompilation.output.allOutputs,
+                jvmMainCompilation.output.allOutputs,
+                componentModelRuntimeClasspath,
+            )
+        mainClass.set("uk.shusek.krwa.component.ComponentModelLeanRuntimeSmoke")
+    }
+
+tasks.named("check") {
+    dependsOn(verifyComponentModelLeanRuntime)
 }
 
 tasks.withType<JavaCompile>().configureEach {

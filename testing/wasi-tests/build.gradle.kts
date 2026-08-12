@@ -6,6 +6,7 @@ import uk.shusek.krwa.gradle.*
 dependencies {
     add("testImplementation", libs.zerofs)
     add("testImplementation", krwa("component-model"))
+    add("testRuntimeOnly", krwa("component-model-tooling"))
     add("testImplementation", krwa("log"))
     add("testImplementation", krwa("runtime"))
     add("testImplementation", krwa("wasi"))

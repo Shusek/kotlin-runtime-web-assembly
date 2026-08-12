@@ -9,7 +9,7 @@ variants are compiled for Java 25.
 
 ## Project Status
 
-`0.3.0-rc.8` is the pre-public release candidate. Its security boundaries,
+`0.3.0-rc.9` is the pre-public release candidate. Its security boundaries,
 multiplatform behavior, ABI, Gradle plugins, and local Maven artifacts are
 verified by the repository release gate. The candidate is intended for pinned
 Suvio V4 integration testing; it is not a general-availability release.
@@ -42,7 +42,7 @@ Start with:
 
 ## Quick Start
 
-The current candidate version is `0.3.0-rc.8`. Before public promotion, consume
+The current candidate version is `0.3.0-rc.9`. Before public promotion, consume
 this checkout with the composite build described under
 [Local Development](#local-development), or run `releaseGate` and point the
 consumer at `build/release-staging-repository`. Published candidates use the
@@ -63,7 +63,7 @@ Use the BOM and add the runtime:
 
 ```kotlin
 // build.gradle.kts
-val runtimeVersion = "0.3.0-rc.8"
+val runtimeVersion = "0.3.0-rc.9"
 
 dependencies {
     implementation(platform("uk.shusek.krwa:bom:$runtimeVersion"))
@@ -94,7 +94,12 @@ with `ByteArray` or `okio.Source`.
 Use `component-model` when plugin boundaries should be described with WIT and
 lifted/lowered through the canonical ABI instead of ad-hoc JSON payloads. It
 includes WIT parsing, Kotlin contract generation, `WasmPlugin`, WASI Preview 2,
-and canonical Preview 3 runtime support. See
+and canonical Preview 3 runtime support. The runtime artifact does not include
+`wasm-tools.wasm`. Add the JVM-only `component-model-tooling` artifact when an
+application itself normalizes WIT, packages/unbundles components, or calls
+`WasmPlugin.builderFromComponent(...)`; the Component Model Gradle plugin adds
+it automatically. Loading a core module with a parsed `WitPackage` needs only
+`component-model`. See
 [modules/component-model/README.md](modules/component-model/README.md) for the
 full surface.
 

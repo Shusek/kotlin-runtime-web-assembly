@@ -5,6 +5,8 @@ The repository includes tools for local experiments and build integration:
 - `tools/cli`: command-line entrypoint for running local workloads.
 - `tools/wabt`: WABT-backed helpers.
 - `tools/wasm-tools`: `wasm-tools` integration running through the runtime.
+- `component-model-tooling`: opt-in JVM integration used by WIT normalization,
+  component packaging/unbundling, and the Component Model Gradle plugin.
 
 The standalone sample is the fastest way to see the pieces together:
 
@@ -63,3 +65,16 @@ dependencies {
 
 Prefer `wasm-tools` for feature-profile validation and Component Model-adjacent
 tooling, and use `wabt` when you specifically need WABT behavior.
+
+For the higher-level `Wit`, `WasmComponentTools`, and
+`WasmPlugin.builderFromComponent(...)` APIs, depend on the tooling companion:
+
+```kotlin
+dependencies {
+    implementation("uk.shusek.krwa:component-model-tooling")
+}
+```
+
+Do not add it to a runtime host that only uses
+`WasmPlugin.builder(witPackage).withModule(module)`; that path does not execute
+`wasm-tools`.

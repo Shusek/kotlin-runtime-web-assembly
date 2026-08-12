@@ -13,6 +13,11 @@ import uk.shusek.krwa.wasm.WasmWriter
 import uk.shusek.krwa.wasm.types.CustomSection
 import uk.shusek.krwa.wasm.types.UnknownCustomSection
 
+/**
+ * JVM Component Model packaging and unbundling helpers.
+ *
+ * Add `uk.shusek.krwa:component-model-tooling` to the runtime classpath before using this facade.
+ */
 object WasmComponentTools {
     private val fileSystem: FileSystem = FileSystem.SYSTEM
 

@@ -1492,3 +1492,16 @@ public final class uk/shusek/krwa/component/WitValue$Variant {
 	public final fun value ()Ljava/lang/Object;
 }
 
+public abstract interface class uk/shusek/krwa/component/tooling/WasmToolsExecutionProvider {
+	public abstract fun execute (Ljava/util/List;Ljava/util/Map;)Luk/shusek/krwa/component/tooling/WasmToolsExecutionResult;
+}
+
+public final class uk/shusek/krwa/component/tooling/WasmToolsExecutionResult {
+	public fun <init> (I[B[B)V
+	public final fun exitCode ()I
+	public final fun stderr ()[B
+	public final fun stderrText ()Ljava/lang/String;
+	public final fun stdout ()[B
+	public final fun stdoutText ()Ljava/lang/String;
+}
+
