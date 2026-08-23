@@ -1,0 +1,246 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "uk.shusek.krwa",
+    "module": "bom",
+    "version": "0.3.0-dev.dd7a6fdf625a",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.7.0"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "platform",
+        "org.gradle.usage": "java-api"
+      },
+      "dependencyConstraints": [
+        {
+          "group": "uk.shusek.krwa",
+          "module": "annotations",
+          "version": {
+            "requires": "0.3.0-dev.dd7a6fdf625a"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "annotations-processor",
+          "version": {
+            "requires": "0.3.0-dev.dd7a6fdf625a"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "cli-experimental",
+          "version": {
+            "requires": "0.3.0-dev.dd7a6fdf625a"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "codegen",
+          "version": {
+            "requires": "0.3.0-dev.dd7a6fdf625a"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "component-model-gradle-plugin",
+          "version": {
+            "requires": "0.3.0-dev.dd7a6fdf625a"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "component-model-tooling",
+          "version": {
+            "requires": "0.3.0-dev.dd7a6fdf625a"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "component-model",
+          "version": {
+            "requires": "0.3.0-dev.dd7a6fdf625a"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "log",
+          "version": {
+            "requires": "0.3.0-dev.dd7a6fdf625a"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "runtime",
+          "version": {
+            "requires": "0.3.0-dev.dd7a6fdf625a"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "runtime-wasmtime-android",
+          "version": {
+            "requires": "0.3.0-dev.dd7a6fdf625a"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "wabt",
+          "version": {
+            "requires": "0.3.0-dev.dd7a6fdf625a"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "wasi",
+          "version": {
+            "requires": "0.3.0-dev.dd7a6fdf625a"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "wasi-preview3",
+          "version": {
+            "requires": "0.3.0-dev.dd7a6fdf625a"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "wasm",
+          "version": {
+            "requires": "0.3.0-dev.dd7a6fdf625a"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "wasm-tools",
+          "version": {
+            "requires": "0.3.0-dev.dd7a6fdf625a"
+          }
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "platform",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencyConstraints": [
+        {
+          "group": "uk.shusek.krwa",
+          "module": "annotations",
+          "version": {
+            "requires": "0.3.0-dev.dd7a6fdf625a"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "annotations-processor",
+          "version": {
+            "requires": "0.3.0-dev.dd7a6fdf625a"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "cli-experimental",
+          "version": {
+            "requires": "0.3.0-dev.dd7a6fdf625a"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "codegen",
+          "version": {
+            "requires": "0.3.0-dev.dd7a6fdf625a"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "component-model-gradle-plugin",
+          "version": {
+            "requires": "0.3.0-dev.dd7a6fdf625a"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "component-model-tooling",
+          "version": {
+            "requires": "0.3.0-dev.dd7a6fdf625a"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "component-model",
+          "version": {
+            "requires": "0.3.0-dev.dd7a6fdf625a"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "log",
+          "version": {
+            "requires": "0.3.0-dev.dd7a6fdf625a"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "runtime",
+          "version": {
+            "requires": "0.3.0-dev.dd7a6fdf625a"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "runtime-wasmtime-android",
+          "version": {
+            "requires": "0.3.0-dev.dd7a6fdf625a"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "wabt",
+          "version": {
+            "requires": "0.3.0-dev.dd7a6fdf625a"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "wasi",
+          "version": {
+            "requires": "0.3.0-dev.dd7a6fdf625a"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "wasi-preview3",
+          "version": {
+            "requires": "0.3.0-dev.dd7a6fdf625a"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "wasm",
+          "version": {
+            "requires": "0.3.0-dev.dd7a6fdf625a"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "wasm-tools",
+          "version": {
+            "requires": "0.3.0-dev.dd7a6fdf625a"
+          }
+        }
+      ]
+    }
+  ]
+}

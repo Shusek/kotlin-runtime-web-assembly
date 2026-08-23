@@ -1,0 +1,130 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "url": "../../wasm/0.3.0-dev.dd7a6fdf625a/wasm-0.3.0-dev.dd7a6fdf625a.module",
+    "group": "uk.shusek.krwa",
+    "module": "wasm",
+    "version": "0.3.0-dev.dd7a6fdf625a",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.7.0"
+    }
+  },
+  "variants": [
+    {
+      "name": "iosArm64ApiElements-published",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.jvm.environment": "non-jvm",
+        "org.gradle.usage": "kotlin-api",
+        "org.jetbrains.kotlin.native.target": "ios_arm64",
+        "org.jetbrains.kotlin.platform.type": "native"
+      },
+      "dependencies": [
+        {
+          "group": "org.jetbrains.kotlinx",
+          "module": "kotlinx-io-core",
+          "version": {
+            "requires": "0.9.1"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.4.10"
+          }
+        },
+        {
+          "group": "com.squareup.okio",
+          "module": "okio",
+          "version": {
+            "requires": "3.18.1"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "wasm-iosArm64Main-0.3.0-dev.dd7a6fdf625a.klib",
+          "url": "wasm-iosarm64-0.3.0-dev.dd7a6fdf625a.klib",
+          "size": 370919,
+          "sha512": "1be4a6160537f650f7221112cf4f1aca398499b576df47cdf6db5cbd4f7176f70ff8106b5a8b7866b8444f66aac2dbabb684a092d07e639695321ea28f96019b",
+          "sha256": "0c45adbf846de565d5ca2f01da13888b0aabc89c6c34d0c8e3d2c38fa5e49d2b",
+          "sha1": "89312f7b9fbfd945951d0215924b73b96c771978",
+          "md5": "029a698e3abd9b9cdb4cf97109a3109a"
+        }
+      ]
+    },
+    {
+      "name": "iosArm64SourcesElements-published",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.jvm.environment": "non-jvm",
+        "org.gradle.usage": "kotlin-runtime",
+        "org.jetbrains.kotlin.native.target": "ios_arm64",
+        "org.jetbrains.kotlin.platform.type": "native"
+      },
+      "files": [
+        {
+          "name": "wasm-iosarm64-0.3.0-dev.dd7a6fdf625a-sources.jar",
+          "url": "wasm-iosarm64-0.3.0-dev.dd7a6fdf625a-sources.jar",
+          "size": 82801,
+          "sha512": "6dac747f4973b7f99bf5e885caddeccd39e8784e16efaac44ad138d7d04529e9fd7c8078b2d918a1daac8fc053fc577e3c06437ba549e70da0b32a84a50fd5ad",
+          "sha256": "1def46b6feb1621c8659a2a272e42d2249d73032b81d2eb9fb341fdaf0c6a536",
+          "sha1": "bae5901421489bdc1f99e2168fc3050e3b19a454",
+          "md5": "9a6f81b8ab5973a09e97d73eab7dbe01"
+        }
+      ]
+    },
+    {
+      "name": "iosArm64MetadataElements-published",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.jvm.environment": "non-jvm",
+        "org.gradle.usage": "kotlin-metadata",
+        "org.jetbrains.kotlin.native.target": "ios_arm64",
+        "org.jetbrains.kotlin.platform.type": "native"
+      },
+      "dependencies": [
+        {
+          "group": "org.jetbrains.kotlinx",
+          "module": "kotlinx-io-core",
+          "version": {
+            "requires": "0.9.1"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.4.10"
+          }
+        },
+        {
+          "group": "com.squareup.okio",
+          "module": "okio",
+          "version": {
+            "requires": "3.18.1"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "wasm-iosarm64-0.3.0-dev.dd7a6fdf625a-metadata.jar",
+          "url": "wasm-iosarm64-0.3.0-dev.dd7a6fdf625a-metadata.jar",
+          "size": 261,
+          "sha512": "1487e5a20c9e4d74f298e07c42e96a61be11b7a768c3fbc199ee138cd68e1fc2267d1cfe3f11f288acc05df755315344d052cc5f6f751f126ab4fe1caa5125ea",
+          "sha256": "c6deada2fac53b8ea6523dbda77597b128006674616f140f04df23264c6d1aa3",
+          "sha1": "2ad14aed781c4a73ed4dbb421966d408a0a06686",
+          "md5": "f43436d6bec321290f6af228ad602604"
+        }
+      ]
+    }
+  ]
+}

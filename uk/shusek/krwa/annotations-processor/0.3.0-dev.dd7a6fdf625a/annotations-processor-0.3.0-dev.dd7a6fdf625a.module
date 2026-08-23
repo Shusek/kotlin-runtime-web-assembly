@@ -1,0 +1,133 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "uk.shusek.krwa",
+    "module": "annotations-processor",
+    "version": "0.3.0-dev.dd7a6fdf625a",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.7.0"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.jvm.version": 25,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.4.10"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "annotations-processor-0.3.0-dev.dd7a6fdf625a.jar",
+          "url": "annotations-processor-0.3.0-dev.dd7a6fdf625a.jar",
+          "size": 28895,
+          "sha512": "49c8622248424e954f73bda76ded2e27425af85bb9a5cc1969c1fdf1345599f4ee504e742177ec399f33d7d8bd24ec4c5eb7bda2a9834424ea8f85672bbd611a",
+          "sha256": "63d0ce79f8bf20f045f102586b1b9f03c7acf89c0bfb0742033eab8cb83ef606",
+          "sha1": "7bf884dcdc7f19d67823f7f96b08dba8d933dbb6",
+          "md5": "61129527154603ced10ceca933f2d5f3"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.jvm.version": 25,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "org.ow2.asm",
+          "module": "asm-bom",
+          "version": {
+            "requires": "9.10.1"
+          },
+          "attributes": {
+            "org.gradle.category": "platform"
+          }
+        },
+        {
+          "group": "com.google.devtools.ksp",
+          "module": "symbol-processing-api",
+          "version": {
+            "requires": "2.3.11"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "annotations",
+          "version": {
+            "requires": "0.3.0-dev.dd7a6fdf625a"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "codegen",
+          "version": {
+            "requires": "0.3.0-dev.dd7a6fdf625a"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.4.10"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "annotations-processor-0.3.0-dev.dd7a6fdf625a.jar",
+          "url": "annotations-processor-0.3.0-dev.dd7a6fdf625a.jar",
+          "size": 28895,
+          "sha512": "49c8622248424e954f73bda76ded2e27425af85bb9a5cc1969c1fdf1345599f4ee504e742177ec399f33d7d8bd24ec4c5eb7bda2a9834424ea8f85672bbd611a",
+          "sha256": "63d0ce79f8bf20f045f102586b1b9f03c7acf89c0bfb0742033eab8cb83ef606",
+          "sha1": "7bf884dcdc7f19d67823f7f96b08dba8d933dbb6",
+          "md5": "61129527154603ced10ceca933f2d5f3"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "annotations-processor-0.3.0-dev.dd7a6fdf625a-sources.jar",
+          "url": "annotations-processor-0.3.0-dev.dd7a6fdf625a-sources.jar",
+          "size": 4921,
+          "sha512": "2cc50329cd05a399924beb4bcc6d53b6f8961ab76b079ffb19978633155902d64a8e8ad9c8f4d4e695f9d3e01f64cd900be876bc1e760f34b4d61b8a8704b291",
+          "sha256": "9cacd7f6551e18d96f3f2c21e9a54ebb7f476162dfb2f8e426555254f8b48238",
+          "sha1": "a341d166764f54cb3be90022e8d6facf7ee1e1aa",
+          "md5": "65d30a11bffca8974a2f3de7d23a71bf"
+        }
+      ]
+    }
+  ]
+}

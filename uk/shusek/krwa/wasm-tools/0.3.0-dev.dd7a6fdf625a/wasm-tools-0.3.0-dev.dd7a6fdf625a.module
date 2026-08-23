@@ -1,0 +1,147 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "uk.shusek.krwa",
+    "module": "wasm-tools",
+    "version": "0.3.0-dev.dd7a6fdf625a",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.7.0"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.jvm.version": 25,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.4.10"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "wasm-tools-0.3.0-dev.dd7a6fdf625a.jar",
+          "url": "wasm-tools-0.3.0-dev.dd7a6fdf625a.jar",
+          "size": 3769719,
+          "sha512": "c809f0e8c7095da78aec89ea1f542383f2a2e38bfe6a40d25ebea7dabdb085a5afa089029368aa368ec401b20c1015218268e10d130d40cc7f02bb95cf073173",
+          "sha256": "0d5bf6f4d2e60e38850caabf5df653c9a785d0de10e288040f69b92281754227",
+          "sha1": "6eb6f798b951820d9627d6c61ec3d86f41df9df2",
+          "md5": "393ddbe27801047012566adf496cec4f"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.jvm.version": 25,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "org.ow2.asm",
+          "module": "asm-bom",
+          "version": {
+            "requires": "9.10.1"
+          },
+          "attributes": {
+            "org.gradle.category": "platform"
+          }
+        },
+        {
+          "group": "io.roastedroot",
+          "module": "zerofs",
+          "version": {
+            "requires": "0.1.0"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "log",
+          "version": {
+            "requires": "0.3.0-dev.dd7a6fdf625a"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "runtime",
+          "version": {
+            "requires": "0.3.0-dev.dd7a6fdf625a"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "wasi",
+          "version": {
+            "requires": "0.3.0-dev.dd7a6fdf625a"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "wasm",
+          "version": {
+            "requires": "0.3.0-dev.dd7a6fdf625a"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.4.10"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "wasm-tools-0.3.0-dev.dd7a6fdf625a.jar",
+          "url": "wasm-tools-0.3.0-dev.dd7a6fdf625a.jar",
+          "size": 3769719,
+          "sha512": "c809f0e8c7095da78aec89ea1f542383f2a2e38bfe6a40d25ebea7dabdb085a5afa089029368aa368ec401b20c1015218268e10d130d40cc7f02bb95cf073173",
+          "sha256": "0d5bf6f4d2e60e38850caabf5df653c9a785d0de10e288040f69b92281754227",
+          "sha1": "6eb6f798b951820d9627d6c61ec3d86f41df9df2",
+          "md5": "393ddbe27801047012566adf496cec4f"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "wasm-tools-0.3.0-dev.dd7a6fdf625a-sources.jar",
+          "url": "wasm-tools-0.3.0-dev.dd7a6fdf625a-sources.jar",
+          "size": 3717514,
+          "sha512": "7fbf43ce968f667d1d46a836ab2aacf9faa2972526f44734bb5fe3931c898e3c58ce50f264d036f2a6afee498c44afbd85cf4acdeb68ab4a8ac7d25c752ba871",
+          "sha256": "e3db1a869071596a65318af49077194d2bd6e7096451eafffcda9288b26d9f26",
+          "sha1": "5cc39892ec9a5c5b0e29830fe441151c5bfa486d",
+          "md5": "2423eea0d499cd433e8f9a02475f2240"
+        }
+      ]
+    }
+  ]
+}

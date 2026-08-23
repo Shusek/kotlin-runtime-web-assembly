@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata>
+  <groupId>uk.shusek.krwa</groupId>
+  <artifactId>component-model-gradle-plugin</artifactId>
+  <versioning>
+    <latest>0.3.0-dev.dd7a6fdf625a</latest>
+    <release>0.3.0-dev.dd7a6fdf625a</release>
+    <versions>
+      <version>0.3.0-dev.dd7a6fdf625a</version>
+    </versions>
+    <lastUpdated>20260823123433</lastUpdated>
+  </versioning>
+</metadata>

@@ -1,0 +1,158 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "url": "../../wasi/0.3.0-dev.dd7a6fdf625a/wasi-0.3.0-dev.dd7a6fdf625a.module",
+    "group": "uk.shusek.krwa",
+    "module": "wasi",
+    "version": "0.3.0-dev.dd7a6fdf625a",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.7.0"
+    }
+  },
+  "variants": [
+    {
+      "name": "iosArm64ApiElements-published",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.jvm.environment": "non-jvm",
+        "org.gradle.usage": "kotlin-api",
+        "org.jetbrains.kotlin.native.target": "ios_arm64",
+        "org.jetbrains.kotlin.platform.type": "native"
+      },
+      "dependencies": [
+        {
+          "group": "uk.shusek.krwa",
+          "module": "runtime",
+          "version": {
+            "requires": "0.3.0-dev.dd7a6fdf625a"
+          }
+        },
+        {
+          "group": "com.squareup.okio",
+          "module": "okio",
+          "version": {
+            "requires": "3.18.1"
+          }
+        },
+        {
+          "group": "org.kotlincrypto.random",
+          "module": "crypto-rand",
+          "version": {
+            "requires": "0.6.0"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlinx",
+          "module": "kotlinx-io-core",
+          "version": {
+            "requires": "0.9.1"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.4.10"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "wasi-iosArm64Main-0.3.0-dev.dd7a6fdf625a.klib",
+          "url": "wasi-iosarm64-0.3.0-dev.dd7a6fdf625a.klib",
+          "size": 123545,
+          "sha512": "52b13466107f75149c60a3ae9c878501e772a333dc69546749612d967b79cbef517ea4e906de9a0fddde74338fe8d9d705190fcbee816e84d37b64d81879cfcc",
+          "sha256": "e561565ebb2a2d1e5ecab33086e4d45017ba8b568be03993c09b44a2bbabae99",
+          "sha1": "0cd5922eed4c4cc513ccd67308f5efd91a76d61c",
+          "md5": "14f9b5111b5e92a7e2009f1c43ae4ecc"
+        }
+      ]
+    },
+    {
+      "name": "iosArm64SourcesElements-published",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.jvm.environment": "non-jvm",
+        "org.gradle.usage": "kotlin-runtime",
+        "org.jetbrains.kotlin.native.target": "ios_arm64",
+        "org.jetbrains.kotlin.platform.type": "native"
+      },
+      "files": [
+        {
+          "name": "wasi-iosarm64-0.3.0-dev.dd7a6fdf625a-sources.jar",
+          "url": "wasi-iosarm64-0.3.0-dev.dd7a6fdf625a-sources.jar",
+          "size": 24795,
+          "sha512": "1b97d1a5a28a06befce3cab82db8d4e3d9a1075ab2fb21b4a7d8e5b3e1550bc4ce5ea4c24b1c70d14ccca1cdcc0d1907e461d749fec34a2cdb62c0c95d6177b8",
+          "sha256": "b97718182219f7acac53e4f6405b0a73de30e48551e65a0e844477c61cf252f7",
+          "sha1": "8ffd94508d111b475887002e6c5685d9b54adc34",
+          "md5": "4184ce0ff6060dee0892b8efdc0f6945"
+        }
+      ]
+    },
+    {
+      "name": "iosArm64MetadataElements-published",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.jvm.environment": "non-jvm",
+        "org.gradle.usage": "kotlin-metadata",
+        "org.jetbrains.kotlin.native.target": "ios_arm64",
+        "org.jetbrains.kotlin.platform.type": "native"
+      },
+      "dependencies": [
+        {
+          "group": "uk.shusek.krwa",
+          "module": "runtime",
+          "version": {
+            "requires": "0.3.0-dev.dd7a6fdf625a"
+          }
+        },
+        {
+          "group": "com.squareup.okio",
+          "module": "okio",
+          "version": {
+            "requires": "3.18.1"
+          }
+        },
+        {
+          "group": "org.kotlincrypto.random",
+          "module": "crypto-rand",
+          "version": {
+            "requires": "0.6.0"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlinx",
+          "module": "kotlinx-io-core",
+          "version": {
+            "requires": "0.9.1"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.4.10"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "wasi-iosarm64-0.3.0-dev.dd7a6fdf625a-metadata.jar",
+          "url": "wasi-iosarm64-0.3.0-dev.dd7a6fdf625a-metadata.jar",
+          "size": 6845,
+          "sha512": "ae048be37636b477a9a48c7bbb15bdcea15f915d2e4b15cc3cc94da1ae0076cdebf3a696c60a5c719c3f7f9772554c3cd3971a5931da953c6cf4b5ab54d6744e",
+          "sha256": "89e376a0e7e95d0111f3ca2bb3d4b0170d3496c1166a18ec64d560407dd2a918",
+          "sha1": "e0147de9b102672933dad4b9de24161b37e88d59",
+          "md5": "3f261ea4724f25a364a426d6bc5e2bae"
+        }
+      ]
+    }
+  ]
+}
