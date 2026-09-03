@@ -81,9 +81,9 @@ jobs:
   runtime-spec:
     name: Wasm runtime spec (${{ matrix.label }})
     runs-on: ubuntu-latest
-    # The first shard contains the largest indivisible spec class. Give only that
-    # shard enough headroom for a cold default-branch cache; warm PR runs stay fast.
-    timeout-minutes: ${{ matrix.shard == 0 && 25 || 20 }}
+    # The first shard contains the largest indivisible spec class and builds the
+    # Wasmtime-backed runtime from a cold cache. Give only that shard extra headroom.
+    timeout-minutes: ${{ matrix.shard == 0 && 35 || 20 }}
     strategy:
       fail-fast: false
       matrix:
