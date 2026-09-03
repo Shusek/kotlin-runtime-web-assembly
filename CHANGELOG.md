@@ -5,6 +5,25 @@ patch and prerelease identifiers advance without changing the `0.3` major/minor 
 `1.0.0`, API changes may still be intentional; release candidates remain immutable once
 published.
 
+## 0.3.0-rc.10 (2026-09-03)
+
+### Changed
+
+- Wasmtime was updated from `47.0.3` to `48.0.1`, including the pinned upstream source revision,
+  host-tool archives, Preview 1 adapters, Android C API archive, and checked-in Android native
+  libraries.
+- The WASI Preview 3 bridge now uses Wasmtime's `FsPerms` filesystem API and the unified
+  `wasmtime-wasi-http` request, body, error, view, and hook APIs.
+- Wasmtime build identity, Homebrew fallback paths, Cargo lock data, and bundled third-party
+  license metadata now identify the `48.0.1` runtime consistently.
+
+### Compatibility
+
+- Preview 3 socket-reuse conformance tests run after the component-model JVM tests to avoid a
+  deterministic macOS ephemeral-port collision in parallel Gradle builds.
+- The Preview 3 bridge retains its deny-by-default network policy, exact scheme/host/port checks,
+  method allowlist, and forbidden proxy and authority-header handling.
+
 ## 0.3.0-rc.9 (2026-08-12)
 
 ### Added
