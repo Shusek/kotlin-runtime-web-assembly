@@ -18,12 +18,13 @@ use wasmtime::component::{Component, ComponentExportIndex, Linker, ResourceTable
 use wasmtime::{Config, Engine, Store, StoreLimits, StoreLimitsBuilder};
 use wasmtime_wasi::p3::bindings::Command as P3Command;
 use wasmtime_wasi::{
-    DirPerms, FilePerms, I32Exit, TrappableError, WasiCtx, WasiCtxBuilder, WasiCtxView, WasiView,
+    FsPerms, I32Exit, WasiCtx, WasiCtxBuilder, WasiCtxView, WasiView,
     p2::pipe::{MemoryInputPipe, MemoryOutputPipe},
 };
-use wasmtime_wasi_http::p3::bindings::http::types::ErrorCode;
-use wasmtime_wasi_http::p3::{RequestOptions, WasiHttpCtxView, WasiHttpHooks, WasiHttpView};
-use wasmtime_wasi_http::{DEFAULT_FORBIDDEN_HEADERS, WasiHttpCtx};
+use wasmtime_wasi_http::{
+    DEFAULT_FORBIDDEN_HEADERS, Error as WasiHttpError, RequestOptions, WasiBody, WasiHttpCtx,
+    WasiHttpCtxView, WasiHttpHooks, WasiHttpView,
+};
 
 const DEFAULT_MAX_MEMORY_BYTES: u64 = 256 * 1024 * 1024;
 const DEFAULT_MAX_WASM_STACK_BYTES: u64 = 512 * 1024;
@@ -157,53 +158,49 @@ impl WasiHttpHooks for PolicyHttpHooks {
 
     fn send_request(
         &mut self,
-        request: http::Request<http_body_util::combinators::UnsyncBoxBody<Bytes, ErrorCode>>,
+        request: http::Request<WasiBody>,
         options: Option<RequestOptions>,
-        fut: Box<dyn Future<Output = Result<(), ErrorCode>> + Send>,
+        fut: Box<dyn Future<Output = Result<(), WasiHttpError>> + Send>,
     ) -> Box<
         dyn Future<
                 Output = Result<
                     (
-                        http::Response<
-                            http_body_util::combinators::UnsyncBoxBody<Bytes, ErrorCode>,
-                        >,
-                        Box<dyn Future<Output = Result<(), ErrorCode>> + Send>,
+                        http::Response<WasiBody>,
+                        Box<dyn Future<Output = Result<(), WasiHttpError>> + Send>,
                     ),
-                    TrappableError<ErrorCode>,
+                    WasiHttpError,
                 >,
             > + Send,
     > {
         let validation = self.policy.validate_request(&request);
         Box::new(async move {
-            validation.map_err(TrappableError::from)?;
+            validation?;
             drop(fut);
-            let (response, io) = wasmtime_wasi_http::p3::default_send_request(request, options)
-                .await
-                .map_err(TrappableError::from)?;
+            let (response, io) = wasmtime_wasi_http::default_send_request(request, options).await?;
             Ok((
                 response.map(BodyExt::boxed_unsync),
-                Box::new(io) as Box<dyn Future<Output = Result<(), ErrorCode>> + Send>,
+                Box::new(io) as Box<dyn Future<Output = Result<(), WasiHttpError>> + Send>,
             ))
         })
     }
 }
 
 impl HttpPolicy {
-    fn validate_request<B>(&self, request: &http::Request<B>) -> Result<(), ErrorCode> {
+    fn validate_request<B>(&self, request: &http::Request<B>) -> Result<(), WasiHttpError> {
         let method = request.method().as_str().to_ascii_uppercase();
         if !ALLOWED_HTTP_METHODS.contains(&method.as_str()) {
-            return Err(ErrorCode::HttpRequestDenied);
+            return Err(WasiHttpError::HttpRequestDenied);
         }
 
         let uri = request.uri();
-        let scheme = uri.scheme().ok_or(ErrorCode::HttpRequestDenied)?;
+        let scheme = uri.scheme().ok_or(WasiHttpError::HttpRequestDenied)?;
         if scheme != &Scheme::HTTP && scheme != &Scheme::HTTPS {
-            return Err(ErrorCode::HttpRequestDenied);
+            return Err(WasiHttpError::HttpRequestDenied);
         }
         let host = uri
             .host()
             .and_then(normalize_exact_http_host)
-            .ok_or(ErrorCode::HttpRequestDenied)?;
+            .ok_or(WasiHttpError::HttpRequestDenied)?;
         let port = uri
             .port_u16()
             .unwrap_or_else(|| if scheme == &Scheme::HTTP { 80 } else { 443 });
@@ -213,7 +210,7 @@ impl HttpPolicy {
             port,
         };
         if !self.allowed_endpoints.contains(&endpoint) {
-            return Err(ErrorCode::HttpRequestDenied);
+            return Err(WasiHttpError::HttpRequestDenied);
         }
         for name in request.headers().keys() {
             let normalized = name.as_str().to_ascii_lowercase();
@@ -221,7 +218,7 @@ impl HttpPolicy {
                 || normalized == "content-length"
                 || normalized.starts_with("proxy-")
             {
-                return Err(ErrorCode::HttpRequestDenied);
+                return Err(WasiHttpError::HttpRequestDenied);
             }
         }
         Ok(())
@@ -1689,7 +1686,6 @@ fn p3_engine(limits: P3Limits) -> Result<Engine, String> {
     config.wasm_bulk_memory(true);
     config.wasm_multi_memory(true);
     config.consume_fuel(limits.max_fuel != UNLIMITED_RESOURCE_LIMIT);
-    config.async_support(true);
     config.epoch_interruption(true);
     Engine::new(&config)
         .map_err(|error| format!("failed to create Wasmtime Preview3 engine: {error}"))
@@ -1755,18 +1751,13 @@ fn p3_state_with_stdio(
                 normalized_guest_root
             ));
         }
-        let dir_perms = if preopen.writable {
-            DirPerms::READ | DirPerms::MUTATE
+        let fs_perms = if preopen.writable {
+            FsPerms::ReadWrite
         } else {
-            DirPerms::READ
-        };
-        let file_perms = if preopen.writable {
-            FilePerms::READ | FilePerms::WRITE
-        } else {
-            FilePerms::READ
+            FsPerms::ReadOnly
         };
         builder
-            .preopened_dir(&host_root, &preopen.guest_root, dir_perms, file_perms)
+            .preopened_dir(&host_root, &preopen.guest_root, fs_perms)
             .map_err(|error| format!("failed to preopen Wasmtime Preview3 directory: {error}"))?;
     }
     Ok(KrwaP3State {
@@ -2618,7 +2609,7 @@ mod tests {
 
         assert!(matches!(
             policy.validate_request(&request),
-            Err(ErrorCode::HttpRequestDenied)
+            Err(WasiHttpError::HttpRequestDenied)
         ));
     }
 
@@ -2639,15 +2630,15 @@ mod tests {
         );
         assert!(matches!(
             policy.validate_request(&http_request("https://api.example.test/catalog")),
-            Err(ErrorCode::HttpRequestDenied)
+            Err(WasiHttpError::HttpRequestDenied)
         ));
         assert!(matches!(
             policy.validate_request(&http_request("http://example.test/catalog")),
-            Err(ErrorCode::HttpRequestDenied)
+            Err(WasiHttpError::HttpRequestDenied)
         ));
         assert!(matches!(
             policy.validate_request(&http_request("https://example.test:444/catalog")),
-            Err(ErrorCode::HttpRequestDenied)
+            Err(WasiHttpError::HttpRequestDenied)
         ));
     }
 

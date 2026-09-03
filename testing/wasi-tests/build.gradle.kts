@@ -17,6 +17,11 @@ dependencies {
 tasks.withType<Test>().configureEach {
     maxHeapSize = "2g"
     jvmArgs("--enable-native-access=ALL-UNNAMED")
+
+    // The official Preview 3 TCP bind test immediately reuses an ephemeral port to verify
+    // SO_REUSEADDR. Component-model JVM tests open real loopback listeners and can claim that
+    // port between bind and listen when Gradle runs both tasks in parallel.
+    mustRunAfter(":component-model:jvmTest")
 }
 
 registerWasiSpecTests()
