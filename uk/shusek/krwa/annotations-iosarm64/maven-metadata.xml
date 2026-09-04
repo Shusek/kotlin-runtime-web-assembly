@@ -3,11 +3,11 @@
   <groupId>uk.shusek.krwa</groupId>
   <artifactId>annotations-iosarm64</artifactId>
   <versioning>
-    <latest>0.3.0-dev.dd7a6fdf625a</latest>
-    <release>0.3.0-dev.dd7a6fdf625a</release>
+    <latest>0.3.0-dev.ec3430fca82c</latest>
+    <release>0.3.0-dev.ec3430fca82c</release>
     <versions>
-      <version>0.3.0-dev.dd7a6fdf625a</version>
+      <version>0.3.0-dev.ec3430fca82c</version>
     </versions>
-    <lastUpdated>20260823123004</lastUpdated>
+    <lastUpdated>20260904110822</lastUpdated>
   </versioning>
 </metadata>

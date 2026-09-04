@@ -1,0 +1,102 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "url": "../../annotations/0.3.0-dev.ec3430fca82c/annotations-0.3.0-dev.ec3430fca82c.module",
+    "group": "uk.shusek.krwa",
+    "module": "annotations",
+    "version": "0.3.0-dev.ec3430fca82c",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.7.1"
+    }
+  },
+  "variants": [
+    {
+      "name": "jvmApiElements-published",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.4.10"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "annotations-jvm-0.3.0-dev.ec3430fca82c.jar",
+          "url": "annotations-jvm-0.3.0-dev.ec3430fca82c.jar",
+          "size": 4625,
+          "sha512": "d6caad0a2713ff6533a844f948225f3053f3dc9a5a7f45ef9f05f338ba0adb4bc34e716b0e03ceda2d6d98592582a250df2ac53d9b59e1c738ad27d86a56ea4c",
+          "sha256": "d4baf86d655d788dc7803879665fa3e44f813d95aefecf7fde515fb42c92f697",
+          "sha1": "0f267ff89ba010235a3bf081c04e093bbb5de232",
+          "md5": "045be85d073517eda24832b5432687f8"
+        }
+      ]
+    },
+    {
+      "name": "jvmRuntimeElements-published",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.4.10"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "annotations-jvm-0.3.0-dev.ec3430fca82c.jar",
+          "url": "annotations-jvm-0.3.0-dev.ec3430fca82c.jar",
+          "size": 4625,
+          "sha512": "d6caad0a2713ff6533a844f948225f3053f3dc9a5a7f45ef9f05f338ba0adb4bc34e716b0e03ceda2d6d98592582a250df2ac53d9b59e1c738ad27d86a56ea4c",
+          "sha256": "d4baf86d655d788dc7803879665fa3e44f813d95aefecf7fde515fb42c92f697",
+          "sha1": "0f267ff89ba010235a3bf081c04e093bbb5de232",
+          "md5": "045be85d073517eda24832b5432687f8"
+        }
+      ]
+    },
+    {
+      "name": "jvmSourcesElements-published",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "files": [
+        {
+          "name": "annotations-jvm-0.3.0-dev.ec3430fca82c-sources.jar",
+          "url": "annotations-jvm-0.3.0-dev.ec3430fca82c-sources.jar",
+          "size": 2749,
+          "sha512": "eaaf3ff50e56998e620a2b0aa47489fb5eb270c984cfdd6b90a0be5187f5839ddb01beb39740eed79db29e5c6a36ee8359ccb213c08781a63db157991484b18e",
+          "sha256": "0a0e5612b4c037a8dbf95bb929348246a518ec9118c81b9ccf74768687b5c0ea",
+          "sha1": "9d6e0757d45b15b7003a1bfdc98c3c2a31872600",
+          "md5": "c124976bfebe641186d42df77230d371"
+        }
+      ]
+    }
+  ]
+}

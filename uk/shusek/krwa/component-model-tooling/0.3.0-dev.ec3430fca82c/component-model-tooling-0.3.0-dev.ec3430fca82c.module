@@ -1,0 +1,168 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "uk.shusek.krwa",
+    "module": "component-model-tooling",
+    "version": "0.3.0-dev.ec3430fca82c",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.7.1"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.jvm.version": 25,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "uk.shusek.krwa",
+          "module": "component-model",
+          "version": {
+            "requires": "0.3.0-dev.ec3430fca82c"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.4.10"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "component-model-tooling-0.3.0-dev.ec3430fca82c.jar",
+          "url": "component-model-tooling-0.3.0-dev.ec3430fca82c.jar",
+          "size": 8462,
+          "sha512": "fd6ca4b7ef54cb3bc4614ee8ee2416ab811ec14691d3923ff62dd26bcff0382b06c519e40ac874676b4fae53f76e034d1ab8fd9b79ffd747bafc07aae76aa5b7",
+          "sha256": "42503fe9505ca04498ebb66cd124d833265d1cd6d1933345858ba4f80330ed5c",
+          "sha1": "4d5c74e1e11913d40356c55ecafca36a21df5de5",
+          "md5": "fa110042668ede7e90d451900c79b63b"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.jvm.version": 25,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "org.ow2.asm",
+          "module": "asm-bom",
+          "version": {
+            "requires": "9.10.1"
+          },
+          "attributes": {
+            "org.gradle.category": "platform"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlinx",
+          "module": "kotlinx-io-core",
+          "version": {
+            "requires": "0.9.1"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "log",
+          "version": {
+            "requires": "0.3.0-dev.ec3430fca82c"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "runtime",
+          "version": {
+            "requires": "0.3.0-dev.ec3430fca82c"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "wasi",
+          "version": {
+            "requires": "0.3.0-dev.ec3430fca82c"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "wasm",
+          "version": {
+            "requires": "0.3.0-dev.ec3430fca82c"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "wasm-tools",
+          "version": {
+            "requires": "0.3.0-dev.ec3430fca82c"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "component-model",
+          "version": {
+            "requires": "0.3.0-dev.ec3430fca82c"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.4.10"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "component-model-tooling-0.3.0-dev.ec3430fca82c.jar",
+          "url": "component-model-tooling-0.3.0-dev.ec3430fca82c.jar",
+          "size": 8462,
+          "sha512": "fd6ca4b7ef54cb3bc4614ee8ee2416ab811ec14691d3923ff62dd26bcff0382b06c519e40ac874676b4fae53f76e034d1ab8fd9b79ffd747bafc07aae76aa5b7",
+          "sha256": "42503fe9505ca04498ebb66cd124d833265d1cd6d1933345858ba4f80330ed5c",
+          "sha1": "4d5c74e1e11913d40356c55ecafca36a21df5de5",
+          "md5": "fa110042668ede7e90d451900c79b63b"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "component-model-tooling-0.3.0-dev.ec3430fca82c-sources.jar",
+          "url": "component-model-tooling-0.3.0-dev.ec3430fca82c-sources.jar",
+          "size": 3094,
+          "sha512": "ffbcc152c49ff93f3505221f163711d7e3d94bc9b386fc24daf231e2a12f6a28a18f7e6e7ca9a5750d37db4768775586f67c61c45e16a3ff3f8cdd5c2ca595b0",
+          "sha256": "741a381b88cf0cf5f929ff74b3ceb43aacf08473903e022558331f83ac50e76c",
+          "sha1": "4a8e30a84b49e9099c19753c9fde3d99d0de31da",
+          "md5": "9926da2d2cd818638d936807647c7df8"
+        }
+      ]
+    }
+  ]
+}

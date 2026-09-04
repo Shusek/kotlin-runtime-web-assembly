@@ -3,11 +3,12 @@
   <groupId>uk.shusek.krwa</groupId>
   <artifactId>codegen</artifactId>
   <versioning>
-    <latest>0.3.0-dev.dd7a6fdf625a</latest>
-    <release>0.3.0-dev.dd7a6fdf625a</release>
+    <latest>0.3.0-dev.ec3430fca82c</latest>
+    <release>0.3.0-dev.ec3430fca82c</release>
     <versions>
       <version>0.3.0-dev.dd7a6fdf625a</version>
+      <version>0.3.0-dev.ec3430fca82c</version>
     </versions>
-    <lastUpdated>20260823123337</lastUpdated>
+    <lastUpdated>20260904111028</lastUpdated>
   </versioning>
 </metadata>
