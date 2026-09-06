@@ -5,6 +5,13 @@ patch and prerelease identifiers advance without changing the `0.3` major/minor 
 `1.0.0`, API changes may still be intentional; release candidates remain immutable once
 published.
 
+## 0.3.0-rc.11 (2026-09-06)
+
+### Added
+
+- Added explicit execution-fuel replenishment for runtime instances on JVM, Android, and iOS so
+  hosts can restore a bounded budget at trusted scheduling boundaries without recreating a plugin.
+
 ## 0.3.0-rc.10 (2026-09-03)
 
 ### Changed

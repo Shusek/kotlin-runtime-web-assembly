@@ -185,6 +185,7 @@ abstract interface uk.shusek.krwa.runtime/PlatformInstanceExecution : kotlin/Aut
     abstract fun memory(kotlin/Int): uk.shusek.krwa.runtime/Memory? // uk.shusek.krwa.runtime/PlatformInstanceExecution.memory|memory(kotlin.Int){}[0]
     abstract fun memory(kotlin/String): uk.shusek.krwa.runtime/Memory // uk.shusek.krwa.runtime/PlatformInstanceExecution.memory|memory(kotlin.String){}[0]
     open fun close() // uk.shusek.krwa.runtime/PlatformInstanceExecution.close|close(){}[0]
+    open fun replenishFuel() // uk.shusek.krwa.runtime/PlatformInstanceExecution.replenishFuel|replenishFuel(){}[0]
 }
 
 abstract interface uk.shusek.krwa.runtime/PulleyExecutionProvider { // uk.shusek.krwa.runtime/PulleyExecutionProvider|null[0]
@@ -364,6 +365,7 @@ final class uk.shusek.krwa.runtime/Instance : kotlin/AutoCloseable { // uk.shuse
     final fun module(): uk.shusek.krwa.wasm/WasmModule // uk.shusek.krwa.runtime/Instance.module|module(){}[0]
     final fun registerException(uk.shusek.krwa.runtime/WasmException): kotlin/Int // uk.shusek.krwa.runtime/Instance.registerException|registerException(uk.shusek.krwa.runtime.WasmException){}[0]
     final fun registerGcRef(uk.shusek.krwa.runtime/WasmGcRef): kotlin/Int // uk.shusek.krwa.runtime/Instance.registerGcRef|registerGcRef(uk.shusek.krwa.runtime.WasmGcRef){}[0]
+    final fun replenishExecutionFuel() // uk.shusek.krwa.runtime/Instance.replenishExecutionFuel|replenishExecutionFuel(){}[0]
     final fun setElement(kotlin/Int, uk.shusek.krwa.wasm.types/Element?) // uk.shusek.krwa.runtime/Instance.setElement|setElement(kotlin.Int;uk.shusek.krwa.wasm.types.Element?){}[0]
     final fun setTailCall(kotlin/Int, kotlin/LongArray) // uk.shusek.krwa.runtime/Instance.setTailCall|setTailCall(kotlin.Int;kotlin.LongArray){}[0]
     final fun table(kotlin/Int): uk.shusek.krwa.runtime/TableInstance // uk.shusek.krwa.runtime/Instance.table|table(kotlin.Int){}[0]

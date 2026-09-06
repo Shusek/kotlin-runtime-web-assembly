@@ -228,6 +228,7 @@ int64_t krwa_pulley_create(
     krwa_pulley_host_callback_t host_callback
 );
 void krwa_pulley_destroy(int64_t native_handle);
+int32_t krwa_pulley_replenish_fuel(int64_t native_handle);
 
 int64_t krwa_pulley_bind_function(int64_t native_handle, const uint8_t *name, size_t name_size);
 int64_t krwa_pulley_bind_memory(int64_t native_handle, const uint8_t *name, size_t name_size);

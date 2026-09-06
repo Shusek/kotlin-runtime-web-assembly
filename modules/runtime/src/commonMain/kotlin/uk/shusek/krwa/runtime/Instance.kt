@@ -200,6 +200,17 @@ private constructor(
 
     fun executionBackend(): ExecutionBackend = resolvedExecutionBackend
 
+    /**
+     * Restores metered execution fuel to this instance's configured maximum.
+     *
+     * Embedders can use this at an intentional scheduling boundary when a long-lived instance is
+     * allowed to start another bounded unit of work. Unmetered execution backends do nothing.
+     */
+    fun replenishExecutionFuel() {
+        ensureOpen()
+        platformExecution?.replenishFuel()
+    }
+
     class Exports private constructor(private val instance: Instance) {
         private fun getExport(type: ExternalType, name: String): Export {
             instance.ensureOpen()

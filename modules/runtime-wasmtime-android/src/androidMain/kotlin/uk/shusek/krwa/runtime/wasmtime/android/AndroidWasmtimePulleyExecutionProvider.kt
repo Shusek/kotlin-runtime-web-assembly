@@ -155,6 +155,10 @@ private class AndroidWasmtimePulleyExecution(
     override fun memory(index: Int): Memory? =
         if (index in 0 until memoriesByIndex.size) memoriesByIndex[index] else null
 
+    override fun replenishFuel() {
+        AndroidWasmtimePulleyNative.replenishFuel(nativeHandle)
+    }
+
     override fun close() {
         handleGuard.close()
     }
@@ -582,6 +586,9 @@ private object AndroidWasmtimePulleyNative {
 
     @JvmStatic
     external fun destroy(nativeHandle: Long)
+
+    @JvmStatic
+    external fun replenishFuel(nativeHandle: Long)
 
     @JvmStatic
     external fun bindFunction(nativeHandle: Long, nameUtf8: ByteArray): Long

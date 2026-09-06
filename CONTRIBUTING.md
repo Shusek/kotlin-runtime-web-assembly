@@ -86,7 +86,7 @@ Before preparing a release candidate, run the aggregate gate with an immutable c
 
 ```shell
 ./gradlew --no-daemon prepareReleaseDependencies
-./gradlew --no-daemon --offline -Pversion=0.3.0-rc.10 releaseGate
+./gradlew --no-daemon --offline -Pversion=0.3.0-rc.11 releaseGate
 ```
 
 `prepareReleaseDependencies` is the repository-owned online preparation step. It downloads pinned

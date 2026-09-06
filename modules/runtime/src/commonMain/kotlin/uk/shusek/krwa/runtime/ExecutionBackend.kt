@@ -42,5 +42,11 @@ interface PlatformInstanceExecution : AutoCloseable {
 
     fun memory(index: Int): Memory?
 
+    /**
+     * Restores metered execution fuel to the maximum configured when this execution was created.
+     * Backends without fuel metering, and executions configured without a fuel limit, do nothing.
+     */
+    fun replenishFuel() = Unit
+
     override fun close() = Unit
 }

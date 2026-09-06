@@ -93,6 +93,7 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
     private final MemorySegment instance;
     private final Map<String, FunctionExport> functionsByName;
     private final List<Long> callbackIds;
+    private final long maxFuel;
     private final AtomicBoolean closed = new AtomicBoolean(false);
     private final Map<String, Memory> memoriesByName = new HashMap<>();
     private final List<Memory> memoriesByIndex = new ArrayList<>();
@@ -106,7 +107,8 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
             MemorySegment context,
             MemorySegment instance,
             Map<String, FunctionExport> functionsByName,
-            List<Long> callbackIds
+            List<Long> callbackIds,
+            long maxFuel
     ) {
         this.arena = arena;
         this.api = api;
@@ -117,6 +119,7 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
         this.instance = instance;
         this.functionsByName = functionsByName;
         this.callbackIds = callbackIds;
+        this.maxFuel = maxFuel;
     }
 
     public static String unavailableReason() {
@@ -1138,7 +1141,8 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
                     context,
                     instance,
                     exportedFunctions(module),
-                    callbackIds
+                    callbackIds,
+                    maxFuel
             );
             execution.bindExportedFunctions();
             execution.bindExportedMemories(module, pulleyModuleBytes.syntheticMemoryExports);
@@ -1369,6 +1373,20 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
             return null;
         }
         return memoriesByIndex.get(index);
+    }
+
+    @Override
+    public void replenishFuel() {
+        if (closed.get()) {
+            throw new IllegalStateException("WebAssembly instance is closed");
+        }
+        try {
+            configureFuel(api, context, maxFuel);
+        } catch (WasmEngineException error) {
+            throw error;
+        } catch (Throwable error) {
+            throw new WasmEngineException("failed to replenish Wasmtime fuel", error);
+        }
     }
 
     @Override

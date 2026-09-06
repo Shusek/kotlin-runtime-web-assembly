@@ -68,6 +68,7 @@ import uk.shusek.krwa.runtime.wasmtimepulley.krwa_pulley_memory_write_i16
 import uk.shusek.krwa.runtime.wasmtimepulley.krwa_pulley_memory_write_i32
 import uk.shusek.krwa.runtime.wasmtimepulley.krwa_pulley_memory_write_i64
 import uk.shusek.krwa.runtime.wasmtimepulley.krwa_pulley_memory_write_u8
+import uk.shusek.krwa.runtime.wasmtimepulley.krwa_pulley_replenish_fuel
 import uk.shusek.krwa.runtime.wasmtimepulley.krwa_pulley_report_host_callback_error
 
 actual fun installWasmtimePulleyExecutionProviderIfAvailable() {
@@ -194,6 +195,12 @@ private class IosWasmtimePulleyExecution(
 
     override fun memory(index: Int): Memory? =
         if (index in 0 until memoriesByIndex.size) memoriesByIndex[index] else null
+
+    override fun replenishFuel() {
+        if (krwa_pulley_replenish_fuel(nativeHandle) != 0) {
+            throw WasmEngineException(lastPulleyError())
+        }
+    }
 
     override fun close() {
         handleGuard.close()

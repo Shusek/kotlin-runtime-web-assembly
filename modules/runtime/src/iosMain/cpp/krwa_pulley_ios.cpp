@@ -210,6 +210,7 @@ struct NativeExecution {
     wasmtime_module_t *module = nullptr;
     wasmtime_store_t *store = nullptr;
     wasmtime_context_t *context = nullptr;
+    std::int64_t maxFuel = -1;
     WasmtimeInstance instance{};
     std::vector<std::unique_ptr<CallbackEnv>> callbackEnvs;
     std::recursive_mutex mutex;
@@ -741,6 +742,7 @@ extern "C" std::int64_t krwa_pulley_create(
         maxTables,
         maxMemories);
     execution->context = wasmtime_store_context(execution->store);
+    execution->maxFuel = maxFuel;
     if (maxFuel != -1) {
         wasmtime_error_t *fuelError =
             wasmtime_context_set_fuel(execution->context, static_cast<std::uint64_t>(maxFuel));
@@ -808,6 +810,24 @@ extern "C" std::int64_t krwa_pulley_create(
 
 extern "C" void krwa_pulley_destroy(std::int64_t nativeHandle) {
     delete executionFrom(nativeHandle);
+}
+
+extern "C" std::int32_t krwa_pulley_replenish_fuel(std::int64_t nativeHandle) {
+    gLastError.clear();
+    auto *execution = executionFrom(nativeHandle);
+    std::lock_guard<std::recursive_mutex> lock(execution->mutex);
+    if (execution->maxFuel == -1) {
+        return 0;
+    }
+    wasmtime_error_t *fuelError = wasmtime_context_set_fuel(
+        execution->context,
+        static_cast<std::uint64_t>(execution->maxFuel)
+    );
+    if (fuelError != nullptr) {
+        setError("replenish Wasmtime fuel: " + consumeError(fuelError));
+        return -1;
+    }
+    return 0;
 }
 
 extern "C" std::int64_t krwa_pulley_bind_function(

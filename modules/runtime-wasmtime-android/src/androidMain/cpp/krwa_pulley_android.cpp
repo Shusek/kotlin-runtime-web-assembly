@@ -161,6 +161,7 @@ struct NativeExecution {
     wasmtime_module_t *module = nullptr;
     wasmtime_store_t *store = nullptr;
     wasmtime_context_t *context = nullptr;
+    std::int64_t maxFuel = -1;
     WasmtimeInstance instance{};
     std::vector<std::unique_ptr<CallbackEnv>> callbackEnvs;
     std::recursive_mutex mutex;
@@ -1000,6 +1001,7 @@ Java_uk_shusek_krwa_runtime_wasmtime_android_AndroidWasmtimePulleyNative_create(
         maxTables,
         maxMemories);
     execution->context = api->storeContext(execution->store);
+    execution->maxFuel = maxFuel;
     if (maxFuel != -1) {
         wasmtime_error_t *fuelError =
             api->contextSetFuel(execution->context, static_cast<std::uint64_t>(maxFuel));
@@ -1080,6 +1082,26 @@ Java_uk_shusek_krwa_runtime_wasmtime_android_AndroidWasmtimePulleyNative_destroy
     jlong nativeHandle
 ) {
     delete executionFrom(nativeHandle);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_uk_shusek_krwa_runtime_wasmtime_android_AndroidWasmtimePulleyNative_replenishFuel(
+    JNIEnv *env,
+    jclass,
+    jlong nativeHandle
+) {
+    auto *execution = executionFrom(nativeHandle);
+    std::lock_guard<std::recursive_mutex> lock(execution->mutex);
+    if (execution->maxFuel == -1) {
+        return;
+    }
+    wasmtime_error_t *fuelError = execution->api->contextSetFuel(
+        execution->context,
+        static_cast<std::uint64_t>(execution->maxFuel)
+    );
+    if (fuelError != nullptr) {
+        throwEngine(env, "replenish Wasmtime fuel: " + consumeError(execution->api, fuelError));
+    }
 }
 
 extern "C" JNIEXPORT jlong JNICALL

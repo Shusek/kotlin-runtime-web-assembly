@@ -422,6 +422,7 @@ public final class uk/shusek/krwa/runtime/Instance : java/lang/AutoCloseable {
 	public final fun module ()Luk/shusek/krwa/wasm/WasmModule;
 	public final fun registerException (Luk/shusek/krwa/runtime/WasmException;)I
 	public final fun registerGcRef (Luk/shusek/krwa/runtime/WasmGcRef;)I
+	public final fun replenishExecutionFuel ()V
 	public final fun setElement (ILuk/shusek/krwa/wasm/types/Element;)V
 	public final fun setTailCall (I[J)V
 	public final fun table (I)Luk/shusek/krwa/runtime/TableInstance;
@@ -717,10 +718,12 @@ public abstract interface class uk/shusek/krwa/runtime/PlatformInstanceExecution
 	public abstract fun getBackend ()Luk/shusek/krwa/runtime/ExecutionBackend;
 	public abstract fun memory (I)Luk/shusek/krwa/runtime/Memory;
 	public abstract fun memory (Ljava/lang/String;)Luk/shusek/krwa/runtime/Memory;
+	public fun replenishFuel ()V
 }
 
 public final class uk/shusek/krwa/runtime/PlatformInstanceExecution$DefaultImpls {
 	public static fun close (Luk/shusek/krwa/runtime/PlatformInstanceExecution;)V
+	public static fun replenishFuel (Luk/shusek/krwa/runtime/PlatformInstanceExecution;)V
 }
 
 public final class uk/shusek/krwa/runtime/PortableMemory : uk/shusek/krwa/runtime/Memory {
@@ -1195,6 +1198,7 @@ public final class uk/shusek/krwa/runtime/WasmtimePulleyExecution : uk/shusek/kr
 	public static fun preview3ExecutionCancellationCreate ()J
 	public static fun preview3ExecutionCancellationFree (J)V
 	public static fun preview3ExecutionCancellationIsCancelled (J)Z
+	public fun replenishFuel ()V
 	public static fun unavailableReason ()Ljava/lang/String;
 	public static fun unavailableReason (Ljava/lang/String;)Ljava/lang/String;
 }

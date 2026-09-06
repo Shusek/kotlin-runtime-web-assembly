@@ -2,7 +2,7 @@
 coroutines = "1.10.2"
 io = "0.9.1"
 kotlin = "2.4.10"
-krwa = "0.3.0-rc.10"
+krwa = "0.3.0-rc.11"
 ktor = "3.5.2"
 serialization = "1.11.0"
 

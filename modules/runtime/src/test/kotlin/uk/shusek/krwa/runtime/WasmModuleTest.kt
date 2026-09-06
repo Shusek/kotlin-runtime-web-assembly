@@ -138,6 +138,10 @@ class WasmModuleTest {
                     .build()
 
             assertEquals(listOf(firstConfig, secondConfig), provider.configs)
+            first.replenishExecutionFuel()
+            second.replenishExecutionFuel()
+            second.replenishExecutionFuel()
+            assertEquals(3, provider.replenishCalls.get())
             first.close()
             first.close()
             second.close()
@@ -200,6 +204,7 @@ class WasmModuleTest {
 
             assertTrue(instance.isClosed())
             assertThrows(IllegalStateException::class.java) { instance.export("add") }
+            assertThrows(IllegalStateException::class.java) { instance.replenishExecutionFuel() }
             assertThrows(IllegalStateException::class.java) { add.apply(5, 6) }
             assertThrows(IllegalStateException::class.java) { memory.pages() }
             instance.close()
@@ -526,6 +531,35 @@ class WasmModuleTest {
                 instance.export("run").apply()
             }
             assertTrue(exception.message.orEmpty().contains("fuel", ignoreCase = true))
+        }
+    }
+
+    @Test
+    fun shouldReplenishConfiguredWasmtimeFuelForALongLivedInstance() {
+        val instance =
+            tryBuildPulley(
+                loadModule("compiled/add.wat.wasm"),
+                config = WasmtimeExecutionConfig(maxFuel = 10_000),
+            ) ?: return
+        instance.use {
+            val add = instance.export("add")
+            var exhausted = false
+            run calls@{
+                repeat(100_000) {
+                    try {
+                        add.apply(5, 6)
+                    } catch (error: TrapException) {
+                        assertTrue(error.message.orEmpty().contains("fuel", ignoreCase = true))
+                        exhausted = true
+                        return@calls
+                    }
+                }
+            }
+            assertTrue(exhausted, "expected repeated calls to exhaust the configured fuel")
+
+            instance.replenishExecutionFuel()
+
+            assertEquals(11L, add.apply(5, 6)[0])
         }
     }
 
@@ -1096,6 +1130,7 @@ class WasmModuleTest {
         private class MockPulleyProvider : PulleyExecutionProvider {
             val createCalls = AtomicInteger()
             val closeCalls = AtomicInteger()
+            val replenishCalls = AtomicInteger()
             val configs = ArrayList<WasmtimeExecutionConfig?>()
             private val memory = ByteArrayMemory(MemoryLimits(1, 2))
 
@@ -1125,6 +1160,10 @@ class WasmModuleTest {
                     override fun memory(name: String): Memory = memory
 
                     override fun memory(index: Int): Memory? = if (index == 0) memory else null
+
+                    override fun replenishFuel() {
+                        replenishCalls.incrementAndGet()
+                    }
 
                     override fun close() {
                         closeCalls.incrementAndGet()
