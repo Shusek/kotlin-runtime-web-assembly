@@ -5,6 +5,13 @@ patch and prerelease identifiers advance without changing the `0.3` major/minor 
 `1.0.0`, API changes may still be intentional; release candidates remain immutable once
 published.
 
+## 0.3.0-rc.12 (2026-09-06)
+
+### Fixed
+
+- Refreshed the checked-in Wasm package lock after the runtime package version change so release
+  publication gates use the same immutable candidate version throughout the dependency graph.
+
 ## 0.3.0-rc.11 (2026-09-06)
 
 ### Added
