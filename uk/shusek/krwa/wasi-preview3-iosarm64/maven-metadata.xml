@@ -3,11 +3,11 @@
   <groupId>uk.shusek.krwa</groupId>
   <artifactId>wasi-preview3-iosarm64</artifactId>
   <versioning>
-    <latest>0.3.0-dev.08b8ff4fbe4a</latest>
-    <release>0.3.0-dev.08b8ff4fbe4a</release>
+    <latest>0.3.0-dev.21b96b7a7348</latest>
+    <release>0.3.0-dev.21b96b7a7348</release>
     <versions>
-      <version>0.3.0-dev.08b8ff4fbe4a</version>
+      <version>0.3.0-dev.21b96b7a7348</version>
     </versions>
-    <lastUpdated>20260906013828</lastUpdated>
+    <lastUpdated>20260906022504</lastUpdated>
   </versioning>
 </metadata>
