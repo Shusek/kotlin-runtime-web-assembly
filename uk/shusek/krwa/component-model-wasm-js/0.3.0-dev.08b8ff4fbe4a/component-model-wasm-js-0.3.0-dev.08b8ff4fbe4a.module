@@ -1,0 +1,249 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "url": "../../component-model/0.3.0-dev.08b8ff4fbe4a/component-model-0.3.0-dev.08b8ff4fbe4a.module",
+    "group": "uk.shusek.krwa",
+    "module": "component-model",
+    "version": "0.3.0-dev.08b8ff4fbe4a",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.7.1"
+    }
+  },
+  "variants": [
+    {
+      "name": "wasmJsApiElements-published",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.jvm.environment": "non-jvm",
+        "org.gradle.usage": "kotlin-api",
+        "org.jetbrains.kotlin.platform.type": "wasm",
+        "org.jetbrains.kotlin.wasm.target": "js"
+      },
+      "dependencies": [
+        {
+          "group": "com.squareup.okio",
+          "module": "okio",
+          "version": {
+            "requires": "3.18.1"
+          }
+        },
+        {
+          "group": "io.ktor",
+          "module": "ktor-client-core",
+          "version": {
+            "requires": "3.5.2"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlinx",
+          "module": "kotlinx-datetime",
+          "version": {
+            "requires": "0.8.0"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlinx",
+          "module": "kotlinx-io-core",
+          "version": {
+            "requires": "0.9.1"
+          }
+        },
+        {
+          "group": "org.kotlincrypto.random",
+          "module": "crypto-rand",
+          "version": {
+            "requires": "0.6.0"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "runtime",
+          "version": {
+            "requires": "0.3.0-dev.08b8ff4fbe4a"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "wasi",
+          "version": {
+            "requires": "0.3.0-dev.08b8ff4fbe4a"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "wasm",
+          "version": {
+            "requires": "0.3.0-dev.08b8ff4fbe4a"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.4.10"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "component-model-wasm-js-0.3.0-dev.08b8ff4fbe4a.klib",
+          "url": "component-model-wasm-js-0.3.0-dev.08b8ff4fbe4a.klib",
+          "size": 915442,
+          "sha512": "747122fac943238d7bbea46053ab080771c479fc20837aec286055fb2d4e9829a1959bb1ede608be1b06fd82cccb07e81a89493506a853702720c3683dee4117",
+          "sha256": "1367718398c95e5dfe2e2a4ca9e59e14fdb350aca2d8ec2f11d7608cb1652137",
+          "sha1": "2c7c29f746b9c2d3af1ba48a66d6578da8fb220c",
+          "md5": "fae329eed19af1939e383a6888220d66"
+        }
+      ]
+    },
+    {
+      "name": "wasmJsRuntimeElements-published",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.jvm.environment": "non-jvm",
+        "org.gradle.usage": "kotlin-runtime",
+        "org.jetbrains.kotlin.platform.type": "wasm",
+        "org.jetbrains.kotlin.wasm.target": "js"
+      },
+      "dependencies": [
+        {
+          "group": "com.squareup.okio",
+          "module": "okio",
+          "version": {
+            "requires": "3.18.1"
+          }
+        },
+        {
+          "group": "io.ktor",
+          "module": "ktor-client-core",
+          "version": {
+            "requires": "3.5.2"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlinx",
+          "module": "kotlinx-datetime",
+          "version": {
+            "requires": "0.8.0"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlinx",
+          "module": "kotlinx-io-core",
+          "version": {
+            "requires": "0.9.1"
+          }
+        },
+        {
+          "group": "org.kotlincrypto.random",
+          "module": "crypto-rand",
+          "version": {
+            "requires": "0.6.0"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "runtime",
+          "version": {
+            "requires": "0.3.0-dev.08b8ff4fbe4a"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "wasi",
+          "version": {
+            "requires": "0.3.0-dev.08b8ff4fbe4a"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "wasm",
+          "version": {
+            "requires": "0.3.0-dev.08b8ff4fbe4a"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.4.10"
+          }
+        },
+        {
+          "group": "io.ktor",
+          "module": "ktor-client-js",
+          "version": {
+            "requires": "3.5.2"
+          }
+        },
+        {
+          "group": "io.ktor",
+          "module": "ktor-client-websockets",
+          "version": {
+            "requires": "3.5.2"
+          }
+        },
+        {
+          "group": "io.ktor",
+          "module": "ktor-network",
+          "version": {
+            "requires": "3.5.2"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlinx",
+          "module": "kotlinx-io-okio",
+          "version": {
+            "requires": "0.9.1"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlinx",
+          "module": "kotlinx-coroutines-core",
+          "version": {
+            "requires": "1.10.2"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "component-model-wasm-js-0.3.0-dev.08b8ff4fbe4a.klib",
+          "url": "component-model-wasm-js-0.3.0-dev.08b8ff4fbe4a.klib",
+          "size": 915442,
+          "sha512": "747122fac943238d7bbea46053ab080771c479fc20837aec286055fb2d4e9829a1959bb1ede608be1b06fd82cccb07e81a89493506a853702720c3683dee4117",
+          "sha256": "1367718398c95e5dfe2e2a4ca9e59e14fdb350aca2d8ec2f11d7608cb1652137",
+          "sha1": "2c7c29f746b9c2d3af1ba48a66d6578da8fb220c",
+          "md5": "fae329eed19af1939e383a6888220d66"
+        }
+      ]
+    },
+    {
+      "name": "wasmJsSourcesElements-published",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.jvm.environment": "non-jvm",
+        "org.gradle.usage": "kotlin-runtime",
+        "org.jetbrains.kotlin.platform.type": "wasm",
+        "org.jetbrains.kotlin.wasm.target": "js"
+      },
+      "files": [
+        {
+          "name": "component-model-wasm-js-0.3.0-dev.08b8ff4fbe4a-sources.jar",
+          "url": "component-model-wasm-js-0.3.0-dev.08b8ff4fbe4a-sources.jar",
+          "size": 151413,
+          "sha512": "3ae4972aee81a13a206dcaaccc2863a4e1e2f338a1ae7eaea6edc64342f3d09bf52f089006b56a0d0ca441393c11afdb49c0325af1a0190784940baa842e8d13",
+          "sha256": "be05b0d2fc0f1626720e737d8b70f13d2d6e19eb611426bd47110ba03c3f98e7",
+          "sha1": "62b5f0bbe943ada9afaca844a8e877c52be755b2",
+          "md5": "d02caf3ed534747f19e65a04b51f3b86"
+        }
+      ]
+    }
+  ]
+}
