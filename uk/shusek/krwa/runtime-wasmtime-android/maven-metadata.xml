@@ -3,14 +3,15 @@
   <groupId>uk.shusek.krwa</groupId>
   <artifactId>runtime-wasmtime-android</artifactId>
   <versioning>
-    <latest>0.3.0-dev.21b96b7a7348</latest>
-    <release>0.3.0-dev.21b96b7a7348</release>
+    <latest>0.3.0-dev.428bfc8e397e</latest>
+    <release>0.3.0-dev.428bfc8e397e</release>
     <versions>
       <version>0.3.0-dev.dd7a6fdf625a</version>
       <version>0.3.0-dev.ec3430fca82c</version>
       <version>0.3.0-dev.08b8ff4fbe4a</version>
       <version>0.3.0-dev.21b96b7a7348</version>
+      <version>0.3.0-dev.428bfc8e397e</version>
     </versions>
-    <lastUpdated>20260906023319</lastUpdated>
+    <lastUpdated>20260915164415</lastUpdated>
   </versioning>
 </metadata>
