@@ -2,6 +2,7 @@ package uk.shusek.krwa.runtime
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFails
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
@@ -11,6 +12,28 @@ import uk.shusek.krwa.wasm.UninstantiableException
 import uk.shusek.krwa.wasm.WasmParser
 
 class IosWasmtimeModuleCompilerTest {
+    @Test
+    fun cachedMeteredModuleKeepsFuelEnforcementAndSeparateIdentity() {
+        installWasmtimePulleyExecutionProviderIfAvailable()
+        assertNotEquals(
+            iosWasmtimeModuleCompilerIdentity(consumeFuel = false),
+            iosWasmtimeModuleCompilerIdentity(consumeFuel = true),
+        )
+        val compiled = iosWasmtimeCompileModuleToCwasm(ADD_WASM, consumeFuel = true)
+        Instance.builder(WasmParser.parse(ADD_WASM))
+            .withExecutionBackend(ExecutionBackend.PULLEY)
+            .withWasmtimeExecutionConfig(
+                WasmtimeExecutionConfig(target = WasmtimePulleyTarget, precompiledModuleBytes = compiled, maxFuel = 16),
+            )
+            .build().use { instance ->
+                assertEquals(42L, instance.export("add").apply(19, 23)[0])
+                val failure = assertFails { repeat(100) { instance.export("add").apply(19, 23) } }
+                assertTrue(failure.message.orEmpty().contains("fuel", ignoreCase = true))
+                instance.replenishExecutionFuel()
+                assertEquals(42L, instance.export("add").apply(19, 23)[0])
+            }
+    }
+
     @Test
     fun compilesModuleToPulleyCwasmAndRunsIt() {
         assertNull(iosWasmtimeModuleCompilerUnavailableReason())

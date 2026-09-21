@@ -820,7 +820,8 @@ Java_uk_shusek_krwa_runtime_wasmtime_android_AndroidWasmtimeModuleCompilerNative
     jclass,
     jbyteArray moduleBytes,
     jstring target,
-    jlong maxWasmStackBytes
+    jlong maxWasmStackBytes,
+    jboolean consumeFuel
 ) {
     if (moduleBytes == nullptr) {
         throwEngine(env, "module bytes must not be null");
@@ -840,7 +841,7 @@ Java_uk_shusek_krwa_runtime_wasmtime_android_AndroidWasmtimeModuleCompilerNative
         throwEngine(env, "wasm_config_new returned null");
         return nullptr;
     }
-    std::string configError = configureWasmtime(api, config, targetValue, true, maxWasmStackBytes, -1);
+    std::string configError = configureWasmtime(api, config, targetValue, true, maxWasmStackBytes, consumeFuel ? 0 : -1);
     if (!configError.empty()) {
         throwEngine(env, configError);
         return nullptr;
