@@ -31,15 +31,18 @@ fun iosWasmtimeModuleCompilerUnavailableReason(
 fun iosWasmtimeModuleCompilerIdentity(
     target: String = WasmtimePulleyTarget,
     maxWasmStackBytes: Long = DefaultWasmtimeMaxWasmStackBytes,
+    consumeFuel: Boolean = false,
 ): String? {
     if (iosWasmtimeModuleCompilerUnavailableReason(target, maxWasmStackBytes) != null) return null
-    return "ios:$WasmtimeModuleCompilerBuildIdentity:target=$target:maxWasmStackBytes=$maxWasmStackBytes"
+    return "ios:$WasmtimeModuleCompilerBuildIdentity:target=$target:maxWasmStackBytes=$maxWasmStackBytes:consumeFuel=$consumeFuel"
 }
 
+/** Compile with the same fuel instrumentation setting as the execution host. */
 fun iosWasmtimeCompileModuleToCwasm(
     moduleBytes: ByteArray,
     target: String = WasmtimePulleyTarget,
     maxWasmStackBytes: Long = DefaultWasmtimeMaxWasmStackBytes,
+    consumeFuel: Boolean = false,
 ): ByteArray {
     require(moduleBytes.isNotEmpty()) { "module bytes must not be empty" }
     return memScoped {
@@ -53,6 +56,7 @@ fun iosWasmtimeCompileModuleToCwasm(
                 moduleBytes.size.convert(),
                 target,
                 maxWasmStackBytes.convert(),
+                if (consumeFuel) 1u else 0u,
                 resultOut.ptr,
                 resultSizeOut.ptr,
             )

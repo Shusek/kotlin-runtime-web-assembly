@@ -29,6 +29,7 @@ const char *krwa_wasmtime_compile_module_to_cwasm(
     size_t module_size,
     const char *target,
     uint64_t max_wasm_stack_bytes,
+    uint8_t consume_fuel,
     const uint8_t **result_out,
     size_t *result_size_out
 );

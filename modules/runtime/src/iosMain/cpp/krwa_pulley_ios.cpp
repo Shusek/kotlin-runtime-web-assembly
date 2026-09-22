@@ -591,6 +591,7 @@ extern "C" const char *krwa_wasmtime_compile_module_to_cwasm(
     std::size_t moduleSize,
     const char *target,
     std::uint64_t maxWasmStackBytes,
+    std::uint8_t consumeFuel,
     const std::uint8_t **resultOut,
     std::size_t *resultSizeOut
 ) {
@@ -614,7 +615,7 @@ extern "C" const char *krwa_wasmtime_compile_module_to_cwasm(
         return setError("wasm_config_new returned null");
     }
     std::unique_ptr<wasm_config_t, decltype(&wasm_config_delete)> configGuard(config, wasm_config_delete);
-    std::string configError = configurePulley(config, static_cast<std::int64_t>(maxWasmStackBytes), -1);
+    std::string configError = configurePulley(config, static_cast<std::int64_t>(maxWasmStackBytes), consumeFuel ? 0 : -1);
     if (!configError.empty()) {
         return setError(configError);
     }

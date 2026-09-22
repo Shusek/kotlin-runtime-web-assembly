@@ -13,17 +13,20 @@ fun androidWasmtimeModuleCompilerUnavailableReason(
 fun androidWasmtimeModuleCompilerIdentity(
     target: String = WasmtimeNativeTarget,
     maxWasmStackBytes: Long = DefaultCompilerMaxWasmStackBytes,
+    consumeFuel: Boolean = false,
 ): String? {
     if (androidWasmtimeModuleCompilerUnavailableReason(target, maxWasmStackBytes) != null) return null
-    return "android:$WasmtimeModuleCompilerBuildIdentity:target=$target:maxWasmStackBytes=$maxWasmStackBytes"
+    return "android:$WasmtimeModuleCompilerBuildIdentity:target=$target:maxWasmStackBytes=$maxWasmStackBytes:consumeFuel=$consumeFuel"
 }
 
+/** Compile with the same fuel instrumentation setting as the execution host. */
 fun androidWasmtimeCompileModuleToCwasm(
     moduleBytes: ByteArray,
     target: String = WasmtimeNativeTarget,
     maxWasmStackBytes: Long = DefaultCompilerMaxWasmStackBytes,
+    consumeFuel: Boolean = false,
 ): ByteArray =
-    AndroidWasmtimeModuleCompilerNative.compileModuleToCwasm(moduleBytes, target, maxWasmStackBytes)
+    AndroidWasmtimeModuleCompilerNative.compileModuleToCwasm(moduleBytes, target, maxWasmStackBytes, consumeFuel)
 
 private object AndroidWasmtimeModuleCompilerNative {
     private val loadError: Throwable? = runCatching {
@@ -37,18 +40,18 @@ private object AndroidWasmtimeModuleCompilerNative {
         return nativeCompilerUnavailableReason(target, maxWasmStackBytes)
     }
 
-    fun compileModuleToCwasm(moduleBytes: ByteArray, target: String, maxWasmStackBytes: Long): ByteArray {
+    fun compileModuleToCwasm(moduleBytes: ByteArray, target: String, maxWasmStackBytes: Long, consumeFuel: Boolean): ByteArray {
         loadError?.let { error ->
             throw WasmEngineException(androidModuleCompilerLoadErrorMessage(error), error)
         }
-        return nativeCompileModuleToCwasm(moduleBytes, target, maxWasmStackBytes)
+        return nativeCompileModuleToCwasm(moduleBytes, target, maxWasmStackBytes, consumeFuel)
     }
 
     @JvmStatic
     external fun nativeCompilerUnavailableReason(target: String, maxWasmStackBytes: Long): String?
 
     @JvmStatic
-    external fun nativeCompileModuleToCwasm(moduleBytes: ByteArray, target: String, maxWasmStackBytes: Long): ByteArray
+    external fun nativeCompileModuleToCwasm(moduleBytes: ByteArray, target: String, maxWasmStackBytes: Long, consumeFuel: Boolean): ByteArray
 }
 
 private const val DefaultCompilerMaxWasmStackBytes = 512L * 1024L
