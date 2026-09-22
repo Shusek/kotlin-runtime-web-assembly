@@ -1045,10 +1045,10 @@ final class uk.shusek.krwa.runtime/WasmtimePreview3ExecutionCancellation : kotli
 }
 
 // Targets: [ios]
-final fun uk.shusek.krwa.runtime/iosWasmtimeCompileModuleToCwasm(kotlin/ByteArray, kotlin/String = ..., kotlin/Long = ...): kotlin/ByteArray // uk.shusek.krwa.runtime/iosWasmtimeCompileModuleToCwasm|iosWasmtimeCompileModuleToCwasm(kotlin.ByteArray;kotlin.String;kotlin.Long){}[0]
+final fun uk.shusek.krwa.runtime/iosWasmtimeCompileModuleToCwasm(kotlin/ByteArray, kotlin/String = ..., kotlin/Long = ..., kotlin/Boolean = ...): kotlin/ByteArray // uk.shusek.krwa.runtime/iosWasmtimeCompileModuleToCwasm|iosWasmtimeCompileModuleToCwasm(kotlin.ByteArray;kotlin.String;kotlin.Long;kotlin.Boolean){}[0]
 
 // Targets: [ios]
-final fun uk.shusek.krwa.runtime/iosWasmtimeModuleCompilerIdentity(kotlin/String = ..., kotlin/Long = ...): kotlin/String? // uk.shusek.krwa.runtime/iosWasmtimeModuleCompilerIdentity|iosWasmtimeModuleCompilerIdentity(kotlin.String;kotlin.Long){}[0]
+final fun uk.shusek.krwa.runtime/iosWasmtimeModuleCompilerIdentity(kotlin/String = ..., kotlin/Long = ..., kotlin/Boolean = ...): kotlin/String? // uk.shusek.krwa.runtime/iosWasmtimeModuleCompilerIdentity|iosWasmtimeModuleCompilerIdentity(kotlin.String;kotlin.Long;kotlin.Boolean){}[0]
 
 // Targets: [ios]
 final fun uk.shusek.krwa.runtime/iosWasmtimeModuleCompilerUnavailableReason(kotlin/String = ..., kotlin/Long = ...): kotlin/String? // uk.shusek.krwa.runtime/iosWasmtimeModuleCompilerUnavailableReason|iosWasmtimeModuleCompilerUnavailableReason(kotlin.String;kotlin.Long){}[0]
