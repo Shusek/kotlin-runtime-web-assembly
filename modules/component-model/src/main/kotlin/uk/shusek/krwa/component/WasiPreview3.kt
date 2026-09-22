@@ -660,7 +660,7 @@ private constructor(
 
     fun futureValue(future: WitFuture<*>): Any? = futureValue(future.handle())
 
-    fun futureValue(handle: Long): Any? = futures.get(handle).state.value
+    fun futureValue(handle: Long): Any? = futures.get(handle).state.snapshot().value
 
     @Suppress("UNCHECKED_CAST")
     suspend fun <T> awaitFuture(future: WitFuture<T>): T =
@@ -1093,7 +1093,7 @@ private constructor(
         ptr: Int,
         payloadType: WitPackage.TypeRef,
     ): Long {
-        val state = futures.get(futureHandle).state
+        val state = futures.get(futureHandle).state.snapshot()
         if (state.readableDropped) {
             return streamCancelled(0)
         }
@@ -1111,11 +1111,15 @@ private constructor(
         payloadType: WitPackage.TypeRef,
     ): Long {
         val state = futures.get(futureHandle).state
-        if (state.readableDropped || state.writableDropped || state.completed) {
+        val snapshot = state.snapshot()
+        if (snapshot.readableDropped || snapshot.writableDropped || snapshot.completed) {
             return streamDropped(0)
         }
-        state.complete(context.loadFutureValue(ptr, payloadType))
-        return streamCompleted(0)
+        return if (state.tryComplete(context.loadFutureValue(ptr, payloadType))) {
+            streamCompleted(0)
+        } else {
+            streamDropped(0)
+        }
     }
 
     override fun futureCancelRead(futureHandle: Long): Long {
@@ -6811,12 +6815,28 @@ private constructor(
     private class HttpTrailers(val rawFutureHandle: Long, val result: WitResult<HttpFields?, Any?>?)
 
     private class FutureState(
-        var value: Any? = null,
-        var completed: Boolean = false,
-        var readableDropped: Boolean = false,
-        var writableDropped: Boolean = false,
+        value: Any? = null,
+        completed: Boolean = false,
+        readableDropped: Boolean = false,
+        writableDropped: Boolean = false,
     ) {
+        private val lock = WasiPreviewLock()
+        private var current = Snapshot(value, completed, readableDropped, writableDropped)
         private val completion = CompletableDeferred<Any?>()
+
+        data class Snapshot(
+            val value: Any?,
+            val completed: Boolean,
+            val readableDropped: Boolean,
+            val writableDropped: Boolean,
+        )
+
+        val completed: Boolean get() = snapshot().completed
+
+        // Host completion and guest reads run on different threads. Reading individual flags
+        // can observe pending before completion, then a dropped writer after completion.
+        // Publish and read the payload and endpoint state as one coherent snapshot.
+        fun snapshot(): Snapshot = withWasiPreviewLock(lock) { current }
 
         init {
             if (completed) {
@@ -6827,34 +6847,45 @@ private constructor(
         suspend fun awaitValue(): Any? = completion.await()
 
         fun complete(value: Any?) {
-            this.value = value
-            completed = true
-            writableDropped = true
-            completion.complete(value)
+            tryComplete(value)
+        }
+
+        fun tryComplete(value: Any?): Boolean {
+            val accepted = withWasiPreviewLock(lock) {
+                if (current.readableDropped || current.writableDropped || current.completed) {
+                    false
+                } else {
+                    current = current.copy(value = value, completed = true, writableDropped = true)
+                    true
+                }
+            }
+            // Resuming an awaiter must not run arbitrary coroutine code under the state lock.
+            if (accepted) completion.complete(value)
+            return accepted
         }
 
         fun cancelReadable() {
-            readableDropped = true
-            failIfIncomplete("WASI Preview 3 future read was cancelled")
+            dropEndpoint(true, "WASI Preview 3 future read was cancelled")
         }
 
         fun cancelWritable() {
-            writableDropped = true
-            failIfIncomplete("WASI Preview 3 future write was cancelled")
+            dropEndpoint(false, "WASI Preview 3 future write was cancelled")
         }
 
         fun dropReadable() {
-            readableDropped = true
-            failIfIncomplete("WASI Preview 3 future readable end was dropped")
+            dropEndpoint(true, "WASI Preview 3 future readable end was dropped")
         }
 
         fun dropWritable() {
-            writableDropped = true
-            failIfIncomplete("WASI Preview 3 future writable end was dropped before completion")
+            dropEndpoint(false, "WASI Preview 3 future writable end was dropped before completion")
         }
 
-        private fun failIfIncomplete(message: String) {
-            if (!completed && !completion.isCompleted) {
+        private fun dropEndpoint(readable: Boolean, message: String) {
+            val incomplete = withWasiPreviewLock(lock) {
+                current = if (readable) current.copy(readableDropped = true) else current.copy(writableDropped = true)
+                !current.completed
+            }
+            if (incomplete) {
                 completion.completeExceptionally(ComponentModelException(message))
             }
         }
