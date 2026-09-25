@@ -3,8 +3,8 @@
   <groupId>uk.shusek.krwa</groupId>
   <artifactId>wasi-jvm</artifactId>
   <versioning>
-    <latest>0.3.0-dev.90cee2d2dbef</latest>
-    <release>0.3.0-dev.90cee2d2dbef</release>
+    <latest>0.3.0-dev.ce74cc1b5a6f</latest>
+    <release>0.3.0-dev.ce74cc1b5a6f</release>
     <versions>
       <version>0.3.0-dev.dd7a6fdf625a</version>
       <version>0.3.0-dev.ec3430fca82c</version>
@@ -14,7 +14,8 @@
       <version>0.3.0-dev.e3ca3a2569a9</version>
       <version>0.3.0-dev.9facec7b2186</version>
       <version>0.3.0-dev.90cee2d2dbef</version>
+      <version>0.3.0-dev.ce74cc1b5a6f</version>
     </versions>
-    <lastUpdated>20260925111700</lastUpdated>
+    <lastUpdated>20260925120058</lastUpdated>
   </versioning>
 </metadata>
