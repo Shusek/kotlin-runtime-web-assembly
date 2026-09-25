@@ -1,0 +1,140 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "uk.shusek.krwa",
+    "module": "cli-experimental",
+    "version": "0.3.0-dev.59c0bdcaad2a",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.7.1"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.jvm.version": 25,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.4.20"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "cli-experimental-0.3.0-dev.59c0bdcaad2a.jar",
+          "url": "cli-experimental-0.3.0-dev.59c0bdcaad2a.jar",
+          "size": 6885,
+          "sha512": "43c918978b7d85c2961240c7b1c4e00986f615f29fc2929e55b24032a54b6eceaa5375b6587f897ebf1eb33533ec1d3f2c5d94f1b39fb882b2c48661bea6963b",
+          "sha256": "45768bed718b56bccabf83bb7034b5d850acbf46155178a71ee24dbac3160dc1",
+          "sha1": "acf6863bb65aa33bfa88e89087a60ccc397fdd37",
+          "md5": "35ac5b2de6fe37ee914ea21726c7442b"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.jvm.version": 25,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "org.ow2.asm",
+          "module": "asm-bom",
+          "version": {
+            "requires": "9.10.1"
+          },
+          "attributes": {
+            "org.gradle.category": "platform"
+          }
+        },
+        {
+          "group": "info.picocli",
+          "module": "picocli",
+          "version": {
+            "requires": "4.7.7"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "runtime",
+          "version": {
+            "requires": "0.3.0-dev.59c0bdcaad2a"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "wasi",
+          "version": {
+            "requires": "0.3.0-dev.59c0bdcaad2a"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "wasm",
+          "version": {
+            "requires": "0.3.0-dev.59c0bdcaad2a"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.4.20"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "cli-experimental-0.3.0-dev.59c0bdcaad2a.jar",
+          "url": "cli-experimental-0.3.0-dev.59c0bdcaad2a.jar",
+          "size": 6885,
+          "sha512": "43c918978b7d85c2961240c7b1c4e00986f615f29fc2929e55b24032a54b6eceaa5375b6587f897ebf1eb33533ec1d3f2c5d94f1b39fb882b2c48661bea6963b",
+          "sha256": "45768bed718b56bccabf83bb7034b5d850acbf46155178a71ee24dbac3160dc1",
+          "sha1": "acf6863bb65aa33bfa88e89087a60ccc397fdd37",
+          "md5": "35ac5b2de6fe37ee914ea21726c7442b"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "cli-experimental-0.3.0-dev.59c0bdcaad2a-sources.jar",
+          "url": "cli-experimental-0.3.0-dev.59c0bdcaad2a-sources.jar",
+          "size": 2878,
+          "sha512": "2b9af03d1fbfd3eba5e5984fcc6e9095b79ca00a02afe59c643a4b790c293a420c927c08fa25fbec7450d4f5b47260a464eeb33d61c895cfa116b5c47f8a4753",
+          "sha256": "1593fbdd54fcea6bd70c4317736b0d8fb9f248e5c6bff288d4a1f7d57a15a96c",
+          "sha1": "d2640de6f86ad54b3ac4113498fb02b5f3e61b42",
+          "md5": "9d02bd9b03c80d409c0e28ff87e3d1d1"
+        }
+      ]
+    }
+  ]
+}

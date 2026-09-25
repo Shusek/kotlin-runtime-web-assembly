@@ -3,8 +3,8 @@
   <groupId>uk.shusek.krwa</groupId>
   <artifactId>wasi-preview3-wasm-js</artifactId>
   <versioning>
-    <latest>0.3.0-dev.ce74cc1b5a6f</latest>
-    <release>0.3.0-dev.ce74cc1b5a6f</release>
+    <latest>0.3.0-dev.59c0bdcaad2a</latest>
+    <release>0.3.0-dev.59c0bdcaad2a</release>
     <versions>
       <version>0.3.0-dev.dd7a6fdf625a</version>
       <version>0.3.0-dev.ec3430fca82c</version>
@@ -15,7 +15,8 @@
       <version>0.3.0-dev.9facec7b2186</version>
       <version>0.3.0-dev.90cee2d2dbef</version>
       <version>0.3.0-dev.ce74cc1b5a6f</version>
+      <version>0.3.0-dev.59c0bdcaad2a</version>
     </versions>
-    <lastUpdated>20260925120131</lastUpdated>
+    <lastUpdated>20260925153340</lastUpdated>
   </versioning>
 </metadata>
