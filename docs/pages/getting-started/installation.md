@@ -1,7 +1,6 @@
 # Installation
 
-When a public release is available, use Maven Central. For development builds,
-add the public GitHub Pages Maven repository and pin the commit-derived version:
+Use KRWA `0.3.0` from Maven Central:
 
 ```kotlin
 // settings.gradle.kts
@@ -9,7 +8,6 @@ dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         mavenCentral()
-        maven("https://shusek.github.io/kotlin-runtime-web-assembly/maven")
     }
 }
 ```
@@ -18,7 +16,7 @@ Use the BOM so all modules stay on the same version:
 
 ```kotlin
 // build.gradle.kts
-val runtimeVersion = "0.3.0-dev.<12-character-commit>"
+val runtimeVersion = "0.3.0"
 
 dependencies {
     implementation(platform("uk.shusek.krwa:bom:$runtimeVersion"))

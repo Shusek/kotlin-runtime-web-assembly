@@ -1,4 +1,7 @@
+import java.io.ByteArrayOutputStream
 import java.security.MessageDigest
+import java.util.Base64
+import java.util.zip.GZIPOutputStream
 import org.gradle.api.plugins.BasePluginExtension
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
@@ -682,6 +685,48 @@ tasks.matching { task -> task.name == "bundleAndroidMainAar" }.configureEach {
     dependsOn(verifyAndroidJniLibAbis)
 }
 
+// Precompiled components are tied to the exact Wasmtime release and engine configuration.
+val generateAndroidCommandFixture by tasks.registering {
+    val source = layout.projectDirectory.file("src/androidDeviceTest/fixtures/minimal-wasip2-command.wat")
+    val outputDirectory = layout.buildDirectory.dir("generated/androidCommandFixture/kotlin")
+    val wasmtime = providers.environmentVariable("WASMTIME").orElse("wasmtime")
+    inputs.file(source)
+    inputs.property("wasmtimeVersion", wasmtimePulleyVersion)
+    inputs.property("wasmtimeExecutable", wasmtime)
+    outputs.dir(outputDirectory)
+    doLast {
+        val versionProcess = ProcessBuilder(wasmtime.get(), "--version").redirectErrorStream(true).start()
+        val versionOutput = versionProcess.inputStream.bufferedReader().use { it.readText() }.trim()
+        check(versionProcess.waitFor() == 0 && versionOutput.split(' ').getOrNull(1) == wasmtimePulleyVersion) {
+            "Android command fixtures require Wasmtime $wasmtimePulleyVersion; found: $versionOutput"
+        }
+        val generated = StringBuilder("package uk.shusek.krwa.runtime.wasmtime.android\n\n")
+        for (bits in listOf(32, 64)) {
+            val compiled = temporaryDir.resolve("minimal-command-pulley$bits.cwasm")
+            runProcess(
+                listOf(wasmtime.get(), "compile", "--target", "pulley$bits", "-C", "collector=drc") +
+                    listOf(
+                        "component-model", "component-model-async", "epoch-interruption",
+                        "component-model-more-async-builtins", "component-model-async-stackful",
+                        "component-model-threading", "component-model-error-context", "gc",
+                        "function-references", "exceptions", "multi-memory",
+                    ).flatMap { feature -> listOf("-W", "$feature=y") } +
+                    listOf("-o", compiled.absolutePath, source.asFile.absolutePath),
+                temporaryDir,
+            )
+            val compressed = ByteArrayOutputStream().also { output ->
+                GZIPOutputStream(output).use { it.write(compiled.readBytes()) }
+            }.toByteArray()
+            val encoded = Base64.getEncoder().encodeToString(compressed)
+            generated.append("internal const val MinimalWasip2CommandPulley${bits}GzipBase64 = \"$encoded\"\n")
+        }
+        outputDirectory.get().file("MinimalWasip2CommandFixture.kt").asFile.apply {
+            parentFile.mkdirs()
+            writeText(generated.toString())
+        }
+    }
+}
+
 kotlin {
     android {
         namespace = "uk.shusek.krwa.runtime.wasmtime.android"
@@ -707,6 +752,7 @@ kotlin {
         }
     }
     sourceSets.named("androidDeviceTest") {
+        kotlin.srcDir(generateAndroidCommandFixture)
         dependencies {
             implementation(kotlin("test"))
             implementation(libs.androidxTestExtJunit)

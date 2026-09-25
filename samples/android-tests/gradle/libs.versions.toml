@@ -3,12 +3,13 @@ agp = "9.4.1"
 junitJupiterApi = "6.1.3"
 kotlin = "2.4.20"
 kotlinxIo = "0.9.1"
-krwa = "0.3.0-rc.15"
+krwa = "0.3.0"
 
 [libraries]
 junit-jupiter-api = { module = "org.junit.jupiter:junit-jupiter-api", version.ref = "junitJupiterApi" }
 kotlinx-io-core-jvm = { module = "org.jetbrains.kotlinx:kotlinx-io-core-jvm", version.ref = "kotlinxIo" }
 krwa-wasi = { module = "uk.shusek.krwa:wasi", version.ref = "krwa" }
+krwa-runtime-wasmtime-android = { module = "uk.shusek.krwa:runtime-wasmtime-android", version.ref = "krwa" }
 krwa-runtime = { module = "uk.shusek.krwa:runtime", version.ref = "krwa" }
 krwa-wasm = { module = "uk.shusek.krwa:wasm", version.ref = "krwa" }
 android-gradle-plugin-api = { module = "com.android.tools.build:gradle-api", version.ref = "agp" }

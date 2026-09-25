@@ -1,11 +1,11 @@
 # Release process
 
-Kendive releases are immutable. The repository must be releasable without reading credentials and
+KRWA releases are immutable. The repository must be releasable without reading credentials and
 the local gate never publishes outside its task-owned staging directory.
 
 ## Candidate checklist
 
-1. Set an immutable semantic version in `gradle.properties` and update `CHANGELOG.md`. Kendive
+1. Set an immutable semantic version in `gradle.properties` and update `CHANGELOG.md`. KRWA
    remains on the configured `0.3.x` compatibility line: advance only the patch or prerelease
    portion, leaving the `0.3` major/minor pair unchanged. `verifyImmutablePublicationVersion`
    enforces this before staging or publication.
@@ -45,9 +45,23 @@ the local gate never publishes outside its task-owned staging directory.
 6. Confirm `build/release-staging-repository` contains only the selected immutable version and
    the curated public module set, and retains the gate-generated `SHA256SUMS`. Use that repository
    for downstream Suvio, SDK, and representative plugin acceptance tests.
-7. Review the generated ABI dumps and release notes. Any intentional public API difference must
+7. Execute Android tests on an ARM64 device or emulator. The local gate builds the consumer
+   instrumentation APK; it does not run it. Run both the provider tests and staged-artifact consumer:
+
+   ```shell
+   ./gradlew --no-daemon -Pkrwa.native.platform=android :runtime-wasmtime-android:connectedAndroidDeviceTest
+   ./gradlew --no-daemon -p samples/android-tests -Pkrwa.releaseRepository=/absolute/path/to/build/release-staging-repository connectedKrwaAcceptanceTest -Pkrwa.android.serial=emulator-5554
+   ```
+
+   Select the intended device serial and, if needed, `-Pkrwa.android.user=0`. The sample
+   acceptance task uses an explicit Android user and requires all four tests to pass; Android 17
+   can otherwise return an empty, successful AGP test report after rejecting user `-2`.
+
+   `WASMTIME` must point to the pinned CLI. Android command fixtures are generated from WAT for
+   both Pulley pointer widths, so an engine upgrade cannot retain an older serialized component.
+8. Review the generated ABI dumps and release notes. Any intentional public API difference must
    be represented in both.
-8. Tag or publish only after the Kendive gate and all downstream acceptance tests pass from a
+9. Tag or publish only after the KRWA gate and all downstream acceptance tests pass from a
    clean checkout. Publishing is performed by the separately reviewed release workflow, never by
    `releaseGate`.
 
@@ -76,8 +90,9 @@ Maven Central requirements:
 - <https://central.sonatype.org/publish/publish-portal-gradle/>
 
 The public release is performed only from an annotated tag reachable from `main`. Dispatch
-`Publish Maven Central` with the exact tag name, for example `v0.3.0-rc.2`. The workflow reruns
-the complete offline release gate on macOS, verifies `SHA256SUMS`, excludes repository-level
+`Publish Maven Central` with the exact tag name, for example `v0.3.0`. The workflow runs the
+platform release gates in CI, assembles and verifies the staged repository and `SHA256SUMS`,
+excludes repository-level
 `maven-metadata.xml` from the version bundle, signs every payload, uploads with automatic
 publishing, and waits for the Publisher Portal to report `PUBLISHED`.
 

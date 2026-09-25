@@ -27,6 +27,7 @@ nav = [
         "components/wasi-preview3.md",
     ]},
     {"Guides" = [
+        "guides/support.md",
         "guides/annotations.md",
         "guides/tools.md",
         "guides/security.md",

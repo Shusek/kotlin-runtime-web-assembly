@@ -9,17 +9,13 @@ variants are compiled for Java 25.
 
 ## Project Status
 
-`0.3.0-rc.15` is the pre-public release candidate. Its security boundaries,
-multiplatform behavior, ABI, Gradle plugins, and local Maven artifacts are
-verified by the repository release gate. The candidate is intended for pinned
-Suvio V4 integration testing; it is not a general-availability release.
+`0.3.0` is the first stable release in the `0.3.x` line. Published artifacts
+are immutable and available from Maven Central. Compatible fixes advance the
+patch version; public APIs may still evolve before `1.0.0`.
 
-The public API may still change before `1.0.0`, but every published candidate is
-immutable. A fix after publication receives a new candidate version instead of
-reusing an existing coordinate. Kendive stays on the `0.3.x` compatibility line:
-new candidates and compatible releases change only the patch or prerelease
-portion, leaving the `0.3` major/minor pair intact. See the
-[changelog](CHANGELOG.md) and [release process](RELEASING.md).
+Stability applies to the documented platform and feature scope. See the
+[support matrix and known limitations](docs/pages/guides/support.md),
+[changelog](CHANGELOG.md), and [release process](RELEASING.md).
 
 Special thanks to [dylibso/chicory](https://github.com/dylibso/chicory) for the
 solid foundations this project builds on.
@@ -42,11 +38,7 @@ Start with:
 
 ## Quick Start
 
-The current candidate version is `0.3.0-rc.15`. Before public promotion, consume
-this checkout with the composite build described under
-[Local Development](#local-development), or run `releaseGate` and point the
-consumer at `build/release-staging-repository`. Published candidates use the
-following Maven repository:
+Use `0.3.0` from Maven Central:
 
 ```kotlin
 // settings.gradle.kts
@@ -54,7 +46,6 @@ dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         mavenCentral()
-        maven("https://shusek.github.io/kotlin-runtime-web-assembly/maven")
     }
 }
 ```
@@ -63,7 +54,7 @@ Use the BOM and add the runtime:
 
 ```kotlin
 // build.gradle.kts
-val runtimeVersion = "0.3.0-rc.15"
+val runtimeVersion = "0.3.0"
 
 dependencies {
     implementation(platform("uk.shusek.krwa:bom:$runtimeVersion"))
