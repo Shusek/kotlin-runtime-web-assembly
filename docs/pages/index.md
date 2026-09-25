@@ -10,11 +10,13 @@ Node WebAssembly engine. JVM artifacts are compiled for Java 25.
 
 ## Project Status
 
-This project is experimental and under active development. Every push to
-`main` publishes immutable `0.3.0-dev.<12-character-commit>` artifacts for evaluation and integration
-work. Production use should wait for reviewed releases and pinned versions.
-Public APIs in experimental modules may change while the Kotlin Multiplatform
-and Component Model surfaces settle.
+KRWA `0.3.0` is a stable release available from Maven Central. The supported
+platforms and feature boundaries are defined in the
+[support matrix](guides/support.md). Published versions are immutable;
+compatible fixes use the `0.3.x` patch line. Public APIs may evolve before `1.0.0`.
+
+Development builds remain available as immutable `0.3.0-dev.<12-character-commit>`
+artifacts for evaluation. Use a reviewed release for deployed applications.
 
 Special thanks to [dylibso/chicory](https://github.com/dylibso/chicory) for
 the solid foundations this project builds on.

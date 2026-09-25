@@ -726,6 +726,10 @@ val buildWasmtimeP3BridgeLib by tasks.registering {
     description = "Builds the Rust Wasmtime Preview3 bridge shared library for JVM integration tests."
     notCompatibleWithConfigurationCache("Runs cargo against the pinned Wasmtime source checkout.")
     dependsOn(prepareRustReleaseDependencies)
+    // Rust 1.96 stripping can misalign LINKEDIT, rejected by the macOS 27 loader.
+    // https://github.com/rust-lang/rust/issues/157750
+    val preserveMacOsLinkeditAlignment = hostIsMacOs
+    inputs.property("preserveMacOsLinkeditAlignment", preserveMacOsLinkeditAlignment)
     inputs.property("wasmtimePulleyVersion", wasmtimePulleyVersion)
     inputs.property("wasmtimePulleyGitRevision", wasmtimePulleyGitRevision)
     inputs.property("rustReleaseVersion", rustReleaseVersion)
@@ -745,6 +749,11 @@ val buildWasmtimeP3BridgeLib by tasks.registering {
             cargoReleaseCommand(cargo) +
                 listOf("build") +
                 cargoNetworkArguments() +
+                (if (preserveMacOsLinkeditAlignment) {
+                    listOf("--config", "profile.release.strip=\"none\"")
+                } else {
+                    emptyList()
+                }) +
                 listOf(
                     "--release",
                     "--manifest-path",

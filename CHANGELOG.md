@@ -5,6 +5,23 @@ patch and prerelease identifiers advance without changing the `0.3` major/minor 
 `1.0.0`, API changes may still be intentional; release candidates remain immutable once
 published.
 
+## 0.3.0 (2026-09-25)
+
+### Changed
+
+- Promoted the Wasmtime `48.0.2` runtime to the first stable `0.3.x` release,
+  with an explicit platform support matrix and documented feature limitations.
+- Stable installation instructions now use Maven Central and the `0.3.0` BOM.
+- macOS host bridge builds preserve the Mach-O string-table alignment by disabling
+  Rust's release stripping, avoiding a library-load failure on macOS 27.
+
+### Fixed
+
+- Android instrumentation command fixtures are generated with the pinned Wasmtime
+  CLI for Pulley 32/64, replacing incompatible serialized Wasmtime 46 components.
+- The Android consumer sample installs the packaged Wasmtime provider, uses API 37,
+  and verifies four instrumentation tests instead of accepting an empty test report.
+
 ## 0.3.0-rc.15 (2026-09-25)
 
 ### Changed

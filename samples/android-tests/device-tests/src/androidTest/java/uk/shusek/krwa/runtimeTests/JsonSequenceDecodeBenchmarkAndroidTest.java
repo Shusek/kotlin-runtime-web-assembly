@@ -8,6 +8,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
@@ -17,6 +18,7 @@ import uk.shusek.krwa.runtime.ImportFunction;
 import uk.shusek.krwa.runtime.ImportValues;
 import uk.shusek.krwa.runtime.Instance;
 import uk.shusek.krwa.runtime.WasmFunctionHandle;
+import uk.shusek.krwa.runtime.wasmtime.android.AndroidWasmtimePulleyExecutionProviderKt;
 import uk.shusek.krwa.wasi.WasiPreview1;
 import uk.shusek.krwa.wasm.WasmParser;
 import uk.shusek.krwa.wasm.types.FunctionType;
@@ -25,6 +27,11 @@ import uk.shusek.krwa.wasm.types.ValType;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public final class JsonSequenceDecodeBenchmarkAndroidTest {
     private static final String TAG = "KRWA-BENCH";
+
+    @BeforeAll
+    public static void installRuntimeProvider() {
+        AndroidWasmtimePulleyExecutionProviderKt.installAndroidWasmtimePulleyExecutionProviderIfAvailable();
+    }
 
     @Test
     @Order(1)
