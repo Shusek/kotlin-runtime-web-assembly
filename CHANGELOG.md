@@ -13,6 +13,7 @@ published.
   host-tool checksums, Preview 1 adapters, Android native libraries, and Preview 3 bridge.
 - Wasmtime now vendors `cap-primitives` and fixes generated bindings compatibility with
   current Rust nightly compilers.
+- Refreshed the Wasm package lock to match the Ktor `3.6.0` dependency already pinned on main.
 
 ## 0.3.0-rc.12 (2026-09-06)
 
