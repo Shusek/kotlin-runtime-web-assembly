@@ -5,6 +5,15 @@ patch and prerelease identifiers advance without changing the `0.3` major/minor 
 `1.0.0`, API changes may still be intentional; release candidates remain immutable once
 published.
 
+## 0.3.0-rc.15 (2026-09-25)
+
+### Changed
+
+- Updated Wasmtime from `48.0.1` to `48.0.2`, including the pinned source revision,
+  host-tool checksums, Preview 1 adapters, Android native libraries, and Preview 3 bridge.
+- Wasmtime now vendors `cap-primitives` and fixes generated bindings compatibility with
+  current Rust nightly compilers.
+
 ## 0.3.0-rc.12 (2026-09-06)
 
 ### Fixed
