@@ -3,8 +3,8 @@
   <groupId>uk.shusek.krwa</groupId>
   <artifactId>cli-experimental</artifactId>
   <versioning>
-    <latest>0.3.0-dev.59c0bdcaad2a</latest>
-    <release>0.3.0-dev.59c0bdcaad2a</release>
+    <latest>0.3.0-dev.8347044dd14e</latest>
+    <release>0.3.0-dev.8347044dd14e</release>
     <versions>
       <version>0.3.0-dev.dd7a6fdf625a</version>
       <version>0.3.0-dev.ec3430fca82c</version>
@@ -16,7 +16,8 @@
       <version>0.3.0-dev.90cee2d2dbef</version>
       <version>0.3.0-dev.ce74cc1b5a6f</version>
       <version>0.3.0-dev.59c0bdcaad2a</version>
+      <version>0.3.0-dev.8347044dd14e</version>
     </versions>
-    <lastUpdated>20260925153156</lastUpdated>
+    <lastUpdated>20260926112952</lastUpdated>
   </versioning>
 </metadata>

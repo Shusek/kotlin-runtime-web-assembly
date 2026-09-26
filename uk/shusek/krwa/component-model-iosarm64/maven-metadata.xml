@@ -3,11 +3,11 @@
   <groupId>uk.shusek.krwa</groupId>
   <artifactId>component-model-iosarm64</artifactId>
   <versioning>
-    <latest>0.3.0-dev.59c0bdcaad2a</latest>
-    <release>0.3.0-dev.59c0bdcaad2a</release>
+    <latest>0.3.0-dev.8347044dd14e</latest>
+    <release>0.3.0-dev.8347044dd14e</release>
     <versions>
-      <version>0.3.0-dev.59c0bdcaad2a</version>
+      <version>0.3.0-dev.8347044dd14e</version>
     </versions>
-    <lastUpdated>20260925154911</lastUpdated>
+    <lastUpdated>20260926114228</lastUpdated>
   </versioning>
 </metadata>
