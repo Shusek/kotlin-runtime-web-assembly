@@ -1,6 +1,6 @@
 # Installation
 
-Use KRWA `0.3.0` from Maven Central:
+Use KRWA `0.3.1` from Maven Central:
 
 ```kotlin
 // settings.gradle.kts
@@ -16,7 +16,7 @@ Use the BOM so all modules stay on the same version:
 
 ```kotlin
 // build.gradle.kts
-val runtimeVersion = "0.3.0"
+val runtimeVersion = "0.3.1"
 
 dependencies {
     implementation(platform("uk.shusek.krwa:bom:$runtimeVersion"))

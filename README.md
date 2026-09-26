@@ -38,7 +38,7 @@ Start with:
 
 ## Quick Start
 
-Use `0.3.0` from Maven Central:
+Use `0.3.1` from Maven Central:
 
 ```kotlin
 // settings.gradle.kts
@@ -54,7 +54,7 @@ Use the BOM and add the runtime:
 
 ```kotlin
 // build.gradle.kts
-val runtimeVersion = "0.3.0"
+val runtimeVersion = "0.3.1"
 
 dependencies {
     implementation(platform("uk.shusek.krwa:bom:$runtimeVersion"))

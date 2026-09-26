@@ -1,7 +1,7 @@
 # Support and compatibility
 
-KRWA `0.3.0` is a stable release for the platform and feature scope below. The
-release uses Wasmtime **48.0.2**. Compatible fixes advance the `0.3.x` patch
+KRWA `0.3.1` is a stable release for the platform and feature scope below. The
+release uses Wasmtime **48.0.3**. Compatible fixes advance the `0.3.x` patch
 version; public APIs may still evolve before `1.0.0`.
 
 ## Platforms
@@ -33,7 +33,7 @@ upstream preview protocols retain their documented status.
 
 Precompiled Wasmtime artifacts are tied to the engine version, target, and
 configuration. Recompile modules and components when upgrading Wasmtime;
-artifacts produced with an older release are not portable caches for 48.0.2.
+artifacts produced with an older release are not portable caches for 48.0.3.
 
 ## Verification and known gaps
 
