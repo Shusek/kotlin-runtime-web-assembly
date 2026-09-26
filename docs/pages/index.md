@@ -10,7 +10,7 @@ Node WebAssembly engine. JVM artifacts are compiled for Java 25.
 
 ## Project Status
 
-KRWA `0.3.0` is a stable release available from Maven Central. The supported
+KRWA `0.3.1` is a stable release available from Maven Central. The supported
 platforms and feature boundaries are defined in the
 [support matrix](guides/support.md). Published versions are immutable;
 compatible fixes use the `0.3.x` patch line. Public APIs may evolve before `1.0.0`.

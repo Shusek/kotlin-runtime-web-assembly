@@ -5,6 +5,17 @@ patch and prerelease identifiers advance without changing the `0.3` major/minor 
 `1.0.0`, API changes may still be intentional; release candidates remain immutable once
 published.
 
+## 0.3.1 (2026-09-26)
+
+### Changed
+
+- Updated Wasmtime from `48.0.2` to `48.0.3`, including the pinned source revision,
+  host-tool checksums, Preview 1 adapters, Android native libraries, and Preview 3 bridge.
+- Includes upstream fixes for execution-fuel accounting across `call_ref`, exception
+  returns and dynamic record lifting, outgoing HTTP body memory exhaustion, and
+  panics on out-of-range WASI filesystem timestamps.
+- Public APIs and the supported platform matrix are unchanged from `0.3.0`.
+
 ## 0.3.0 (2026-09-25)
 
 ### Changed
