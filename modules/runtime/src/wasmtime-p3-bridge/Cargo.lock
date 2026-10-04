@@ -150,7 +150,7 @@ dependencies = [
 
 [[package]]
 name = "cranelift-bforest"
-version = "0.135.3"
+version = "0.135.5"
 dependencies = [
  "cranelift-entity",
  "wasmtime-internal-core",
@@ -158,7 +158,7 @@ dependencies = [
 
 [[package]]
 name = "cranelift-bitset"
-version = "0.135.3"
+version = "0.135.5"
 dependencies = [
  "serde",
  "serde_derive",
@@ -167,7 +167,7 @@ dependencies = [
 
 [[package]]
 name = "cranelift-entity"
-version = "0.135.3"
+version = "0.135.5"
 dependencies = [
  "cranelift-bitset",
  "serde",
@@ -792,7 +792,7 @@ dependencies = [
 
 [[package]]
 name = "pulley-interpreter"
-version = "48.0.3"
+version = "48.0.5"
 dependencies = [
  "cranelift-bitset",
  "log",
@@ -802,7 +802,7 @@ dependencies = [
 
 [[package]]
 name = "pulley-macros"
-version = "48.0.3"
+version = "48.0.5"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1229,9 +1229,9 @@ checksum = "ccf3ec651a847eb01de73ccad15eb7d99f80485de043efb2f370cd654f4ea44b"
 
 [[package]]
 name = "wasm-encoder"
-version = "0.254.0"
+version = "0.254.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "09480d646178e5fdd12bb06e812d0af9a3a191dbc9cd697fdc86687beade7393"
+checksum = "ebaca0b540bdb15d195ff34fb23074255948708b8916a11a339ba4513dc61906"
 dependencies = [
  "leb128fmt",
  "wasmparser",
@@ -1239,9 +1239,9 @@ dependencies = [
 
 [[package]]
 name = "wasm-metadata"
-version = "0.254.0"
+version = "0.254.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b01df5f3b4ca7881e843f3bc0fb8a3905d79c68692250dcb8e33e698705ccdb6"
+checksum = "5d1880dd9a848aa68f387966256c34ad49abb4607e3cfa35720d2723d0591cd3"
 dependencies = [
  "anyhow",
  "indexmap",
@@ -1251,9 +1251,9 @@ dependencies = [
 
 [[package]]
 name = "wasmparser"
-version = "0.254.0"
+version = "0.254.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d5769a29f799fbab136aaf65b4fe5384cd7d93fe6fc9ba0dcb6c8382a1f16e27"
+checksum = "c5ff8685b587722894b6f25958fc608d315b93b8d23647bfb567664e7006d757"
 dependencies = [
  "bitflags",
  "hashbrown",
@@ -1264,7 +1264,7 @@ dependencies = [
 
 [[package]]
 name = "wasmtime"
-version = "48.0.3"
+version = "48.0.5"
 dependencies = [
  "addr2line",
  "async-trait",
@@ -1303,7 +1303,7 @@ dependencies = [
 
 [[package]]
 name = "wasmtime-environ"
-version = "48.0.3"
+version = "48.0.5"
 dependencies = [
  "anyhow",
  "cpp_demangle",
@@ -1330,7 +1330,7 @@ dependencies = [
 
 [[package]]
 name = "wasmtime-internal-component-macro"
-version = "48.0.3"
+version = "48.0.5"
 dependencies = [
  "anyhow",
  "proc-macro2",
@@ -1343,11 +1343,11 @@ dependencies = [
 
 [[package]]
 name = "wasmtime-internal-component-util"
-version = "48.0.3"
+version = "48.0.5"
 
 [[package]]
 name = "wasmtime-internal-core"
-version = "48.0.3"
+version = "48.0.5"
 dependencies = [
  "hashbrown",
  "libm",
@@ -1356,7 +1356,7 @@ dependencies = [
 
 [[package]]
 name = "wasmtime-internal-fiber"
-version = "48.0.3"
+version = "48.0.5"
 dependencies = [
  "cc",
  "libc",
@@ -1368,7 +1368,7 @@ dependencies = [
 
 [[package]]
 name = "wasmtime-internal-jit-debug"
-version = "48.0.3"
+version = "48.0.5"
 dependencies = [
  "cc",
  "wasmtime-internal-versioned-export-macros",
@@ -1376,7 +1376,7 @@ dependencies = [
 
 [[package]]
 name = "wasmtime-internal-jit-icache-coherence"
-version = "48.0.3"
+version = "48.0.5"
 dependencies = [
  "libc",
  "wasmtime-internal-core",
@@ -1385,7 +1385,7 @@ dependencies = [
 
 [[package]]
 name = "wasmtime-internal-unwinder"
-version = "48.0.3"
+version = "48.0.5"
 dependencies = [
  "log",
  "object",
@@ -1394,7 +1394,7 @@ dependencies = [
 
 [[package]]
 name = "wasmtime-internal-versioned-export-macros"
-version = "48.0.3"
+version = "48.0.5"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1403,7 +1403,7 @@ dependencies = [
 
 [[package]]
 name = "wasmtime-internal-wit-bindgen"
-version = "48.0.3"
+version = "48.0.5"
 dependencies = [
  "anyhow",
  "bitflags",
@@ -1415,7 +1415,7 @@ dependencies = [
 
 [[package]]
 name = "wasmtime-wasi"
-version = "48.0.3"
+version = "48.0.5"
 dependencies = [
  "async-trait",
  "bitflags",
@@ -1437,7 +1437,7 @@ dependencies = [
 
 [[package]]
 name = "wasmtime-wasi-http"
-version = "48.0.3"
+version = "48.0.5"
 dependencies = [
  "async-trait",
  "bytes",
@@ -1460,7 +1460,7 @@ dependencies = [
 
 [[package]]
 name = "wasmtime-wasi-io"
-version = "48.0.3"
+version = "48.0.5"
 dependencies = [
  "async-trait",
  "bytes",
@@ -1661,9 +1661,9 @@ dependencies = [
 
 [[package]]
 name = "wit-component"
-version = "0.254.0"
+version = "0.254.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b0e65bb94c369b3c4741ce3d1d2704b1fec93db7c540df0e521a097e7ceeb5be"
+checksum = "1c96b3cea6838dbea55173baa56991fcb087896c321b0a770db201e5a0bd3506"
 dependencies = [
  "anyhow",
  "bitflags",
@@ -1680,9 +1680,9 @@ dependencies = [
 
 [[package]]
 name = "wit-parser"
-version = "0.254.0"
+version = "0.254.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1655131e4f7d3f0cb141f6eca71315ca40eff0f3d4de7cff0a82bacedd8c89b4"
+checksum = "22672d61bfb9df46a16b46ce38522293aee1cc4749fc84a3464ce4083b3d5fd6"
 dependencies = [
  "anyhow",
  "hashbrown",

@@ -1,4 +1,4 @@
 package uk.shusek.krwa.runtime
 
 const val WasmtimeModuleCompilerBuildIdentity =
-    "wasmtime-module-compiler:v1:wasmtime=48.0.3:revision=ebf20ab7cbf35fa3fbd8202562017fda6a541021"
+    "wasmtime-module-compiler:v1:wasmtime=48.0.5:revision=563544c6296610b1b3fbbe2e4643f9999899ec66"

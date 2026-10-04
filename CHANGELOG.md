@@ -5,6 +5,21 @@ patch and prerelease identifiers advance without changing the `0.3` major/minor 
 `1.0.0`, API changes may still be intentional; release candidates remain immutable once
 published.
 
+## 0.3.2 (2026-10-04)
+
+### Changed
+
+- Updated Wasmtime from `48.0.3` to `48.0.5`, including the pinned source revision,
+  host-tool checksums, Preview 1 adapters, Android native libraries, and Preview 3 bridge.
+  Wasmtime `48.0.5` republishes the `48.0.4` fixes, whose upstream release artifacts
+  were not published.
+- Includes upstream fixes for fuel consumption in WASI preview 0 `poll_oneoff`, host
+  memory growth for guests without stdio, uninitialized padding copied by `fd_readdir`,
+  panics on pre-epoch WASIp3 filesystem timestamps and zero `wasi:http` timeouts,
+  unvalidated async-lifted callback result counts, and GC heap corruption from
+  mis-typed tag imports or missing roots across `try_call`.
+- Public APIs and the supported platform matrix are unchanged from `0.3.1`.
+
 ## 0.3.1 (2026-09-26)
 
 ### Changed
