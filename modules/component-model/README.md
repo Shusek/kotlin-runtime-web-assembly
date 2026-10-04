@@ -413,7 +413,13 @@ val wasi = WasiPreview2.builder()
     .withEnvironment("KRWA_MODE", "component")
     .withPreopenedDirectory("/", "plugins/data")
     .withTerminalStdout(true)
-    .withNetworking()
+    .withNetworkPolicy(
+        WasiNetworkPolicy(
+            httpEndpoints = setOf(
+                WasiHttpNetworkEndpoint(WasiHttpNetworkProtocol.Https, "api.example.com", 443),
+            ),
+        ),
+    )
     .withFixedWallClock(kotlin.time.Instant.parse("2026-06-08T00:00:00Z"))
     .withSecureRandom(SecureRandom())
     .build()
@@ -424,6 +430,13 @@ val plugin = WasmPlugin.builder(wit)
     .withWasiPreview2(wasi, WasiPreview2HostOwnership.OWNED)
     .build()
 ```
+
+Networking in the Preview 2 host is deny-by-default and uses the same `WasiNetworkPolicy`
+as Preview 3: `wasi:http` requests must match an HTTP grant exactly (scheme, canonical
+host, port), and `wasi:sockets` connects, binds, UDP sends and name lookups must match a
+raw-socket grant. The former `withNetworking()` switch granted unrestricted access to every
+host, including loopback and link-local addresses; it is deprecated and requires opting in
+to `UnsafeComponentModelApi`.
 
 `OWNED` transfers the Preview 2 host to the plugin, so `plugin.close()` also closes the
 host-created HTTP and socket transports. Use `BORROWED` when the caller keeps the host and closes

@@ -5,6 +5,19 @@ patch and prerelease identifiers advance without changing the `0.3` major/minor 
 `1.0.0`, API changes may still be intentional; release candidates remain immutable once
 published.
 
+## Unreleased
+
+### Security
+
+- `WasiPreview2` now enforces the same exact-match `WasiNetworkPolicy` as `WasiPreview3`
+  through `WasiPreview2.Builder.withNetworkPolicy`. `wasi:http` requests, `wasi:sockets`
+  TCP connect/bind, UDP bind/connect/send and `ip-name-lookup` are checked against explicit
+  HTTP and raw-socket grants; name lookups only authorize the addresses they returned.
+  Previously the only option was the all-or-nothing `withNetworking()` switch, which let a
+  guest reach any destination including `127.0.0.1` and `169.254.169.254`; that switch is
+  now deprecated and marked `@UnsafeComponentModelApi`, and the README example uses a
+  policy instead.
+
 ## 0.3.2 (2026-10-04)
 
 ### Changed

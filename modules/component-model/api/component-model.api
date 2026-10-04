@@ -409,6 +409,7 @@ public final class uk/shusek/krwa/component/WasiPreview2$Builder {
 	public final fun withInsecureSeed (JJ)Luk/shusek/krwa/component/WasiPreview2$Builder;
 	public final fun withMonotonicClock (Lkotlin/jvm/functions/Function0;)Luk/shusek/krwa/component/WasiPreview2$Builder;
 	public final fun withMonotonicResolutionNanos (J)Luk/shusek/krwa/component/WasiPreview2$Builder;
+	public final fun withNetworkPolicy (Luk/shusek/krwa/component/WasiNetworkPolicy;)Luk/shusek/krwa/component/WasiPreview2$Builder;
 	public final fun withNetworking ()Luk/shusek/krwa/component/WasiPreview2$Builder;
 	public final fun withNetworking (Z)Luk/shusek/krwa/component/WasiPreview2$Builder;
 	public final fun withPreopenedDirectory (Ljava/lang/String;Ljava/lang/String;)Luk/shusek/krwa/component/WasiPreview2$Builder;

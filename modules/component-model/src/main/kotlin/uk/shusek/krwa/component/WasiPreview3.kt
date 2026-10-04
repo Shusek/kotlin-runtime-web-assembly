@@ -351,10 +351,10 @@ private fun normalizedNetworkPolicyHostOrNull(host: String): String? =
         null
     }
 
-private fun normalizeNetworkPolicyHost(host: String): String =
+internal fun normalizeNetworkPolicyHost(host: String): String =
     canonicalizeExactNetworkHost(host)
 
-private fun networkHostFromAddress(address: ByteArray): String =
+internal fun networkHostFromAddress(address: ByteArray): String =
     when (address.size) {
         4 -> address.joinToString(".") { unsignedByte(it).toString() }
         16 ->

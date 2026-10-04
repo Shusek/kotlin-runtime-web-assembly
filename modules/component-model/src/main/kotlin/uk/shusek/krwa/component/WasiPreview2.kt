@@ -202,7 +202,10 @@ private constructor(
     private val terminalStdin: Boolean
     private val terminalStdout: Boolean
     private val terminalStderr: Boolean
-    private val networkingEnabled: Boolean
+    private val networkPolicy: WasiNetworkPolicy
+    private val unsafeAllowAllNetworking: Boolean
+    private val networkPolicyLock = WasiPreviewLock()
+    private val resolvedRawSocketAddresses: MutableMap<String, Set<String>> = LinkedHashMap()
     private val httpClient: WasiHttpClient
     private val fileSystem: FileSystem
     private val socketRuntime: WasiSocketRuntime
@@ -259,7 +262,8 @@ private constructor(
         this.terminalStdin = builder.terminalStdin
         this.terminalStdout = builder.terminalStdout
         this.terminalStderr = builder.terminalStderr
-        this.networkingEnabled = builder.networkingEnabled
+        this.networkPolicy = builder.networkPolicy
+        this.unsafeAllowAllNetworking = builder.networkingEnabled
         this.httpClient = transports.httpClient
         this.fileSystem = builder.fileSystem
         this.socketRuntime = transports.socketRuntime
@@ -1467,7 +1471,9 @@ private constructor(
 
     private fun instanceNetwork(args: List<Any?>): Any? {
         requireArity("instance-network", args, 0)
-        return networks.insertResource(Network(networkingEnabled))
+        return networks.insertResource(
+            Network(unsafeAllowAllNetworking || networkPolicy.hasRawSocketAccess())
+        )
     }
 
     private fun networkErrorCode(args: List<Any?>): Any? {
@@ -1479,7 +1485,10 @@ private constructor(
         requireArity("resolve-addresses", args, 2)
         return networkResult {
             requireNetwork(args, 0)
-            var addresses = resolveIpAddresses(args.get(1) as String)
+            val hostname = args.get(1) as String
+            val normalizedHostname = requireRawSocketHostnameAllowed(hostname)
+            val addresses = resolveIpAddresses(hostname)
+            rememberResolvedRawSocketAddresses(normalizedHostname, addresses)
             return@networkResult resolveAddressStreams.insertResource(
                 ResolveAddressStream(addresses.iterator())
             )
@@ -1518,6 +1527,7 @@ private constructor(
             }
             var local = socketAddress(args.get(2))
             requireFamily(socket.family, local)
+            requireRawSocketEndpointAllowed(local)
             socket.pendingBind = local
             socket.bindStarted = true
             return@networkResult null
@@ -1547,6 +1557,7 @@ private constructor(
             }
             var remote = socketAddress(args.get(2))
             requireFamily(socket.family, remote)
+            requireRawSocketEndpointAllowed(remote)
             val connection =
                 socketRuntime.connectTcp(
                     remote,
@@ -1852,6 +1863,7 @@ private constructor(
             }
             var local = socketAddress(args.get(2))
             requireFamily(socket.family, local)
+            requireRawSocketEndpointAllowed(local)
             socket.pendingBind = local
             socket.bindStarted = true
             return@networkResult null
@@ -1889,6 +1901,7 @@ private constructor(
             if (remote != null) {
                 var remoteAddress = socketAddress(remote)
                 requireFamily(socket.family, remoteAddress)
+                requireRawSocketEndpointAllowed(remoteAddress)
                 socket.remoteAddress = remoteAddress
             } else if (socket.remoteAddress != null) {
                 socket.remoteAddress = null
@@ -2036,6 +2049,7 @@ private constructor(
                 if (remote == null) {
                     throw NetException("invalid-argument")
                 }
+                requireRawSocketEndpointAllowed(remote)
                 val endpoint = stream.socket.endpoint ?: throw NetException("invalid-state")
                 endpoint.send(data, remote)
                 sent++
@@ -2430,7 +2444,7 @@ private constructor(
 
     private fun outgoingHandlerHandle(args: List<Any?>): Any? {
         requireArity("outgoing-handler.handle", args, 2)
-        if (!networkingEnabled) {
+        if (!canAttemptHttpRequests()) {
             return WitResult.err("HTTP-request-denied")
         }
         try {
@@ -3241,6 +3255,87 @@ private constructor(
         }
     }
 
+    private fun canAttemptHttpRequests(): Boolean =
+        unsafeAllowAllNetworking || networkPolicy.hasHttpAccess()
+
+    /**
+     * Checks the exact URI string the HTTP client will send against the network policy, so there is
+     * no parser difference between what is authorized and what is connected to.
+     */
+    private fun requireHttpRequestAllowed(uri: String) {
+        if (unsafeAllowAllNetworking) {
+            return
+        }
+        val url =
+            try {
+                Url(uri)
+            } catch (_: URLParserException) {
+                throw HttpException("HTTP-request-URI-invalid")
+            } catch (_: IllegalArgumentException) {
+                throw HttpException("HTTP-request-URI-invalid")
+            }
+        val protocol =
+            when (url.protocol.name.lowercase()) {
+                "http" -> WasiHttpNetworkProtocol.Http
+                "https" -> WasiHttpNetworkProtocol.Https
+                else -> throw HttpException("HTTP-request-denied")
+            }
+        if (!networkPolicy.allowsHttp(protocol, url.host, url.port)) {
+            throw HttpException("HTTP-request-denied")
+        }
+    }
+
+    private fun requireRawSocketEndpointAllowed(address: InetSocketAddress) {
+        if (unsafeAllowAllNetworking) {
+            return
+        }
+        val addressBytes = address.resolveAddress() ?: throw NetException("invalid-argument")
+        val numericHost = networkHostFromAddress(addressBytes)
+        if (networkPolicy.allowsRawSocket(numericHost, address.port)) {
+            return
+        }
+        val allowedByResolvedHostname =
+            withWasiPreviewLock(networkPolicyLock) {
+                networkPolicy.allowsResolvedRawSocket(
+                    numericHost,
+                    address.port,
+                    resolvedRawSocketAddresses,
+                )
+            }
+        if (!allowedByResolvedHostname) {
+            throw NetException("access-denied")
+        }
+    }
+
+    private fun requireRawSocketHostnameAllowed(hostname: String): String? {
+        if (unsafeAllowAllNetworking) {
+            return null
+        }
+        val normalized =
+            try {
+                normalizeNetworkPolicyHost(hostname)
+            } catch (_: IllegalArgumentException) {
+                throw NetException("invalid-argument")
+            }
+        if (!networkPolicy.allowsRawSocketHost(normalized)) {
+            throw NetException("access-denied")
+        }
+        return normalized
+    }
+
+    private fun rememberResolvedRawSocketAddresses(
+        normalizedHostname: String?,
+        addresses: List<ByteArray>,
+    ) {
+        if (normalizedHostname == null) {
+            return
+        }
+        val normalizedAddresses = addresses.map(::networkHostFromAddress).toSet()
+        withWasiPreviewLock(networkPolicyLock) {
+            resolvedRawSocketAddresses[normalizedHostname] = normalizedAddresses
+        }
+    }
+
     private fun addressFamily(value: Any?): AddressFamily {
         var label = label(value, "ipv4", "ipv6")
         if ("ipv4".equals(label)) {
@@ -3583,6 +3678,7 @@ private constructor(
             } catch (_: IllegalArgumentException) {
                 throw HttpException("HTTP-request-URI-invalid")
             }
+        requireHttpRequestAllowed(uri)
         val requestBody = request.body
         if (requestBody != null && !requestBody.finished) {
             throw HttpException(WitValue.variant("HTTP-request-body-size", null))
@@ -4103,6 +4199,7 @@ private constructor(
         var terminalStdout: Boolean = false
         var terminalStderr: Boolean = false
         var networkingEnabled: Boolean = false
+        var networkPolicy: WasiNetworkPolicy = WasiNetworkPolicy.DENY_ALL
         /**
          * HTTP transport used by this host.
          *
@@ -4234,18 +4331,50 @@ private constructor(
             return this
         }
 
-        fun withNetworking(): Builder {
-            this.networkingEnabled = true
+        /**
+         * Grants network access to exactly the HTTP endpoints and raw-socket endpoints listed in
+         * [networkPolicy]. Matching is exact (scheme, canonical host and port); every other
+         * destination, including name lookups for hosts without a raw-socket grant, is denied with
+         * `access-denied` / `HTTP-request-denied`. The default policy denies all network access.
+         */
+        fun withNetworkPolicy(networkPolicy: WasiNetworkPolicy): Builder {
+            this.networkPolicy = requirePresent(networkPolicy, "networkPolicy")
+            this.networkingEnabled = false
             return this
         }
 
+        @UnsafeComponentModelApi
+        @Deprecated(
+            message =
+                "Unrestricted networking lets a guest reach any host, including loopback, " +
+                    "link-local and private addresses. Use withNetworkPolicy with explicit HTTP " +
+                    "and raw-socket grants.",
+        )
+        fun withNetworking(): Builder {
+            this.networkingEnabled = true
+            this.networkPolicy = WasiNetworkPolicy.DENY_ALL
+            return this
+        }
+
+        @UnsafeComponentModelApi
+        @Deprecated(
+            message =
+                "Unrestricted networking lets a guest reach any host, including loopback, " +
+                    "link-local and private addresses. Use withNetworkPolicy with explicit HTTP " +
+                    "and raw-socket grants.",
+        )
         fun withNetworking(networkingEnabled: Boolean): Builder {
-            this.networkingEnabled = networkingEnabled
+            if (!networkingEnabled) {
+                return withoutNetworking()
+            }
+            this.networkingEnabled = true
+            this.networkPolicy = WasiNetworkPolicy.DENY_ALL
             return this
         }
 
         fun withoutNetworking(): Builder {
             this.networkingEnabled = false
+            this.networkPolicy = WasiNetworkPolicy.DENY_ALL
             return this
         }
 
