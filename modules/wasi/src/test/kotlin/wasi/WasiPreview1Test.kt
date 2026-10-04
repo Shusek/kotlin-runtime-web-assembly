@@ -2,6 +2,7 @@ package wasi
 
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
+import java.lang.management.ManagementFactory
 import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.FileSystemException
 import java.nio.file.Files as JFiles
@@ -27,6 +28,8 @@ import uk.shusek.krwa.runtime.ImportValues
 import uk.shusek.krwa.runtime.Instance
 import uk.shusek.krwa.runtime.Store
 import uk.shusek.krwa.runtime.WasmFunctionHandle
+import uk.shusek.krwa.wasi.WasiClockId
+import uk.shusek.krwa.wasi.WasiEventType
 import uk.shusek.krwa.wasi.WasiExitException
 import uk.shusek.krwa.wasi.WasiErrno
 import uk.shusek.krwa.wasi.WasiFdFlags
@@ -457,6 +460,51 @@ class WasiPreview1Test {
         assertEquals(6, result)
     }
 
+    @Test
+    fun pollOneoffSleepsUntilTheClockDeadlineInsteadOfSpinning() {
+        val wasi = WasiPreview1.builder().withOptions(WasiOptions.builder().build()).build()
+        val memory = ByteArrayMemory(MemoryLimits(1))
+        val inPtr = 0
+        val outPtr = 64
+        val neventsPtr = 128
+        val timeoutNanos = 200_000_000L
+        val userData = 0x1234_5678L
+        writeClockSubscription(memory, inPtr, userData, timeoutNanos)
+        val threads = ManagementFactory.getThreadMXBean()
+        val measureCpu = threads.isCurrentThreadCpuTimeSupported
+
+        val startedAt = System.nanoTime()
+        val cpuBefore = if (measureCpu) threads.currentThreadCpuTime else 0L
+        val errno = wasi.pollOneoff(memory, inPtr, outPtr, 1, neventsPtr)
+        val cpuAfter = if (measureCpu) threads.currentThreadCpuTime else 0L
+        val elapsedNanos = System.nanoTime() - startedAt
+
+        assertEquals(WasiErrno.ESUCCESS.value(), errno)
+        assertEquals(1, memory.readInt(neventsPtr))
+        assertEquals(userData, memory.readLong(outPtr))
+        assertEquals(WasiErrno.ESUCCESS.value().toShort(), memory.readShort(outPtr + 8))
+        assertEquals(WasiEventType.CLOCK, memory.read(outPtr + 10))
+        assertTrue(elapsedNanos >= timeoutNanos, "poll_oneoff returned after $elapsedNanos ns")
+        if (measureCpu) {
+            val cpuNanos = cpuAfter - cpuBefore
+            assertTrue(
+                cpuNanos < elapsedNanos / 2,
+                "poll_oneoff burned $cpuNanos ns of CPU while waiting $elapsedNanos ns",
+            )
+        }
+    }
+
+    @Test
+    fun pollOneoffRejectsEmptyAndOversizedSubscriptionLists() {
+        val wasi = WasiPreview1.builder().withOptions(WasiOptions.builder().build()).build()
+        val memory = ByteArrayMemory(MemoryLimits(1))
+
+        assertEquals(WasiErrno.EINVAL.value(), wasi.pollOneoff(memory, 0, 64, 0, 128))
+        assertEquals(WasiErrno.EINVAL.value(), wasi.pollOneoff(memory, 0, 64, 4_097, 128))
+        assertEquals(WasiErrno.EINVAL.value(), wasi.pollOneoff(memory, 0, 64, Int.MAX_VALUE, 128))
+        assertEquals(WasiErrno.EINVAL.value(), wasi.pollOneoff(memory, 0, 64, -1, 128))
+    }
+
     companion object {
         private const val WASI_ESUCCESS = 0
         private const val WASI_LOOKUPFLAGS_SYMLINK_FOLLOW = 1
@@ -464,6 +512,20 @@ class WasiPreview1Test {
         private const val WASI_OFLAGS_CREAT = 1
         private const val WASI_OFLAGS_TRUNC = 1 shl 3
         private const val WASI_RIGHTS_FD_WRITE = 1 shl 6
+
+        private fun writeClockSubscription(
+            memory: ByteArrayMemory,
+            ptr: Int,
+            userData: Long,
+            timeoutNanos: Long,
+        ) {
+            memory.writeLong(ptr, userData)
+            memory.writeByte(ptr + 8, WasiEventType.CLOCK)
+            memory.writeI32(ptr + 16, WasiClockId.MONOTONIC)
+            memory.writeLong(ptr + 24, timeoutNanos)
+            memory.writeLong(ptr + 32, 0L)
+            memory.writeShort(ptr + 40, 0)
+        }
 
         private fun writeIov(memory: ByteArrayMemory, iovs: Int, dataPtr: Int, data: ByteArray) {
             memory.write(dataPtr, data)

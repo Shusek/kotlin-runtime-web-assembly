@@ -111,7 +111,10 @@ runtime interruption policy described in
 [`CPU limits`](../../docs/pages/execution/cpu-limits.md).
 
 `withResourceBudget(...)` sets dispatcher parallelism, stream buffer capacity,
-and the usual guest-visible P3 limits together.
+and the usual guest-visible P3 limits together. Without it the host still caps
+pending futures, pending streams and in-flight host tasks at 65536 each and
+waitables at 131072, so a guest that keeps creating handles it never completes
+cannot exhaust host memory; pick a tighter budget for untrusted plugins.
 
 `withResourceBudget(...)` does not measure CPU. `parallelism` is an upper bound
 on how many P3 lanes may run, not proof that all lanes were busy. If a host sets

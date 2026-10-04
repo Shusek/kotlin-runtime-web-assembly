@@ -783,11 +783,19 @@ private constructor(
         registerHttpMethod(builder, "incoming-response", "status", this::incomingResponseStatus)
         registerHttpMethod(builder, "incoming-response", "headers", this::incomingResponseHeaders)
         registerHttpMethod(builder, "incoming-response", "consume", this::incomingResponseConsume)
-        registerResourceDrop(builder, HTTP_PACKAGE, "types", "incoming-response", incomingResponses)
+        registerResourceDrop(builder, HTTP_PACKAGE, "types", "incoming-response", incomingResponses) { response ->
+            if (!response.bodyConsumed) {
+                response.body.close()
+            }
+        }
 
         registerHttpMethod(builder, "incoming-body", "stream", this::incomingBodyStream)
         registerHttpStatic(builder, "incoming-body", "finish", this::incomingBodyFinish)
-        registerResourceDrop(builder, HTTP_PACKAGE, "types", "incoming-body", incomingBodies)
+        registerResourceDrop(builder, HTTP_PACKAGE, "types", "incoming-body", incomingBodies) { body ->
+            if (!body.streamTaken) {
+                body.body.close()
+            }
+        }
 
         registerHttpMethod(builder, "future-trailers", "subscribe", this::futureTrailersSubscribe)
         registerHttpMethod(builder, "future-trailers", "get", this::futureTrailersGet)
@@ -832,6 +840,11 @@ private constructor(
             "types",
             "future-incoming-response",
             futureIncomingResponses,
+            { future ->
+                if (!future.consumed && !future.response.bodyConsumed) {
+                    future.response.body.close()
+                }
+            },
         )
         register(builder, HTTP_PACKAGE, "outgoing-handler", "handle", this::outgoingHandlerHandle)
 
@@ -904,7 +917,11 @@ private constructor(
             "[method]input-stream.subscribe",
             this::subscribeInput,
         )
-        registerResourceDrop(builder, IO_PACKAGE, "streams", "input-stream", inputStreams)
+        registerResourceDrop(builder, IO_PACKAGE, "streams", "input-stream", inputStreams) { stream ->
+            if (stream !== stdin) {
+                stream.release()
+            }
+        }
 
         register(builder, IO_PACKAGE, "streams", "output-stream.check-write", this::checkWrite)
         register(
@@ -1016,7 +1033,11 @@ private constructor(
             "[method]output-stream.blocking-splice",
             { args -> splice(args, true) },
         )
-        registerResourceDrop(builder, IO_PACKAGE, "streams", "output-stream", outputStreams)
+        registerResourceDrop(builder, IO_PACKAGE, "streams", "output-stream", outputStreams) { stream ->
+            if (stream !== stdout && stream !== stderr) {
+                stream.release()
+            }
+        }
 
         register(builder, RANDOM_PACKAGE, "random", "get-random-bytes", this::getRandomBytes)
         register(builder, RANDOM_PACKAGE, "random", "get-random-u64", this::getRandomU64)
@@ -1110,7 +1131,12 @@ private constructor(
         registerTcpMethod(builder, "set-send-buffer-size", this::tcpSetSendBufferSize)
         registerTcpMethod(builder, "subscribe", this::tcpSubscribe)
         registerTcpMethod(builder, "shutdown", this::tcpShutdown)
-        registerResourceDrop(builder, SOCKETS_PACKAGE, "tcp", "tcp-socket", tcpSockets)
+        registerResourceDrop(builder, SOCKETS_PACKAGE, "tcp", "tcp-socket", tcpSockets) { socket ->
+            closePreview2ResourceIgnoringFailure { socket.connection?.close() }
+            socket.connection = null
+            closePreview2ResourceIgnoringFailure { socket.listener?.close() }
+            socket.listener = null
+        }
 
         register(
             builder,
@@ -1181,7 +1207,10 @@ private constructor(
             "outgoing-datagram-stream",
             outgoingDatagramStreams,
         )
-        registerResourceDrop(builder, SOCKETS_PACKAGE, "udp", "udp-socket", udpSockets)
+        registerResourceDrop(builder, SOCKETS_PACKAGE, "udp", "udp-socket", udpSockets) { socket ->
+            socket.endpoint?.close()
+            socket.endpoint = null
+        }
 
         return builder
     }
@@ -1576,9 +1605,15 @@ private constructor(
             val connection = socket.connection ?: throw NetException("invalid-state")
             return@networkResult listOf(
                 inputStreams.insertResource(
-                    WasiInputStream(connection.inputSource(), connection::inputAvailable)
+                    WasiInputStream(
+                        connection.inputSource(),
+                        connection::inputAvailable,
+                        closeOnDrop = false,
+                    )
                 ),
-                outputStreams.insertResource(WasiOutputStream(connection.outputSink())),
+                outputStreams.insertResource(
+                    WasiOutputStream(connection.outputSink(), closeOnDrop = false)
+                ),
             )
         }
     }
@@ -1629,9 +1664,15 @@ private constructor(
             return@networkResult listOf(
                 tcpSockets.insertResource(child),
                 inputStreams.insertResource(
-                    WasiInputStream(accepted.inputSource(), accepted::inputAvailable)
+                    WasiInputStream(
+                        accepted.inputSource(),
+                        accepted::inputAvailable,
+                        closeOnDrop = false,
+                    )
                 ),
-                outputStreams.insertResource(WasiOutputStream(accepted.outputSink())),
+                outputStreams.insertResource(
+                    WasiOutputStream(accepted.outputSink(), closeOnDrop = false)
+                ),
             )
         }
     }
@@ -3598,12 +3639,16 @@ private constructor(
         )
     }
 
-    private fun httpTimeout(options: RequestOptions?): Duration? {
+    /**
+     * Guest-supplied timeouts are optional and unbounded, so a plugin or a slow peer could hold the
+     * calling host thread indefinitely. Apply the host default when none is given and clamp the
+     * requested value to the host maximum.
+     */
+    private fun httpTimeout(options: RequestOptions?): Duration {
         val nanos = options?.firstByteTimeoutNanos ?: options?.connectTimeoutNanos
-        if (nanos == null || nanos <= 0) {
-            return null
-        }
-        return nanos.nanoseconds
+        val requested =
+            if (nanos == null || nanos <= 0) WASI_PREVIEW_DEFAULT_HTTP_TIMEOUT else nanos.nanoseconds
+        return minOf(requested, WASI_PREVIEW_MAX_HTTP_TIMEOUT)
     }
 
     private fun fieldsFromHttpHeaders(
@@ -3944,12 +3989,18 @@ private constructor(
         )
     }
 
+    /**
+     * Registers the canonical `[resource-drop]` import for [table]. When [onDrop] is given it runs
+     * on the removed value so that dropping a handle releases the host resource behind it (sockets,
+     * streams, response bodies) instead of leaking it until the host closes.
+     */
     private fun <T> registerResourceDrop(
         builder: WasiHostImportBuilder,
         packageName: String,
         interfaceName: String,
         resourceName: String,
         table: WitResourceTable<T>,
+        onDrop: ((T) -> Unit)? = null,
     ) {
         register(
             builder,
@@ -3958,7 +4009,10 @@ private constructor(
             "[resource-drop]" + resourceName,
             { args ->
                 requireArity("[resource-drop]" + resourceName, args, 1)
-                table.remove(handle(args, 0))
+                val removed = table.remove(handle(args, 0))
+                if (onDrop != null) {
+                    closePreview2ResourceIgnoringFailure { onDrop(removed) }
+                }
                 null
             },
         )
@@ -4416,9 +4470,21 @@ private constructor(
     internal constructor(
         private val source: RawSource,
         private val available: (() -> Int)? = null,
+        /**
+         * Whether dropping the guest handle closes [source]. Streams that merely borrow a resource
+         * owned by another handle (a TCP socket's read side) keep it open until that owner is dropped.
+         */
+        private val closeOnDrop: Boolean = true,
     ) {
         private val lifecycleLock = WasiPreviewLock()
         private var closed: Boolean = false
+
+        /** Releases the stream when its guest handle is dropped. */
+        internal fun release() {
+            if (closeOnDrop) {
+                close()
+            }
+        }
 
         @Throws(IOException::class)
         internal fun readBytes(len: Int, blocking: Boolean): ByteArray {
@@ -4478,9 +4544,24 @@ private constructor(
         }
     }
 
-    class WasiOutputStream internal constructor(private val sink: RawSink) {
+    class WasiOutputStream
+    internal constructor(
+        private val sink: RawSink,
+        /**
+         * See [WasiInputStream.closeOnDrop]: a TCP socket's write side stays open until the socket
+         * itself is dropped.
+         */
+        private val closeOnDrop: Boolean = true,
+    ) {
         private val lifecycleLock = WasiPreviewLock()
         private var closed: Boolean = false
+
+        /** Releases the stream when its guest handle is dropped. */
+        internal fun release() {
+            if (closeOnDrop) {
+                close()
+            }
+        }
 
         @Throws(IOException::class)
         internal fun write(bytes: ByteArray) {

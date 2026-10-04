@@ -4909,12 +4909,16 @@ private constructor(
         )
     }
 
-    private fun httpTimeout(options: RequestOptions?): Duration? {
+    /**
+     * Guest-supplied timeouts are optional and unbounded, so a plugin or a slow peer could hold the
+     * calling host thread indefinitely. Apply the host default when none is given and clamp the
+     * requested value to the host maximum.
+     */
+    private fun httpTimeout(options: RequestOptions?): Duration {
         val nanos = options?.firstByteTimeout ?: options?.connectTimeout
-        if (nanos == null || nanos <= 0L) {
-            return null
-        }
-        return nanos.nanoseconds
+        val requested =
+            if (nanos == null || nanos <= 0L) WASI_PREVIEW_DEFAULT_HTTP_TIMEOUT else nanos.nanoseconds
+        return minOf(requested, WASI_PREVIEW_MAX_HTTP_TIMEOUT)
     }
 
     private fun fieldsFromHttpHeaders(
@@ -5930,10 +5934,10 @@ private constructor(
         var httpHandler: WasiHttpHandler = defaultWasiHttpHandler()
         var streamBufferCapacity: Int = DEFAULT_STREAM_BUFFER_CAPACITY
         var maxCanonicalThreads: Int = WASI_PREVIEW3_UNLIMITED_RESOURCES
-        var maxPendingFutures: Int = WASI_PREVIEW3_UNLIMITED_RESOURCES
-        var maxPendingStreams: Int = WASI_PREVIEW3_UNLIMITED_RESOURCES
-        var maxWaitables: Int = WASI_PREVIEW3_UNLIMITED_RESOURCES
-        var maxInFlightHostTasks: Int = WASI_PREVIEW3_UNLIMITED_RESOURCES
+        var maxPendingFutures: Int = WASI_PREVIEW3_DEFAULT_MAX_PENDING
+        var maxPendingStreams: Int = WASI_PREVIEW3_DEFAULT_MAX_PENDING
+        var maxWaitables: Int = WASI_PREVIEW3_DEFAULT_MAX_WAITABLES
+        var maxInFlightHostTasks: Int = WASI_PREVIEW3_DEFAULT_MAX_PENDING
         internal var coroutineScope: CoroutineScope? = null
         internal var ownsCoroutineScope: Boolean = false
         internal var defaultHttpClientFactory: () -> WasiHttpClient = ::defaultWasiHttpClient
