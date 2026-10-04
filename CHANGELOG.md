@@ -5,6 +5,19 @@ patch and prerelease identifiers advance without changing the `0.3` major/minor 
 `1.0.0`, API changes may still be intentional; release candidates remain immutable once
 published.
 
+## Unreleased
+
+### Security
+
+- The Wasm parser and validator now report three classes of crafted input through their
+  documented exception types instead of raw runtime exceptions: an unknown multi-byte opcode
+  whose LEB128 sub-opcode lands outside the opcode table (previously
+  `ArrayIndexOutOfBoundsException`), an `end` that closes the function block before the last
+  instruction (previously `NullPointerException`), and subtype hierarchies that reference a
+  supertype defined later or exceed the specification depth limit of 63 (previously unbounded
+  recursion in subtype checks). Hosts that catch `MalformedException` and `InvalidException`
+  around untrusted modules are no longer crashed by these inputs.
+
 ## 0.3.2 (2026-10-04)
 
 ### Changed

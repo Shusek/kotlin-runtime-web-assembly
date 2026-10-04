@@ -567,7 +567,13 @@ enum class OpCode(
             }
         }
 
-        fun byOpCode(opcode: Int): OpCode? = byOpCode[opcode]
+        /**
+         * Returns the opcode for a decoded (possibly multi-byte) opcode value, or `null` when the
+         * value is unknown. Values outside the table, which untrusted input can produce through an
+         * arbitrary LEB128 sub-opcode, are reported as unknown instead of indexing out of bounds.
+         */
+        fun byOpCode(opcode: Int): OpCode? =
+            if (opcode < 0 || opcode >= OP_CODES_SIZE) null else byOpCode[opcode]
 
         fun signature(opcode: OpCode): List<WasmEncoding> = signatures[opcode.opcode]!!
     }
