@@ -2027,17 +2027,27 @@ private constructor(
         requireArity("descriptor.read", args, 3)
         return filesystemResult {
             val descriptor = readableDescriptor(args, 0)
-            val length = checkedByteLength(args[1])
+            val requested = asU64(args[1])
             val offset = asU64(args[2])
             if (offset < 0) {
                 throw FsException("invalid")
             }
-            val buffer = ByteArray(length)
-            val read = descriptor.fileHandle().read(offset, buffer, 0, length)
-            if (read < 0) {
+            // Allocate only what the file can still provide, bounded by the host chunk limit;
+            // short reads are allowed by the interface, so a guest cannot force a 2 GiB buffer.
+            val handle = descriptor.fileHandle()
+            val size = handle.size()
+            if (offset >= size) {
                 listOf(ByteArray(0), true)
             } else {
-                listOf(buffer.copyOf(read), read < length)
+                var length = if (requested < 0) Long.MAX_VALUE else requested
+                length = minOf(length, size - offset, WASI_PREVIEW_MAX_GUEST_BYTE_REQUEST.toLong())
+                val buffer = ByteArray(length.toInt())
+                val read = handle.read(offset, buffer, 0, length.toInt())
+                if (read < 0) {
+                    listOf(ByteArray(0), true)
+                } else {
+                    listOf(buffer.copyOf(read), offset + read >= size)
+                }
             }
         }
     }
@@ -5250,8 +5260,11 @@ private constructor(
 
     private fun checkedByteLength(value: Any?): Int {
         val requested = asU64(value)
-        if (requested > Int.MAX_VALUE) {
-            throw ComponentModelException("requested byte length too large: $requested")
+        if (requested < 0 || requested > WASI_PREVIEW_MAX_GUEST_BYTE_REQUEST) {
+            throw ComponentModelException(
+                "requested byte length ${requested.toULong()} exceeds the host limit of " +
+                    "$WASI_PREVIEW_MAX_GUEST_BYTE_REQUEST bytes"
+            )
         }
         return requested.toInt()
     }
