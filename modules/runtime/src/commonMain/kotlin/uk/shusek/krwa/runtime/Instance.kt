@@ -1099,6 +1099,7 @@ private constructor(
 
             val tableLength = module.tableSection().tableCount()
             val tables = Array(tableLength) { i -> module.tableSection().getTable(i) }
+            checkDefinedTableSizes(tables)
             val elements = module.elementSection().elements()
 
             var memories = emptyArray<Memory>()
@@ -1179,7 +1180,11 @@ private constructor(
             val selectedPolicy = memoryPolicy
             if (selectedPolicy == null) {
                 if (legacyLimits == null) {
-                    return null
+                    return resolveImplicitDefinedMemoryLimits(
+                        memorySection,
+                        definedCount,
+                        mappedHostImports.memoryCount(),
+                    )
                 }
                 if (definedCount > 1) {
                     throw UninstantiableException(
@@ -1253,6 +1258,87 @@ private constructor(
                     initial + grantedGrowth.toInt(),
                     declared.shared(),
                 )
+            }
+        }
+
+        /**
+         * Bounds applied to defined memories when the host configured neither a [WasmMemoryPolicy]
+         * nor legacy memory limits.
+         *
+         * Host-side memory objects are materialized before any engine limit applies, so without
+         * these bounds a module declaring `(memory 32767)` made the host allocate 2 GiB before
+         * Wasmtime or the browser engine could refuse it. The bounds mirror the Wasmtime store
+         * defaults, or the configured [WasmtimeExecutionConfig]: one per-memory byte budget and one
+         * memory count, without an aggregate split, so growth behaviour on Wasmtime is unchanged and
+         * wasmJs gets the same limits. Imported memories are host-owned and are not re-checked.
+         */
+        private fun resolveImplicitDefinedMemoryLimits(
+            memorySection: MemorySection?,
+            definedCount: Int,
+            importedCount: Int,
+        ): Array<MemoryLimits>? {
+            if (memorySection == null || definedCount == 0) {
+                return null
+            }
+            val config = wasmtimeExecutionConfig
+            val maxMemories = config?.maxMemories ?: DefaultWasmtimeCoreMaxMemories
+            val totalCount = importedCount + definedCount
+            if (maxMemories >= 0L && totalCount.toLong() > maxMemories) {
+                throw UninstantiableException(
+                    "WebAssembly instance declares $totalCount memories, exceeding the default " +
+                        "limit of $maxMemories; configure WasmMemoryPolicy or " +
+                        "WasmtimeExecutionConfig.maxMemories to allow it"
+                )
+            }
+            val perMemoryPages =
+                implicitPagesPerMemory(config?.maxMemoryBytes ?: DefaultWasmtimeMaxMemoryBytes)
+            // Clamping a declared maximum rewrites the memory section for the engine, which needs
+            // the original bytes and must not diverge from a precompiled artifact. Without a
+            // rewrite the engine's own store limiter still bounds growth.
+            val canRewriteModule =
+                module.originalBytes() != null && config?.precompiledModuleBytes == null
+            return Array(definedCount) { index ->
+                val declared = memorySection.getMemory(index).limits()
+                if (declared.initialPages() > perMemoryPages) {
+                    throw UninstantiableException(
+                        "defined memory $index initial size ${declared.initialPages()} exceeds " +
+                            "the default per-memory limit of $perMemoryPages pages; configure " +
+                            "WasmMemoryPolicy or WasmtimeExecutionConfig.maxMemoryBytes to allow it"
+                    )
+                }
+                if (declared.maximumPages() <= perMemoryPages || !canRewriteModule) {
+                    declared
+                } else {
+                    MemoryLimits(declared.initialPages(), perMemoryPages, declared.shared())
+                }
+            }
+        }
+
+        private fun implicitPagesPerMemory(maxMemoryBytes: Long): Int =
+            (maxMemoryBytes / Memory.PAGE_SIZE.toLong())
+                .coerceIn(1L, MemoryLimits.MAX_PAGES.toLong())
+                .toInt()
+
+        /**
+         * Host-side tables are allocated at their declared initial size before any engine limit
+         * applies, so the declared size is checked against the configured Wasmtime table element
+         * limit (or its default) first. [WasmtimeUnlimitedResourceLimit] disables the check.
+         */
+        private fun checkDefinedTableSizes(tables: Array<Table>) {
+            val maxTableElements =
+                wasmtimeExecutionConfig?.maxTableElements ?: DefaultWasmtimeCoreMaxTableElements
+            if (maxTableElements < 0L) {
+                return
+            }
+            for (index in tables.indices) {
+                val initial = tables[index].limits().min()
+                if (initial > maxTableElements) {
+                    throw UninstantiableException(
+                        "defined table $index declares $initial initial elements, exceeding the " +
+                            "limit of $maxTableElements; raise " +
+                            "WasmtimeExecutionConfig.maxTableElements to allow it"
+                    )
+                }
             }
         }
 

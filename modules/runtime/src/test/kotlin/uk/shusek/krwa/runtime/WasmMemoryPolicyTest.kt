@@ -189,6 +189,126 @@ class WasmMemoryPolicyTest {
         assertEquals(policyThenConfig, configThenPolicy)
     }
 
+    @Test
+    fun definedMemoriesGetTheWasmtimeDefaultsWithoutAnExplicitPolicy() {
+        val module = moduleWithDefinedMemories(MemoryLimits(1), MemoryLimits(1, 100))
+
+        withCapturingProvider { provider ->
+            Instance.builder(module).build().use { }
+            assertMemoryLimits(
+                provider.modules.single().definedMemoryLimits(),
+                expectedInitials = listOf(1, 1),
+                expectedMaxima = listOf(DEFAULT_PAGES_PER_MEMORY, 100),
+            )
+        }
+    }
+
+    @Test
+    fun definedMemoryInitialSizeCannotExceedTheDefaultCapWithoutAnExplicitPolicy() {
+        val module = moduleWithDefinedMemories(MemoryLimits(DEFAULT_PAGES_PER_MEMORY + 1))
+
+        val exception =
+            assertThrows(UninstantiableException::class.java) {
+                withCapturingProvider { Instance.builder(module).build() }
+            }
+
+        assertTrue(
+            exception.message.orEmpty().contains("initial size ${DEFAULT_PAGES_PER_MEMORY + 1}")
+        )
+        assertTrue(exception.message.orEmpty().contains("limit of $DEFAULT_PAGES_PER_MEMORY pages"))
+    }
+
+    @Test
+    fun configuredWasmtimeMemoryBytesDriveTheDefaultCap() {
+        val config = WasmtimeExecutionConfig(maxMemoryBytes = pagesToBytes(3))
+
+        withCapturingProvider { provider ->
+            Instance.builder(moduleWithDefinedMemories(MemoryLimits(2)))
+                .withWasmtimeExecutionConfig(config)
+                .build()
+                .use { }
+            assertMemoryLimits(
+                provider.modules.single().definedMemoryLimits(),
+                expectedInitials = listOf(2),
+                expectedMaxima = listOf(3),
+            )
+        }
+
+        assertThrows(UninstantiableException::class.java) {
+            withCapturingProvider {
+                Instance.builder(moduleWithDefinedMemories(MemoryLimits(4)))
+                    .withWasmtimeExecutionConfig(config)
+                    .build()
+            }
+        }
+    }
+
+    @Test
+    fun importedMemoriesAreNotCappedWithoutAnExplicitPolicy() {
+        val module = moduleWithImportedMemories(ImportedMemory("env", "memory", MemoryLimits(1)))
+        val imports =
+            ImportValues.builder()
+                .addMemory(ImportMemory("env", "memory", ByteBufferMemory(MemoryLimits(1))))
+                .build()
+
+        withCapturingProvider { provider ->
+            Instance.builder(module).withImportValues(imports).build().use { }
+            assertEquals(1, provider.modules.size)
+        }
+    }
+
+    @Test
+    fun definedTableSizesAreCappedByTheWasmtimeTableElementDefault() {
+        val oversized = DefaultWasmtimeCoreMaxTableElements.toInt() + 1
+
+        val exception =
+            assertThrows(UninstantiableException::class.java) {
+                withCapturingProvider { Instance.builder(moduleWithDefinedTables(oversized)).build() }
+            }
+        assertTrue(exception.message.orEmpty().contains("declares $oversized initial elements"))
+
+        val config = WasmtimeExecutionConfig(maxTableElements = 4)
+        withCapturingProvider {
+            Instance.builder(moduleWithDefinedTables(4))
+                .withWasmtimeExecutionConfig(config)
+                .build()
+                .use { }
+        }
+        assertThrows(UninstantiableException::class.java) {
+            withCapturingProvider {
+                Instance.builder(moduleWithDefinedTables(5))
+                    .withWasmtimeExecutionConfig(config)
+                    .build()
+            }
+        }
+
+        withCapturingProvider {
+            Instance.builder(moduleWithDefinedTables(oversized))
+                .withWasmtimeExecutionConfig(
+                    WasmtimeExecutionConfig(maxTableElements = WasmtimeUnlimitedResourceLimit)
+                )
+                .build()
+                .use { }
+        }
+    }
+
+    @Test
+    fun constantExpressionArrayLengthsAreBounded() {
+        withCapturingProvider {
+            Instance.builder(moduleWithConstantArrayGlobal(3)).build().use { }
+        }
+
+        for (length in listOf(Int.MAX_VALUE, -1)) {
+            val exception =
+                assertThrows(UninstantiableException::class.java) {
+                    withCapturingProvider {
+                        Instance.builder(moduleWithConstantArrayGlobal(length)).build()
+                    }
+                }
+            assertTrue(exception.message.orEmpty().contains("constant expression limit"))
+        }
+    }
+
     private fun capturedConfig(
         module: WasmModule,
         configure: Instance.Builder.() -> Unit,
@@ -323,6 +443,50 @@ class WasmMemoryPolicyTest {
             return bytes.toByteArray()
         }
 
+        private fun moduleWithDefinedTables(vararg initialSizes: Int): WasmModule {
+            val body =
+                unsignedLeb128(initialSizes.size) +
+                    initialSizes.fold(ByteArray(0)) { bytes, initial ->
+                        bytes +
+                            byteArrayOf(FUNCREF_TYPE.toByte(), MIN_ONLY_LIMITS.toByte()) +
+                            unsignedLeb128(initial)
+                    }
+            return parseModule(section(TABLE_SECTION_ID, body))
+        }
+
+        /** `(type $a (array i32)) (global (ref null $a) (array.new_default $a (i32.const length)))` */
+        private fun moduleWithConstantArrayGlobal(length: Int): WasmModule {
+            val types =
+                unsignedLeb128(1) +
+                    byteArrayOf(ARRAY_TYPE.toByte(), I32_TYPE.toByte(), IMMUTABLE.toByte())
+            val globals =
+                unsignedLeb128(1) +
+                    byteArrayOf(REF_NULL_TYPE.toByte(), 0x00, IMMUTABLE.toByte()) +
+                    byteArrayOf(I32_CONST.toByte()) +
+                    signedLeb128(length) +
+                    byteArrayOf(GC_PREFIX.toByte()) +
+                    unsignedLeb128(ARRAY_NEW_DEFAULT) +
+                    unsignedLeb128(0) +
+                    byteArrayOf(END.toByte())
+            return parseModule(section(TYPE_SECTION_ID, types), section(GLOBAL_SECTION_ID, globals))
+        }
+
+        private fun signedLeb128(value: Int): ByteArray {
+            val bytes = ArrayList<Byte>()
+            var remaining = value
+            while (true) {
+                val current = remaining and 0x7f
+                remaining = remaining shr 7
+                val done =
+                    (remaining == 0 && (current and 0x40) == 0) ||
+                        (remaining == -1 && (current and 0x40) != 0)
+                bytes.add((if (done) current else current or 0x80).toByte())
+                if (done) {
+                    return bytes.toByteArray()
+                }
+            }
+        }
+
         private fun WasmModule.definedMemoryLimits(): List<MemoryLimits> {
             val section = memorySection() ?: return emptyList()
             return List(section.memoryCount()) { index -> section.getMemory(index).limits() }
@@ -339,10 +503,24 @@ class WasmMemoryPolicyTest {
 
         private val WASM_HEADER =
             byteArrayOf(0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00)
+        private val DEFAULT_PAGES_PER_MEMORY =
+            (DefaultWasmtimeMaxMemoryBytes / Memory.PAGE_SIZE.toLong()).toInt()
+        private const val TYPE_SECTION_ID = 1
         private const val IMPORT_SECTION_ID = 2
+        private const val TABLE_SECTION_ID = 4
         private const val MEMORY_SECTION_ID = 5
+        private const val GLOBAL_SECTION_ID = 6
         private const val MEMORY_IMPORT_KIND = 2
         private const val MIN_ONLY_LIMITS = 0
         private const val MIN_AND_MAX_LIMITS = 1
+        private const val FUNCREF_TYPE = 0x70
+        private const val ARRAY_TYPE = 0x5E
+        private const val I32_TYPE = 0x7F
+        private const val REF_NULL_TYPE = 0x63
+        private const val IMMUTABLE = 0x00
+        private const val I32_CONST = 0x41
+        private const val GC_PREFIX = 0xFB
+        private const val ARRAY_NEW_DEFAULT = 0x07
+        private const val END = 0x0B
     }
 }

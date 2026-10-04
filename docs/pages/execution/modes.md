@@ -53,8 +53,10 @@ Wasmtime execution can be configured per instance during instantiation. Prefer
 settings as one value instead of allowing a partially updated builder.
 `WasmtimeExecutionConfig` exposes Wasmtime store and engine limits for maximum
 linear memory bytes, maximum Wasm stack bytes, table elements, instances,
-tables, memories, and guest execution fuel. Optional count limits and `maxFuel`
-use `WasmtimeUnlimitedResourceLimit` (`-1`) for unlimited:
+tables, memories, and guest execution fuel. The defaults are 256 MiB per linear
+memory, 512 KiB of Wasm stack, 1,000,000 table elements, 1 instance, 128 tables,
+16 memories, and unlimited fuel. Optional count limits and `maxFuel` use
+`WasmtimeUnlimitedResourceLimit` (`-1`) for unlimited:
 
 ```kotlin
 val instance =

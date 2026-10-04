@@ -56,6 +56,27 @@ most one defined memory. It does not account for imported memories or aggregate
 growth and rejects modules with multiple defined memories. Prefer
 `withMemoryPolicy(...)` for untrusted or multi-memory modules.
 
-Runtime memory objects are owned by the active platform engine. On JVM, Android,
-and iOS this means the linked Wasmtime backend; on `wasmJs` this means the
-browser or Node WebAssembly engine.
+## Default Limits
+
+Without `withMemoryPolicy(...)` or `withMemoryLimits(...)`, defined memories
+still receive default bounds. Each defined memory is capped at
+`WasmtimeExecutionConfig.maxMemoryBytes` (256 MiB unless configured) and the
+instance may declare at most `WasmtimeExecutionConfig.maxMemories` memories (16
+unless configured). A module whose initial memory size exceeds the per-memory cap
+fails with `UninstantiableException` before any memory is allocated, and a larger
+declared maximum is reduced to the cap. Imported memories are host-owned and are
+not re-checked. Defined tables are checked the same way against
+`WasmtimeExecutionConfig.maxTableElements` (1,000,000 elements unless configured;
+`WasmtimeUnlimitedResourceLimit` disables the check), and `array.new` /
+`array.new_default` in constant expressions accept at most 10,000,000 elements.
+
+These defaults exist so that a hostile module cannot make the host allocate
+gigabytes during `Instance.builder(module).build()`. They are not a substitute
+for an explicit policy: set `WasmMemoryPolicy` to budget memory for untrusted
+plugins, including the aggregate across memories.
+
+The host materializes instance memories and tables while building the instance,
+within the limits above, before handing the module to the engine. The memories
+reachable through `Instance.memory(...)` after a successful build are owned by
+the active platform engine. On JVM, Android, and iOS this means the linked
+Wasmtime backend; on `wasmJs` this means the browser or Node WebAssembly engine.

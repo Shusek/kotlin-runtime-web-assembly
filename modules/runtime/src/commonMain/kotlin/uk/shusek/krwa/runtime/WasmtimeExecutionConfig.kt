@@ -21,12 +21,19 @@ const val DefaultWasmtimeCoreMaxTables: Long = 128L
 
 const val DefaultWasmtimeCoreMaxMemories: Long = 16L
 
+/**
+ * Default per-table element limit for core module execution. Tables are materialized on the host
+ * and in the engine with their declared initial size, so an unlimited default let a module declare
+ * ten million entries per table before any other limit applied.
+ */
+const val DefaultWasmtimeCoreMaxTableElements: Long = 1_000_000L
+
 data class WasmtimeExecutionConfig(
     val target: String = WasmtimeAutomaticTarget,
     val precompiledModuleBytes: ByteArray? = null,
     val maxMemoryBytes: Long = DefaultWasmtimeMaxMemoryBytes,
     val maxWasmStackBytes: Long = DefaultWasmtimeMaxWasmStackBytes,
-    val maxTableElements: Long = WasmtimeUnlimitedResourceLimit,
+    val maxTableElements: Long = DefaultWasmtimeCoreMaxTableElements,
     val maxInstances: Long = DefaultWasmtimeCoreMaxInstances,
     val maxTables: Long = DefaultWasmtimeCoreMaxTables,
     val maxMemories: Long = DefaultWasmtimeCoreMaxMemories,
