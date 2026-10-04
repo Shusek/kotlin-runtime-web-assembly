@@ -1,0 +1,125 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "url": "../../runtime/0.3.0-dev.f3c34df3a402/runtime-0.3.0-dev.f3c34df3a402.module",
+    "group": "uk.shusek.krwa",
+    "module": "runtime",
+    "version": "0.3.0-dev.f3c34df3a402",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.8.0"
+    }
+  },
+  "variants": [
+    {
+      "name": "iosArm64ApiElements-published",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.jvm.environment": "non-jvm",
+        "org.gradle.usage": "kotlin-api",
+        "org.jetbrains.kotlin.native.target": "ios_arm64",
+        "org.jetbrains.kotlin.platform.type": "native"
+      },
+      "dependencies": [
+        {
+          "group": "uk.shusek.krwa",
+          "module": "wasm",
+          "version": {
+            "requires": "0.3.0-dev.f3c34df3a402"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.4.20"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "runtime-iosArm64Main-0.3.0-dev.f3c34df3a402.klib",
+          "url": "runtime-iosarm64-0.3.0-dev.f3c34df3a402.klib",
+          "size": 347669,
+          "sha512": "eb0fda21c836a789a17f703babd11720a6206b67bf60359e3668c0a08ac61d76ca2fcb7cfe0a1ef4ca5f268bcdfaf5d1d69188058ba265741b38403f25fab366",
+          "sha256": "805c6f12aa0d9d9a3c8ad5498d269aa0a49752b64a6622eb000de93d3a149b8e",
+          "sha1": "487295cdc4876e94989782d09022e043b545a16a",
+          "md5": "44b3f69b9a5909ed6ce986286130ab1c"
+        },
+        {
+          "name": "runtime-iosArm64Cinterop-wasmtimePulleyMain-0.3.0-dev.f3c34df3a402.klib",
+          "url": "runtime-iosarm64-0.3.0-dev.f3c34df3a402-cinterop-wasmtimePulley.klib",
+          "size": 41063178,
+          "sha512": "68e177e8c40505d9633d6b99ec8741a1c4885ee5964d96c4e25fc1ae435d2f5877065dca6a860c7937edbfa428a56c5318d140ea103961d3ef165ee8bf5534d5",
+          "sha256": "04fcbab9eaf2dd2808197b6212ed2dd22a291770bc0f35989b56a6631696ba27",
+          "sha1": "56a45675bba806bd3e1a5d35de80d9a7164bd03a",
+          "md5": "a46993ac530be82e8baed322a4430cbc"
+        }
+      ]
+    },
+    {
+      "name": "iosArm64SourcesElements-published",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.jvm.environment": "non-jvm",
+        "org.gradle.usage": "kotlin-runtime",
+        "org.jetbrains.kotlin.native.target": "ios_arm64",
+        "org.jetbrains.kotlin.platform.type": "native"
+      },
+      "files": [
+        {
+          "name": "runtime-iosarm64-0.3.0-dev.f3c34df3a402-sources.jar",
+          "url": "runtime-iosarm64-0.3.0-dev.f3c34df3a402-sources.jar",
+          "size": 67538,
+          "sha512": "c4e334b2e4e7f2fa3ae2722f5e65de006f1ae14c15d0916038e28030ef955dd5725fc4c3c30dd5b930857c30af167a1e0f6028719c0579cfc31ab70c8e96271a",
+          "sha256": "c262b7a94913db08d09c49a91378de25560ab6c6ee792eff83a168dc4f7b49cf",
+          "sha1": "3c2d9661b4c67271247a1b98a5c90428c13e740e",
+          "md5": "d274dd941f675291e05342abf6bafbfa"
+        }
+      ]
+    },
+    {
+      "name": "iosArm64MetadataElements-published",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.jvm.environment": "non-jvm",
+        "org.gradle.usage": "kotlin-metadata",
+        "org.jetbrains.kotlin.native.target": "ios_arm64",
+        "org.jetbrains.kotlin.platform.type": "native"
+      },
+      "dependencies": [
+        {
+          "group": "uk.shusek.krwa",
+          "module": "wasm",
+          "version": {
+            "requires": "0.3.0-dev.f3c34df3a402"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.4.20"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "runtime-iosarm64-0.3.0-dev.f3c34df3a402-metadata.jar",
+          "url": "runtime-iosarm64-0.3.0-dev.f3c34df3a402-metadata.jar",
+          "size": 34443,
+          "sha512": "d05d5d88dc3e22d188893bd94e85e0d0d28fb6417d635cdbdfd59f4011e9a9f890d3de12efa3ed411e3d983926524cf42f1cf741d8548b864a4a8a2c1bdafe47",
+          "sha256": "36f34eb5f5de72f358e6261982946f8783df98535637a4ed1da97b0bbbc473ae",
+          "sha1": "329592d2776f921e8877f7ec4013aa6bcb5611f3",
+          "md5": "83dda7653201846eca3acc933af7b434"
+        }
+      ]
+    }
+  ]
+}

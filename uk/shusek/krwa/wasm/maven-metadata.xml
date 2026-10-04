@@ -3,8 +3,8 @@
   <groupId>uk.shusek.krwa</groupId>
   <artifactId>wasm</artifactId>
   <versioning>
-    <latest>0.3.0-dev.8347044dd14e</latest>
-    <release>0.3.0-dev.8347044dd14e</release>
+    <latest>0.3.0-dev.f3c34df3a402</latest>
+    <release>0.3.0-dev.f3c34df3a402</release>
     <versions>
       <version>0.3.0-dev.dd7a6fdf625a</version>
       <version>0.3.0-dev.ec3430fca82c</version>
@@ -17,7 +17,8 @@
       <version>0.3.0-dev.ce74cc1b5a6f</version>
       <version>0.3.0-dev.59c0bdcaad2a</version>
       <version>0.3.0-dev.8347044dd14e</version>
+      <version>0.3.0-dev.f3c34df3a402</version>
     </versions>
-    <lastUpdated>20260926113313</lastUpdated>
+    <lastUpdated>20261004162909</lastUpdated>
   </versioning>
 </metadata>
