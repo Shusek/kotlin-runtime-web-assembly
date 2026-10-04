@@ -1,7 +1,6 @@
 package uk.shusek.krwa.component
 
 import java.lang.reflect.Array as ReflectArray
-import java.lang.reflect.Field as ReflectField
 import java.lang.reflect.Method
 
 internal actual fun canonicalAbiReflectedCase(
@@ -23,11 +22,10 @@ internal actual fun canonicalAbiReflectedCase(
 }
 
 internal actual fun canonicalAbiFieldValue(value: Any, name: String): CanonicalAbiReflectedValue? {
-    val method = fieldAccessorOrNull(value.javaClass, name)
+    val method = WitReflectionAccess.publicZeroArgMethod(value.javaClass, name)
     if (method != null) {
         try {
-            method.isAccessible = true
-            return CanonicalAbiReflectedValue(method.invoke(value))
+            return CanonicalAbiReflectedValue(WitReflectionAccess.open(method).invoke(value))
         } catch (e: ReflectiveOperationException) {
             throw ComponentModelException(
                 "failed to read field $name on ${value.javaClass.name}",
@@ -35,11 +33,10 @@ internal actual fun canonicalAbiFieldValue(value: Any, name: String): CanonicalA
             )
         }
     }
-    val field = fieldOrNull(value.javaClass, name)
+    val field = WitReflectionAccess.publicField(value.javaClass, name)
     if (field != null) {
         try {
-            field.isAccessible = true
-            return CanonicalAbiReflectedValue(field.get(value))
+            return CanonicalAbiReflectedValue(WitReflectionAccess.open(field).get(value))
         } catch (e: ReflectiveOperationException) {
             throw ComponentModelException(
                 "failed to read field $name on ${value.javaClass.name}",
@@ -53,10 +50,10 @@ internal actual fun canonicalAbiFieldValue(value: Any, name: String): CanonicalA
 internal actual fun canonicalAbiTupleComponents(value: Any, size: Int): List<Any?>? {
     val result = ArrayList<Any?>(size)
     for (i in 1..size) {
-        val method = componentMethod(value.javaClass, i) ?: return null
+        val method =
+            WitReflectionAccess.publicZeroArgMethod(value.javaClass, "component$i") ?: return null
         try {
-            method.isAccessible = true
-            result.add(method.invoke(value))
+            result.add(WitReflectionAccess.open(method).invoke(value))
         } catch (e: ReflectiveOperationException) {
             throw ComponentModelException(
                 "failed to read tuple component$i from ${value.javaClass.name}",
@@ -79,7 +76,7 @@ internal actual fun canonicalAbiArrayElements(value: Any): List<Any?>? {
 }
 
 internal actual fun canonicalAbiResourceHandle(value: Any): Long? {
-    for (method in value.javaClass.methods) {
+    for (method in WitReflectionAccess.publicInstanceMethods(value.javaClass)) {
         if (
             method.parameterCount == 0 &&
                 (method.name == "handle" ||
@@ -92,14 +89,16 @@ internal actual fun canonicalAbiResourceHandle(value: Any): Long? {
             }
         }
     }
-    try {
-        val field = value.javaClass.getField("handle")
-        val handle = field.get(value)
-        if (handle is Number) {
-            return handle.toLong()
+    val field = WitReflectionAccess.publicField(value.javaClass, "handle")
+    if (field != null) {
+        try {
+            val handle = WitReflectionAccess.open(field).get(value)
+            if (handle is Number) {
+                return handle.toLong()
+            }
+        } catch (_: ReflectiveOperationException) {
+            // Try only common Kotlin/Java resource wrapper shapes.
         }
-    } catch (_: ReflectiveOperationException) {
-        // Try only common Kotlin/Java resource wrapper shapes.
     }
     return null
 }
@@ -108,66 +107,35 @@ internal actual fun canonicalAbiTypeName(value: Any): String = value.javaClass.n
 
 private fun variantPayload(value: Any): Any? {
     for (methodName in listOf("value", "getValue")) {
+        val method = WitReflectionAccess.publicZeroArgMethod(value.javaClass, methodName) ?: continue
         try {
-            val method = value.javaClass.getMethod(methodName)
-            return method.invoke(value)
-        } catch (_: ReflectiveOperationException) {
-            // Try the next common Kotlin/Java variant payload shape.
+            return WitReflectionAccess.open(method).invoke(value)
+        } catch (e: ReflectiveOperationException) {
+            throw ComponentModelException(
+                "failed to read variant payload on ${value.javaClass.name}",
+                e,
+            )
         }
     }
-    try {
-        val field = value.javaClass.getDeclaredField("value")
-        field.isAccessible = true
-        return field.get(value)
-    } catch (_: ReflectiveOperationException) {
-        throw ComponentModelException("missing variant payload on ${value.javaClass.name}")
-    }
-}
-
-private fun fieldAccessorOrNull(type: Class<*>, name: String): Method? {
-    try {
-        return type.getMethod(name)
-    } catch (_: NoSuchMethodException) {
-        var current: Class<*>? = type
-        while (current != null) {
-            try {
-                return current.getDeclaredMethod(name)
-            } catch (_: NoSuchMethodException) {
-                current = current.superclass
-            }
-        }
-    }
-    return null
-}
-
-private fun fieldOrNull(type: Class<*>, name: String): ReflectField? {
-    var current: Class<*>? = type
-    while (current != null) {
+    val field = WitReflectionAccess.publicField(value.javaClass, "value")
+    if (field != null) {
         try {
-            return current.getDeclaredField(name)
-        } catch (_: NoSuchFieldException) {
-            current = current.superclass
+            return WitReflectionAccess.open(field).get(value)
+        } catch (e: ReflectiveOperationException) {
+            throw ComponentModelException(
+                "failed to read variant payload on ${value.javaClass.name}",
+                e,
+            )
         }
     }
-    return null
-}
-
-private fun componentMethod(type: Class<*>, index: Int): Method? {
-    val name = "component$index"
-    try {
-        return type.getMethod(name)
-    } catch (_: NoSuchMethodException) {
-        try {
-            return type.getDeclaredMethod(name)
-        } catch (_: NoSuchMethodException) {
-            return null
-        }
-    }
+    throw ComponentModelException(
+        "missing public variant payload accessor (value() or getValue()) on ${value.javaClass.name}"
+    )
 }
 
 private fun invokeHandle(value: Any, method: Method): Long? {
     try {
-        val handle = method.invoke(value)
+        val handle = WitReflectionAccess.open(method).invoke(value)
         if (handle is Number) {
             return handle.toLong()
         }

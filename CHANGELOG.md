@@ -5,6 +5,18 @@ patch and prerelease identifiers advance without changing the `0.3` major/minor 
 `1.0.0`, API changes may still be intentional; release candidates remain immutable once
 published.
 
+## Unreleased
+
+### Security
+
+- JVM reflective WIT binding (`WasmPlugin.Builder.withHost`, `WitReflection`, record /
+  variant / tuple / resource lowering) now resolves only public instance members declared
+  outside `java.lang.Object`. Previously a WIT field or function name chosen by the plugin could
+  read private fields, invoke private methods up the class hierarchy and reach `Object`
+  methods through `setAccessible(true)`. Public members of non-public host classes (anonymous
+  or private contract implementations) remain bindable; private constructors are no longer
+  used to materialize host record, variant or tuple types from guest data.
+
 ## 0.3.2 (2026-10-04)
 
 ### Changed

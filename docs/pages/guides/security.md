@@ -85,3 +85,19 @@ Before a host function touches a guest-provided pointer, length, handle, path,
 or enum value, validate that it is in range and valid for the protocol. Keep
 host functions small, avoid unbounded loops over guest-controlled input, and
 make blocking I/O obey the same timeout policy as guest execution.
+
+## Reflective Host Binding on the JVM
+
+`WasmPlugin.Builder.withHost(...)` binds WIT imports to methods of a host object
+by name, and record, variant, and tuple lowering reads the values a host returns
+through accessors named after the WIT fields. WIT names can come from the plugin
+when a component is loaded with `builderFromComponent`, so treat them as
+untrusted: the runtime resolves only public instance members declared outside
+`java.lang.Object`, never widens access to private, protected, or
+package-private members, and rejects private constructors when it materializes
+host types from guest data. Within those rules the whole public surface of a
+bound host object is reachable under a matching WIT name, so pass a dedicated
+adapter object that exposes exactly the imported functions, return dedicated
+record types from host functions instead of application objects, and, when the
+WIT comes from the component, verify it against the host contract before
+binding.
