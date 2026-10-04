@@ -21,6 +21,29 @@ const val DefaultWasmtimeCoreMaxTables: Long = 128L
 
 const val DefaultWasmtimeCoreMaxMemories: Long = 16L
 
+/**
+ * Wasmtime engine and store configuration for a core module.
+ *
+ * ## Trust boundary for precompiled artifacts
+ *
+ * [precompiledModuleBytes] holds a serialized Wasmtime artifact (`.cwasm`). Wasmtime deserializes it
+ * with an API that Wasmtime itself documents as unsafe: the artifact is executable code (native
+ * machine code or Pulley bytecode) plus trusted runtime metadata, and it is not validated the way a
+ * `.wasm` module is. A crafted artifact can read and write arbitrary host memory and execute
+ * arbitrary code in the host process, bypassing fuel, memory limits and every WASI capability
+ * configured on this host.
+ *
+ * Only pass bytes that the host itself produced from a validated `.wasm` module with a trusted,
+ * pinned toolchain (for example `iosWasmtimeCompileModuleToCwasm`,
+ * `androidWasmtimeCompileModuleToCwasm` or `wasmtime compile`) and stored where plugins cannot
+ * write. Never load precompiled bytes shipped inside a plugin bundle, downloaded from a location a
+ * plugin author controls, or otherwise supplied by an untrusted party. When in doubt, pass the
+ * `.wasm` bytes and let the runtime compile them.
+ *
+ * The artifact is silently ignored and the module is compiled from `.wasm` when a memory policy is
+ * applied or when the module needs synthetic memory exports. It must also match the engine version,
+ * target and configuration (fuel, limits) of this host.
+ */
 data class WasmtimeExecutionConfig(
     val target: String = WasmtimeAutomaticTarget,
     val precompiledModuleBytes: ByteArray? = null,
@@ -146,6 +169,20 @@ private fun String.hostPathSegments(): List<String> = replace('\\', '/').pathSeg
 
 private fun String.pathSegments(): List<String> = split('/').filter(String::isNotBlank)
 
+/**
+ * Configuration for running a precompiled WASI Preview 3 component through the Wasmtime bridge.
+ *
+ * ## Trust boundary for precompiled artifacts
+ *
+ * [precompiledComponentBytes] is a serialized Wasmtime component artifact. The bridge deserializes
+ * it with Wasmtime's unsafe deserialization API, so these bytes are equivalent to native code
+ * running in the host process: a crafted artifact bypasses [maxFuel], [maxMemoryBytes],
+ * [networkPolicy] and the filesystem [preopens]. The bridge has no path that compiles a component
+ * from validated `.wasm` bytes, so the host alone is responsible for producing the artifact with a
+ * trusted, pinned Wasmtime toolchain (for example `wasmtime compile`) from a component it has
+ * validated, and for storing it where plugins cannot write. Never accept precompiled component
+ * bytes from a plugin bundle or from an untrusted network location.
+ */
 data class WasmtimePreview3ComponentConfig(
     val target: String = WasmtimeAutomaticTarget,
     val precompiledComponentBytes: ByteArray,

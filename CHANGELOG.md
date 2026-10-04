@@ -5,6 +5,18 @@ patch and prerelease identifiers advance without changing the `0.3` major/minor 
 `1.0.0`, API changes may still be intentional; release candidates remain immutable once
 published.
 
+## Unreleased
+
+### Security
+
+- Documented the trust boundary for precompiled Wasmtime artifacts.
+  `WasmtimeExecutionConfig.precompiledModuleBytes` and
+  `WasmtimePreview3ComponentConfig.precompiledComponentBytes` are deserialized without
+  validation and are equivalent to native code in the host process, so hosts must only pass
+  artifacts they compiled themselves from validated `.wasm` and must never accept them from
+  plugin bundles or untrusted network sources. The KDoc of both fields and the security,
+  execution-mode, CPU-limit, support and WASI Preview 3 guides now state this.
+
 ## 0.3.2 (2026-10-04)
 
 ### Changed

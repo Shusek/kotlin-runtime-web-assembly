@@ -152,6 +152,13 @@ on `wasmJs`. iOS and Android resolve `auto` to Pulley. iOS builds only the
 Pulley target; an explicit `native`/Cranelift target must fail availability
 checks there instead of silently selecting another mode.
 
+CWasm bytes are executable code, not a validated module: Wasmtime deserializes
+them with an API it documents as unsafe, and a crafted artifact runs with host
+privileges regardless of fuel, memory limits or WASI capabilities. Only use
+artifacts the host compiled itself from validated `.wasm`, and never load a
+`.cwasm` shipped by a plugin. See
+[Security](../guides/security.md#precompiled-artifacts-are-native-code).
+
 - Use the default `ExecutionBackend.AUTO` for normal hosts. It requires a linked
   Wasmtime backend on JVM, Android, and iOS, and uses the host WebAssembly engine
   on `wasmJs`.

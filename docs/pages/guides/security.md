@@ -38,6 +38,38 @@ For untrusted modules:
 - cap all imported and defined memories with `WasmMemoryPolicy` and keep host
   allocation protocols bounded.
 
+## Precompiled Artifacts Are Native Code
+
+`WasmtimeExecutionConfig.precompiledModuleBytes` and
+`WasmtimePreview3ComponentConfig.precompiledComponentBytes` carry serialized
+Wasmtime artifacts (`.cwasm`). Wasmtime deserializes them with an API it
+documents as unsafe: the artifact is executable code (native machine code or
+Pulley bytecode) plus trusted runtime metadata, and it is not validated the way
+a `.wasm` module is. A crafted artifact can read and write arbitrary host
+memory and run arbitrary code in the host process. Fuel, memory limits, the
+network policy and filesystem preopens do not apply to it, because they are
+enforced by the very code the artifact replaces.
+
+Treat precompiled bytes exactly like a native library you link into the
+application:
+
+- produce them yourself, from a `.wasm` module or component you have
+  validated, with a pinned Wasmtime toolchain
+  (`iosWasmtimeCompileModuleToCwasm`, `androidWasmtimeCompileModuleToCwasm`,
+  or `wasmtime compile` with the same version, target and settings as the
+  host),
+- store them where plugins cannot write, for example app-private storage keyed
+  by the SHA-256 of the source `.wasm`,
+- never load a `.cwasm` that ships inside a plugin bundle, that was downloaded
+  from a location a plugin author controls, or that an untrusted party supplied,
+- when in doubt, pass the `.wasm` bytes and let the runtime compile them.
+
+Preview 3 components currently run only from precompiled bytes, so hosts that
+load third-party components must compile them in a trusted step before
+deployment. Core modules fall back to compiling the `.wasm` bytes when a
+memory policy is applied or the module needs synthetic memory exports, so the
+artifact may be ignored without an error; do not rely on it for sandboxing.
+
 ## Untrusted Parser Input
 
 The default Wasm and WIT parsers have finite limits. For an application that

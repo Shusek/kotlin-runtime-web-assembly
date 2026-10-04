@@ -62,6 +62,13 @@ bridge creates a fresh store for each component call or command run, so this is 
 per-call budget. The precompiled component must be built with fuel enabled, for
 example `wasmtime compile -W fuel=1 ...`, when `maxFuel` is used.
 
+`precompiledComponentBytes` is deserialized without validation and is equivalent
+to native code in the host process; a crafted artifact bypasses `maxFuel`,
+`maxMemoryBytes`, the network policy and the preopens. Compile components in a
+trusted host-controlled step from validated `.wasm` and never accept precompiled
+bytes from a plugin bundle or an untrusted network source. See
+[Security](../guides/security.md#precompiled-artifacts-are-native-code).
+
 The separate `executionTimeoutMillis` value is a wall-clock bridge timeout. It is
 useful as an outer policy but should not be treated as deterministic fuel or CPU
 metering, and it does not account for host work running outside guest Wasm

@@ -85,6 +85,13 @@ uses precompiled component bytes, compile fuel-enabled artifacts with matching
 Wasmtime settings, for example `wasmtime compile -W fuel=1 ...`, before setting a
 finite `maxFuel`.
 
+Precompiled component bytes are deserialized without validation and are
+equivalent to native code in the host process: a crafted artifact bypasses fuel,
+memory limits, the network policy and the preopens. Only run artifacts the host
+compiled itself from a validated component, and never accept precompiled bytes
+from a plugin bundle or an untrusted network source. See the
+[security guide](../../docs/pages/guides/security.md#precompiled-artifacts-are-native-code).
+
 `withCoroutineScope(...)` and `withCoroutineDispatcher(...)` decide where P3
 host tasks run. If that scope or dispatcher has parallelism greater than one,
 the guest-visible async surface can make progress on multiple CPU cores at the
