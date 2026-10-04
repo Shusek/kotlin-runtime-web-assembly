@@ -25,7 +25,7 @@ apply(plugin = "org.jetbrains.kotlin.multiplatform")
 apply(plugin = "maven-publish")
 
 val wasmtimePulleyVersion = libs.versions.wasmtime.get()
-val wasmtimePulleyGitRevision = "ebf20ab7cbf35fa3fbd8202562017fda6a541021"
+val wasmtimePulleyGitRevision = "563544c6296610b1b3fbbe2e4643f9999899ec66"
 val rustReleaseVersion = libs.versions.rustRelease.get()
 val rustReleaseCommitHash = libs.versions.rustReleaseCommit.get()
 val wasmtimePulleyFeatures =
