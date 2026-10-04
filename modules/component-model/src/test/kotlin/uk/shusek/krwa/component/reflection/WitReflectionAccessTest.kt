@@ -72,6 +72,23 @@ class WitReflectionAccessTest {
     }
 
     @Test
+    fun kotlinInlineClassSignaturesStayReachable() {
+        val host = UnsignedHost()
+        val handler = WitReflection.hostHandler(listOf(host), "host", "store")
+        assertNotNull(handler)
+
+        handler!!.apply(listOf(linkedMapOf("id" to 7L, "title" to "seven")))
+
+        val stored = host.stored
+        assertNotNull(stored)
+        assertEquals(7uL, stored!!.id)
+        assertEquals("seven", stored.title)
+        assertEquals(7L, canonicalAbiFieldValue(stored, "getId")?.value)
+        assertEquals("seven", canonicalAbiFieldValue(stored, "getTitle")?.value)
+        assertNull(canonicalAbiFieldValue(stored, "getSecret"))
+    }
+
+    @Test
     fun resourceHandlesComeFromPublicMembersOnly() {
         assertEquals(7L, canonicalAbiResourceHandle(PublicHandle(7)))
         assertNull(canonicalAbiResourceHandle(PrivateHandle(7)))
@@ -134,6 +151,20 @@ class WitReflectionAccessTest {
 
         @Suppress("unused")
         private fun getSecret(): String = secret()
+    }
+
+    class UnsignedRecord(val id: ULong, val title: String) {
+        @Suppress("unused")
+        private val secret: ULong = 42uL
+    }
+
+    private class UnsignedHost {
+        var stored: UnsignedRecord? = null
+
+        @Suppress("unused")
+        fun store(record: UnsignedRecord) {
+            stored = record
+        }
     }
 
     private class PublicHandle(private val id: Long) {
