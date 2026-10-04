@@ -5,6 +5,20 @@ patch and prerelease identifiers advance without changing the `0.3` major/minor 
 `1.0.0`, API changes may still be intentional; release candidates remain immutable once
 published.
 
+## Unreleased
+
+### Security
+
+- JVM Wasmtime (Pulley) backend: a failed instantiation (for example a start function that
+  traps) now releases the engine, compiled module, store and host callback registrations it
+  created instead of leaking them together with the host `Instance` graph; `close()` called while
+  an export is still running on another thread marks the instance closed and defers the native
+  release to the running call instead of freeing the store under the guest; a host callback
+  failure that could not be turned into a trap is now reported to the caller instead of being
+  silently swallowed; the Wasmtime library is loaded once per process with a global arena so its
+  signal handlers never point at unmapped code; and the Preview 3 component bridge is no longer
+  searched relative to the working directory.
+
 ## 0.3.2 (2026-10-04)
 
 ### Changed
