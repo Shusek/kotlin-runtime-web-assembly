@@ -5,6 +5,16 @@ patch and prerelease identifiers advance without changing the `0.3` major/minor 
 `1.0.0`, API changes may still be intentional; release candidates remain immutable once
 published.
 
+## Unreleased
+
+### Security
+
+- `CanonicalAbi.of` and `WasmPlugin.builder` now reject recursive WIT type graphs (alias cycles
+  such as `type a = b; type b = a;` and self-referencing records, variants, tuples, lists,
+  options and results) and type nesting deeper than 128 levels with `ComponentModelException`.
+  Previously such a WIT, including one extracted from an untrusted component, crashed the host
+  thread with `StackOverflowError` while the plugin was being bound.
+
 ## 0.3.2 (2026-10-04)
 
 ### Changed

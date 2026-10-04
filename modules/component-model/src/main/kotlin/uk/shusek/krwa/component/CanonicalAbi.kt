@@ -12,6 +12,10 @@ import uk.shusek.krwa.wasm.types.ValType
 class CanonicalAbi private constructor(private val witPackage: WitPackage) {
     private val declarations: Map<String, WitPackage.TypeDeclaration> = indexTypes(witPackage)
 
+    init {
+        validateTypeGraph()
+    }
+
     fun witPackage(): WitPackage = witPackage
 
     fun bind(
@@ -2260,15 +2264,134 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
     }
 
     private fun resolveAlias(type: WitPackage.TypeRef): WitPackage.TypeRef {
-        if (type.kind() == WitPackage.TypeRef.TypeKind.NAMED) {
-            val declaration = declaration(type.name()!!)
+        var current = type
+        var hops = 0
+        while (current.kind() == WitPackage.TypeRef.TypeKind.NAMED) {
+            val declaration = declaration(current.name()!!)
             if (
-                declaration != null && declaration.kind() == WitPackage.TypeDeclaration.Kind.ALIAS
+                declaration == null || declaration.kind() != WitPackage.TypeDeclaration.Kind.ALIAS
             ) {
-                return resolveAlias(declaration.target()!!)
+                return current
             }
+            // validateTypeGraph rejects alias cycles up front; the hop bound keeps a pathological
+            // declaration set from looping here regardless of how the package was built.
+            if (++hops > declarations.size) {
+                throw ComponentModelException("cyclic WIT type alias ${type.name()}")
+            }
+            current = declaration.target()!!
         }
-        return type
+        return current
+    }
+
+    /**
+     * Rejects type graphs the layout functions cannot terminate on.
+     *
+     * WIT has no recursive types, but the parser does not perform an occurs-check and a package can
+     * also be assembled programmatically. `flattenType`, `alignment`, `elementSize`, `store` and
+     * `load` recurse along fields, cases, tuple elements, list / option / result payloads and
+     * alias targets, so `type a = b; type b = a;` or `record node { next: option<node> }` used to
+     * surface as a `StackOverflowError` while a plugin was being bound. Resource handles
+     * (`own<t>`, `borrow<t>`) and futures and streams are nominal and are not followed. The same
+     * walk bounds the nesting depth so the recursion stays shallow for acyclic graphs too.
+     */
+    private fun validateTypeGraph() {
+        val heights = HashMap<WitPackage.TypeDeclaration, Int>()
+        val path = LinkedHashMap<WitPackage.TypeDeclaration, String>()
+        for ((name, declaration) in declarations) {
+            verifyAcyclicDeclaration(name, declaration, heights, path, 0)
+        }
+    }
+
+    /**
+     * Walks [declaration] and returns its height (the number of nesting levels below it). Heights
+     * are memoized so shared declarations are walked once while still bounding the total nesting
+     * wherever they are reached.
+     */
+    private fun verifyAcyclicDeclaration(
+        name: String,
+        declaration: WitPackage.TypeDeclaration,
+        heights: MutableMap<WitPackage.TypeDeclaration, Int>,
+        path: LinkedHashMap<WitPackage.TypeDeclaration, String>,
+        depth: Int,
+    ): Int {
+        val known = heights[declaration]
+        if (known != null) {
+            requireTypeNesting(depth + known, path)
+            return known
+        }
+        if (path.containsKey(declaration)) {
+            throw ComponentModelException(
+                "recursive WIT type is not supported: " +
+                    (path.values + name).joinToString(" -> ")
+            )
+        }
+        path[declaration] = name
+        var height = 0
+        try {
+            when (declaration.kind()) {
+                WitPackage.TypeDeclaration.Kind.RECORD ->
+                    for (field in declaration.fields()) {
+                        height =
+                            maxOf(height, 1 + verifyAcyclicType(field.type(), heights, path, depth + 1))
+                    }
+                WitPackage.TypeDeclaration.Kind.VARIANT ->
+                    for (case in declaration.cases()) {
+                        val payload = case.type() ?: continue
+                        height = maxOf(height, 1 + verifyAcyclicType(payload, heights, path, depth + 1))
+                    }
+                WitPackage.TypeDeclaration.Kind.ALIAS ->
+                    height = 1 + verifyAcyclicType(declaration.target()!!, heights, path, depth + 1)
+                WitPackage.TypeDeclaration.Kind.ENUM,
+                WitPackage.TypeDeclaration.Kind.FLAGS,
+                WitPackage.TypeDeclaration.Kind.RESOURCE -> {
+                    // Leaves: enums and flags carry no payload, resources are passed as handles.
+                }
+            }
+        } finally {
+            path.remove(declaration)
+        }
+        heights[declaration] = height
+        return height
+    }
+
+    private fun verifyAcyclicType(
+        type: WitPackage.TypeRef,
+        heights: MutableMap<WitPackage.TypeDeclaration, Int>,
+        path: LinkedHashMap<WitPackage.TypeDeclaration, String>,
+        depth: Int,
+    ): Int {
+        requireTypeNesting(depth, path)
+        return when (type.kind()) {
+            WitPackage.TypeRef.TypeKind.NAMED -> {
+                val name = type.name()!!
+                val declaration = declaration(name) ?: return 0
+                verifyAcyclicDeclaration(name, declaration, heights, path, depth)
+            }
+            WitPackage.TypeRef.TypeKind.LIST,
+            WitPackage.TypeRef.TypeKind.OPTION,
+            WitPackage.TypeRef.TypeKind.RESULT,
+            WitPackage.TypeRef.TypeKind.TUPLE -> {
+                var height = 0
+                for (argument in type.arguments()) {
+                    height = maxOf(height, 1 + verifyAcyclicType(argument, heights, path, depth + 1))
+                }
+                height
+            }
+            WitPackage.TypeRef.TypeKind.PRIMITIVE,
+            WitPackage.TypeRef.TypeKind.FUTURE,
+            WitPackage.TypeRef.TypeKind.STREAM,
+            WitPackage.TypeRef.TypeKind.BORROW,
+            WitPackage.TypeRef.TypeKind.OWN -> 0
+        }
+    }
+
+    private fun requireTypeNesting(depth: Int, path: Map<WitPackage.TypeDeclaration, String>) {
+        if (depth > MAX_TYPE_NESTING) {
+            throw ComponentModelException(
+                "WIT type nesting exceeds $MAX_TYPE_NESTING levels" +
+                    (if (path.isEmpty()) "" else " at " + path.values.joinToString(" -> "))
+            )
+        }
     }
 
     private fun requireDeclaration(name: String): WitPackage.TypeDeclaration =
@@ -2934,5 +3057,11 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
         private const val MAX_LOW_SURROGATE: Int = 0xdfff
 
         @ComponentModelJvmStatic fun of(witPackage: WitPackage): CanonicalAbi = CanonicalAbi(witPackage)
+
+        /**
+         * Deepest type nesting accepted by [validateTypeGraph]; real contracts stay far below it
+         * while the layout recursion keeps a small, predictable stack footprint.
+         */
+        internal const val MAX_TYPE_NESTING: Int = 128
     }
 }
