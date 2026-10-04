@@ -180,4 +180,7 @@ val stream = fs.readWitByteStream("out/result.txt", runtime.wasi)
 ```
 
 The facade rejects paths that escape the preopen root, so `../outside.txt` is not
-accepted.
+accepted. It also resolves symbolic links on the host before every operation and
+rejects a path whose real location is outside the preopen, so a link that a guest
+created with `symlink-at` cannot redirect host reads or writes to other host
+files. Links that stay inside the preopen keep working.

@@ -5,6 +5,16 @@ patch and prerelease identifiers advance without changing the `0.3` major/minor 
 `1.0.0`, API changes may still be intentional; release candidates remain immutable once
 published.
 
+## Unreleased
+
+### Security
+
+- The `wasi-preview3` host file facade (`WasiFileSystem`) now canonicalizes the host path
+  of every operation and rejects paths whose real location is outside the preopen. A guest
+  could previously create a relative symbolic link with `symlink-at` and make the host read
+  or write arbitrary host files through `readBytes`, `writeText`, `list` and the other
+  facade methods, which only checked the lexical path.
+
 ## 0.3.2 (2026-10-04)
 
 ### Changed
