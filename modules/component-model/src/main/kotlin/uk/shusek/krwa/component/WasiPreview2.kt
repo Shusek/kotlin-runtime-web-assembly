@@ -4537,9 +4537,10 @@ private constructor(
             fun fromBytes(bytes: ByteArray): WasiInputStream {
                 val buffer = Buffer()
                 buffer.write(bytes)
-                return WasiInputStream(buffer) {
-                    buffer.size.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
-                }
+                return WasiInputStream(
+                    buffer,
+                    available = { buffer.size.coerceAtMost(Int.MAX_VALUE.toLong()).toInt() },
+                )
             }
         }
     }
