@@ -2416,7 +2416,10 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
                 return reflected.value
             }
         }
-        throw ComponentModelException("missing field $name on ${canonicalAbiTypeName(value)}")
+        throw ComponentModelException(
+            "missing field $name on ${canonicalAbiTypeName(value)}; record lowering reads public " +
+                "accessors only"
+        )
     }
 
     private fun positionalValues(value: Any?, size: Int): List<Any?> {

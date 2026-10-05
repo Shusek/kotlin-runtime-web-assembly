@@ -79,6 +79,13 @@ published.
   `OutOfMemoryError` or `NegativeArraySizeException`.
 - `ByteBufferMemory` and `ByteArrayMemory` reject initial sizes above the runtime limit of
   32767 pages with `UninstantiableException` instead of `ArrayIndexOutOfBoundsException`.
+- JVM reflective WIT binding (`WasmPlugin.Builder.withHost`, `WitReflection`, record /
+  variant / tuple / resource lowering) now resolves only public instance members declared
+  outside `java.lang.Object`. Previously a WIT field or function name chosen by the plugin could
+  read private fields, invoke private methods up the class hierarchy and reach `Object`
+  methods through `setAccessible(true)`. Public members of non-public host classes (anonymous
+  or private contract implementations) remain bindable; private constructors are no longer
+  used to materialize host record, variant or tuple types from guest data.
 
 ## 0.3.2 (2026-10-04)
 
