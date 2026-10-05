@@ -16,6 +16,12 @@ published.
   artifacts they compiled themselves from validated `.wasm` and must never accept them from
   plugin bundles or untrusted network sources. The KDoc of both fields and the security,
   execution-mode, CPU-limit, support and WASI Preview 3 guides now state this.
+- WASI Preview 1 path resolution now checks the real host path of every guest path
+  against the preopen root, so a symbolic link in any path component can no longer be
+  used to read, write, rename or delete files outside the preopen. `path_symlink` also
+  refuses relative targets that would leave the preopen, in line with the existing refusal
+  of absolute targets. Previously only the final component of `path_open` and
+  `path_filestat_get` with `SYMLINK_FOLLOW` was canonicalized.
 
 ## 0.3.2 (2026-10-04)
 
