@@ -85,6 +85,13 @@ uses precompiled component bytes, compile fuel-enabled artifacts with matching
 Wasmtime settings, for example `wasmtime compile -W fuel=1 ...`, before setting a
 finite `maxFuel`.
 
+Precompiled component bytes are deserialized without validation and are
+equivalent to native code in the host process: a crafted artifact bypasses fuel,
+memory limits, the network policy and the preopens. Only run artifacts the host
+compiled itself from a validated component, and never accept precompiled bytes
+from a plugin bundle or an untrusted network source. See the
+[security guide](../../docs/pages/guides/security.md#precompiled-artifacts-are-native-code).
+
 `withCoroutineScope(...)` and `withCoroutineDispatcher(...)` decide where P3
 host tasks run. If that scope or dispatcher has parallelism greater than one,
 the guest-visible async surface can make progress on multiple CPU cores at the
@@ -111,7 +118,10 @@ runtime interruption policy described in
 [`CPU limits`](../../docs/pages/execution/cpu-limits.md).
 
 `withResourceBudget(...)` sets dispatcher parallelism, stream buffer capacity,
-and the usual guest-visible P3 limits together.
+and the usual guest-visible P3 limits together. Without it the host still caps
+pending futures, pending streams and in-flight host tasks at 65536 each and
+waitables at 131072, so a guest that keeps creating handles it never completes
+cannot exhaust host memory; pick a tighter budget for untrusted plugins.
 
 `withResourceBudget(...)` does not measure CPU. `parallelism` is an upper bound
 on how many P3 lanes may run, not proof that all lanes were busy. If a host sets
@@ -180,4 +190,7 @@ val stream = fs.readWitByteStream("out/result.txt", runtime.wasi)
 ```
 
 The facade rejects paths that escape the preopen root, so `../outside.txt` is not
-accepted.
+accepted. It also resolves symbolic links on the host before every operation and
+rejects a path whose real location is outside the preopen, so a link that a guest
+created with `symlink-at` cannot redirect host reads or writes to other host
+files. Links that stay inside the preopen keep working.

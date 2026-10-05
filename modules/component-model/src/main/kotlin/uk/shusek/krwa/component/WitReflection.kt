@@ -338,8 +338,7 @@ object WitReflection {
             val method = findZeroArgMethod(host.javaClass, methodName)
             if (method != null) {
                 try {
-                    method.isAccessible = true
-                    return method.invoke(host)
+                    return WitReflectionAccess.open(method).invoke(host)
                 } catch (e: ReflectiveOperationException) {
                     throw ComponentModelException("failed to read host interface $interfaceName", e)
                 }
@@ -349,8 +348,7 @@ object WitReflection {
         val field = findField(host.javaClass, propertyName)
         if (field != null) {
             try {
-                field.isAccessible = true
-                return field.get(host)
+                return WitReflectionAccess.open(field).get(host)
             } catch (e: ReflectiveOperationException) {
                 throw ComponentModelException("failed to read host interface $interfaceName", e)
             }
@@ -387,8 +385,7 @@ object WitReflection {
 
     private fun invokeHost(target: Any, method: Method, arguments: List<Any?>): Any? {
         try {
-            method.isAccessible = true
-            return method.invoke(target, *adaptArguments(method, arguments))
+            return WitReflectionAccess.open(method).invoke(target, *adaptArguments(method, arguments))
         } catch (e: ReflectiveOperationException) {
             throw ComponentModelException("failed to invoke host import ${method.name}", e)
         }
@@ -466,7 +463,7 @@ object WitReflection {
     }
 
     private fun constructCase(nested: Class<*>, value: WitValue.Variant): Any? {
-        for (constructor in nested.declaredConstructors) {
+        for (constructor in WitReflectionAccess.publicConstructors(nested)) {
             if (constructor.parameterCount == 0 && !value.hasValue()) {
                 return construct(constructor)
             }
@@ -480,8 +477,7 @@ object WitReflection {
 
     private fun construct(constructor: Constructor<*>, vararg args: Any?): Any {
         try {
-            constructor.isAccessible = true
-            return constructor.newInstance(*args)
+            return WitReflectionAccess.open(constructor).newInstance(*args)
         } catch (e: ReflectiveOperationException) {
             throw ComponentModelException(
                 "failed to construct WIT variant ${constructor.declaringClass}",
@@ -492,9 +488,7 @@ object WitReflection {
 
     private fun objectSingleton(type: Class<*>): Any? =
         try {
-            val field = type.getField("INSTANCE")
-            field.isAccessible = true
-            field.get(null)
+            WitReflectionAccess.open(type.getField("INSTANCE")).get(null)
         } catch (ignored: ReflectiveOperationException) {
             null
         }
@@ -683,7 +677,7 @@ object WitReflection {
             if (nested.simpleName != nestedName) {
                 continue
             }
-            for (constructor in nested.declaredConstructors) {
+            for (constructor in WitReflectionAccess.publicConstructors(nested)) {
                 if (constructor.parameterCount == 1) {
                     return construct(constructor, payload)
                 }
@@ -736,8 +730,8 @@ object WitReflection {
             return null
         }
         val values = ArrayList(value.values)
-        for (constructor in targetType.declaredConstructors) {
-            if (constructor.isSynthetic || constructor.parameterCount != values.size) {
+        for (constructor in WitReflectionAccess.publicConstructors(targetType)) {
+            if (constructor.parameterCount != values.size) {
                 continue
             }
             val parameterTypes = constructor.genericParameterTypes
@@ -746,8 +740,7 @@ object WitReflection {
                 arguments[index] = convertValue(values[index], parameterTypes[index])
             }
             try {
-                constructor.isAccessible = true
-                return constructor.newInstance(*arguments)
+                return WitReflectionAccess.open(constructor).newInstance(*arguments)
             } catch (e: IllegalArgumentException) {
                 throw ComponentModelException(
                     "failed to construct WIT record ${targetType.name}",
@@ -760,7 +753,9 @@ object WitReflection {
                 )
             }
         }
-        return null
+        throw ComponentModelException(
+            "no matching public constructor for WIT record ${targetType.name}",
+        )
     }
 
     private fun isRecordTarget(targetType: Class<*>): Boolean =
@@ -793,7 +788,7 @@ object WitReflection {
         if (value !is List<*> || !isTupleType(targetType)) {
             return null
         }
-        for (constructor in targetType.declaredConstructors) {
+        for (constructor in WitReflectionAccess.publicConstructors(targetType)) {
             if (constructor.parameterCount != value.size) {
                 continue
             }
@@ -809,8 +804,7 @@ object WitReflection {
                 arguments[index] = convertValue(value[index], targetElementType)
             }
             try {
-                constructor.isAccessible = true
-                return constructor.newInstance(*arguments)
+                return WitReflectionAccess.open(constructor).newInstance(*arguments)
             } catch (e: IllegalArgumentException) {
                 throw ComponentModelException("failed to construct WIT tuple ${targetType.name}", e)
             } catch (e: ReflectiveOperationException) {
@@ -928,12 +922,12 @@ object WitReflection {
         return result
     }
 
-    private fun methods(type: Class<*>): List<Method> {
-        val result = ArrayList<Method>()
-        result.addAll(type.methods.toList())
-        result.addAll(type.declaredMethods.toList())
-        return result
-    }
+    /**
+     * Candidate host methods for a WIT name: public instance methods only, so a guest-chosen name
+     * can never reach private host code. See [WitReflectionAccess].
+     */
+    private fun methods(type: Class<*>): List<Method> =
+        WitReflectionAccess.publicInstanceMethods(type)
 
     private fun findZeroArgMethod(type: Class<*>, name: String): Method? {
         for (method in methods(type)) {
@@ -944,17 +938,8 @@ object WitReflection {
         return null
     }
 
-    private fun findField(type: Class<*>, name: String): Field? {
-        var current: Class<*>? = type
-        while (current != null) {
-            try {
-                return current.getDeclaredField(name)
-            } catch (ignored: NoSuchFieldException) {
-                current = current.superclass
-            }
-        }
-        return null
-    }
+    private fun findField(type: Class<*>, name: String): Field? =
+        WitReflectionAccess.publicField(type, name)
 
     private fun propertyName(method: Method): String? {
         if (method.parameterCount != 0) {

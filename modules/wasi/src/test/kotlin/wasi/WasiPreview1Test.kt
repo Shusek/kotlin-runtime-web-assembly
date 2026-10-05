@@ -2,6 +2,7 @@ package wasi
 
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
+import java.lang.management.ManagementFactory
 import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.FileSystemException
 import java.nio.file.Files as JFiles
@@ -13,6 +14,7 @@ import java.util.concurrent.TimeUnit
 import kotlinx.io.Buffer
 import kotlinx.io.readByteArray
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Assumptions.assumeTrue
@@ -27,6 +29,8 @@ import uk.shusek.krwa.runtime.ImportValues
 import uk.shusek.krwa.runtime.Instance
 import uk.shusek.krwa.runtime.Store
 import uk.shusek.krwa.runtime.WasmFunctionHandle
+import uk.shusek.krwa.wasi.WasiClockId
+import uk.shusek.krwa.wasi.WasiEventType
 import uk.shusek.krwa.wasi.WasiExitException
 import uk.shusek.krwa.wasi.WasiErrno
 import uk.shusek.krwa.wasi.WasiFdFlags
@@ -161,6 +165,58 @@ class WasiPreview1Test {
                 0,
             )
         assertEquals(WasiErrno.ENOTCAPABLE.value(), errno)
+    }
+
+    @Test
+    fun fileSizeChangesRequireRightsAndStaySparse() {
+        val file = tempDir.resolve("grow.txt")
+        JFiles.writeString(file, "x", UTF_8)
+        val wasiOpts = WasiOptions.builder().withDirectory(".", tempDir).build()
+        val wasi = WasiPreview1.builder().withOptions(wasiOpts).build()
+        val memory = ByteArrayMemory(MemoryLimits(1))
+
+        var errno =
+            wasi.pathOpen(
+                memory,
+                3,
+                0,
+                "grow.txt",
+                0,
+                (WasiRights.FD_READ or WasiRights.FD_WRITE).toLong(),
+                0,
+                0,
+                0,
+            )
+        assertEquals(WasiErrno.ESUCCESS.value(), errno)
+        val limitedFd = memory.readInt(0)
+        assertEquals(WasiErrno.ENOTCAPABLE.value(), wasi.fdFilestatSetSize(limitedFd, 16L))
+        assertEquals(WasiErrno.ENOTCAPABLE.value(), wasi.fdAllocate(limitedFd, 0L, 16L))
+        assertEquals(1L, JFiles.size(file))
+
+        errno =
+            wasi.pathOpen(
+                memory,
+                3,
+                0,
+                "grow.txt",
+                0,
+                (WasiRights.FD_WRITE or WasiRights.FD_FILESTAT_SET_SIZE or WasiRights.FD_ALLOCATE).toLong(),
+                0,
+                0,
+                0,
+            )
+        assertEquals(WasiErrno.ESUCCESS.value(), errno)
+        val fd = memory.readInt(0)
+        assertEquals(WasiErrno.EFBIG.value(), wasi.fdFilestatSetSize(fd, -1L))
+        assertEquals(WasiErrno.EFBIG.value(), wasi.fdAllocate(fd, Long.MAX_VALUE, 1L))
+
+        val size = 64L * 1024L * 1024L
+        assertEquals(WasiErrno.ESUCCESS.value(), wasi.fdFilestatSetSize(fd, size))
+        assertEquals(size, JFiles.size(file))
+        assertEquals(WasiErrno.ESUCCESS.value(), wasi.fdAllocate(fd, size, 1024L))
+        assertEquals(size + 1024L, JFiles.size(file))
+        assertEquals(WasiErrno.ESUCCESS.value(), wasi.fdFilestatSetSize(fd, 1L))
+        assertEquals(1L, JFiles.size(file))
     }
 
     @Test
@@ -457,13 +513,178 @@ class WasiPreview1Test {
         assertEquals(6, result)
     }
 
+    @Test
+    fun pathOperationsShouldNotFollowSymlinksOutsideThePreopen() {
+        val sandbox = tempDir.resolve("sandbox")
+        val outside = tempDir.resolve("outside")
+        JFiles.createDirectories(sandbox)
+        JFiles.createDirectories(outside)
+        val secret = outside.resolve("secret.txt")
+        JFiles.writeString(secret, "secret", UTF_8)
+        createSymlinkOrSkip(sandbox.resolve("escape"), Path.of("..", "outside"))
+        createSymlinkOrSkip(sandbox.resolve("escaped-file"), Path.of("..", "outside", "secret.txt"))
+
+        val wasiOpts = WasiOptions.builder().withDirectory("/", sandbox).build()
+        val wasi = WasiPreview1.builder().withOptions(wasiOpts).build()
+        val memory = ByteArrayMemory(MemoryLimits(1))
+
+        // A symlink in an intermediate component is refused with and without SYMLINK_FOLLOW.
+        assertEquals(
+            WasiErrno.EPERM.value(),
+            wasi.pathOpen(memory, 3, WASI_LOOKUPFLAGS_SYMLINK_FOLLOW, "escape/secret.txt", 0, WASI_RIGHTS_FD_READ.toLong(), 0L, 0, 0),
+        )
+        assertEquals(
+            WasiErrno.EPERM.value(),
+            wasi.pathOpen(memory, 3, 0, "escape/secret.txt", 0, WASI_RIGHTS_FD_READ.toLong(), 0L, 0, 0),
+        )
+        // A final symlink that leaves the preopen is refused when followed.
+        assertEquals(
+            WasiErrno.EACCES.value(),
+            wasi.pathOpen(memory, 3, WASI_LOOKUPFLAGS_SYMLINK_FOLLOW, "escaped-file", 0, WASI_RIGHTS_FD_READ.toLong(), 0L, 0, 0),
+        )
+        assertEquals(
+            WasiErrno.EACCES.value(),
+            wasi.pathFilestatGet(memory, 3, WASI_LOOKUPFLAGS_SYMLINK_FOLLOW, "escape/secret.txt", 0),
+        )
+        assertEquals(
+            WasiErrno.EACCES.value(),
+            wasi.pathFilestatGet(memory, 3, WASI_LOOKUPFLAGS_SYMLINK_FOLLOW, "escaped-file", 0),
+        )
+        assertEquals(WasiErrno.EACCES.value(), wasi.pathUnlinkFile(3, "escape/secret.txt"))
+        assertEquals(WasiErrno.EACCES.value(), wasi.pathCreateDirectory(3, "escape/created"))
+        assertEquals(
+            WasiErrno.EACCES.value(),
+            wasi.pathFilestatSetTimes(3, WASI_LOOKUPFLAGS_SYMLINK_FOLLOW, "escaped-file", 0L, 0L, WASI_FSTFLAGS_MTIM),
+        )
+
+        assertEquals("secret", JFiles.readString(secret, UTF_8))
+        assertFalse(JFiles.exists(outside.resolve("created")))
+    }
+
+    @Test
+    fun symlinksInsideThePreopenRemainUsable() {
+        val sandbox = tempDir.resolve("sandbox")
+        JFiles.createDirectories(sandbox.resolve("sub"))
+        JFiles.writeString(sandbox.resolve("data.txt"), "data", UTF_8)
+        createSymlinkOrSkip(sandbox.resolve("sub/link"), Path.of("..", "data.txt"))
+
+        val wasiOpts = WasiOptions.builder().withDirectory("/", sandbox).build()
+        val wasi = WasiPreview1.builder().withOptions(wasiOpts).build()
+        val memory = ByteArrayMemory(MemoryLimits(1))
+
+        val errno =
+            wasi.pathOpen(memory, 3, WASI_LOOKUPFLAGS_SYMLINK_FOLLOW, "sub/link", 0, WASI_RIGHTS_FD_READ.toLong(), 0L, 0, 0)
+
+        assertEquals(WASI_ESUCCESS, errno)
+        assertEquals(
+            WASI_ESUCCESS,
+            wasi.pathFilestatGet(memory, 3, WASI_LOOKUPFLAGS_SYMLINK_FOLLOW, "sub/link", 0),
+        )
+    }
+
+    @Test
+    fun pathSymlinkShouldRefuseTargetsThatLeaveThePreopen() {
+        val sandbox = tempDir.resolve("sandbox")
+        JFiles.createDirectories(sandbox.resolve("sub"))
+        JFiles.writeString(sandbox.resolve("inside.txt"), "inside", UTF_8)
+        JFiles.createDirectories(tempDir.resolve("outside"))
+        JFiles.writeString(tempDir.resolve("outside/secret.txt"), "secret", UTF_8)
+        createSymlinkOrSkip(sandbox.resolve("probe"), Path.of("inside.txt"))
+        JFiles.delete(sandbox.resolve("probe"))
+
+        val wasiOpts = WasiOptions.builder().withDirectory("/", sandbox).build()
+        val wasi = WasiPreview1.builder().withOptions(wasiOpts).build()
+
+        assertEquals(WasiErrno.EACCES.value(), wasi.pathSymlink("../outside/secret.txt", 3, "leak"))
+        assertEquals(WasiErrno.EACCES.value(), wasi.pathSymlink("../../outside", 3, "sub/leak"))
+        assertEquals(WasiErrno.EACCES.value(), wasi.pathSymlink("/etc/passwd", 3, "absolute"))
+        assertEquals(WasiErrno.ESUCCESS.value(), wasi.pathSymlink("inside.txt", 3, "ok"))
+        assertEquals(WasiErrno.ESUCCESS.value(), wasi.pathSymlink("../inside.txt", 3, "sub/ok"))
+
+        assertFalse(JFiles.exists(sandbox.resolve("leak"), LinkOption.NOFOLLOW_LINKS))
+        assertFalse(JFiles.exists(sandbox.resolve("sub/leak"), LinkOption.NOFOLLOW_LINKS))
+        assertFalse(JFiles.exists(sandbox.resolve("absolute"), LinkOption.NOFOLLOW_LINKS))
+        assertEquals("inside", JFiles.readString(sandbox.resolve("ok"), UTF_8))
+        assertEquals("inside", JFiles.readString(sandbox.resolve("sub/ok"), UTF_8))
+    }
+
+    @Test
+    fun pollOneoffSleepsUntilTheClockDeadlineInsteadOfSpinning() {
+        val wasi = WasiPreview1.builder().withOptions(WasiOptions.builder().build()).build()
+        val memory = ByteArrayMemory(MemoryLimits(1))
+        val inPtr = 0
+        val outPtr = 64
+        val neventsPtr = 128
+        val timeoutNanos = 200_000_000L
+        val userData = 0x1234_5678L
+        writeClockSubscription(memory, inPtr, userData, timeoutNanos)
+        val threads = ManagementFactory.getThreadMXBean()
+        val measureCpu = threads.isCurrentThreadCpuTimeSupported
+
+        val startedAt = System.nanoTime()
+        val cpuBefore = if (measureCpu) threads.currentThreadCpuTime else 0L
+        val errno = wasi.pollOneoff(memory, inPtr, outPtr, 1, neventsPtr)
+        val cpuAfter = if (measureCpu) threads.currentThreadCpuTime else 0L
+        val elapsedNanos = System.nanoTime() - startedAt
+
+        assertEquals(WasiErrno.ESUCCESS.value(), errno)
+        assertEquals(1, memory.readInt(neventsPtr))
+        assertEquals(userData, memory.readLong(outPtr))
+        assertEquals(WasiErrno.ESUCCESS.value().toShort(), memory.readShort(outPtr + 8))
+        assertEquals(WasiEventType.CLOCK, memory.read(outPtr + 10))
+        assertTrue(elapsedNanos >= timeoutNanos, "poll_oneoff returned after $elapsedNanos ns")
+        if (measureCpu) {
+            val cpuNanos = cpuAfter - cpuBefore
+            assertTrue(
+                cpuNanos < elapsedNanos / 2,
+                "poll_oneoff burned $cpuNanos ns of CPU while waiting $elapsedNanos ns",
+            )
+        }
+    }
+
+    @Test
+    fun pollOneoffRejectsEmptyAndOversizedSubscriptionLists() {
+        val wasi = WasiPreview1.builder().withOptions(WasiOptions.builder().build()).build()
+        val memory = ByteArrayMemory(MemoryLimits(1))
+
+        assertEquals(WasiErrno.EINVAL.value(), wasi.pollOneoff(memory, 0, 64, 0, 128))
+        assertEquals(WasiErrno.EINVAL.value(), wasi.pollOneoff(memory, 0, 64, 4_097, 128))
+        assertEquals(WasiErrno.EINVAL.value(), wasi.pollOneoff(memory, 0, 64, Int.MAX_VALUE, 128))
+        assertEquals(WasiErrno.EINVAL.value(), wasi.pollOneoff(memory, 0, 64, -1, 128))
+    }
+
     companion object {
         private const val WASI_ESUCCESS = 0
         private const val WASI_LOOKUPFLAGS_SYMLINK_FOLLOW = 1
         private const val WASI_FSTFLAGS_MTIM = 4
         private const val WASI_OFLAGS_CREAT = 1
         private const val WASI_OFLAGS_TRUNC = 1 shl 3
+        private const val WASI_RIGHTS_FD_READ = 1 shl 1
         private const val WASI_RIGHTS_FD_WRITE = 1 shl 6
+
+        private fun createSymlinkOrSkip(link: Path, target: Path) {
+            try {
+                JFiles.createSymbolicLink(link, target)
+            } catch (_: UnsupportedOperationException) {
+                assumeTrue(false, "host filesystem does not support symbolic links")
+            } catch (_: FileSystemException) {
+                assumeTrue(false, "host filesystem does not allow creating symbolic links")
+            }
+        }
+
+        private fun writeClockSubscription(
+            memory: ByteArrayMemory,
+            ptr: Int,
+            userData: Long,
+            timeoutNanos: Long,
+        ) {
+            memory.writeLong(ptr, userData)
+            memory.writeByte(ptr + 8, WasiEventType.CLOCK)
+            memory.writeI32(ptr + 16, WasiClockId.MONOTONIC)
+            memory.writeLong(ptr + 24, timeoutNanos)
+            memory.writeLong(ptr + 32, 0L)
+            memory.writeShort(ptr + 40, 0)
+        }
 
         private fun writeIov(memory: ByteArrayMemory, iovs: Int, dataPtr: Int, data: ByteArray) {
             memory.write(dataPtr, data)

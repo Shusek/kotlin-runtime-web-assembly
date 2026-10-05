@@ -64,7 +64,10 @@ across exported calls on the same instance. For `WasmtimePreview3ComponentConfig
 the Preview 3 bridge creates a fresh store per component call or command run, so
 `maxFuel` is effectively a per-call budget. Precompiled Preview 3 components
 must be compiled with fuel enabled, for example `wasmtime compile -W fuel=1 ...`,
-otherwise Wasmtime rejects deserialization under a fuel-enabled engine.
+otherwise Wasmtime rejects deserialization under a fuel-enabled engine. Fuel only
+limits artifacts the host trusts: a precompiled artifact is native code and a
+crafted one is not metered at all, so compile it yourself from validated `.wasm`
+(see [Security](../guides/security.md#precompiled-artifacts-are-native-code)).
 
 Fuel does not measure host work. It does not tick while the guest is idle, while a
 host import is blocked in I/O, or while the application waits outside Wasmtime.

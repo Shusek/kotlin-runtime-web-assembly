@@ -23,28 +23,28 @@ case "$(uname -s)-$(uname -m)" in
     target="aarch64-macos"
     wasmtime_api_sha256="92e74e76ef06ae699beec893cf3268d439da4d05dbca020e8f608ca3f0c1e862"
     wasmtime_cli_sha256="36d78cf1a5c8a5f40c0b9e933208ac3d937e868aca44b3cbbe1b48a3a530cf47"
-    wasm_tools_sha256="58bf83fdfa59da2c70ac6eb8dd395870934d8e3af835ff9311f34b9072586547"
+    wasm_tools_sha256="94c4fc9baeada6e793f0d4adeca537633b5d93e9dc6bf718be2f478f4afe0296"
     library_name="libwasmtime.dylib"
     ;;
   Darwin-x86_64)
     target="x86_64-macos"
     wasmtime_api_sha256="47789d6be9ae03d4ba0ff13821e1d069bbaa3a8926bcd4b701482c3149539556"
     wasmtime_cli_sha256="b28b3987e6ba5a18d39dc3dc60e7c312e3fd3dcd5b2cb7a7f7fb9cfb834a6d0e"
-    wasm_tools_sha256="21f0d003c5a937f29fe4cbbcb947b41ed7cc14982b8680abb15ba4078cb6a227"
+    wasm_tools_sha256="354a84ffeede30ba11f29bc72de76875a977cf43bf1c5bdc3e91e2313e8a854b"
     library_name="libwasmtime.dylib"
     ;;
   Linux-aarch64|Linux-arm64)
     target="aarch64-linux"
     wasmtime_api_sha256="3fd35813cf4a922b968fa3dbd12a300ecea032181a895c4ffe7b1f6f2824fca6"
     wasmtime_cli_sha256="8713dcbc6f9427eb120d7a4b514b6a58597a369e5b5d79cebeaae11fa24479f5"
-    wasm_tools_sha256="b51adcd4b7e2b85c689af3a1800534e7de192fdf47b1b6b6a8b5bcb0f449c392"
+    wasm_tools_sha256="6f19389a69e21c7dbd2a4e7ae72f807dc999988b48782c706c4102bad3e44487"
     library_name="libwasmtime.so"
     ;;
   Linux-x86_64)
     target="x86_64-linux"
     wasmtime_api_sha256="81fffe5fe895c7f8f84a744f4d4d165dda28793d00ee943ee71fcfb6ab5ed923"
     wasmtime_cli_sha256="f533a0fb3eca20aee34d69192f214839c5227a507fff2ecb3070ae1a37f0c40d"
-    wasm_tools_sha256="a62237f4731c45f665f1115cad39acaeec02963cbc848c9473ab033eed837072"
+    wasm_tools_sha256="ad62b2176037e93e1348cb65d6212d128ca9f097b63d155569f25215818ff7b1"
     library_name="libwasmtime.so"
     ;;
   *)

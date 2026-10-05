@@ -1,5 +1,5 @@
 [versions]
-agp = "9.2.1"
+agp = "9.4.1"
 android-compileSdk = "37"
 android-minSdk = "28"
 android-ndk = "29.0.14206865"
@@ -7,7 +7,7 @@ androidx-test-ext-junit = "1.3.0"
 androidx-test-runner = "1.7.0"
 approvalTests = "31.0.0"
 asm = "9.10.1"
-commonsLang = "3.20.0"
+commonsLang = "3.21.0"
 dokka = "2.2.0"
 errorProne = "2.50.0"
 graalvmNativeImage = "25.4.4.1.1"
@@ -18,7 +18,7 @@ jmh = "1.37"
 junit = "6.1.3"
 kotlin = "2.4.20"
 kotlinCryptoRandom = "0.6.0"
-kotlinxCoroutines = "1.10.2"
+kotlinxCoroutines = "1.11.0"
 kotlinxBrowser = "0.5.0"
 kotlinxDatetime = "0.8.0"
 kotlinxIo = "0.9.1"
@@ -29,7 +29,7 @@ picocli = "4.7.7"
 rustRelease = "1.96.1"
 rustReleaseCommit = "31fca3adb283cc9dfd56b49cdee9a96eb9c96ffd"
 velocity = "1.7"
-wasmTools = "1.255.0"
+wasmTools = "1.261.0"
 wasmtime = "48.0.5"
 zerofs = "0.1.0"
 zip4j = "2.11.6"
@@ -57,6 +57,7 @@ junitJupiterParams = { module = "org.junit.jupiter:junit-jupiter-params" }
 junitPlatformLauncher = { module = "org.junit.platform:junit-platform-launcher" }
 kotlinCompilerEmbeddable = { module = "org.jetbrains.kotlin:kotlin-compiler-embeddable", version.ref = "kotlin" }
 kotlinGradlePlugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
+kotlinMetadataJvm = { module = "org.jetbrains.kotlin:kotlin-metadata-jvm", version.ref = "kotlin" }
 kotlinCryptoRand = { module = "org.kotlincrypto.random:crypto-rand", version.ref = "kotlinCryptoRandom" }
 kotlinxCoroutinesCore = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
 kotlinxCoroutinesTest = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinxCoroutines" }

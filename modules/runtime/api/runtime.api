@@ -1054,6 +1054,7 @@ public final class uk/shusek/krwa/runtime/WasmtimeExecutionConfig {
 public final class uk/shusek/krwa/runtime/WasmtimeExecutionConfigKt {
 	public static final field DefaultWasmtimeCoreMaxInstances J
 	public static final field DefaultWasmtimeCoreMaxMemories J
+	public static final field DefaultWasmtimeCoreMaxTableElements J
 	public static final field DefaultWasmtimeCoreMaxTables J
 	public static final field DefaultWasmtimeMaxMemoryBytes J
 	public static final field DefaultWasmtimeMaxWasmStackBytes J

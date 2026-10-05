@@ -1,6 +1,6 @@
 # Support and compatibility
 
-KRWA `0.3.2` is a stable release for the platform and feature scope below. The
+KRWA `0.3.3` is a stable release for the platform and feature scope below. The
 release uses Wasmtime **48.0.5**. Compatible fixes advance the `0.3.x` patch
 version; public APIs may still evolve before `1.0.0`.
 
@@ -34,6 +34,11 @@ upstream preview protocols retain their documented status.
 Precompiled Wasmtime artifacts are tied to the engine version, target, and
 configuration. Recompile modules and components when upgrading Wasmtime;
 artifacts produced with an older release are not portable caches for 48.0.5.
+They are also a trust boundary: precompiled bytes are deserialized without
+validation and are equivalent to native code in the host process. Produce them
+with the host's own pinned toolchain and never accept them from a plugin bundle
+or an untrusted network source. See
+[Security](security.md#precompiled-artifacts-are-native-code).
 
 ## Verification and known gaps
 

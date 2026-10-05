@@ -188,7 +188,10 @@ private class NioWasiFileHandle(
     override fun protectedResize(size: Long) {
         val currentSize = channel.size()
         if (size > currentSize) {
-            protectedWrite(currentSize, ByteArray((size - currentSize).toInt()), 0, (size - currentSize).toInt())
+            // Extend sparsely: one zero byte at the new end sets the size without materializing
+            // (size - currentSize) bytes in host memory or on disk, and without truncating the
+            // difference to an Int.
+            channel.write(ByteBuffer.wrap(ByteArray(1)), size - 1)
         } else {
             channel.truncate(size)
         }

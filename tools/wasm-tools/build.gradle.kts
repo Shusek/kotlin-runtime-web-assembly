@@ -4,7 +4,7 @@ import org.gradle.kotlin.dsl.register
 import uk.shusek.krwa.gradle.*
 
 val wasmToolsVersion = libs.versions.wasmTools.get()
-val wasmToolsArchiveSha256 = "231f72d0be8b6a8b5d7bb5e8a25d1c0f55a544e650e98c9d0e2218511c94841c"
+val wasmToolsArchiveSha256 = "dfc413a300a34254f4caf8856bca543b90750013eee2820b1fd522c29e2f55f6"
 
 val archive = layout.buildDirectory.file("downloads/wasm-tools-$wasmToolsVersion-wasm32-wasip1.tar.gz")
 val downloadWasmTools =

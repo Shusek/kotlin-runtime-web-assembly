@@ -497,6 +497,8 @@ internal class Validator(
 
     internal fun validateTypes() {
         var subTypeBase = 0
+        // Depth of each defined type in the subtype hierarchy, indexed by flat type index.
+        val subtypeDepths = IntArray(module.typeSection().subTypeCount())
         for (i in 0 until (module.typeSection().typeCount())) {
             val t = module.typeSection().getRecType(i)
             val groupSize = t.subTypes().size
@@ -521,20 +523,48 @@ internal class Validator(
                 if (arrayType != null) {
                     validateStorageTypeRefs(arrayType.fieldType().storageType(), validUpperBound)
                 }
-                // Validate supertype references and subtype validity
+                // Validate supertype references and subtype validity. The specification requires a
+                // supertype to be defined before its subtype (its index must be smaller), which also
+                // rules out cycles, and bounds the depth of the hierarchy so that subtype checks
+                // cannot recurse without limit on attacker-controlled type graphs.
+                var depth = 0
                 for (sup in st.typeIdx()) {
                     if (sup < 0 || sup >= validUpperBound) {
                         throw InvalidException("unknown type " + sup)
+                    }
+                    if (sup >= flatIdx) {
+                        throw InvalidException(
+                            "sub type " + flatIdx + " references super type " + sup + " that is not yet defined"
+                        )
                     }
                     val superSt = module.typeSection().getSubType(sup)
                     if (superSt.isFinal()) {
                         throw InvalidException("sub type " + flatIdx + " does not match super type")
                     }
-                    validateSubtypeMatch(flatIdx, st.compType(), superSt.compType())
+                    depth = maxOf(depth, subtypeDepths[sup] + 1)
                 }
+                if (depth > WasmLimits.MAX_SUBTYPE_DEPTH) {
+                    throw InvalidException(
+                        "sub type hierarchy too deep: found depth " + depth +
+                            ", cannot exceed depth " + WasmLimits.MAX_SUBTYPE_DEPTH
+                    )
+                }
+                subtypeDepths[flatIdx] = depth
                 flatIdx++
             }
             subTypeBase += groupSize
+        }
+        // Matching fields can follow forward references within a recursion group. Validate the
+        // entire supertype graph first, including types those fields refer to, before traversing it.
+        for (flatIdx in 0 until module.typeSection().subTypeCount()) {
+            val subType = module.typeSection().getSubType(flatIdx)
+            for (sup in subType.typeIdx()) {
+                validateSubtypeMatch(
+                    flatIdx,
+                    subType.compType(),
+                    module.typeSection().getSubType(sup).compType(),
+                )
+            }
         }
     }
 

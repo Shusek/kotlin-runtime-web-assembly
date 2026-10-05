@@ -8,12 +8,22 @@ import kotlinx.io.RawSource
 import kotlinx.io.readByteArray
 import okio.FileHandle
 import okio.FileMetadata
+import okio.FileSystem
 import okio.IOException
 import okio.Path
 import okio.Path.Companion.toPath
 import uk.shusek.krwa.runtime.ExecutionCompletedException
 import uk.shusek.krwa.runtime.HostFunction
 import uk.shusek.krwa.runtime.Memory
+
+/** Upper bound for the subscription count a guest may pass to `poll_oneoff`. */
+private const val MAX_POLL_SUBSCRIPTIONS: Int = 4_096
+
+/** Longest single sleep inside `poll_oneoff`, so the wait stays responsive to interruption. */
+private const val MAX_POLL_SLEEP_NANOS: Long = 1_000_000_000L
+
+/** Interval at which `poll_oneoff` re-checks stream readiness while sleeping. */
+private const val POLL_READ_INTERVAL_NANOS: Long = 1_000_000L
 
 internal class WasiPreview1Engine(opts: WasiOptions) : WasiPreview1Host {
     private val random = opts.random()
@@ -131,9 +141,15 @@ internal class WasiPreview1Engine(opts: WasiOptions) : WasiPreview1Host {
             is OutStream -> wasiResult(WasiErrno.EINVAL)
             is DirectoryDescriptor -> wasiResult(WasiErrno.EISDIR)
             is OpenFile -> {
+                val descriptor = descriptors.get(fd) as OpenFile
+                if (!flagSet(descriptor.rightsBase, WasiRights.FD_ALLOCATE)) {
+                    return wasiResult(WasiErrno.ENOTCAPABLE)
+                }
+                if (len > Long.MAX_VALUE - offset) {
+                    return wasiResult(WasiErrno.EFBIG)
+                }
                 try {
                     val size = offset + len
-                    val descriptor = descriptors.get(fd) as OpenFile
                     if (size > descriptor.handle.size()) {
                         descriptor.handle.resize(size)
                     }
@@ -282,14 +298,20 @@ internal class WasiPreview1Engine(opts: WasiOptions) : WasiPreview1Host {
             is OutStream -> wasiResult(WasiErrno.EINVAL)
             is DirectoryDescriptor -> wasiResult(WasiErrno.EISDIR)
             is OpenFile -> {
-                try {
-                    val descriptor = descriptors.get(fd) as OpenFile
-                    descriptor.handle.resize(size)
-                    wasiResult(WasiErrno.ESUCCESS)
-                } catch (_: IOException) {
-                    wasiResult(WasiErrno.EIO)
-                } catch (_: IllegalStateException) {
+                val descriptor = descriptors.get(fd) as OpenFile
+                if (!flagSet(descriptor.rightsBase, WasiRights.FD_FILESTAT_SET_SIZE)) {
                     wasiResult(WasiErrno.ENOTCAPABLE)
+                } else if (size < 0) {
+                    wasiResult(WasiErrno.EFBIG)
+                } else {
+                    try {
+                        descriptor.handle.resize(size)
+                        wasiResult(WasiErrno.ESUCCESS)
+                    } catch (_: IOException) {
+                        wasiResult(WasiErrno.EIO)
+                    } catch (_: IllegalStateException) {
+                        wasiResult(WasiErrno.ENOTCAPABLE)
+                    }
                 }
             }
         }
@@ -658,7 +680,9 @@ internal class WasiPreview1Engine(opts: WasiOptions) : WasiPreview1Host {
         rawPath: String,
         buf: Int,
     ): Int {
-        val resolved = resolvePath(dirFd, rawPath) ?: return wasiResult(pathError(dirFd, WasiErrno.EACCES))
+        val resolved =
+            resolvePath(dirFd, rawPath, followLast = flagSet(lookupFlags, WasiLookupFlags.SYMLINK_FOLLOW))
+                ?: return wasiResult(pathError(dirFd, WasiErrno.EACCES))
         return try {
             val statPath =
                 if (flagSet(lookupFlags, WasiLookupFlags.SYMLINK_FOLLOW)) {
@@ -698,7 +722,9 @@ internal class WasiPreview1Engine(opts: WasiOptions) : WasiPreview1Host {
         modifiedTime: Long,
         fstFlags: Int,
     ): Int {
-        val resolved = resolvePath(dirFd, rawPath) ?: return wasiResult(pathError(dirFd, WasiErrno.EACCES))
+        val resolved =
+            resolvePath(dirFd, rawPath, followLast = flagSet(lookupFlags, WasiLookupFlags.SYMLINK_FOLLOW))
+                ?: return wasiResult(pathError(dirFd, WasiErrno.EACCES))
         return wasiResult(
             wasiSetFileTimes(
                 resolved.directory.fileSystem,
@@ -722,7 +748,9 @@ internal class WasiPreview1Engine(opts: WasiOptions) : WasiPreview1Host {
         if (rawNewPath.endsWith("/")) {
             return wasiResult(WasiErrno.ENOENT)
         }
-        val old = resolvePath(oldFd, rawOldPath) ?: return wasiResult(pathError(oldFd, WasiErrno.EACCES))
+        val old =
+            resolvePath(oldFd, rawOldPath, followLast = flagSet(lookupFlags, WasiLookupFlags.SYMLINK_FOLLOW))
+                ?: return wasiResult(pathError(oldFd, WasiErrno.EACCES))
         val new = resolvePath(newFd, rawNewPath) ?: return wasiResult(pathError(newFd, WasiErrno.EACCES))
         if (old.directory.fileSystem !== new.directory.fileSystem) {
             return wasiResult(WasiErrno.EXDEV)
@@ -931,6 +959,9 @@ internal class WasiPreview1Engine(opts: WasiOptions) : WasiPreview1Host {
             )
         }
         val new = resolvePath(dirFd, newRawPath) ?: return wasiResult(WasiErrno.EBADF)
+        if (!symlinkTargetInsidePreopen(new, target)) {
+            return wasiResult(WasiErrno.EACCES)
+        }
         return try {
             if (new.directory.fileSystem.exists(new.path)) {
                 return wasiResult(WasiErrno.EEXIST)
@@ -973,7 +1004,7 @@ internal class WasiPreview1Engine(opts: WasiOptions) : WasiPreview1Host {
         nsubscriptions: Int,
         neventsPtr: Int,
     ): Int {
-        if (nsubscriptions <= 0) {
+        if (nsubscriptions <= 0 || nsubscriptions > MAX_POLL_SUBSCRIPTIONS) {
             return wasiResult(WasiErrno.EINVAL)
         }
 
@@ -1054,8 +1085,21 @@ internal class WasiPreview1Engine(opts: WasiOptions) : WasiPreview1Host {
                     nevents++
                 }
             }
-            if (nevents == 0 && minTimeout == Long.MAX_VALUE && readSubs.isEmpty()) {
-                break
+            if (nevents == 0) {
+                if (minTimeout == Long.MAX_VALUE && readSubs.isEmpty()) {
+                    break
+                }
+                // Sleep until the nearest clock deadline, waking periodically to poll stream
+                // readiness, instead of spinning at full CPU until an event becomes ready.
+                val untilDeadline =
+                    if (minTimeout == Long.MAX_VALUE) MAX_POLL_SLEEP_NANOS else minTimeout - elapsed
+                var sleepNanos = minOf(untilDeadline, MAX_POLL_SLEEP_NANOS)
+                if (readSubs.isNotEmpty()) {
+                    sleepNanos = minOf(sleepNanos, POLL_READ_INTERVAL_NANOS)
+                }
+                if (sleepNanos > 0L && !wasiSleepNanos(sleepNanos)) {
+                    return wasiResult(WasiErrno.EINTR)
+                }
             }
         } while (nevents == 0)
 
@@ -1150,7 +1194,7 @@ internal class WasiPreview1Engine(opts: WasiOptions) : WasiPreview1Host {
         return if (descriptor is DirectoryDescriptor) invalidPathErrno else WasiErrno.ENOTDIR
     }
 
-    private fun resolvePath(fd: Int, rawPath: String): ResolvedPath? {
+    private fun resolvePath(fd: Int, rawPath: String, followLast: Boolean = false): ResolvedPath? {
         val descriptor = directoryDescriptor(fd) ?: return null
         val relativePath = guestRelativePath(descriptor, rawPath) ?: return null
         val raw =
@@ -1164,6 +1208,9 @@ internal class WasiPreview1Engine(opts: WasiOptions) : WasiPreview1Host {
         }
         val resolved = descriptor.path.resolve(raw, normalize = true)
         if (!isInsidePreopen(descriptor.path, resolved)) {
+            return null
+        }
+        if (!isInsideRealPreopen(descriptor.directory, resolved, followLast)) {
             return null
         }
         return ResolvedPath(descriptor.directory, resolved)
@@ -1192,6 +1239,73 @@ internal class WasiPreview1Engine(opts: WasiOptions) : WasiPreview1Host {
         val rootText = root.normalized().toString().trimEnd('/')
         val pathText = path.normalized().toString()
         return pathText == rootText || pathText.startsWith("$rootText/")
+    }
+
+    /**
+     * Lexical containment is not sufficient on a real filesystem: any component of [path] may be a
+     * symbolic link that points outside the preopen. This resolves the existing part of [path] on
+     * the host, following every intermediate link, and requires the result to stay under the real
+     * path of the preopen root. The final component is followed only when [followLast] is set,
+     * because callers such as unlink, readlink, rename and lstat operate on the link itself.
+     */
+    private fun isInsideRealPreopen(directory: WasiDirectory, path: Path, followLast: Boolean): Boolean =
+        try {
+            val fileSystem = directory.fileSystem
+            val realRoot = fileSystem.canonicalize(directory.path)
+            isInsidePreopen(realRoot, realPathForSandboxCheck(fileSystem, path, followLast))
+        } catch (_: IOException) {
+            false
+        }
+
+    private fun realPathForSandboxCheck(fileSystem: FileSystem, path: Path, followLast: Boolean): Path {
+        val normalized = path.normalized()
+        if (followLast) {
+            return realPathAllowingMissingLeaf(fileSystem, normalized)
+        }
+        val parent = normalized.parent ?: return normalized
+        return realPathAllowingMissingLeaf(fileSystem, parent).resolve(normalized.name, normalize = true)
+    }
+
+    /**
+     * Canonicalizes the deepest existing ancestor of [path] and re-appends the missing components,
+     * so that paths about to be created are checked against the real location of their parent.
+     */
+    private fun realPathAllowingMissingLeaf(fileSystem: FileSystem, path: Path): Path {
+        val normalized = path.normalized()
+        if (fileSystem.exists(normalized)) {
+            return fileSystem.canonicalize(normalized)
+        }
+        val missing = ArrayList<String>()
+        var current: Path? = normalized
+        while (current != null && !fileSystem.exists(current)) {
+            missing.add(current.name)
+            current = current.parent
+        }
+        if (current == null) {
+            return normalized
+        }
+        var resolved = fileSystem.canonicalize(current)
+        for (index in missing.indices.reversed()) {
+            resolved = resolved.resolve(missing[index], normalize = true)
+        }
+        return resolved.normalized()
+    }
+
+    /**
+     * A relative symlink target is interpreted from the real location of the link's parent
+     * directory; creating a link whose target leaves the preopen is refused, mirroring the
+     * existing refusal of absolute targets.
+     */
+    private fun symlinkTargetInsidePreopen(link: ResolvedPath, target: Path): Boolean {
+        val linkParent = link.path.normalized().parent ?: return false
+        return try {
+            val fileSystem = link.directory.fileSystem
+            val realRoot = fileSystem.canonicalize(link.directory.path)
+            val realParent = realPathAllowingMissingLeaf(fileSystem, linkParent)
+            isInsidePreopen(realRoot, realParent.resolve(target, normalize = true))
+        } catch (_: IOException) {
+            false
+        }
     }
 
     private fun metadataOrNull(descriptor: DirectoryDescriptor): FileMetadata? =

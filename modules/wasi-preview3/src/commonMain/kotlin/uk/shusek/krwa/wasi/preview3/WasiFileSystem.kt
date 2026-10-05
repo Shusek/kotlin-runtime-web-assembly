@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.flow
 import okio.BufferedSink
 import okio.FileMetadata
 import okio.FileSystem
+import okio.IOException
 import okio.Path
 import okio.Path.Companion.toPath
 import okio.buffer
@@ -186,10 +187,55 @@ public class WasiFileSystem internal constructor(
         val relative = relativeText.toPath(normalize = true)
         require(relative.isRelative) { "absolute host paths are not allowed: $path" }
         val resolved = hostRootPath.resolve(relative, normalize = true)
-        require(resolved == hostRootPath || resolved.toString().startsWith("${hostRoot.trimEnd('/')}/")) {
+        require(isInsideRoot(hostRootPath, resolved)) {
             "path escapes WASI preopen $guestRoot: $path"
         }
+        require(isInsideRealRoot(resolved)) {
+            "path escapes WASI preopen $guestRoot through a symbolic link: $path"
+        }
         return resolved
+    }
+
+    private fun isInsideRoot(root: Path, candidate: Path): Boolean {
+        val rootText = root.normalized().toString().trimEnd('/')
+        val candidateText = candidate.normalized().toString()
+        return candidateText == rootText || candidateText.startsWith("$rootText/")
+    }
+
+    /**
+     * Lexical containment does not account for symbolic links: a link inside the preopen, which a
+     * guest may create through `symlink-at`, can point anywhere on the host, and this host-side
+     * facade follows links when it reads, writes, lists or deletes. The existing part of
+     * [candidate] is therefore canonicalized, following every link including the final one, and
+     * must stay under the real path of the preopen root. Links that stay inside the preopen keep
+     * working.
+     */
+    private fun isInsideRealRoot(candidate: Path): Boolean =
+        try {
+            isInsideRoot(realPathAllowingMissingLeaf(hostRootPath), realPathAllowingMissingLeaf(candidate))
+        } catch (_: IOException) {
+            false
+        }
+
+    private fun realPathAllowingMissingLeaf(path: Path): Path {
+        val normalized = path.normalized()
+        if (fileSystem.exists(normalized)) {
+            return fileSystem.canonicalize(normalized)
+        }
+        val missing = ArrayList<String>()
+        var current: Path? = normalized
+        while (current != null && !fileSystem.exists(current)) {
+            missing.add(current.name)
+            current = current.parent
+        }
+        if (current == null) {
+            return normalized
+        }
+        var resolved = fileSystem.canonicalize(current)
+        for (index in missing.indices.reversed()) {
+            resolved = resolved.resolve(missing[index], normalize = true)
+        }
+        return resolved.normalized()
     }
 
     private fun guestRelativePath(path: String): String {

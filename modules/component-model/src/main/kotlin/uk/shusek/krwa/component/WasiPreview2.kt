@@ -202,7 +202,10 @@ private constructor(
     private val terminalStdin: Boolean
     private val terminalStdout: Boolean
     private val terminalStderr: Boolean
-    private val networkingEnabled: Boolean
+    private val networkPolicy: WasiNetworkPolicy
+    private val unsafeAllowAllNetworking: Boolean
+    private val networkPolicyLock = WasiPreviewLock()
+    private val resolvedRawSocketAddresses: MutableMap<String, Set<String>> = LinkedHashMap()
     private val httpClient: WasiHttpClient
     private val fileSystem: FileSystem
     private val socketRuntime: WasiSocketRuntime
@@ -259,7 +262,8 @@ private constructor(
         this.terminalStdin = builder.terminalStdin
         this.terminalStdout = builder.terminalStdout
         this.terminalStderr = builder.terminalStderr
-        this.networkingEnabled = builder.networkingEnabled
+        this.networkPolicy = builder.networkPolicy
+        this.unsafeAllowAllNetworking = builder.networkingEnabled
         this.httpClient = transports.httpClient
         this.fileSystem = builder.fileSystem
         this.socketRuntime = transports.socketRuntime
@@ -783,11 +787,19 @@ private constructor(
         registerHttpMethod(builder, "incoming-response", "status", this::incomingResponseStatus)
         registerHttpMethod(builder, "incoming-response", "headers", this::incomingResponseHeaders)
         registerHttpMethod(builder, "incoming-response", "consume", this::incomingResponseConsume)
-        registerResourceDrop(builder, HTTP_PACKAGE, "types", "incoming-response", incomingResponses)
+        registerResourceDrop(builder, HTTP_PACKAGE, "types", "incoming-response", incomingResponses) { response ->
+            if (!response.bodyConsumed) {
+                response.body.close()
+            }
+        }
 
         registerHttpMethod(builder, "incoming-body", "stream", this::incomingBodyStream)
         registerHttpStatic(builder, "incoming-body", "finish", this::incomingBodyFinish)
-        registerResourceDrop(builder, HTTP_PACKAGE, "types", "incoming-body", incomingBodies)
+        registerResourceDrop(builder, HTTP_PACKAGE, "types", "incoming-body", incomingBodies) { body ->
+            if (!body.streamTaken) {
+                body.body.close()
+            }
+        }
 
         registerHttpMethod(builder, "future-trailers", "subscribe", this::futureTrailersSubscribe)
         registerHttpMethod(builder, "future-trailers", "get", this::futureTrailersGet)
@@ -832,6 +844,11 @@ private constructor(
             "types",
             "future-incoming-response",
             futureIncomingResponses,
+            { future ->
+                if (!future.consumed && !future.response.bodyConsumed) {
+                    future.response.body.close()
+                }
+            },
         )
         register(builder, HTTP_PACKAGE, "outgoing-handler", "handle", this::outgoingHandlerHandle)
 
@@ -904,7 +921,11 @@ private constructor(
             "[method]input-stream.subscribe",
             this::subscribeInput,
         )
-        registerResourceDrop(builder, IO_PACKAGE, "streams", "input-stream", inputStreams)
+        registerResourceDrop(builder, IO_PACKAGE, "streams", "input-stream", inputStreams) { stream ->
+            if (stream !== stdin) {
+                stream.release()
+            }
+        }
 
         register(builder, IO_PACKAGE, "streams", "output-stream.check-write", this::checkWrite)
         register(
@@ -1016,7 +1037,11 @@ private constructor(
             "[method]output-stream.blocking-splice",
             { args -> splice(args, true) },
         )
-        registerResourceDrop(builder, IO_PACKAGE, "streams", "output-stream", outputStreams)
+        registerResourceDrop(builder, IO_PACKAGE, "streams", "output-stream", outputStreams) { stream ->
+            if (stream !== stdout && stream !== stderr) {
+                stream.release()
+            }
+        }
 
         register(builder, RANDOM_PACKAGE, "random", "get-random-bytes", this::getRandomBytes)
         register(builder, RANDOM_PACKAGE, "random", "get-random-u64", this::getRandomU64)
@@ -1110,7 +1135,12 @@ private constructor(
         registerTcpMethod(builder, "set-send-buffer-size", this::tcpSetSendBufferSize)
         registerTcpMethod(builder, "subscribe", this::tcpSubscribe)
         registerTcpMethod(builder, "shutdown", this::tcpShutdown)
-        registerResourceDrop(builder, SOCKETS_PACKAGE, "tcp", "tcp-socket", tcpSockets)
+        registerResourceDrop(builder, SOCKETS_PACKAGE, "tcp", "tcp-socket", tcpSockets) { socket ->
+            closePreview2ResourceIgnoringFailure { socket.connection?.close() }
+            socket.connection = null
+            closePreview2ResourceIgnoringFailure { socket.listener?.close() }
+            socket.listener = null
+        }
 
         register(
             builder,
@@ -1181,7 +1211,10 @@ private constructor(
             "outgoing-datagram-stream",
             outgoingDatagramStreams,
         )
-        registerResourceDrop(builder, SOCKETS_PACKAGE, "udp", "udp-socket", udpSockets)
+        registerResourceDrop(builder, SOCKETS_PACKAGE, "udp", "udp-socket", udpSockets) { socket ->
+            socket.endpoint?.close()
+            socket.endpoint = null
+        }
 
         return builder
     }
@@ -1352,8 +1385,17 @@ private constructor(
     private fun write(args: List<Any?>, flush: Boolean): Any? {
         requireArity("output-stream.write", args, 2)
         var stream = outputStreams.get(handle(args, 0))
+        val data = bytes(args.get(1))
+        if (data.size > MAX_IO_CHUNK) {
+            // check-write never permits more than MAX_IO_CHUNK bytes and blocking-write-and-flush
+            // is specified for at most 4096 bytes; exceeding the permit traps instead of buffering.
+            throw ComponentModelException(
+                "output-stream write of " + data.size + " bytes exceeds the " + MAX_IO_CHUNK +
+                    "-byte check-write permit"
+            )
+        }
         try {
-            stream.write(bytes(args.get(1)))
+            stream.write(data)
             if (flush) {
                 stream.flush()
             }
@@ -1467,7 +1509,9 @@ private constructor(
 
     private fun instanceNetwork(args: List<Any?>): Any? {
         requireArity("instance-network", args, 0)
-        return networks.insertResource(Network(networkingEnabled))
+        return networks.insertResource(
+            Network(unsafeAllowAllNetworking || networkPolicy.hasRawSocketAccess())
+        )
     }
 
     private fun networkErrorCode(args: List<Any?>): Any? {
@@ -1479,7 +1523,10 @@ private constructor(
         requireArity("resolve-addresses", args, 2)
         return networkResult {
             requireNetwork(args, 0)
-            var addresses = resolveIpAddresses(args.get(1) as String)
+            val hostname = args.get(1) as String
+            val normalizedHostname = requireRawSocketHostnameAllowed(hostname)
+            val addresses = resolveIpAddresses(hostname)
+            rememberResolvedRawSocketAddresses(normalizedHostname, addresses)
             return@networkResult resolveAddressStreams.insertResource(
                 ResolveAddressStream(addresses.iterator())
             )
@@ -1518,6 +1565,7 @@ private constructor(
             }
             var local = socketAddress(args.get(2))
             requireFamily(socket.family, local)
+            requireRawSocketEndpointAllowed(local)
             socket.pendingBind = local
             socket.bindStarted = true
             return@networkResult null
@@ -1547,6 +1595,7 @@ private constructor(
             }
             var remote = socketAddress(args.get(2))
             requireFamily(socket.family, remote)
+            requireRawSocketEndpointAllowed(remote)
             val connection =
                 socketRuntime.connectTcp(
                     remote,
@@ -1576,9 +1625,15 @@ private constructor(
             val connection = socket.connection ?: throw NetException("invalid-state")
             return@networkResult listOf(
                 inputStreams.insertResource(
-                    WasiInputStream(connection.inputSource(), connection::inputAvailable)
+                    WasiInputStream(
+                        connection.inputSource(),
+                        connection::inputAvailable,
+                        closeOnDrop = false,
+                    )
                 ),
-                outputStreams.insertResource(WasiOutputStream(connection.outputSink())),
+                outputStreams.insertResource(
+                    WasiOutputStream(connection.outputSink(), closeOnDrop = false)
+                ),
             )
         }
     }
@@ -1629,9 +1684,15 @@ private constructor(
             return@networkResult listOf(
                 tcpSockets.insertResource(child),
                 inputStreams.insertResource(
-                    WasiInputStream(accepted.inputSource(), accepted::inputAvailable)
+                    WasiInputStream(
+                        accepted.inputSource(),
+                        accepted::inputAvailable,
+                        closeOnDrop = false,
+                    )
                 ),
-                outputStreams.insertResource(WasiOutputStream(accepted.outputSink())),
+                outputStreams.insertResource(
+                    WasiOutputStream(accepted.outputSink(), closeOnDrop = false)
+                ),
             )
         }
     }
@@ -1852,6 +1913,7 @@ private constructor(
             }
             var local = socketAddress(args.get(2))
             requireFamily(socket.family, local)
+            requireRawSocketEndpointAllowed(local)
             socket.pendingBind = local
             socket.bindStarted = true
             return@networkResult null
@@ -1889,6 +1951,7 @@ private constructor(
             if (remote != null) {
                 var remoteAddress = socketAddress(remote)
                 requireFamily(socket.family, remoteAddress)
+                requireRawSocketEndpointAllowed(remoteAddress)
                 socket.remoteAddress = remoteAddress
             } else if (socket.remoteAddress != null) {
                 socket.remoteAddress = null
@@ -2036,6 +2099,7 @@ private constructor(
                 if (remote == null) {
                     throw NetException("invalid-argument")
                 }
+                requireRawSocketEndpointAllowed(remote)
                 val endpoint = stream.socket.endpoint ?: throw NetException("invalid-state")
                 endpoint.send(data, remote)
                 sent++
@@ -2430,7 +2494,7 @@ private constructor(
 
     private fun outgoingHandlerHandle(args: List<Any?>): Any? {
         requireArity("outgoing-handler.handle", args, 2)
-        if (!networkingEnabled) {
+        if (!canAttemptHttpRequests()) {
             return WitResult.err("HTTP-request-denied")
         }
         try {
@@ -2561,14 +2625,22 @@ private constructor(
         requireArity("descriptor.read", args, 3)
         return filesystemResult {
             var descriptor = readableDescriptor(args, 0)
-            var length: Int = checkedByteLength(args.get(1))
+            val requested = asU64(args.get(1))
+            val offset = asU64(args.get(2))
             fileSystem.openReadOnly(descriptor.path).useHandle { handle ->
+                // Allocate only what the file can still provide, bounded by the host chunk limit;
+                // short reads are allowed by the interface, so a guest cannot force a 2 GiB buffer.
+                val size = handle.size()
+                if (offset < 0 || offset >= size) {
+                    return@filesystemResult listOf(ByteArray(0), true)
+                }
+                val length = boundedReadLength(requested, size - offset)
                 var buffer = ByteArray(length)
-                var read = handle.read(asU64(args.get(2)), buffer, 0, length)
+                var read = handle.read(offset, buffer, 0, length)
                 if (read < 0) {
                     return@filesystemResult listOf(ByteArray(0), true)
                 }
-                return@filesystemResult listOf(buffer.copyOf(read), read < length)
+                return@filesystemResult listOf(buffer.copyOf(read), offset + read >= size)
             }
         }
     }
@@ -2906,6 +2978,13 @@ private constructor(
         }
     }
 
+    private fun boundedReadLength(requested: Long, remaining: Long): Int {
+        var length = if (requested < 0) Long.MAX_VALUE else requested
+        length = kotlin.math.min(length, remaining)
+        length = kotlin.math.min(length, WASI_PREVIEW_MAX_GUEST_BYTE_REQUEST.toLong())
+        return length.toInt()
+    }
+
     private fun readableDescriptor(args: List<Any?>, index: Int): FilesystemDescriptor {
         var descriptor = descriptors.get(handle(args, index))
         if (!descriptor.flags.contains("read")) {
@@ -3238,6 +3317,87 @@ private constructor(
     private fun requireNetwork(args: List<Any?>, index: Int) {
         if (!networks.get(handle(args, index)).enabled) {
             throw NetException("access-denied")
+        }
+    }
+
+    private fun canAttemptHttpRequests(): Boolean =
+        unsafeAllowAllNetworking || networkPolicy.hasHttpAccess()
+
+    /**
+     * Checks the exact URI string the HTTP client will send against the network policy, so there is
+     * no parser difference between what is authorized and what is connected to.
+     */
+    private fun requireHttpRequestAllowed(uri: String) {
+        if (unsafeAllowAllNetworking) {
+            return
+        }
+        val url =
+            try {
+                Url(uri)
+            } catch (_: URLParserException) {
+                throw HttpException("HTTP-request-URI-invalid")
+            } catch (_: IllegalArgumentException) {
+                throw HttpException("HTTP-request-URI-invalid")
+            }
+        val protocol =
+            when (url.protocol.name.lowercase()) {
+                "http" -> WasiHttpNetworkProtocol.Http
+                "https" -> WasiHttpNetworkProtocol.Https
+                else -> throw HttpException("HTTP-request-denied")
+            }
+        if (!networkPolicy.allowsHttp(protocol, url.host, url.port)) {
+            throw HttpException("HTTP-request-denied")
+        }
+    }
+
+    private fun requireRawSocketEndpointAllowed(address: InetSocketAddress) {
+        if (unsafeAllowAllNetworking) {
+            return
+        }
+        val addressBytes = address.resolveAddress() ?: throw NetException("invalid-argument")
+        val numericHost = networkHostFromAddress(addressBytes)
+        if (networkPolicy.allowsRawSocket(numericHost, address.port)) {
+            return
+        }
+        val allowedByResolvedHostname =
+            withWasiPreviewLock(networkPolicyLock) {
+                networkPolicy.allowsResolvedRawSocket(
+                    numericHost,
+                    address.port,
+                    resolvedRawSocketAddresses,
+                )
+            }
+        if (!allowedByResolvedHostname) {
+            throw NetException("access-denied")
+        }
+    }
+
+    private fun requireRawSocketHostnameAllowed(hostname: String): String? {
+        if (unsafeAllowAllNetworking) {
+            return null
+        }
+        val normalized =
+            try {
+                normalizeNetworkPolicyHost(hostname)
+            } catch (_: IllegalArgumentException) {
+                throw NetException("invalid-argument")
+            }
+        if (!networkPolicy.allowsRawSocketHost(normalized)) {
+            throw NetException("access-denied")
+        }
+        return normalized
+    }
+
+    private fun rememberResolvedRawSocketAddresses(
+        normalizedHostname: String?,
+        addresses: List<ByteArray>,
+    ) {
+        if (normalizedHostname == null) {
+            return
+        }
+        val normalizedAddresses = addresses.map(::networkHostFromAddress).toSet()
+        withWasiPreviewLock(networkPolicyLock) {
+            resolvedRawSocketAddresses[normalizedHostname] = normalizedAddresses
         }
     }
 
@@ -3583,6 +3743,7 @@ private constructor(
             } catch (_: IllegalArgumentException) {
                 throw HttpException("HTTP-request-URI-invalid")
             }
+        requireHttpRequestAllowed(uri)
         val requestBody = request.body
         if (requestBody != null && !requestBody.finished) {
             throw HttpException(WitValue.variant("HTTP-request-body-size", null))
@@ -3598,12 +3759,16 @@ private constructor(
         )
     }
 
-    private fun httpTimeout(options: RequestOptions?): Duration? {
+    /**
+     * Guest-supplied timeouts are optional and unbounded, so a plugin or a slow peer could hold the
+     * calling host thread indefinitely. Apply the host default when none is given and clamp the
+     * requested value to the host maximum.
+     */
+    private fun httpTimeout(options: RequestOptions?): Duration {
         val nanos = options?.firstByteTimeoutNanos ?: options?.connectTimeoutNanos
-        if (nanos == null || nanos <= 0) {
-            return null
-        }
-        return nanos.nanoseconds
+        val requested =
+            if (nanos == null || nanos <= 0) WASI_PREVIEW_DEFAULT_HTTP_TIMEOUT else nanos.nanoseconds
+        return minOf(requested, WASI_PREVIEW_MAX_HTTP_TIMEOUT)
     }
 
     private fun fieldsFromHttpHeaders(
@@ -3944,12 +4109,18 @@ private constructor(
         )
     }
 
+    /**
+     * Registers the canonical `[resource-drop]` import for [table]. When [onDrop] is given it runs
+     * on the removed value so that dropping a handle releases the host resource behind it (sockets,
+     * streams, response bodies) instead of leaking it until the host closes.
+     */
     private fun <T> registerResourceDrop(
         builder: WasiHostImportBuilder,
         packageName: String,
         interfaceName: String,
         resourceName: String,
         table: WitResourceTable<T>,
+        onDrop: ((T) -> Unit)? = null,
     ) {
         register(
             builder,
@@ -3958,7 +4129,10 @@ private constructor(
             "[resource-drop]" + resourceName,
             { args ->
                 requireArity("[resource-drop]" + resourceName, args, 1)
-                table.remove(handle(args, 0))
+                val removed = table.remove(handle(args, 0))
+                if (onDrop != null) {
+                    closePreview2ResourceIgnoringFailure { onDrop(removed) }
+                }
                 null
             },
         )
@@ -3997,9 +4171,10 @@ private constructor(
 
     private fun checkedByteLength(value: Any?): Int {
         var length = asU64(value)
-        if (length < 0 || length > Int.MAX_VALUE) {
+        if (length < 0 || length > WASI_PREVIEW_MAX_GUEST_BYTE_REQUEST) {
             throw ComponentModelException(
-                "WASI list length is too large for this host: " + unsignedLongString(length)
+                "WASI byte request of " + unsignedLongString(length) +
+                    " exceeds the host limit of " + WASI_PREVIEW_MAX_GUEST_BYTE_REQUEST + " bytes"
             )
         }
         return length.toInt()
@@ -4103,6 +4278,7 @@ private constructor(
         var terminalStdout: Boolean = false
         var terminalStderr: Boolean = false
         var networkingEnabled: Boolean = false
+        var networkPolicy: WasiNetworkPolicy = WasiNetworkPolicy.DENY_ALL
         /**
          * HTTP transport used by this host.
          *
@@ -4234,18 +4410,50 @@ private constructor(
             return this
         }
 
-        fun withNetworking(): Builder {
-            this.networkingEnabled = true
+        /**
+         * Grants network access to exactly the HTTP endpoints and raw-socket endpoints listed in
+         * [networkPolicy]. Matching is exact (scheme, canonical host and port); every other
+         * destination, including name lookups for hosts without a raw-socket grant, is denied with
+         * `access-denied` / `HTTP-request-denied`. The default policy denies all network access.
+         */
+        fun withNetworkPolicy(networkPolicy: WasiNetworkPolicy): Builder {
+            this.networkPolicy = requirePresent(networkPolicy, "networkPolicy")
+            this.networkingEnabled = false
             return this
         }
 
+        @UnsafeComponentModelApi
+        @Deprecated(
+            message =
+                "Unrestricted networking lets a guest reach any host, including loopback, " +
+                    "link-local and private addresses. Use withNetworkPolicy with explicit HTTP " +
+                    "and raw-socket grants.",
+        )
+        fun withNetworking(): Builder {
+            this.networkingEnabled = true
+            this.networkPolicy = WasiNetworkPolicy.DENY_ALL
+            return this
+        }
+
+        @UnsafeComponentModelApi
+        @Deprecated(
+            message =
+                "Unrestricted networking lets a guest reach any host, including loopback, " +
+                    "link-local and private addresses. Use withNetworkPolicy with explicit HTTP " +
+                    "and raw-socket grants.",
+        )
         fun withNetworking(networkingEnabled: Boolean): Builder {
-            this.networkingEnabled = networkingEnabled
+            if (!networkingEnabled) {
+                return withoutNetworking()
+            }
+            this.networkingEnabled = true
+            this.networkPolicy = WasiNetworkPolicy.DENY_ALL
             return this
         }
 
         fun withoutNetworking(): Builder {
             this.networkingEnabled = false
+            this.networkPolicy = WasiNetworkPolicy.DENY_ALL
             return this
         }
 
@@ -4416,9 +4624,21 @@ private constructor(
     internal constructor(
         private val source: RawSource,
         private val available: (() -> Int)? = null,
+        /**
+         * Whether dropping the guest handle closes [source]. Streams that merely borrow a resource
+         * owned by another handle (a TCP socket's read side) keep it open until that owner is dropped.
+         */
+        private val closeOnDrop: Boolean = true,
     ) {
         private val lifecycleLock = WasiPreviewLock()
         private var closed: Boolean = false
+
+        /** Releases the stream when its guest handle is dropped. */
+        internal fun release() {
+            if (closeOnDrop) {
+                close()
+            }
+        }
 
         @Throws(IOException::class)
         internal fun readBytes(len: Int, blocking: Boolean): ByteArray {
@@ -4471,16 +4691,32 @@ private constructor(
             fun fromBytes(bytes: ByteArray): WasiInputStream {
                 val buffer = Buffer()
                 buffer.write(bytes)
-                return WasiInputStream(buffer) {
-                    buffer.size.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
-                }
+                return WasiInputStream(
+                    buffer,
+                    available = { buffer.size.coerceAtMost(Int.MAX_VALUE.toLong()).toInt() },
+                )
             }
         }
     }
 
-    class WasiOutputStream internal constructor(private val sink: RawSink) {
+    class WasiOutputStream
+    internal constructor(
+        private val sink: RawSink,
+        /**
+         * See [WasiInputStream.closeOnDrop]: a TCP socket's write side stays open until the socket
+         * itself is dropped.
+         */
+        private val closeOnDrop: Boolean = true,
+    ) {
         private val lifecycleLock = WasiPreviewLock()
         private var closed: Boolean = false
+
+        /** Releases the stream when its guest handle is dropped. */
+        internal fun release() {
+            if (closeOnDrop) {
+                close()
+            }
+        }
 
         @Throws(IOException::class)
         internal fun write(bytes: ByteArray) {
@@ -4966,12 +5202,41 @@ private constructor(
 
     private class OutgoingBody {
         private val output: Buffer = Buffer()
+        private val boundedOutput: RawSink =
+            BoundedRawSink(output, WASI_PREVIEW_MAX_HTTP_REQUEST_BODY_BYTES)
         var streamTaken: Boolean = false
         var finished: Boolean = false
 
-        fun outputStream(): WasiOutputStream = WasiOutputStream(output)
+        fun outputStream(): WasiOutputStream = WasiOutputStream(boundedOutput)
 
         fun bodyBytes(): ByteArray = output.copy().readByteArray()
+    }
+
+    /**
+     * Rejects writes once more than [limit] bytes have been accepted, so a guest cannot grow a
+     * host-side buffer without bound through repeated stream writes.
+     */
+    private class BoundedRawSink(
+        private val delegate: RawSink,
+        private val limit: Long,
+    ) : RawSink {
+        private var written: Long = 0L
+
+        override fun write(source: Buffer, byteCount: Long) {
+            if (byteCount > limit - written) {
+                throw IOException("buffered request body exceeds the host limit of $limit bytes")
+            }
+            delegate.write(source, byteCount)
+            written += byteCount
+        }
+
+        override fun flush() {
+            delegate.flush()
+        }
+
+        override fun close() {
+            delegate.close()
+        }
     }
 
     private class FutureIncomingResponse {

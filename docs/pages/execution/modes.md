@@ -44,6 +44,18 @@ platform links a Wasmtime binding fails fast instead of falling through to
 another engine, so runtime measurements cannot accidentally report the wrong
 engine.
 
+The Wasmtime library is loaded once per JVM process and stays mapped: Wasmtime
+installs process-wide signal handlers on first load and never removes them, so
+unloading it would leave the JVM with dangling handlers. Closing an instance
+frees its Wasmtime store, module and engine. If an export call is still running
+on another thread when `close()` is called (a host timeout stopping a runaway
+guest, for example), the instance is marked closed immediately and the native
+objects are released when that call returns. A failed `build()` releases the
+engine, module, store and host callbacks it created. The Preview 3 component
+bridge is located only through the `krwa.wasmtime.p3.bridge.library` system
+property or `KRWA_WASMTIME_P3_BRIDGE_LIBRARY`; it is never searched relative to
+the working directory.
+
 Use `ExecutionBackend.PULLEY.availability()` or `.isAvailable()` before exposing
 Wasmtime as a user-selectable mode. The availability check reports the same
 platform/linking requirements that explicit `PULLEY` execution would enforce.
@@ -53,8 +65,10 @@ Wasmtime execution can be configured per instance during instantiation. Prefer
 settings as one value instead of allowing a partially updated builder.
 `WasmtimeExecutionConfig` exposes Wasmtime store and engine limits for maximum
 linear memory bytes, maximum Wasm stack bytes, table elements, instances,
-tables, memories, and guest execution fuel. Optional count limits and `maxFuel`
-use `WasmtimeUnlimitedResourceLimit` (`-1`) for unlimited:
+tables, memories, and guest execution fuel. The defaults are 256 MiB per linear
+memory, 512 KiB of Wasm stack, 1,000,000 table elements, 1 instance, 128 tables,
+16 memories, and unlimited fuel. Optional count limits and `maxFuel` use
+`WasmtimeUnlimitedResourceLimit` (`-1`) for unlimited:
 
 ```kotlin
 val instance =
@@ -151,6 +165,13 @@ CWasm is a Wasmtime-specific serialized artifact and is therefore never used
 on `wasmJs`. iOS and Android resolve `auto` to Pulley. iOS builds only the
 Pulley target; an explicit `native`/Cranelift target must fail availability
 checks there instead of silently selecting another mode.
+
+CWasm bytes are executable code, not a validated module: Wasmtime deserializes
+them with an API it documents as unsafe, and a crafted artifact runs with host
+privileges regardless of fuel, memory limits or WASI capabilities. Only use
+artifacts the host compiled itself from validated `.wasm`, and never load a
+`.cwasm` shipped by a plugin. See
+[Security](../guides/security.md#precompiled-artifacts-are-native-code).
 
 - Use the default `ExecutionBackend.AUTO` for normal hosts. It requires a linked
   Wasmtime backend on JVM, Android, and iOS, and uses the host WebAssembly engine

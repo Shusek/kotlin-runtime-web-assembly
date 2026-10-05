@@ -362,6 +362,7 @@ public final class uk/shusek/krwa/component/WasiPreview2$Builder {
 	public final fun getInsecureSeedUpper ()J
 	public final fun getMonotonicClock ()Lkotlin/jvm/functions/Function0;
 	public final fun getMonotonicResolutionNanos ()J
+	public final fun getNetworkPolicy ()Luk/shusek/krwa/component/WasiNetworkPolicy;
 	public final fun getNetworkingEnabled ()Z
 	public final fun getSecureRandom ()Lorg/kotlincrypto/random/CryptoRand;
 	public final fun getStderr ()Luk/shusek/krwa/component/WasiPreview2$WasiOutputStream;
@@ -382,6 +383,7 @@ public final class uk/shusek/krwa/component/WasiPreview2$Builder {
 	public final fun setInsecureSeedUpper (J)V
 	public final fun setMonotonicClock (Lkotlin/jvm/functions/Function0;)V
 	public final fun setMonotonicResolutionNanos (J)V
+	public final fun setNetworkPolicy (Luk/shusek/krwa/component/WasiNetworkPolicy;)V
 	public final fun setNetworkingEnabled (Z)V
 	public final fun setSecureRandom (Lorg/kotlincrypto/random/CryptoRand;)V
 	public final fun setStderr (Luk/shusek/krwa/component/WasiPreview2$WasiOutputStream;)V
@@ -409,6 +411,7 @@ public final class uk/shusek/krwa/component/WasiPreview2$Builder {
 	public final fun withInsecureSeed (JJ)Luk/shusek/krwa/component/WasiPreview2$Builder;
 	public final fun withMonotonicClock (Lkotlin/jvm/functions/Function0;)Luk/shusek/krwa/component/WasiPreview2$Builder;
 	public final fun withMonotonicResolutionNanos (J)Luk/shusek/krwa/component/WasiPreview2$Builder;
+	public final fun withNetworkPolicy (Luk/shusek/krwa/component/WasiNetworkPolicy;)Luk/shusek/krwa/component/WasiPreview2$Builder;
 	public final fun withNetworking ()Luk/shusek/krwa/component/WasiPreview2$Builder;
 	public final fun withNetworking (Z)Luk/shusek/krwa/component/WasiPreview2$Builder;
 	public final fun withPreopenedDirectory (Ljava/lang/String;Ljava/lang/String;)Luk/shusek/krwa/component/WasiPreview2$Builder;

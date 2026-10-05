@@ -5,6 +5,112 @@ patch and prerelease identifiers advance without changing the `0.3` major/minor 
 `1.0.0`, API changes may still be intentional; release candidates remain immutable once
 published.
 
+## 0.3.3 (2026-10-05)
+
+### Changed
+
+- Updated Commons Lang to `3.21.0`, kotlinx.coroutines to `1.11.0`, Android Gradle
+  Plugin to `9.4.1`, and wasm-tools to `1.261.0` with verified archive checksums.
+  Standalone consumers now use Kotlin `2.4.20`, Ktor `3.6.0`, Gradle `9.8.0`,
+  and KRWA `0.3.3`.
+- Kotlin/JVM reflection now uses cached Kotlin metadata to distinguish public
+  inline-class constructors from private constructors with compiler-generated bridges.
+
+### Security
+
+- Documented the trust boundary for precompiled Wasmtime artifacts.
+  `WasmtimeExecutionConfig.precompiledModuleBytes` and
+  `WasmtimePreview3ComponentConfig.precompiledComponentBytes` are deserialized without
+  validation and are equivalent to native code in the host process, so hosts must only pass
+  artifacts they compiled themselves from validated `.wasm` and must never accept them from
+  plugin bundles or untrusted network sources. The KDoc of both fields and the security,
+  execution-mode, CPU-limit, support and WASI Preview 3 guides now state this.
+- WASI Preview 1 path resolution now checks the real host path of every guest path
+  against the preopen root, so a symbolic link in any path component can no longer be
+  used to read, write, rename or delete files outside the preopen. `path_symlink` also
+  refuses relative targets that would leave the preopen, in line with the existing refusal
+  of absolute targets. Previously only the final component of `path_open` and
+  `path_filestat_get` with `SYMLINK_FOLLOW` was canonicalized.
+- The `wasi-preview3` host file facade (`WasiFileSystem`) now canonicalizes the host path
+  of every operation and rejects paths whose real location is outside the preopen. A guest
+  could previously create a relative symbolic link with `symlink-at` and make the host read
+  or write arbitrary host files through `readBytes`, `writeText`, `list` and the other
+  facade methods, which only checked the lexical path.
+- The Wasm parser and validator now report three classes of crafted input through their
+  documented exception types instead of raw runtime exceptions: an unknown multi-byte opcode
+  whose LEB128 sub-opcode lands outside the opcode table (previously
+  `ArrayIndexOutOfBoundsException`), an `end` that closes the function block before the last
+  instruction (previously `NullPointerException`), and subtype hierarchies that reference a
+  supertype defined later or exceed the specification depth limit of 63 (previously unbounded
+  recursion in subtype checks). The complete supertype graph is validated before
+  field compatibility checks can follow forward references inside recursion groups. Hosts that catch `MalformedException` and `InvalidException`
+  around untrusted modules are no longer crashed by these inputs.
+- `WasiPreview2` now enforces the same exact-match `WasiNetworkPolicy` as `WasiPreview3`
+  through `WasiPreview2.Builder.withNetworkPolicy`. `wasi:http` requests, `wasi:sockets`
+  TCP connect/bind, UDP bind/connect/send and `ip-name-lookup` are checked against explicit
+  HTTP and raw-socket grants; name lookups only authorize the addresses they returned.
+  Previously the only option was the all-or-nothing `withNetworking()` switch, which let a
+  guest reach any destination including `127.0.0.1` and `169.254.169.254`; that switch is
+  now deprecated and marked `@UnsafeComponentModelApi`, and the README example uses a
+  policy instead.
+- Host functions no longer allocate guest-chosen byte counts blindly. In the WASI Preview 2
+  and Preview 3 hosts, `random.get-random-bytes` and similar calls reject requests above a
+  64 MiB host limit instead of allocating up to 2 GiB, `descriptor.read` allocates only what
+  the file can still provide, `output-stream.write` traps when a single write exceeds the
+  4096-byte `check-write` permit, and an outgoing HTTP request body is bounded at 64 MiB of
+  host buffering. In the WASI Preview 1 host, `fd_filestat_set_size` and `fd_allocate` now
+  require the `FD_FILESTAT_SET_SIZE` / `FD_ALLOCATE` rights, reject sizes that overflow, and
+  grow files sparsely instead of materializing the new size as a host byte array (which also
+  truncated the length to 32 bits).
+- WASI Preview 1 `poll_oneoff` now sleeps until the nearest clock deadline (waking at most
+  once per millisecond while stream subscriptions are pending) instead of spinning at full
+  CPU, reports `EINTR` when the host thread is interrupted, and rejects empty or oversized
+  subscription lists (more than 4096 entries) with `EINVAL`.
+- The WASI Preview 2 and Preview 3 HTTP hosts no longer let a guest hold the calling thread
+  indefinitely: requests without guest-supplied timeouts use a 60-second default and guest
+  timeouts are clamped to 10 minutes.
+- The Preview 2 host releases host resources when a guest drops the owning handle: dropping
+  a `tcp-socket` or `udp-socket` closes the underlying connection, listener or endpoint,
+  dropping an `input-stream` or `output-stream` closes the stream (standard streams
+  excepted), and dropping an unconsumed `incoming-response`, `incoming-body` or
+  `future-incoming-response` closes the response body.
+- Preview 3 pending futures, pending streams, in-flight host tasks and waitables are now
+  capped by default (65536 pending items and host tasks, 131072 waitables) instead of being
+  unbounded, so a guest cannot exhaust host memory by creating handles it never completes.
+- `Instance.builder(module).build()` no longer lets a module dictate how much host memory is
+  allocated before any engine limit applies. Without an explicit `WasmMemoryPolicy`, defined
+  memories are now bounded by `WasmtimeExecutionConfig.maxMemoryBytes` (256 MiB by default) and
+  `maxMemories`; a module whose initial memory exceeds the cap fails with
+  `UninstantiableException` instead of allocating gigabytes. Imported memories are unaffected.
+- `WasmtimeExecutionConfig.maxTableElements` now defaults to 1,000,000 instead of unlimited, and
+  defined table sizes are checked against it before the host allocates the table.
+- `array.new` and `array.new_default` in constant expressions reject negative lengths and
+  lengths above 10,000,000 elements with `UninstantiableException` instead of failing with
+  `OutOfMemoryError` or `NegativeArraySizeException`.
+- `ByteBufferMemory` and `ByteArrayMemory` reject initial sizes above the runtime limit of
+  32767 pages with `UninstantiableException` instead of `ArrayIndexOutOfBoundsException`.
+- JVM reflective WIT binding (`WasmPlugin.Builder.withHost`, `WitReflection`, record /
+  variant / tuple / resource lowering) now resolves only public instance members declared
+  outside `java.lang.Object`. Previously a WIT field or function name chosen by the plugin could
+  read private fields, invoke private methods up the class hierarchy and reach `Object`
+  methods through `setAccessible(true)`. Public members of non-public host classes (anonymous
+  or private contract implementations) remain bindable; private constructors are no longer
+  used to materialize host record, variant or tuple types from guest data.
+- `CanonicalAbi.of` and `WasmPlugin.builder` now reject recursive WIT type graphs (alias cycles
+  such as `type a = b; type b = a;` and self-referencing records, variants, tuples, lists,
+  options and results) and type nesting deeper than 128 levels with `ComponentModelException`.
+  Previously such a WIT, including one extracted from an untrusted component, crashed the host
+  thread with `StackOverflowError` while the plugin was being bound.
+- JVM Wasmtime (Pulley) backend: a failed instantiation (for example a start function that
+  traps) now releases the engine, compiled module, store and host callback registrations it
+  created instead of leaking them together with the host `Instance` graph; `close()` called while
+  an export is still running on another thread marks the instance closed and defers the native
+  release to the running call instead of freeing the store under the guest; a host callback
+  failure that could not be turned into a trap is now reported to the caller instead of being
+  silently swallowed; the Wasmtime library is loaded once per process with a global arena so its
+  signal handlers never point at unmapped code; and the Preview 3 component bridge is no longer
+  searched relative to the working directory.
+
 ## 0.3.2 (2026-10-04)
 
 ### Changed

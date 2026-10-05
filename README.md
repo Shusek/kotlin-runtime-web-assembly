@@ -38,7 +38,7 @@ Start with:
 
 ## Quick Start
 
-Use `0.3.2` from Maven Central:
+Use `0.3.3` from Maven Central:
 
 ```kotlin
 // settings.gradle.kts
@@ -54,7 +54,7 @@ Use the BOM and add the runtime:
 
 ```kotlin
 // build.gradle.kts
-val runtimeVersion = "0.3.2"
+val runtimeVersion = "0.3.3"
 
 dependencies {
     implementation(platform("uk.shusek.krwa:bom:$runtimeVersion"))
@@ -181,7 +181,11 @@ bounded resource policy such as `withResourceBudget(parallelism = 1)`.
 budget to a precompiled Preview 3 bridge call or command run. The precompiled
 component must be built with Wasmtime fuel enabled, for example `wasmtime compile
 -W fuel=1 ...`, so the serialized artifact matches the fuel-enabled engine
-configuration. `withResourceBudget(...)` is a resource limit, not a CPU meter.
+configuration. Precompiled module and component bytes are deserialized without
+validation and are equivalent to native code: compile them yourself from
+validated `.wasm` and never load artifacts shipped by a plugin (see
+[Security guidance](docs/pages/guides/security.md#precompiled-artifacts-are-native-code)).
+`withResourceBudget(...)` is a resource limit, not a CPU meter.
 Real CPU accounting requires OS/process isolation, cgroup accounting, or a
 dedicated JVM worker pool measured with platform thread CPU counters.
 See [CPU limits](docs/pages/execution/cpu-limits.md) and
