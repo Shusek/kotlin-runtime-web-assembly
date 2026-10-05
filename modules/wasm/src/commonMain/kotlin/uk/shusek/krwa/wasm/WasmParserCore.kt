@@ -1170,6 +1170,11 @@ private constructor(
                             instruction.withScope(blockScope.first())
                         }
                         OpCode.END -> {
+                            if (depth == 0 && !lastInstruction) {
+                                // The function body is a single block: an `end` at depth 0 must be
+                                // its final instruction, otherwise the control stack underflows.
+                                throw MalformedException("unexpected end")
+                            }
                             instruction.withDepth(depth)
                             depth--
                             instruction.withScope(
@@ -1187,10 +1192,10 @@ private constructor(
                         OpCode.BLOCK,
                         OpCode.LOOP ->
                             currentControlFlow =
-                                currentControlFlow!!.spawn(instructions.size, instruction)
+                                requireControlFlow(currentControlFlow).spawn(instructions.size, instruction)
                         OpCode.IF -> {
                             currentControlFlow =
-                                currentControlFlow!!.spawn(instructions.size, instruction)
+                                requireControlFlow(currentControlFlow).spawn(instructions.size, instruction)
                             val defaultJmp = instructions.size + 1
                             currentControlFlow.addCallback { end ->
                                 instruction.updateLabelFalse(end)
@@ -1199,8 +1204,9 @@ private constructor(
                             instruction.withLabelFalse(defaultJmp)
                         }
                         OpCode.ELSE -> {
-                            currentControlFlow!!.instruction().withLabelFalse(instructions.size + 1)
-                            currentControlFlow.addCallback(instruction::withLabelTrue)
+                            val enclosing = requireControlFlow(currentControlFlow)
+                            enclosing.instruction().withLabelFalse(instructions.size + 1)
+                            enclosing.addCallback(instruction::withLabelTrue)
                         }
                         OpCode.BR_IF,
                         OpCode.BR_ON_NULL,
@@ -1230,7 +1236,7 @@ private constructor(
                                     offset--
                                 }
                                 val finalIdx = idx
-                                reference!!.addCallback { end -> labelTable[finalIdx] = end }
+                                requireControlFlow(reference).addCallback { end -> labelTable[finalIdx] = end }
                             }
                             @Suppress("UNCHECKED_CAST")
                             instruction.withLabelTable(labelTable as List<Int>)
@@ -1249,20 +1255,18 @@ private constructor(
                                     offset--
                                 }
                                 val finalIdx = idx
-                                reference!!.addCallback { end ->
+                                requireControlFlow(reference).addCallback { end ->
                                     catches[finalIdx].resolvedLabel(end)
                                 }
                             }
                             instruction.withCatches(catches)
                             currentControlFlow =
-                                currentControlFlow!!.spawn(instructions.size, instruction)
+                                requireControlFlow(currentControlFlow).spawn(instructions.size, instruction)
                         }
                         OpCode.END -> {
-                            currentControlFlow!!.setFinalInstructionNumber(
-                                instructions.size,
-                                instruction,
-                            )
-                            currentControlFlow = currentControlFlow.parent()
+                            val closing = requireControlFlow(currentControlFlow)
+                            closing.setFinalInstructionNumber(instructions.size, instruction)
+                            currentControlFlow = closing.parent()
                             if (lastInstruction && instructions.size > 1) {
                                 val former = instructions[instructions.size - 1]
                                 if (former.opcode() == OpCode.END) {
@@ -1307,8 +1311,15 @@ private constructor(
                 reference = reference.parent()
                 offset--
             }
-            reference!!.addCallback(instruction::withLabelTrue)
+            requireControlFlow(reference).addCallback(instruction::withLabelTrue)
         }
+
+        /**
+         * Control-flow bookkeeping must never observe a closed function block; malformed input that
+         * reaches this state is reported as such instead of dereferencing `null`.
+         */
+        private fun requireControlFlow(controlFlow: ControlTree?): ControlTree =
+            controlFlow ?: throw MalformedException("unexpected end")
 
         private fun parseDataSection(buffer: WasmByteReader, multiMemory: Boolean): DataSection {
             val dataSegmentCount =

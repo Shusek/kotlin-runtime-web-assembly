@@ -27,6 +27,14 @@ published.
   could previously create a relative symbolic link with `symlink-at` and make the host read
   or write arbitrary host files through `readBytes`, `writeText`, `list` and the other
   facade methods, which only checked the lexical path.
+- The Wasm parser and validator now report three classes of crafted input through their
+  documented exception types instead of raw runtime exceptions: an unknown multi-byte opcode
+  whose LEB128 sub-opcode lands outside the opcode table (previously
+  `ArrayIndexOutOfBoundsException`), an `end` that closes the function block before the last
+  instruction (previously `NullPointerException`), and subtype hierarchies that reference a
+  supertype defined later or exceed the specification depth limit of 63 (previously unbounded
+  recursion in subtype checks). Hosts that catch `MalformedException` and `InvalidException`
+  around untrusted modules are no longer crashed by these inputs.
 
 ## 0.3.2 (2026-10-04)
 
