@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.Test
 import uk.shusek.krwa.component.ComponentModelException
 import uk.shusek.krwa.component.KotlinWitBindings
@@ -483,6 +484,50 @@ class KotlinWasiPreview3Test {
             }
         } finally {
             Files.deleteIfExists(root)
+        }
+    }
+
+    @Test
+    fun fileSystemFacadeDoesNotFollowSymlinksOutsideThePreopen() {
+        val base = Files.createTempDirectory("krwa-wasi-preview3-fs-symlink")
+        try {
+            val root = Files.createDirectories(base.resolve("sandbox"))
+            val outside = Files.createDirectories(base.resolve("outside"))
+            val secret = Files.writeString(outside.resolve("secret.txt"), "secret")
+            Files.writeString(root.resolve("inside.txt"), "inside")
+            try {
+                Files.createSymbolicLink(root.resolve("escape"), java.nio.file.Path.of("..", "outside"))
+                Files.createSymbolicLink(
+                    root.resolve("leak.txt"),
+                    java.nio.file.Path.of("..", "outside", "secret.txt"),
+                )
+                Files.createSymbolicLink(root.resolve("inside-link.txt"), java.nio.file.Path.of("inside.txt"))
+            } catch (_: UnsupportedOperationException) {
+                assumeTrue(false, "host filesystem does not support symbolic links")
+            } catch (_: java.nio.file.FileSystemException) {
+                assumeTrue(false, "host filesystem does not allow creating symbolic links")
+            }
+
+            val runtime =
+                KotlinWasiPreview3.builder().withPreopenedDirectory("/", root.toString()).build()
+            val fs = runtime.fileSystem()
+
+            assertThrows(IllegalArgumentException::class.java) { fs.readBytes("leak.txt") }
+            assertThrows(IllegalArgumentException::class.java) { fs.readBytes("escape/secret.txt") }
+            assertThrows(IllegalArgumentException::class.java) { fs.exists("escape/secret.txt") }
+            assertThrows(IllegalArgumentException::class.java) { fs.list("escape") }
+            assertThrows(IllegalArgumentException::class.java) {
+                fs.writeText("escape/planted.txt", "planted")
+            }
+            assertThrows(IllegalArgumentException::class.java) { fs.delete("leak.txt") }
+
+            assertEquals("inside", fs.readText("inside-link.txt"))
+            assertEquals("secret", Files.readString(secret))
+            assertFalse(Files.exists(outside.resolve("planted.txt")))
+        } finally {
+            Files.walk(base).use { walk ->
+                walk.sorted(Comparator.reverseOrder()).forEach(Files::deleteIfExists)
+            }
         }
     }
 

@@ -22,6 +22,11 @@ published.
   refuses relative targets that would leave the preopen, in line with the existing refusal
   of absolute targets. Previously only the final component of `path_open` and
   `path_filestat_get` with `SYMLINK_FOLLOW` was canonicalized.
+- The `wasi-preview3` host file facade (`WasiFileSystem`) now canonicalizes the host path
+  of every operation and rejects paths whose real location is outside the preopen. A guest
+  could previously create a relative symbolic link with `symlink-at` and make the host read
+  or write arbitrary host files through `readBytes`, `writeText`, `list` and the other
+  facade methods, which only checked the lexical path.
 
 ## 0.3.2 (2026-10-04)
 
