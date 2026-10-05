@@ -2,11 +2,30 @@ package uk.shusek.krwa.runtime
 
 import uk.shusek.krwa.wasm.InvalidException
 import uk.shusek.krwa.wasm.MalformedException
+import uk.shusek.krwa.wasm.UninstantiableException
 import uk.shusek.krwa.wasm.types.Instruction
 import uk.shusek.krwa.wasm.types.OpCode
 import uk.shusek.krwa.wasm.types.OpCode.GLOBAL_GET
 import uk.shusek.krwa.wasm.types.ValType
 import uk.shusek.krwa.wasm.types.Value
+
+/**
+ * Upper bound for `array.new` / `array.new_default` lengths in constant expressions. The length is
+ * guest-controlled and backs a host heap allocation that happens before any engine limit applies,
+ * so an out-of-range request fails instantiation instead of escaping `Instance.Builder.build()` as
+ * an `OutOfMemoryError` or `NegativeArraySizeException`.
+ */
+private const val MAX_CONSTANT_ARRAY_LENGTH: Int = 10_000_000
+
+private fun checkedConstantArrayLength(length: Int): Int {
+    if (length < 0 || length > MAX_CONSTANT_ARRAY_LENGTH) {
+        throw UninstantiableException(
+            "array length ${length.toUInt()} exceeds the constant expression limit of " +
+                "$MAX_CONSTANT_ARRAY_LENGTH elements"
+        )
+    }
+    return length
+}
 
 object ConstantEvaluators {
     fun computeConstantValue(instance: Instance, expr: Array<Instruction>): LongArray =
@@ -110,7 +129,7 @@ object ConstantEvaluators {
                 }
                 OpCode.ARRAY_NEW -> {
                     val typeIdx = instruction.operand(0).toInt()
-                    val len = stack.removeLast()[0].toInt()
+                    val len = checkedConstantArrayLength(stack.removeLast()[0].toInt())
                     val fillValue = stack.removeLast()[0]
                     val elements = LongArray(len)
                     elements.fill(fillValue)
@@ -120,7 +139,7 @@ object ConstantEvaluators {
                 }
                 OpCode.ARRAY_NEW_DEFAULT -> {
                     val typeIdx = instruction.operand(0).toInt()
-                    val len = stack.removeLast()[0].toInt()
+                    val len = checkedConstantArrayLength(stack.removeLast()[0].toInt())
                     val arrayType =
                         instance.module().typeSection().getSubType(typeIdx).compType().arrayType()!!
                     val elements = LongArray(len)
@@ -134,7 +153,7 @@ object ConstantEvaluators {
                 }
                 OpCode.ARRAY_NEW_FIXED -> {
                     val typeIdx = instruction.operand(0).toInt()
-                    val len = instruction.operand(1).toInt()
+                    val len = checkedConstantArrayLength(instruction.operand(1).toInt())
                     val elements = LongArray(len)
                     for (i in len - 1 downTo 0) {
                         elements[i] = stack.removeLast()[0]

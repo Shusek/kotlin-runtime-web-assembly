@@ -67,6 +67,18 @@ published.
 - Preview 3 pending futures, pending streams, in-flight host tasks and waitables are now
   capped by default (65536 pending items and host tasks, 131072 waitables) instead of being
   unbounded, so a guest cannot exhaust host memory by creating handles it never completes.
+- `Instance.builder(module).build()` no longer lets a module dictate how much host memory is
+  allocated before any engine limit applies. Without an explicit `WasmMemoryPolicy`, defined
+  memories are now bounded by `WasmtimeExecutionConfig.maxMemoryBytes` (256 MiB by default) and
+  `maxMemories`; a module whose initial memory exceeds the cap fails with
+  `UninstantiableException` instead of allocating gigabytes. Imported memories are unaffected.
+- `WasmtimeExecutionConfig.maxTableElements` now defaults to 1,000,000 instead of unlimited, and
+  defined table sizes are checked against it before the host allocates the table.
+- `array.new` and `array.new_default` in constant expressions reject negative lengths and
+  lengths above 10,000,000 elements with `UninstantiableException` instead of failing with
+  `OutOfMemoryError` or `NegativeArraySizeException`.
+- `ByteBufferMemory` and `ByteArrayMemory` reject initial sizes above the runtime limit of
+  32767 pages with `UninstantiableException` instead of `ArrayIndexOutOfBoundsException`.
 
 ## 0.3.2 (2026-10-04)
 

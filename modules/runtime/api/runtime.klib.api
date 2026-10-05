@@ -1001,6 +1001,8 @@ final const val uk.shusek.krwa.runtime/DefaultWasmtimeCoreMaxInstances // uk.shu
     final fun <get-DefaultWasmtimeCoreMaxInstances>(): kotlin/Long // uk.shusek.krwa.runtime/DefaultWasmtimeCoreMaxInstances.<get-DefaultWasmtimeCoreMaxInstances>|<get-DefaultWasmtimeCoreMaxInstances>(){}[0]
 final const val uk.shusek.krwa.runtime/DefaultWasmtimeCoreMaxMemories // uk.shusek.krwa.runtime/DefaultWasmtimeCoreMaxMemories|{}DefaultWasmtimeCoreMaxMemories[0]
     final fun <get-DefaultWasmtimeCoreMaxMemories>(): kotlin/Long // uk.shusek.krwa.runtime/DefaultWasmtimeCoreMaxMemories.<get-DefaultWasmtimeCoreMaxMemories>|<get-DefaultWasmtimeCoreMaxMemories>(){}[0]
+final const val uk.shusek.krwa.runtime/DefaultWasmtimeCoreMaxTableElements // uk.shusek.krwa.runtime/DefaultWasmtimeCoreMaxTableElements|{}DefaultWasmtimeCoreMaxTableElements[0]
+    final fun <get-DefaultWasmtimeCoreMaxTableElements>(): kotlin/Long // uk.shusek.krwa.runtime/DefaultWasmtimeCoreMaxTableElements.<get-DefaultWasmtimeCoreMaxTableElements>|<get-DefaultWasmtimeCoreMaxTableElements>(){}[0]
 final const val uk.shusek.krwa.runtime/DefaultWasmtimeCoreMaxTables // uk.shusek.krwa.runtime/DefaultWasmtimeCoreMaxTables|{}DefaultWasmtimeCoreMaxTables[0]
     final fun <get-DefaultWasmtimeCoreMaxTables>(): kotlin/Long // uk.shusek.krwa.runtime/DefaultWasmtimeCoreMaxTables.<get-DefaultWasmtimeCoreMaxTables>|<get-DefaultWasmtimeCoreMaxTables>(){}[0]
 final const val uk.shusek.krwa.runtime/DefaultWasmtimeMaxMemoryBytes // uk.shusek.krwa.runtime/DefaultWasmtimeMaxMemoryBytes|{}DefaultWasmtimeMaxMemoryBytes[0]

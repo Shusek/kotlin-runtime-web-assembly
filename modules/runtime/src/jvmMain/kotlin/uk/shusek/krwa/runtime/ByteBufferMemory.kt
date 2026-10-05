@@ -46,6 +46,11 @@ class ByteBufferMemory(private val limits: MemoryLimits) : Memory {
         if (limits.shared()) ConcurrentHashMap() else null
 
     init {
+        if (limits.initialPages() > pages.size) {
+            throw UninstantiableException(
+                "memory size must be at most ${Memory.RUNTIME_MAX_PAGES} runtime pages"
+            )
+        }
         for (i in 0 until limits.initialPages()) {
             pages[i] = ByteBuffer.allocate(Memory.PAGE_SIZE).order(ByteOrder.LITTLE_ENDIAN)
             pageArrays[i] = pages[i]!!.array()
