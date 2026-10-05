@@ -44,6 +44,18 @@ platform links a Wasmtime binding fails fast instead of falling through to
 another engine, so runtime measurements cannot accidentally report the wrong
 engine.
 
+The Wasmtime library is loaded once per JVM process and stays mapped: Wasmtime
+installs process-wide signal handlers on first load and never removes them, so
+unloading it would leave the JVM with dangling handlers. Closing an instance
+frees its Wasmtime store, module and engine. If an export call is still running
+on another thread when `close()` is called (a host timeout stopping a runaway
+guest, for example), the instance is marked closed immediately and the native
+objects are released when that call returns. A failed `build()` releases the
+engine, module, store and host callbacks it created. The Preview 3 component
+bridge is located only through the `krwa.wasmtime.p3.bridge.library` system
+property or `KRWA_WASMTIME_P3_BRIDGE_LIBRARY`; it is never searched relative to
+the working directory.
+
 Use `ExecutionBackend.PULLEY.availability()` or `.isAvailable()` before exposing
 Wasmtime as a user-selectable mode. The availability check reports the same
 platform/linking requirements that explicit `PULLEY` execution would enforce.

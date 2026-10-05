@@ -22,6 +22,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import uk.shusek.krwa.wasm.InvalidException;
 import uk.shusek.krwa.wasm.UninstantiableException;
@@ -95,6 +96,8 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
     private final List<Long> callbackIds;
     private final long maxFuel;
     private final AtomicBoolean closed = new AtomicBoolean(false);
+    private final AtomicInteger inFlightCalls = new AtomicInteger();
+    private final AtomicBoolean nativeReleased = new AtomicBoolean(false);
     private final Map<String, Memory> memoriesByName = new HashMap<>();
     private final List<Memory> memoriesByIndex = new ArrayList<>();
 
@@ -123,8 +126,8 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
     }
 
     public static String unavailableReason() {
-        try (Arena arena = Arena.ofConfined()) {
-            WasmtimeApi.load(arena);
+        try {
+            WasmtimeApi.shared();
             return null;
         } catch (IllegalCallerException e) {
             return "Wasmtime Pulley execution needs JVM native access enabled " +
@@ -156,8 +159,8 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
     }
 
     public static String componentWasiUnavailableReason() {
-        try (Arena arena = Arena.ofConfined()) {
-            SymbolLookup lookup = SymbolLookup.libraryLookup(WasmtimeApi.findLibrary(), arena);
+        try {
+            SymbolLookup lookup = WasmtimeApi.shared().lookup;
             for (String symbol : COMPONENT_WASI_SYMBOLS) {
                 if (lookup.find(symbol).isEmpty()) {
                     return "Wasmtime C API component/WASIp2 primitives are not linked: missing symbol " + symbol;
@@ -1084,16 +1087,21 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
         }
 
         Arena arena = Arena.ofShared();
+        WasmtimeApi api = null;
+        MemorySegment engine = null;
+        MemorySegment wasmtimeModule = null;
+        MemorySegment store = null;
+        List<Long> callbackIds = new ArrayList<>();
+        boolean instantiated = false;
         try {
-            WasmtimeApi api = WasmtimeApi.load(arena);
-            trapNewHandle = api.trapNew;
+            api = WasmtimeApi.shared();
 
             ConfigResult config = createConfig(api, arena, target, maxWasmStackBytes, maxFuel);
             if (config.error != null) {
                 throw new WasmEngineException(config.error);
             }
 
-            MemorySegment engine = (MemorySegment) api.wasmEngineNewWithConfig.invokeExact(config.config);
+            engine = (MemorySegment) api.wasmEngineNewWithConfig.invokeExact(config.config);
             requireNotNull(engine, "wasm_engine_new_with_config");
 
             PulleyModuleBytes pulleyModuleBytes = moduleBytesWithSyntheticMemoryExports(bytes, module);
@@ -1104,10 +1112,10 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
             boolean precompiledModule = moduleBytes == precompiledModuleBytes;
             MemorySegment wasmBytes = arena.allocate(moduleBytes.length);
             wasmBytes.copyFrom(MemorySegment.ofArray(moduleBytes));
-            MemorySegment wasmtimeModule =
+            wasmtimeModule =
                     createWasmtimeModule(api, arena, engine, wasmBytes, moduleBytes.length, precompiledModule, target);
 
-            MemorySegment store = (MemorySegment) api.storeNew.invokeExact(engine, MemorySegment.NULL, MemorySegment.NULL);
+            store = (MemorySegment) api.storeNew.invokeExact(engine, MemorySegment.NULL, MemorySegment.NULL);
             requireNotNull(store, "wasmtime_store_new");
             api.storeLimiter.invokeExact(
                     store,
@@ -1120,7 +1128,6 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
             MemorySegment context = (MemorySegment) api.storeContext.invokeExact(store);
             configureFuel(api, context, maxFuel);
 
-            List<Long> callbackIds = new ArrayList<>();
             MemorySegment importExterns = buildImports(api, arena, context, module, imports, hostInstance, callbackIds);
             MemorySegment instance = arena.allocate(16);
             MemorySegment trapOut = arena.allocate(ValueLayout.ADDRESS);
@@ -1146,23 +1153,61 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
             );
             execution.bindExportedFunctions();
             execution.bindExportedMemories(module, pulleyModuleBytes.syntheticMemoryExports);
+            instantiated = true;
             return execution;
         } catch (WasmEngineException e) {
-            arena.close();
             throw e;
         } catch (IllegalCallerException e) {
-            arena.close();
             throw new WasmEngineException(
                     "Wasmtime Pulley execution needs JVM native access enabled " +
                             "(for example --enable-native-access=ALL-UNNAMED)",
                     e
             );
         } catch (UnsatisfiedLinkError | IllegalArgumentException e) {
-            arena.close();
             throw new WasmEngineException("Wasmtime Pulley execution is not linked on this JVM runtime", e);
         } catch (Throwable e) {
-            arena.close();
             throw new WasmEngineException("Wasmtime Pulley execution failed", e);
+        } finally {
+            if (!instantiated) {
+                releaseFailedInstantiation(api, engine, wasmtimeModule, store, callbackIds, arena);
+            }
+        }
+    }
+
+    /**
+     * Frees everything a failed {@link #create} left behind. Before this, a module whose start
+     * function trapped, or that Wasmtime rejected after the engine and store existed, leaked the
+     * engine, the compiled module and the store, and its host callback registrations kept the whole
+     * host {@code Instance} graph reachable through the static callback map.
+     */
+    private static void releaseFailedInstantiation(
+            WasmtimeApi api,
+            MemorySegment engine,
+            MemorySegment module,
+            MemorySegment store,
+            List<Long> callbackIds,
+            Arena arena
+    ) {
+        for (long callbackId : callbackIds) {
+            HOST_CALLBACKS.remove(callbackId);
+            HOST_CALLBACK_FAILURES.remove(callbackId);
+        }
+        try {
+            if (api != null) {
+                if (store != null) {
+                    api.storeDelete.invokeExact(store);
+                }
+                if (module != null) {
+                    api.moduleDelete.invokeExact(module);
+                }
+                if (engine != null) {
+                    api.engineDelete.invokeExact(engine);
+                }
+            }
+        } catch (Throwable ignored) {
+            // Best effort: the instantiation failure itself is what the caller sees.
+        } finally {
+            arena.close();
         }
     }
 
@@ -1234,7 +1279,7 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
     }
 
     private static ConfigResult createConfig(Arena arena, String targetName) throws Throwable {
-        WasmtimeApi api = WasmtimeApi.load(arena);
+        WasmtimeApi api = WasmtimeApi.shared();
         return createConfig(api, arena, targetName, DEFAULT_MAX_WASM_STACK_BYTES, UNLIMITED_RESOURCE_LIMIT);
     }
 
@@ -1389,6 +1434,12 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
         }
     }
 
+    /**
+     * Marks the execution closed and frees the Wasmtime store, module and engine. When an export
+     * call is still running on another thread (a host timeout closing a runaway guest, for example),
+     * the native objects stay alive until that call returns and are released by the calling thread
+     * instead: freeing the store under a running guest is a use-after-free in native code.
+     */
     @Override
     public void close() {
         if (!closed.compareAndSet(false, true)) {
@@ -1398,12 +1449,23 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
             HOST_CALLBACKS.remove(callbackId);
             HOST_CALLBACK_FAILURES.remove(callbackId);
         }
+        if (inFlightCalls.get() == 0) {
+            releaseNativeResources(true);
+        }
+    }
+
+    private void releaseNativeResources(boolean propagateFailure) {
+        if (!nativeReleased.compareAndSet(false, true)) {
+            return;
+        }
         try {
             api.storeDelete.invokeExact(store);
             api.moduleDelete.invokeExact(module);
             api.engineDelete.invokeExact(engine);
         } catch (Throwable error) {
-            throw new WasmEngineException("failed to close Wasmtime Pulley execution", error);
+            if (propagateFailure) {
+                throw new WasmEngineException("failed to close Wasmtime Pulley execution", error);
+            }
         } finally {
             arena.close();
         }
@@ -1416,6 +1478,22 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
                     "wrong number of arguments: expected " + type.params().size() + ", got " + args.length
             );
         }
+        // Register the call before checking closed: close() then either sees it and defers the
+        // native release until this call returns, or has already released and this call fails fast.
+        inFlightCalls.incrementAndGet();
+        try {
+            if (closed.get()) {
+                throw new IllegalStateException("WebAssembly instance is closed");
+            }
+            return invokeExport(export, type, args);
+        } finally {
+            if (inFlightCalls.decrementAndGet() == 0 && closed.get()) {
+                releaseNativeResources(false);
+            }
+        }
+    }
+
+    private long[] invokeExport(FunctionExport export, FunctionType type, long[] args) {
         try (Arena callArena = Arena.ofConfined()) {
             int valueSlotCount = Math.max(type.params().size(), type.returns().size());
             int rawSlotCount = Math.max(1, valueSlotCount);
@@ -1430,6 +1508,12 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
                         trapOut,
                         "call Pulley export " + export.name
                 );
+                Throwable swallowedFailure = takeHostCallbackFailure();
+                if (swallowedFailure != null) {
+                    // A host callback failed but no trap reached Wasmtime, so the guest kept running
+                    // on results the host never wrote. Fail closed instead of returning them.
+                    throw hostFailure(swallowedFailure);
+                }
             } catch (TrapException e) {
                 Throwable hostFailure = takeHostCallbackFailure();
                 if (hostFailure != null) {
@@ -1780,20 +1864,32 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
                 results = new long[0];
             }
             if (results.length != callback.type.returns().size()) {
-                return trap(
-                        "host function " + callback.function.module() + "." + callback.function.name() +
-                                " returned " + results.length + " values, expected " +
-                                callback.type.returns().size()
+                return failHostCall(
+                        callbackId,
+                        new WasmEngineException(
+                                "host function " + callback.function.module() + "." + callback.function.name() +
+                                        " returned " + results.length + " values, expected " +
+                                        callback.type.returns().size()
+                        )
                 );
             }
             writeRawValues(raw, callback.type.returns(), results);
             return MemorySegment.NULL;
         } catch (Throwable e) {
-            if (callbackId >= 0) {
-                HOST_CALLBACK_FAILURES.put(callbackId, e);
-            }
-            return trap(e.getMessage() != null ? e.getMessage() : e.toString());
+            return failHostCall(callbackId, e);
         }
+    }
+
+    /**
+     * Records a host callback failure for the calling export and returns the trap that aborts the
+     * guest. The record is what makes the failure visible to {@link #invokeExport} even when
+     * creating the trap itself fails and Wasmtime therefore resumes the guest.
+     */
+    private static MemorySegment failHostCall(long callbackId, Throwable failure) {
+        if (callbackId >= 0) {
+            HOST_CALLBACK_FAILURES.put(callbackId, failure);
+        }
+        return trap(failure.getMessage() != null ? failure.getMessage() : failure.toString());
     }
 
     private void clearHostCallbackFailures() {
@@ -2841,8 +2937,8 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
             if (configured != null && !configured.isBlank()) {
                 candidates.add(Path.of(configured));
             }
-            candidates.add(Path.of("modules/runtime/build/wasmtime-p3-bridge/target/release/libkrwa_wasmtime_p3_bridge.dylib"));
-            candidates.add(Path.of("modules/runtime/build/wasmtime-p3-bridge/target/release/libkrwa_wasmtime_p3_bridge.so"));
+            // Deliberately no working-directory relative fallback: a library picked up from the
+            // current directory would run with the host's privileges (CWE-427).
             for (Path candidate : candidates) {
                 if (Files.isRegularFile(candidate)) {
                     return candidate;
@@ -2854,12 +2950,19 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
                             .reduce((left, right) -> left + ", " + right)
                             .orElse("<none>");
             throw new WasmEngineException(
-                    "Wasmtime Preview3 component bridge is not linked on this JVM runtime; checked " + message
+                    "Wasmtime Preview3 component bridge is not linked on this JVM runtime; set the " +
+                            "krwa.wasmtime.p3.bridge.library system property or KRWA_WASMTIME_P3_BRIDGE_LIBRARY; checked " +
+                            message
             );
         }
     }
 
     private static final class WasmtimeApi {
+        private static final Object SHARED_LOCK = new Object();
+        private static volatile WasmtimeApi sharedApi;
+        private static volatile Path sharedLibrary;
+
+        private final SymbolLookup lookup;
         private final Linker linker;
         private final MethodHandle wasmConfigNew;
         private final MethodHandle wasmEngineNewWithConfig;
@@ -2903,6 +3006,7 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
         private final MethodHandle memoryGrow;
 
         private WasmtimeApi(Linker linker, SymbolLookup lookup) {
+            this.lookup = lookup;
             this.linker = linker;
             wasmConfigNew = downcall(linker, lookup, "wasm_config_new", FunctionDescriptor.of(ValueLayout.ADDRESS));
             wasmEngineNewWithConfig = downcall(linker, lookup, "wasm_engine_new_with_config", FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS));
@@ -2946,10 +3050,29 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
             memoryGrow = downcall(linker, lookup, "wasmtime_memory_grow", FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.JAVA_LONG, ValueLayout.ADDRESS));
         }
 
-        private static WasmtimeApi load(Arena arena) {
+        /**
+         * Loads the Wasmtime C API once per process. Wasmtime installs process-wide signal handlers
+         * the first time it is loaded and never removes them, so mapping the library into a
+         * per-instance arena and unmapping it in {@code close()} left the JVM with handlers pointing
+         * at unmapped code. The library now stays mapped for the lifetime of the process.
+         */
+        private static WasmtimeApi shared() {
             Path library = findLibrary();
-            SymbolLookup lookup = SymbolLookup.libraryLookup(library, arena);
-            return new WasmtimeApi(Linker.nativeLinker(), lookup);
+            WasmtimeApi result = sharedApi;
+            if (result != null && library.equals(sharedLibrary)) {
+                return result;
+            }
+            synchronized (SHARED_LOCK) {
+                result = sharedApi;
+                if (result == null || !library.equals(sharedLibrary)) {
+                    SymbolLookup lookup = SymbolLookup.libraryLookup(library, Arena.global());
+                    result = new WasmtimeApi(Linker.nativeLinker(), lookup);
+                    sharedApi = result;
+                    sharedLibrary = library;
+                    trapNewHandle = result.trapNew;
+                }
+                return result;
+            }
         }
 
         private static Path findLibrary() {
