@@ -1,11 +1,16 @@
 package uk.shusek.krwa.component
 
+import java.lang.invoke.MethodType
 import java.lang.reflect.AccessibleObject
 import java.lang.reflect.Constructor
 import java.lang.reflect.Field
 import java.lang.reflect.Member
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
+import kotlin.metadata.Visibility
+import kotlin.metadata.jvm.KotlinClassMetadata
+import kotlin.metadata.jvm.signature
+import kotlin.metadata.visibility
 
 /**
  * Reflection boundary for WIT-driven access to host objects.
@@ -17,7 +22,22 @@ import java.lang.reflect.Modifier
  * contract implementation). Non-public members are never opened.
  */
 internal object WitReflectionAccess {
-    private const val DEFAULT_CONSTRUCTOR_MARKER = "kotlin.jvm.internal.DefaultConstructorMarker"
+    private val publicKotlinConstructors =
+        object : ClassValue<Set<String>>() {
+            override fun computeValue(type: Class<*>): Set<String> {
+                val annotation = type.getAnnotation(Metadata::class.java) ?: return emptySet()
+                val metadata =
+                    try {
+                        KotlinClassMetadata.readStrict(annotation) as? KotlinClassMetadata.Class
+                    } catch (_: IllegalArgumentException) {
+                        null
+                    } ?: return emptySet()
+                return metadata.kmClass.constructors
+                    .filter { it.visibility == Visibility.PUBLIC }
+                    .mapNotNull { it.signature?.descriptor }
+                    .toSet()
+            }
+        }
 
     /** Public, non-static methods of [type], excluding those declared by `java.lang.Object`. */
     fun publicInstanceMethods(type: Class<*>): List<Method> =
@@ -55,8 +75,8 @@ internal object WitReflectionAccess {
     /**
      * Constructors of [type] that are public in the source language. Besides JVM-public
      * constructors this includes the private constructor Kotlin emits for a public constructor with
-     * inline-class parameters, which is recognised by its public synthetic twin taking a trailing
-     * `DefaultConstructorMarker`. Constructors declared private stay unreachable.
+     * inline-class parameters. Kotlin metadata must confirm the visibility of that exact JVM
+     * signature: a public synthetic twin can also be emitted for a source-private constructor.
      */
     fun publicConstructors(type: Class<*>): List<Constructor<*>> {
         val declared = type.declaredConstructors
@@ -67,7 +87,7 @@ internal object WitReflectionAccess {
             }
             if (
                 Modifier.isPublic(constructor.modifiers) ||
-                    hasPublicSyntheticTwin(constructor, declared)
+                    isPublicKotlinConstructor(constructor)
             ) {
                 result.add(constructor)
             }
@@ -84,7 +104,7 @@ internal object WitReflectionAccess {
         val sourcePublic =
             Modifier.isPublic(member.modifiers) ||
                 (member is Constructor<*> &&
-                    hasPublicSyntheticTwin(member, member.declaringClass.declaredConstructors))
+                    isPublicKotlinConstructor(member))
         require(sourcePublic) {
             "only public members may be reached through WIT names: ${member.declaringClass.name}.${member.name}"
         }
@@ -105,33 +125,15 @@ internal object WitReflectionAccess {
     private fun isMangledName(actual: String, name: String): Boolean =
         actual.length > name.length + 1 && actual.startsWith(name) && actual[name.length] == '-'
 
-    private fun hasPublicSyntheticTwin(
-        constructor: Constructor<*>,
-        declared: Array<Constructor<*>>,
-    ): Boolean {
-        val parameters = constructor.parameterTypes
-        for (candidate in declared) {
-            if (!candidate.isSynthetic || !Modifier.isPublic(candidate.modifiers)) {
-                continue
-            }
-            val candidateParameters = candidate.parameterTypes
-            if (
-                candidateParameters.size != parameters.size + 1 ||
-                    candidateParameters[parameters.size].name != DEFAULT_CONSTRUCTOR_MARKER
-            ) {
-                continue
-            }
-            var matches = true
-            for (index in parameters.indices) {
-                if (candidateParameters[index] != parameters[index]) {
-                    matches = false
-                    break
-                }
-            }
-            if (matches) {
-                return true
-            }
-        }
-        return false
+    private fun isPublicKotlinConstructor(constructor: Constructor<*>): Boolean {
+        val publicSignatures = publicKotlinConstructors.get(constructor.declaringClass)
+        val descriptor =
+            MethodType.methodType(Void.TYPE, constructor.parameterTypes.toList())
+                .toMethodDescriptorString()
+        // For a source-public inline-class constructor, metadata names the marker bridge rather
+        // than the private implementation. Source-private factories are marked private in metadata.
+        val markerDescriptor =
+            descriptor.removeSuffix(")V") + "Lkotlin/jvm/internal/DefaultConstructorMarker;)V"
+        return descriptor in publicSignatures || markerDescriptor in publicSignatures
     }
 }

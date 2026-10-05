@@ -132,6 +132,7 @@ extensions.configure<KotlinMultiplatformExtension> {
         dependencies {
             implementation(libs.ktorClientCore)
             implementation(libs.ktorClientCio)
+            implementation(libs.kotlinMetadataJvm)
             implementation(libs.ktorNetwork)
             implementation(libs.kotlinxCoroutinesCore)
             implementation(krwa("log"))

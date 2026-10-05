@@ -53,6 +53,22 @@ class ParserRobustnessTest {
     }
 
     @Test
+    fun fieldReferencesCannotReachAnUnvalidatedSupertypeCycle() {
+        // Comparing the fields of types 0 and 1 must not traverse the cycle in types 3 and 4.
+        val recGroup =
+            bytes(0x4E, 0x05) +
+                bytes(0x50, 0x00, 0x5F, 0x01, 0x63, 0x02, 0x00) +
+                bytes(0x50, 0x01, 0x00, 0x5F, 0x01, 0x63, 0x03, 0x00) +
+                bytes(0x50, 0x00, 0x5F, 0x00) +
+                bytes(0x50, 0x01, 0x04, 0x5F, 0x00) +
+                bytes(0x50, 0x01, 0x03, 0x5F, 0x00)
+
+        assertThrows(InvalidException::class.java) {
+            WasmParser.parse(wasmModule(section(1, bytes(0x01) + recGroup)))
+        }
+    }
+
+    @Test
     fun subtypeHierarchyDeeperThanTheLimitIsInvalid() {
         val limit = WasmLimits.MAX_SUBTYPE_DEPTH
 

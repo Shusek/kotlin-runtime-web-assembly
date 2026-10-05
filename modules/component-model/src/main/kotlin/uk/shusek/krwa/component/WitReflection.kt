@@ -753,7 +753,9 @@ object WitReflection {
                 )
             }
         }
-        return null
+        throw ComponentModelException(
+            "no matching public constructor for WIT record ${targetType.name}",
+        )
     }
 
     private fun isRecordTarget(targetType: Class<*>): Boolean =

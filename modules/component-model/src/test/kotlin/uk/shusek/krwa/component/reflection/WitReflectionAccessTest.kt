@@ -3,7 +3,9 @@ package uk.shusek.krwa.component.reflection
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
+import uk.shusek.krwa.component.ComponentModelException
 import uk.shusek.krwa.component.WitReflection
 import uk.shusek.krwa.component.canonicalAbiFieldValue
 import uk.shusek.krwa.component.canonicalAbiResourceHandle
@@ -86,6 +88,30 @@ class WitReflectionAccessTest {
         assertEquals(7L, canonicalAbiFieldValue(stored, "getId")?.value)
         assertEquals("seven", canonicalAbiFieldValue(stored, "getTitle")?.value)
         assertNull(canonicalAbiFieldValue(stored, "getSecret"))
+    }
+
+    @Test
+    fun companionFactoryDoesNotExposePrivateConstructor() {
+        val host = ValidatedHost()
+        val handler = WitReflection.hostHandler(listOf(host), "host", "store")!!
+
+        assertThrows(IllegalArgumentException::class.java) { ValidatedRecord.create(-1) }
+        assertThrows(ComponentModelException::class.java) {
+            handler.apply(listOf(linkedMapOf("amount" to -1)))
+        }
+        assertNull(host.stored)
+    }
+
+    @Test
+    fun inlineClassFactoryDoesNotExposePrivateConstructor() {
+        val host = ValidatedUnsignedHost()
+        val handler = WitReflection.hostHandler(listOf(host), "host", "store")!!
+
+        assertThrows(IllegalArgumentException::class.java) { ValidatedUnsignedRecord.create(0uL) }
+        assertThrows(ComponentModelException::class.java) {
+            handler.apply(listOf(linkedMapOf("id" to 0L)))
+        }
+        assertNull(host.stored)
     }
 
     @Test
@@ -173,4 +199,40 @@ class WitReflectionAccessTest {
     }
 
     private class PrivateHandle(@Suppress("unused") private val handle: Long)
+
+    class ValidatedRecord private constructor(val amount: Int) {
+        companion object {
+            fun create(amount: Int): ValidatedRecord {
+                require(amount >= 0)
+                return ValidatedRecord(amount)
+            }
+        }
+    }
+
+    private class ValidatedHost {
+        var stored: ValidatedRecord? = null
+
+        @Suppress("unused")
+        fun store(record: ValidatedRecord) {
+            stored = record
+        }
+    }
+
+    class ValidatedUnsignedRecord private constructor(val id: ULong) {
+        companion object {
+            fun create(id: ULong): ValidatedUnsignedRecord {
+                require(id > 0uL)
+                return ValidatedUnsignedRecord(id)
+            }
+        }
+    }
+
+    private class ValidatedUnsignedHost {
+        var stored: ValidatedUnsignedRecord? = null
+
+        @Suppress("unused")
+        fun store(record: ValidatedUnsignedRecord) {
+            stored = record
+        }
+    }
 }

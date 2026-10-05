@@ -541,7 +541,6 @@ internal class Validator(
                     if (superSt.isFinal()) {
                         throw InvalidException("sub type " + flatIdx + " does not match super type")
                     }
-                    validateSubtypeMatch(flatIdx, st.compType(), superSt.compType())
                     depth = maxOf(depth, subtypeDepths[sup] + 1)
                 }
                 if (depth > WasmLimits.MAX_SUBTYPE_DEPTH) {
@@ -554,6 +553,18 @@ internal class Validator(
                 flatIdx++
             }
             subTypeBase += groupSize
+        }
+        // Matching fields can follow forward references within a recursion group. Validate the
+        // entire supertype graph first, including types those fields refer to, before traversing it.
+        for (flatIdx in 0 until module.typeSection().subTypeCount()) {
+            val subType = module.typeSection().getSubType(flatIdx)
+            for (sup in subType.typeIdx()) {
+                validateSubtypeMatch(
+                    flatIdx,
+                    subType.compType(),
+                    module.typeSection().getSubType(sup).compType(),
+                )
+            }
         }
     }
 

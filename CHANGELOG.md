@@ -5,7 +5,15 @@ patch and prerelease identifiers advance without changing the `0.3` major/minor 
 `1.0.0`, API changes may still be intentional; release candidates remain immutable once
 published.
 
-## Unreleased
+## 0.3.3 (2026-10-05)
+
+### Changed
+
+- Updated Commons Lang to `3.21.0`, kotlinx.coroutines to `1.11.0`, Android Gradle
+  Plugin to `9.4.1`, and wasm-tools to `1.261.0` with verified archive checksums.
+  Standalone consumers now use Kotlin `2.4.20`, Ktor `3.6.0`, and KRWA `0.3.3`.
+- Kotlin/JVM reflection now uses cached Kotlin metadata to distinguish public
+  inline-class constructors from private constructors with compiler-generated bridges.
 
 ### Security
 
@@ -33,7 +41,8 @@ published.
   `ArrayIndexOutOfBoundsException`), an `end` that closes the function block before the last
   instruction (previously `NullPointerException`), and subtype hierarchies that reference a
   supertype defined later or exceed the specification depth limit of 63 (previously unbounded
-  recursion in subtype checks). Hosts that catch `MalformedException` and `InvalidException`
+  recursion in subtype checks). The complete supertype graph is validated before
+  field compatibility checks can follow forward references inside recursion groups. Hosts that catch `MalformedException` and `InvalidException`
   around untrusted modules are no longer crashed by these inputs.
 - `WasiPreview2` now enforces the same exact-match `WasiNetworkPolicy` as `WasiPreview3`
   through `WasiPreview2.Builder.withNetworkPolicy`. `wasi:http` requests, `wasi:sockets`
