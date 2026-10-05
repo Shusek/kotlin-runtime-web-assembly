@@ -5,6 +5,7 @@ import java.util.concurrent.atomic.AtomicReference
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import uk.shusek.krwa.runtime.ByteArrayMemory
 import uk.shusek.krwa.runtime.ImportValues
@@ -17,6 +18,108 @@ import uk.shusek.krwa.wasm.types.MemoryLimits
 import uk.shusek.krwa.wasm.types.ValType
 
 class CanonicalAbiTest {
+    @Test
+    fun rejectsAliasCycles() {
+        val exception =
+            assertThrows(ComponentModelException::class.java) {
+                CanonicalAbi.of(
+                    apiPackage(
+                        """
+                        type a = b;
+                        type b = a;
+                        run: func() -> a;
+                        """
+                    )
+                )
+            }
+
+        val message = exception.message.orEmpty()
+        assertTrue(message.contains("recursive WIT type"), message)
+        assertTrue(message.contains("a -> b") || message.contains("b -> a"), message)
+    }
+
+    @Test
+    fun rejectsRecursiveRecordsVariantsAndContainers() {
+        val bodies =
+            listOf(
+                "record node { next: option<node> }",
+                "record node { children: list<node> }",
+                "variant tree { leaf(u32), branch(tuple<tree, tree>) }",
+                "record left { right: right }\nrecord right { left: result<left, string> }",
+                "type indirect = list<indirect>;",
+            )
+        for (body in bodies) {
+            val exception =
+                assertThrows(ComponentModelException::class.java) {
+                    CanonicalAbi.of(apiPackage(body))
+                }
+            assertTrue(exception.message.orEmpty().contains("recursive WIT type"), body)
+        }
+    }
+
+    @Test
+    fun resourceHandlesDoNotCountAsRecursion() {
+        val abi =
+            CanonicalAbi.of(
+                apiPackage(
+                    """
+                    resource node {
+                      parent: func() -> option<entry>;
+                    }
+                    record entry { node: own<node>, label: string }
+                    type alias-entry = entry;
+                    lookup: func(node: borrow<node>) -> list<alias-entry>;
+                    """
+                )
+            )
+
+        assertEquals(
+            listOf(
+                CanonicalAbi.CoreValType.I32,
+                CanonicalAbi.CoreValType.I32,
+                CanonicalAbi.CoreValType.I32,
+            ),
+            abi.flattenType(WitPackage.TypeRef.named("entry")),
+        )
+    }
+
+    @Test
+    fun boundsTypeNestingDepth() {
+        CanonicalAbi.of(nestedRecordPackage(CanonicalAbi.MAX_TYPE_NESTING - 8))
+
+        val exception =
+            assertThrows(ComponentModelException::class.java) {
+                CanonicalAbi.of(nestedRecordPackage(CanonicalAbi.MAX_TYPE_NESTING + 8))
+            }
+
+        assertTrue(exception.message.orEmpty().contains("nesting exceeds"))
+    }
+
+    @Test
+    fun pluginBuilderRejectsRecursiveWitInsteadOfOverflowingTheStack() {
+        val witPackage = apiPackage("record node { next: option<node> }\nrun: func() -> node;")
+
+        assertThrows(ComponentModelException::class.java) { WasmPlugin.builder(witPackage) }
+    }
+
+    private fun apiPackage(interfaceBody: String): WitPackage =
+        WitPackage.parse(
+            "package example:types;\n" +
+                "interface api {\n" +
+                interfaceBody.trimIndent().prependIndent("  ") +
+                "\n}\n" +
+                "world plugin {\n  export api;\n}\n"
+        )
+
+    private fun nestedRecordPackage(count: Int): WitPackage {
+        val body = StringBuilder("record l0 { v: u32 }\n")
+        for (index in 1 until count) {
+            body.append("record l").append(index).append(" { v: l").append(index - 1).append(" }\n")
+        }
+        body.append("run: func() -> l").append(count - 1).append(";")
+        return apiPackage(body.toString())
+    }
+
     @Test
     fun computesCoreFunctionTypeForLiftedExport() {
         val witPackage = pluginPackage()

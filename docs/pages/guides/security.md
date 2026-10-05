@@ -74,7 +74,11 @@ artifact may be ignored without an error; do not rely on it for sandboxing.
 
 The default Wasm and WIT parsers have finite limits. For an application that
 accepts untrusted input, set smaller limits that match the largest contract it
-intends to support:
+intends to support. WIT type graphs are additionally checked when a
+`CanonicalAbi` or `WasmPlugin.Builder` is created: recursive types (including
+alias cycles) and nesting deeper than 128 levels fail with
+`ComponentModelException` instead of exhausting the host stack while the plugin
+is bound.
 
 ```kotlin
 val wasmParser =

@@ -86,6 +86,11 @@ published.
   methods through `setAccessible(true)`. Public members of non-public host classes (anonymous
   or private contract implementations) remain bindable; private constructors are no longer
   used to materialize host record, variant or tuple types from guest data.
+- `CanonicalAbi.of` and `WasmPlugin.builder` now reject recursive WIT type graphs (alias cycles
+  such as `type a = b; type b = a;` and self-referencing records, variants, tuples, lists,
+  options and results) and type nesting deeper than 128 levels with `ComponentModelException`.
+  Previously such a WIT, including one extracted from an untrusted component, crashed the host
+  thread with `StackOverflowError` while the plugin was being bound.
 
 ## 0.3.2 (2026-10-04)
 
