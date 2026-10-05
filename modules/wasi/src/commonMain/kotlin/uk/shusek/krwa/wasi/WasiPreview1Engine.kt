@@ -132,9 +132,15 @@ internal class WasiPreview1Engine(opts: WasiOptions) : WasiPreview1Host {
             is OutStream -> wasiResult(WasiErrno.EINVAL)
             is DirectoryDescriptor -> wasiResult(WasiErrno.EISDIR)
             is OpenFile -> {
+                val descriptor = descriptors.get(fd) as OpenFile
+                if (!flagSet(descriptor.rightsBase, WasiRights.FD_ALLOCATE)) {
+                    return wasiResult(WasiErrno.ENOTCAPABLE)
+                }
+                if (len > Long.MAX_VALUE - offset) {
+                    return wasiResult(WasiErrno.EFBIG)
+                }
                 try {
                     val size = offset + len
-                    val descriptor = descriptors.get(fd) as OpenFile
                     if (size > descriptor.handle.size()) {
                         descriptor.handle.resize(size)
                     }
@@ -283,14 +289,20 @@ internal class WasiPreview1Engine(opts: WasiOptions) : WasiPreview1Host {
             is OutStream -> wasiResult(WasiErrno.EINVAL)
             is DirectoryDescriptor -> wasiResult(WasiErrno.EISDIR)
             is OpenFile -> {
-                try {
-                    val descriptor = descriptors.get(fd) as OpenFile
-                    descriptor.handle.resize(size)
-                    wasiResult(WasiErrno.ESUCCESS)
-                } catch (_: IOException) {
-                    wasiResult(WasiErrno.EIO)
-                } catch (_: IllegalStateException) {
+                val descriptor = descriptors.get(fd) as OpenFile
+                if (!flagSet(descriptor.rightsBase, WasiRights.FD_FILESTAT_SET_SIZE)) {
                     wasiResult(WasiErrno.ENOTCAPABLE)
+                } else if (size < 0) {
+                    wasiResult(WasiErrno.EFBIG)
+                } else {
+                    try {
+                        descriptor.handle.resize(size)
+                        wasiResult(WasiErrno.ESUCCESS)
+                    } catch (_: IOException) {
+                        wasiResult(WasiErrno.EIO)
+                    } catch (_: IllegalStateException) {
+                        wasiResult(WasiErrno.ENOTCAPABLE)
+                    }
                 }
             }
         }

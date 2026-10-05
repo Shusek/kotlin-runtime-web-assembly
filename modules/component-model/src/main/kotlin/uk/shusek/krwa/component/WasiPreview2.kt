@@ -1356,8 +1356,17 @@ private constructor(
     private fun write(args: List<Any?>, flush: Boolean): Any? {
         requireArity("output-stream.write", args, 2)
         var stream = outputStreams.get(handle(args, 0))
+        val data = bytes(args.get(1))
+        if (data.size > MAX_IO_CHUNK) {
+            // check-write never permits more than MAX_IO_CHUNK bytes and blocking-write-and-flush
+            // is specified for at most 4096 bytes; exceeding the permit traps instead of buffering.
+            throw ComponentModelException(
+                "output-stream write of " + data.size + " bytes exceeds the " + MAX_IO_CHUNK +
+                    "-byte check-write permit"
+            )
+        }
         try {
-            stream.write(bytes(args.get(1)))
+            stream.write(data)
             if (flush) {
                 stream.flush()
             }
@@ -2575,14 +2584,22 @@ private constructor(
         requireArity("descriptor.read", args, 3)
         return filesystemResult {
             var descriptor = readableDescriptor(args, 0)
-            var length: Int = checkedByteLength(args.get(1))
+            val requested = asU64(args.get(1))
+            val offset = asU64(args.get(2))
             fileSystem.openReadOnly(descriptor.path).useHandle { handle ->
+                // Allocate only what the file can still provide, bounded by the host chunk limit;
+                // short reads are allowed by the interface, so a guest cannot force a 2 GiB buffer.
+                val size = handle.size()
+                if (offset < 0 || offset >= size) {
+                    return@filesystemResult listOf(ByteArray(0), true)
+                }
+                val length = boundedReadLength(requested, size - offset)
                 var buffer = ByteArray(length)
-                var read = handle.read(asU64(args.get(2)), buffer, 0, length)
+                var read = handle.read(offset, buffer, 0, length)
                 if (read < 0) {
                     return@filesystemResult listOf(ByteArray(0), true)
                 }
-                return@filesystemResult listOf(buffer.copyOf(read), read < length)
+                return@filesystemResult listOf(buffer.copyOf(read), offset + read >= size)
             }
         }
     }
@@ -2918,6 +2935,13 @@ private constructor(
             }
             throw e
         }
+    }
+
+    private fun boundedReadLength(requested: Long, remaining: Long): Int {
+        var length = if (requested < 0) Long.MAX_VALUE else requested
+        length = kotlin.math.min(length, remaining)
+        length = kotlin.math.min(length, WASI_PREVIEW_MAX_GUEST_BYTE_REQUEST.toLong())
+        return length.toInt()
     }
 
     private fun readableDescriptor(args: List<Any?>, index: Int): FilesystemDescriptor {
@@ -4093,9 +4117,10 @@ private constructor(
 
     private fun checkedByteLength(value: Any?): Int {
         var length = asU64(value)
-        if (length < 0 || length > Int.MAX_VALUE) {
+        if (length < 0 || length > WASI_PREVIEW_MAX_GUEST_BYTE_REQUEST) {
             throw ComponentModelException(
-                "WASI list length is too large for this host: " + unsignedLongString(length)
+                "WASI byte request of " + unsignedLongString(length) +
+                    " exceeds the host limit of " + WASI_PREVIEW_MAX_GUEST_BYTE_REQUEST + " bytes"
             )
         }
         return length.toInt()
@@ -5095,12 +5120,41 @@ private constructor(
 
     private class OutgoingBody {
         private val output: Buffer = Buffer()
+        private val boundedOutput: RawSink =
+            BoundedRawSink(output, WASI_PREVIEW_MAX_HTTP_REQUEST_BODY_BYTES)
         var streamTaken: Boolean = false
         var finished: Boolean = false
 
-        fun outputStream(): WasiOutputStream = WasiOutputStream(output)
+        fun outputStream(): WasiOutputStream = WasiOutputStream(boundedOutput)
 
         fun bodyBytes(): ByteArray = output.copy().readByteArray()
+    }
+
+    /**
+     * Rejects writes once more than [limit] bytes have been accepted, so a guest cannot grow a
+     * host-side buffer without bound through repeated stream writes.
+     */
+    private class BoundedRawSink(
+        private val delegate: RawSink,
+        private val limit: Long,
+    ) : RawSink {
+        private var written: Long = 0L
+
+        override fun write(source: Buffer, byteCount: Long) {
+            if (byteCount > limit - written) {
+                throw IOException("buffered request body exceeds the host limit of $limit bytes")
+            }
+            delegate.write(source, byteCount)
+            written += byteCount
+        }
+
+        override fun flush() {
+            delegate.flush()
+        }
+
+        override fun close() {
+            delegate.close()
+        }
     }
 
     private class FutureIncomingResponse {

@@ -165,6 +165,58 @@ class WasiPreview1Test {
     }
 
     @Test
+    fun fileSizeChangesRequireRightsAndStaySparse() {
+        val file = tempDir.resolve("grow.txt")
+        JFiles.writeString(file, "x", UTF_8)
+        val wasiOpts = WasiOptions.builder().withDirectory(".", tempDir).build()
+        val wasi = WasiPreview1.builder().withOptions(wasiOpts).build()
+        val memory = ByteArrayMemory(MemoryLimits(1))
+
+        var errno =
+            wasi.pathOpen(
+                memory,
+                3,
+                0,
+                "grow.txt",
+                0,
+                (WasiRights.FD_READ or WasiRights.FD_WRITE).toLong(),
+                0,
+                0,
+                0,
+            )
+        assertEquals(WasiErrno.ESUCCESS.value(), errno)
+        val limitedFd = memory.readInt(0)
+        assertEquals(WasiErrno.ENOTCAPABLE.value(), wasi.fdFilestatSetSize(limitedFd, 16L))
+        assertEquals(WasiErrno.ENOTCAPABLE.value(), wasi.fdAllocate(limitedFd, 0L, 16L))
+        assertEquals(1L, JFiles.size(file))
+
+        errno =
+            wasi.pathOpen(
+                memory,
+                3,
+                0,
+                "grow.txt",
+                0,
+                (WasiRights.FD_WRITE or WasiRights.FD_FILESTAT_SET_SIZE or WasiRights.FD_ALLOCATE).toLong(),
+                0,
+                0,
+                0,
+            )
+        assertEquals(WasiErrno.ESUCCESS.value(), errno)
+        val fd = memory.readInt(0)
+        assertEquals(WasiErrno.EFBIG.value(), wasi.fdFilestatSetSize(fd, -1L))
+        assertEquals(WasiErrno.EFBIG.value(), wasi.fdAllocate(fd, Long.MAX_VALUE, 1L))
+
+        val size = 64L * 1024L * 1024L
+        assertEquals(WasiErrno.ESUCCESS.value(), wasi.fdFilestatSetSize(fd, size))
+        assertEquals(size, JFiles.size(file))
+        assertEquals(WasiErrno.ESUCCESS.value(), wasi.fdAllocate(fd, size, 1024L))
+        assertEquals(size + 1024L, JFiles.size(file))
+        assertEquals(WasiErrno.ESUCCESS.value(), wasi.fdFilestatSetSize(fd, 1L))
+        assertEquals(1L, JFiles.size(file))
+    }
+
+    @Test
     fun fdFdstatSetRightsShouldLimitPreopenPathOpenCapability() {
         JFiles.writeString(tempDir.resolve("hello.txt"), "hello", UTF_8)
         val wasiOpts = WasiOptions.builder().withDirectory(".", tempDir).build()

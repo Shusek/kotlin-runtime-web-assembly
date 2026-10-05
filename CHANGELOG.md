@@ -43,6 +43,15 @@ published.
   guest reach any destination including `127.0.0.1` and `169.254.169.254`; that switch is
   now deprecated and marked `@UnsafeComponentModelApi`, and the README example uses a
   policy instead.
+- Host functions no longer allocate guest-chosen byte counts blindly. In the WASI Preview 2
+  and Preview 3 hosts, `random.get-random-bytes` and similar calls reject requests above a
+  64 MiB host limit instead of allocating up to 2 GiB, `descriptor.read` allocates only what
+  the file can still provide, `output-stream.write` traps when a single write exceeds the
+  4096-byte `check-write` permit, and an outgoing HTTP request body is bounded at 64 MiB of
+  host buffering. In the WASI Preview 1 host, `fd_filestat_set_size` and `fd_allocate` now
+  require the `FD_FILESTAT_SET_SIZE` / `FD_ALLOCATE` rights, reject sizes that overflow, and
+  grow files sparsely instead of materializing the new size as a host byte array (which also
+  truncated the length to 32 bits).
 
 ## 0.3.2 (2026-10-04)
 
