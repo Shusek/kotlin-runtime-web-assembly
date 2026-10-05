@@ -52,6 +52,21 @@ published.
   require the `FD_FILESTAT_SET_SIZE` / `FD_ALLOCATE` rights, reject sizes that overflow, and
   grow files sparsely instead of materializing the new size as a host byte array (which also
   truncated the length to 32 bits).
+- WASI Preview 1 `poll_oneoff` now sleeps until the nearest clock deadline (waking at most
+  once per millisecond while stream subscriptions are pending) instead of spinning at full
+  CPU, reports `EINTR` when the host thread is interrupted, and rejects empty or oversized
+  subscription lists (more than 4096 entries) with `EINVAL`.
+- The WASI Preview 2 and Preview 3 HTTP hosts no longer let a guest hold the calling thread
+  indefinitely: requests without guest-supplied timeouts use a 60-second default and guest
+  timeouts are clamped to 10 minutes.
+- The Preview 2 host releases host resources when a guest drops the owning handle: dropping
+  a `tcp-socket` or `udp-socket` closes the underlying connection, listener or endpoint,
+  dropping an `input-stream` or `output-stream` closes the stream (standard streams
+  excepted), and dropping an unconsumed `incoming-response`, `incoming-body` or
+  `future-incoming-response` closes the response body.
+- Preview 3 pending futures, pending streams, in-flight host tasks and waitables are now
+  capped by default (65536 pending items and host tasks, 131072 waitables) instead of being
+  unbounded, so a guest cannot exhaust host memory by creating handles it never completes.
 
 ## 0.3.2 (2026-10-04)
 

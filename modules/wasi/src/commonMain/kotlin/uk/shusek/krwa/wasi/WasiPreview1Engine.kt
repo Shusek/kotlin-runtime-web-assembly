@@ -16,6 +16,15 @@ import uk.shusek.krwa.runtime.ExecutionCompletedException
 import uk.shusek.krwa.runtime.HostFunction
 import uk.shusek.krwa.runtime.Memory
 
+/** Upper bound for the subscription count a guest may pass to `poll_oneoff`. */
+private const val MAX_POLL_SUBSCRIPTIONS: Int = 4_096
+
+/** Longest single sleep inside `poll_oneoff`, so the wait stays responsive to interruption. */
+private const val MAX_POLL_SLEEP_NANOS: Long = 1_000_000_000L
+
+/** Interval at which `poll_oneoff` re-checks stream readiness while sleeping. */
+private const val POLL_READ_INTERVAL_NANOS: Long = 1_000_000L
+
 internal class WasiPreview1Engine(opts: WasiOptions) : WasiPreview1Host {
     private val random = opts.random()
     private val clock = opts.clock()
@@ -995,7 +1004,7 @@ internal class WasiPreview1Engine(opts: WasiOptions) : WasiPreview1Host {
         nsubscriptions: Int,
         neventsPtr: Int,
     ): Int {
-        if (nsubscriptions <= 0) {
+        if (nsubscriptions <= 0 || nsubscriptions > MAX_POLL_SUBSCRIPTIONS) {
             return wasiResult(WasiErrno.EINVAL)
         }
 
@@ -1076,8 +1085,21 @@ internal class WasiPreview1Engine(opts: WasiOptions) : WasiPreview1Host {
                     nevents++
                 }
             }
-            if (nevents == 0 && minTimeout == Long.MAX_VALUE && readSubs.isEmpty()) {
-                break
+            if (nevents == 0) {
+                if (minTimeout == Long.MAX_VALUE && readSubs.isEmpty()) {
+                    break
+                }
+                // Sleep until the nearest clock deadline, waking periodically to poll stream
+                // readiness, instead of spinning at full CPU until an event becomes ready.
+                val untilDeadline =
+                    if (minTimeout == Long.MAX_VALUE) MAX_POLL_SLEEP_NANOS else minTimeout - elapsed
+                var sleepNanos = minOf(untilDeadline, MAX_POLL_SLEEP_NANOS)
+                if (readSubs.isNotEmpty()) {
+                    sleepNanos = minOf(sleepNanos, POLL_READ_INTERVAL_NANOS)
+                }
+                if (sleepNanos > 0L && !wasiSleepNanos(sleepNanos)) {
+                    return wasiResult(WasiErrno.EINTR)
+                }
             }
         } while (nevents == 0)
 
