@@ -11,7 +11,8 @@ published.
 
 - Updated Commons Lang to `3.21.0`, kotlinx.coroutines to `1.11.0`, Android Gradle
   Plugin to `9.4.1`, and wasm-tools to `1.261.0` with verified archive checksums.
-  Standalone consumers now use Kotlin `2.4.20`, Ktor `3.6.0`, and KRWA `0.3.3`.
+  Standalone consumers now use Kotlin `2.4.20`, Ktor `3.6.0`, Gradle `9.8.0`,
+  and KRWA `0.3.3`.
 - Kotlin/JVM reflection now uses cached Kotlin metadata to distinguish public
   inline-class constructors from private constructors with compiler-generated bridges.
 
