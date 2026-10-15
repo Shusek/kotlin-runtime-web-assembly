@@ -1,0 +1,276 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "uk.shusek.krwa",
+    "module": "runtime",
+    "version": "0.3.0-dev.a0343b9d621c",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.8.0"
+    }
+  },
+  "variants": [
+    {
+      "name": "metadataApiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.jvm.environment": "non-jvm",
+        "org.gradle.usage": "kotlin-metadata",
+        "org.jetbrains.kotlin.platform.type": "common"
+      },
+      "dependencies": [
+        {
+          "group": "uk.shusek.krwa",
+          "module": "wasm",
+          "version": {
+            "requires": "0.3.0-dev.a0343b9d621c"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.4.20"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "runtime-metadata-0.3.0-dev.a0343b9d621c.jar",
+          "url": "runtime-0.3.0-dev.a0343b9d621c.jar",
+          "size": 42513,
+          "sha512": "7d2fc420b69a90ecf7098c5a2ebb1e7e443e6817e5b3b13db759803818c0edc1c84263c97ff7f37e5209a607c15acf8f23e06519ca8bbb7e4495b4d96e0e52a4",
+          "sha256": "2bb4decf13ea51abd36c997eefdcfa5fe69235f60cdd4563d1e99cb0f50478a1",
+          "sha1": "4fddc1b299af4b22865ac5843cce6ed41d854c76",
+          "md5": "5bca735ec3593991b131251f25284515"
+        }
+      ]
+    },
+    {
+      "name": "metadataSourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.jvm.environment": "non-jvm",
+        "org.gradle.usage": "kotlin-runtime",
+        "org.jetbrains.kotlin.platform.type": "common"
+      },
+      "files": [
+        {
+          "name": "runtime-kotlin-0.3.0-dev.a0343b9d621c-sources.jar",
+          "url": "runtime-0.3.0-dev.a0343b9d621c-sources.jar",
+          "size": 69990,
+          "sha512": "37956b8d9ec0d0273fec3d2967d40556b5e3758716a4f5511f56d4e1493b52ddb33e0e02ac58a2a276957ce2c1b90f876537dd061495e9d37e5a12802a8a13cb",
+          "sha256": "d86f7f1f493cc8fd9017d0deb5bb445eb6f41177ca85309151617b24f4aa41f0",
+          "sha1": "ca67b2d7d569048de37a4c410c495ea7e1545767",
+          "md5": "9a16679854fe5e0758e365e30ec56c26"
+        }
+      ]
+    },
+    {
+      "name": "iosArm64ApiElements-published",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.jvm.environment": "non-jvm",
+        "org.gradle.usage": "kotlin-api",
+        "org.jetbrains.kotlin.native.target": "ios_arm64",
+        "org.jetbrains.kotlin.platform.type": "native"
+      },
+      "available-at": {
+        "url": "../../runtime-iosarm64/0.3.0-dev.a0343b9d621c/runtime-iosarm64-0.3.0-dev.a0343b9d621c.module",
+        "group": "uk.shusek.krwa",
+        "module": "runtime-iosarm64",
+        "version": "0.3.0-dev.a0343b9d621c"
+      }
+    },
+    {
+      "name": "iosArm64SourcesElements-published",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.jvm.environment": "non-jvm",
+        "org.gradle.usage": "kotlin-runtime",
+        "org.jetbrains.kotlin.native.target": "ios_arm64",
+        "org.jetbrains.kotlin.platform.type": "native"
+      },
+      "available-at": {
+        "url": "../../runtime-iosarm64/0.3.0-dev.a0343b9d621c/runtime-iosarm64-0.3.0-dev.a0343b9d621c.module",
+        "group": "uk.shusek.krwa",
+        "module": "runtime-iosarm64",
+        "version": "0.3.0-dev.a0343b9d621c"
+      }
+    },
+    {
+      "name": "iosArm64MetadataElements-published",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.jvm.environment": "non-jvm",
+        "org.gradle.usage": "kotlin-metadata",
+        "org.jetbrains.kotlin.native.target": "ios_arm64",
+        "org.jetbrains.kotlin.platform.type": "native"
+      },
+      "available-at": {
+        "url": "../../runtime-iosarm64/0.3.0-dev.a0343b9d621c/runtime-iosarm64-0.3.0-dev.a0343b9d621c.module",
+        "group": "uk.shusek.krwa",
+        "module": "runtime-iosarm64",
+        "version": "0.3.0-dev.a0343b9d621c"
+      }
+    },
+    {
+      "name": "iosSimulatorArm64ApiElements-published",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.jvm.environment": "non-jvm",
+        "org.gradle.usage": "kotlin-api",
+        "org.jetbrains.kotlin.native.target": "ios_simulator_arm64",
+        "org.jetbrains.kotlin.platform.type": "native"
+      },
+      "available-at": {
+        "url": "../../runtime-iossimulatorarm64/0.3.0-dev.a0343b9d621c/runtime-iossimulatorarm64-0.3.0-dev.a0343b9d621c.module",
+        "group": "uk.shusek.krwa",
+        "module": "runtime-iossimulatorarm64",
+        "version": "0.3.0-dev.a0343b9d621c"
+      }
+    },
+    {
+      "name": "iosSimulatorArm64SourcesElements-published",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.jvm.environment": "non-jvm",
+        "org.gradle.usage": "kotlin-runtime",
+        "org.jetbrains.kotlin.native.target": "ios_simulator_arm64",
+        "org.jetbrains.kotlin.platform.type": "native"
+      },
+      "available-at": {
+        "url": "../../runtime-iossimulatorarm64/0.3.0-dev.a0343b9d621c/runtime-iossimulatorarm64-0.3.0-dev.a0343b9d621c.module",
+        "group": "uk.shusek.krwa",
+        "module": "runtime-iossimulatorarm64",
+        "version": "0.3.0-dev.a0343b9d621c"
+      }
+    },
+    {
+      "name": "iosSimulatorArm64MetadataElements-published",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.jvm.environment": "non-jvm",
+        "org.gradle.usage": "kotlin-metadata",
+        "org.jetbrains.kotlin.native.target": "ios_simulator_arm64",
+        "org.jetbrains.kotlin.platform.type": "native"
+      },
+      "available-at": {
+        "url": "../../runtime-iossimulatorarm64/0.3.0-dev.a0343b9d621c/runtime-iossimulatorarm64-0.3.0-dev.a0343b9d621c.module",
+        "group": "uk.shusek.krwa",
+        "module": "runtime-iossimulatorarm64",
+        "version": "0.3.0-dev.a0343b9d621c"
+      }
+    },
+    {
+      "name": "jvmApiElements-published",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "available-at": {
+        "url": "../../runtime-jvm/0.3.0-dev.a0343b9d621c/runtime-jvm-0.3.0-dev.a0343b9d621c.module",
+        "group": "uk.shusek.krwa",
+        "module": "runtime-jvm",
+        "version": "0.3.0-dev.a0343b9d621c"
+      }
+    },
+    {
+      "name": "jvmRuntimeElements-published",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "available-at": {
+        "url": "../../runtime-jvm/0.3.0-dev.a0343b9d621c/runtime-jvm-0.3.0-dev.a0343b9d621c.module",
+        "group": "uk.shusek.krwa",
+        "module": "runtime-jvm",
+        "version": "0.3.0-dev.a0343b9d621c"
+      }
+    },
+    {
+      "name": "jvmSourcesElements-published",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "available-at": {
+        "url": "../../runtime-jvm/0.3.0-dev.a0343b9d621c/runtime-jvm-0.3.0-dev.a0343b9d621c.module",
+        "group": "uk.shusek.krwa",
+        "module": "runtime-jvm",
+        "version": "0.3.0-dev.a0343b9d621c"
+      }
+    },
+    {
+      "name": "wasmJsApiElements-published",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.jvm.environment": "non-jvm",
+        "org.gradle.usage": "kotlin-api",
+        "org.jetbrains.kotlin.platform.type": "wasm",
+        "org.jetbrains.kotlin.wasm.target": "js"
+      },
+      "available-at": {
+        "url": "../../runtime-wasm-js/0.3.0-dev.a0343b9d621c/runtime-wasm-js-0.3.0-dev.a0343b9d621c.module",
+        "group": "uk.shusek.krwa",
+        "module": "runtime-wasm-js",
+        "version": "0.3.0-dev.a0343b9d621c"
+      }
+    },
+    {
+      "name": "wasmJsRuntimeElements-published",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.jvm.environment": "non-jvm",
+        "org.gradle.usage": "kotlin-runtime",
+        "org.jetbrains.kotlin.platform.type": "wasm",
+        "org.jetbrains.kotlin.wasm.target": "js"
+      },
+      "available-at": {
+        "url": "../../runtime-wasm-js/0.3.0-dev.a0343b9d621c/runtime-wasm-js-0.3.0-dev.a0343b9d621c.module",
+        "group": "uk.shusek.krwa",
+        "module": "runtime-wasm-js",
+        "version": "0.3.0-dev.a0343b9d621c"
+      }
+    },
+    {
+      "name": "wasmJsSourcesElements-published",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.jvm.environment": "non-jvm",
+        "org.gradle.usage": "kotlin-runtime",
+        "org.jetbrains.kotlin.platform.type": "wasm",
+        "org.jetbrains.kotlin.wasm.target": "js"
+      },
+      "available-at": {
+        "url": "../../runtime-wasm-js/0.3.0-dev.a0343b9d621c/runtime-wasm-js-0.3.0-dev.a0343b9d621c.module",
+        "group": "uk.shusek.krwa",
+        "module": "runtime-wasm-js",
+        "version": "0.3.0-dev.a0343b9d621c"
+      }
+    }
+  ]
+}

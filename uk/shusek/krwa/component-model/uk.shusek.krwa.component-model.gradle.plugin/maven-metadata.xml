@@ -3,8 +3,8 @@
   <groupId>uk.shusek.krwa.component-model</groupId>
   <artifactId>uk.shusek.krwa.component-model.gradle.plugin</artifactId>
   <versioning>
-    <latest>0.3.0-dev.60a66e4f9767</latest>
-    <release>0.3.0-dev.60a66e4f9767</release>
+    <latest>0.3.0-dev.a0343b9d621c</latest>
+    <release>0.3.0-dev.a0343b9d621c</release>
     <versions>
       <version>0.3.0-dev.dd7a6fdf625a</version>
       <version>0.3.0-dev.ec3430fca82c</version>
@@ -20,7 +20,8 @@
       <version>0.3.0-dev.f3c34df3a402</version>
       <version>0.3.0-dev.a852e327fbb9</version>
       <version>0.3.0-dev.60a66e4f9767</version>
+      <version>0.3.0-dev.a0343b9d621c</version>
     </versions>
-    <lastUpdated>20261015092246</lastUpdated>
+    <lastUpdated>20261015103551</lastUpdated>
   </versioning>
 </metadata>

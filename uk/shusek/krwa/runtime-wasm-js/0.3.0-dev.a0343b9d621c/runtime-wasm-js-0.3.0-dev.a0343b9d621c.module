@@ -1,0 +1,123 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "url": "../../runtime/0.3.0-dev.a0343b9d621c/runtime-0.3.0-dev.a0343b9d621c.module",
+    "group": "uk.shusek.krwa",
+    "module": "runtime",
+    "version": "0.3.0-dev.a0343b9d621c",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.8.0"
+    }
+  },
+  "variants": [
+    {
+      "name": "wasmJsApiElements-published",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.jvm.environment": "non-jvm",
+        "org.gradle.usage": "kotlin-api",
+        "org.jetbrains.kotlin.platform.type": "wasm",
+        "org.jetbrains.kotlin.wasm.target": "js"
+      },
+      "dependencies": [
+        {
+          "group": "uk.shusek.krwa",
+          "module": "wasm",
+          "version": {
+            "requires": "0.3.0-dev.a0343b9d621c"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.4.20"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "runtime-wasm-js-0.3.0-dev.a0343b9d621c.klib",
+          "url": "runtime-wasm-js-0.3.0-dev.a0343b9d621c.klib",
+          "size": 368326,
+          "sha512": "85ef3b1b3cefaf310a17e2c2d1e2a1b64eb2ee09e03ce6bc1a435b0b34c267f2c47f01f4976299be07fd9198f3eea0511bc2b44be48acedd778e8545ea4fac32",
+          "sha256": "dc5af082b86d3693ca3a5d958cc423968eae9adc902c6299daa256e20b24beba",
+          "sha1": "b96ff1f5f53d42a94de44956fafd4cc56316e5c5",
+          "md5": "40332ef3e549c68b4241568fc6bcc171"
+        }
+      ]
+    },
+    {
+      "name": "wasmJsRuntimeElements-published",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.jvm.environment": "non-jvm",
+        "org.gradle.usage": "kotlin-runtime",
+        "org.jetbrains.kotlin.platform.type": "wasm",
+        "org.jetbrains.kotlin.wasm.target": "js"
+      },
+      "dependencies": [
+        {
+          "group": "uk.shusek.krwa",
+          "module": "wasm",
+          "version": {
+            "requires": "0.3.0-dev.a0343b9d621c"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.4.20"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlinx",
+          "module": "kotlinx-browser",
+          "version": {
+            "requires": "0.5.0"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "runtime-wasm-js-0.3.0-dev.a0343b9d621c.klib",
+          "url": "runtime-wasm-js-0.3.0-dev.a0343b9d621c.klib",
+          "size": 368326,
+          "sha512": "85ef3b1b3cefaf310a17e2c2d1e2a1b64eb2ee09e03ce6bc1a435b0b34c267f2c47f01f4976299be07fd9198f3eea0511bc2b44be48acedd778e8545ea4fac32",
+          "sha256": "dc5af082b86d3693ca3a5d958cc423968eae9adc902c6299daa256e20b24beba",
+          "sha1": "b96ff1f5f53d42a94de44956fafd4cc56316e5c5",
+          "md5": "40332ef3e549c68b4241568fc6bcc171"
+        }
+      ]
+    },
+    {
+      "name": "wasmJsSourcesElements-published",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.jvm.environment": "non-jvm",
+        "org.gradle.usage": "kotlin-runtime",
+        "org.jetbrains.kotlin.platform.type": "wasm",
+        "org.jetbrains.kotlin.wasm.target": "js"
+      },
+      "files": [
+        {
+          "name": "runtime-wasm-js-0.3.0-dev.a0343b9d621c-sources.jar",
+          "url": "runtime-wasm-js-0.3.0-dev.a0343b9d621c-sources.jar",
+          "size": 74495,
+          "sha512": "4d8107bde6642b57ee6431e8421014db1d9d68a70f45541cd9eae619352eac2fb9ef72c49d043ea19edb17798c0ab2f58bb9b1a7fb547a2305b149180d15c971",
+          "sha256": "861b1e83a27d17afc81205ae03b1030a0f4b49d351445f0d6197d027d5e01b06",
+          "sha1": "6577134c61192722ee6426d63dcdbe7e2b6acfa5",
+          "md5": "e9267ea2fc8ded53a911a86a5e509f39"
+        }
+      ]
+    }
+  ]
+}
