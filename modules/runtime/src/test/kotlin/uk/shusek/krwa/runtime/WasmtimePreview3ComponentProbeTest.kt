@@ -1,7 +1,9 @@
 package uk.shusek.krwa.runtime
 
 import java.nio.file.Files
+import java.nio.file.LinkOption
 import java.nio.file.Path
+import java.util.Comparator
 import java.util.concurrent.TimeUnit
 import kotlin.test.Test
 import kotlin.test.assertContains
@@ -919,6 +921,96 @@ class WasmtimePreview3ComponentProbeTest {
         }
     }
 
+    @Test
+    fun jvmPreview3ComponentBridgeRefusesSymlinksThatClimbOutOfTheWritablePreopen() {
+        runBridgeSymlinkProbe(preview = 3)
+    }
+
+    @Test
+    fun jvmPreview2ComponentBridgeRefusesSymlinksThatClimbOutOfTheWritablePreopen() {
+        runBridgeSymlinkProbe(preview = 2)
+    }
+
+    /**
+     * Wasmtime itself only refuses absolute symlink targets. The bridge must also refuse relative
+     * targets that climb, or a guest could leave `cache/x -> ../../..` for a host that later
+     * follows links while clearing the cache.
+     */
+    private fun runBridgeSymlinkProbe(preview: Int) {
+        assumeTrue(System.getProperty("krwa.wasmtime.p3.bridge.integration") == "true")
+        assumeTrue(!System.getProperty("os.name").startsWith("Windows", ignoreCase = true))
+        val bridgeLibraryPath = Path.of(System.getProperty("krwa.wasmtime.p3.bridge.library"))
+        assertTrue(Files.isRegularFile(bridgeLibraryPath), "Missing bridge library: $bridgeLibraryPath")
+        val sandbox = Files.createTempDirectory("krwa-wasmtime-p$preview-symlink-confinement")
+        val cacheRoot = sandbox.resolve("cache-root")
+        val outsideRoot = sandbox.resolve("outside")
+        Files.createDirectories(cacheRoot.resolve("sub"))
+        Files.createDirectories(outsideRoot)
+        Files.writeString(outsideRoot.resolve("secret.txt"), "secret")
+
+        try {
+            val componentBytes =
+                if (preview == 3) {
+                    compilePulleyComponentFromCore(
+                        directory = sandbox,
+                        name = "filesystem-symlink-confinement-p3",
+                        witSource = Preview3FilesystemProbeWit,
+                        coreWatSource = preview3SymlinkProbeCoreWat(BridgeSymlinkProbeCases),
+                        asyncStackful = false,
+                    )
+                } else {
+                    compilePulleyComponentFromCore(
+                        directory = sandbox,
+                        name = "filesystem-symlink-confinement-p2",
+                        witSource = Preview2FilesystemProbeWit,
+                        coreWatSource = preview2SymlinkProbeCoreWat(BridgeSymlinkProbeCases),
+                        asyncStackful = false,
+                        witDirectory = wasmtimePreview2WitDirectory(),
+                    )
+                }
+            val reason = wasmtimePreview3ComponentCallS32UnavailableReason(
+                WasmtimePreview3ComponentConfig(
+                    precompiledComponentBytes = componentBytes,
+                    preopens = listOf(
+                        WasmtimePreview3Preopen(
+                            hostRoot = cacheRoot.toString(),
+                            guestRoot = "/suvio/cache",
+                            writable = true,
+                        ),
+                    ),
+                    maxMemoryBytes = 64L * 1024L * 1024L,
+                ),
+                exportName = "catalog.run",
+                argument = 41,
+                expectedResult = 42,
+            )
+
+            assertNull(reason)
+            for (case in BridgeSymlinkProbeCases.filter(SymlinkProbeCase::refused)) {
+                assertFalse(
+                    Files.exists(cacheRoot.resolve(case.link), LinkOption.NOFOLLOW_LINKS),
+                    "${case.link} -> ${case.target}",
+                )
+            }
+            assertEquals(Path.of("."), Files.readSymbolicLink(cacheRoot.resolve("self")))
+            assertEquals(Path.of("data.txt"), Files.readSymbolicLink(cacheRoot.resolve("down")))
+            assertEquals(Path.of("sub/data.txt"), Files.readSymbolicLink(cacheRoot.resolve("nested")))
+            assertEquals("secret", Files.readString(outsideRoot.resolve("secret.txt")))
+        } finally {
+            deleteWithoutFollowingLinks(sandbox)
+        }
+    }
+
+    /** Test cleanup must not follow a link that a regression may have left behind. */
+    private fun deleteWithoutFollowingLinks(root: Path) {
+        if (!Files.exists(root, LinkOption.NOFOLLOW_LINKS)) {
+            return
+        }
+        Files.walk(root).use { paths ->
+            paths.sorted(Comparator.reverseOrder()).forEach { path -> Files.deleteIfExists(path) }
+        }
+    }
+
     private fun String?.assertBridgeLoadedAndRejectedInvalidComponent() {
         val message = assertNotNull(this)
         assertContains(message, "failed to deserialize Wasmtime component")
@@ -945,6 +1037,7 @@ class WasmtimePreview3ComponentProbeTest {
         witSource: String,
         coreWatSource: String,
         asyncStackful: Boolean = true,
+        witDirectory: Path = wasmtimePreview3WitDirectory(),
     ): ByteArray {
         val wasmTools = System.getProperty("krwa.wasm.tools.cli")?.takeIf(String::isNotBlank) ?: "wasm-tools"
         val wasmtime = System.getProperty("krwa.wasmtime.cli")?.takeIf(String::isNotBlank) ?: "wasmtime"
@@ -959,7 +1052,7 @@ class WasmtimePreview3ComponentProbeTest {
         val cwasm = directory.resolve("$name.cwasm")
         Files.createDirectories(witDeps)
         Files.writeString(wit, witSource)
-        Files.newDirectoryStream(wasmtimePreview3WitDirectory().resolve("deps")) { path ->
+        Files.newDirectoryStream(witDirectory.resolve("deps")) { path ->
             path.fileName.toString().endsWith(".wit")
         }.use { sources ->
             for (source in sources) {
@@ -1101,16 +1194,20 @@ class WasmtimePreview3ComponentProbeTest {
         return compilePulleyComponentFile(wasmtime, componentWasm, cwasm)
     }
 
-    private fun wasmtimePreview3WitDirectory(): Path {
+    private fun wasmtimePreview3WitDirectory(): Path = wasmtimeWitDirectory("p3")
+
+    private fun wasmtimePreview2WitDirectory(): Path = wasmtimeWitDirectory("p2")
+
+    private fun wasmtimeWitDirectory(preview: String): Path {
         val witCandidates = listOf(
-            Path.of("modules/runtime/build/wasmtime-pulley/source/crates/wasi/src/p3/wit"),
-            Path.of("build/wasmtime-pulley/source/crates/wasi/src/p3/wit"),
-            Path.of("modules/runtime/build/wasmtime-pulley-ios/source/crates/wasi/src/p3/wit"),
-            Path.of("build/wasmtime-pulley-ios/source/crates/wasi/src/p3/wit"),
+            Path.of("modules/runtime/build/wasmtime-pulley/source/crates/wasi/src/$preview/wit"),
+            Path.of("build/wasmtime-pulley/source/crates/wasi/src/$preview/wit"),
+            Path.of("modules/runtime/build/wasmtime-pulley-ios/source/crates/wasi/src/$preview/wit"),
+            Path.of("build/wasmtime-pulley-ios/source/crates/wasi/src/$preview/wit"),
         ).map { path -> path.toAbsolutePath().normalize() }
         return assertNotNull(
             witCandidates.firstOrNull(Files::isDirectory),
-            "Missing Wasmtime Preview3 WIT directory. Checked: $witCandidates",
+            "Missing Wasmtime $preview WIT directory. Checked: $witCandidates",
         )
     }
 
@@ -1330,6 +1427,375 @@ class WasmtimePreview3ComponentProbeTest {
               export catalog;
             }
         """.trimIndent()
+
+        val Preview2FilesystemProbeWit = """
+            package test:fs2@1.0.0;
+
+            interface catalog {
+              run: func(value: s32) -> s32;
+            }
+
+            world plugin {
+              import wasi:filesystem/types@0.2.12;
+              import wasi:filesystem/preopens@0.2.12;
+              export catalog;
+            }
+        """.trimIndent()
+
+        /** `error-code.not-permitted` in `wasi:filesystem@0.3.0` and `@0.2.12`. */
+        const val Preview3NotPermittedErrorCode = 30
+        const val Preview2NotPermittedErrorCode = 31
+
+        val BridgeSymlinkProbeCases = listOf(
+            SymlinkProbeCase(".", "self", refused = false),
+            SymlinkProbeCase("data.txt", "down", refused = false),
+            SymlinkProbeCase("sub/data.txt", "nested", refused = false),
+            SymlinkProbeCase("..", "parent", refused = true),
+            SymlinkProbeCase("../outside", "outside-link", refused = true),
+            SymlinkProbeCase("../../../../..", "root-link", refused = true),
+            SymlinkProbeCase("self/../outside", "chain", refused = true),
+            SymlinkProbeCase("sub/../../outside", "normalized", refused = true),
+            SymlinkProbeCase("..\\outside", "backslash", refused = true),
+            SymlinkProbeCase("/etc", "absolute", refused = true),
+        )
+
+        /**
+         * Calls `symlink-at` on the only preopen for every case, in order. Returns `value + 1`
+         * when each refused case failed with `not-permitted` and each other case succeeded,
+         * otherwise `1000 * (case index + 1) + outcome`, where outcome is 0 for success, `1 +
+         * error code` for a failure and 700..703 for a canonical ABI failure.
+         */
+        fun preview3SymlinkProbeCoreWat(cases: List<SymlinkProbeCase>): String {
+            val checks = symlinkProbeChecks(cases, Preview3NotPermittedErrorCode) { failure ->
+                """
+                $failure
+                call ${'$'}return-run
+                return
+                """.trimIndent()
+            }
+            return """
+            (module
+              (type ${'$'}async-call (func (param i32 i32) (result i32)))
+              (import "wasi:filesystem/types@0.3.0" "[async-lower][method]descriptor.symlink-at" (func ${'$'}symlink-at (type ${'$'}async-call)))
+              (import "wasi:filesystem/types@0.3.0" "[resource-drop]descriptor" (func ${'$'}drop-descriptor (param i32)))
+              (import "wasi:filesystem/preopens@0.3.0" "get-directories" (func ${'$'}get-directories (param i32)))
+              (import "${'$'}root" "[waitable-set-new]" (func ${'$'}waitable-set-new (result i32)))
+              (import "${'$'}root" "[waitable-set-wait]" (func ${'$'}waitable-set-wait (param i32 i32) (result i32)))
+              (import "${'$'}root" "[waitable-set-drop]" (func ${'$'}waitable-set-drop (param i32)))
+              (import "${'$'}root" "[waitable-join]" (func ${'$'}waitable-join (param i32 i32)))
+              (import "${'$'}root" "[subtask-drop]" (func ${'$'}subtask-drop (param i32)))
+              (import "[export]test:fs/catalog@1.0.0" "[task-return]run" (func ${'$'}task-return-run (param i32)))
+
+              (memory (export "memory") 1)
+              (global ${'$'}heap (mut i32) (i32.const 16384))
+              ${symlinkProbeData(cases)}
+              $SymlinkProbeRealloc
+
+              (func (export "_initialize"))
+              (func (export "cabi_post_run") (param i32))
+
+              (func ${'$'}return-run (param ${'$'}value i32) (result i32)
+                local.get ${'$'}value
+                call ${'$'}task-return-run
+                i32.const 0
+              )
+
+              (func ${'$'}await-subtask (param ${'$'}packed i32) (result i32)
+                (local ${'$'}status i32)
+                (local ${'$'}handle i32)
+                (local ${'$'}set i32)
+                local.get ${'$'}packed
+                i32.const 15
+                i32.and
+                local.set ${'$'}status
+                local.get ${'$'}packed
+                i32.const 4
+                i32.shr_u
+                local.set ${'$'}handle
+                block ${'$'}done
+                  loop ${'$'}again
+                    local.get ${'$'}status
+                    i32.const 2
+                    i32.eq
+                    br_if ${'$'}done
+                    local.get ${'$'}status
+                    i32.const 3
+                    i32.ge_u
+                    if
+                      i32.const 700
+                      return
+                    end
+                    local.get ${'$'}set
+                    i32.eqz
+                    if
+                      call ${'$'}waitable-set-new
+                      local.set ${'$'}set
+                      local.get ${'$'}handle
+                      i32.eqz
+                      if
+                        i32.const 703
+                        return
+                      end
+                      local.get ${'$'}handle
+                      local.get ${'$'}set
+                      call ${'$'}waitable-join
+                    end
+                    local.get ${'$'}set
+                    i32.const 3000
+                    call ${'$'}waitable-set-wait
+                    i32.const 1
+                    i32.ne
+                    if
+                      i32.const 701
+                      return
+                    end
+                    i32.const 3000
+                    i32.load
+                    local.get ${'$'}handle
+                    i32.ne
+                    if
+                      i32.const 702
+                      return
+                    end
+                    i32.const 3004
+                    i32.load
+                    local.set ${'$'}status
+                    br ${'$'}again
+                  end
+                end
+                local.get ${'$'}set
+                if
+                  local.get ${'$'}handle
+                  if
+                    local.get ${'$'}handle
+                    call ${'$'}subtask-drop
+                  end
+                  local.get ${'$'}set
+                  call ${'$'}waitable-set-drop
+                end
+                i32.const 0
+              )
+
+              (func ${'$'}symlink
+                (param ${'$'}descriptor i32)
+                (param ${'$'}target i32)
+                (param ${'$'}target-len i32)
+                (param ${'$'}link i32)
+                (param ${'$'}link-len i32)
+                (result i32)
+                (local ${'$'}await-result i32)
+                i32.const 2100
+                local.get ${'$'}descriptor
+                i32.store
+                i32.const 2104
+                local.get ${'$'}target
+                i32.store
+                i32.const 2108
+                local.get ${'$'}target-len
+                i32.store
+                i32.const 2112
+                local.get ${'$'}link
+                i32.store
+                i32.const 2116
+                local.get ${'$'}link-len
+                i32.store
+                i32.const 2100
+                i32.const 2140
+                call ${'$'}symlink-at
+                call ${'$'}await-subtask
+                local.tee ${'$'}await-result
+                if
+                  local.get ${'$'}await-result
+                  return
+                end
+                ;; result<_, error-code>: discriminant at +0, error-code variant case at +4.
+                i32.const 2140
+                i32.load8_u
+                if (result i32)
+                  i32.const 2144
+                  i32.load8_u
+                  i32.const 1
+                  i32.add
+                else
+                  i32.const 0
+                end
+              )
+
+              (func (export "[async-lift]test:fs/catalog@1.0.0#run") (param ${'$'}value i32) (result i32)
+                (local ${'$'}descriptor i32)
+                (local ${'$'}outcome i32)
+                i32.const 2000
+                call ${'$'}get-directories
+                i32.const 2004
+                i32.load
+                i32.const 1
+                i32.ne
+                if
+                  i32.const 710
+                  call ${'$'}return-run
+                  return
+                end
+                i32.const 2000
+                i32.load
+                i32.load
+                local.set ${'$'}descriptor
+                $checks
+                local.get ${'$'}descriptor
+                call ${'$'}drop-descriptor
+                local.get ${'$'}value
+                i32.const 1
+                i32.add
+                call ${'$'}return-run
+              )
+              (func (export "[callback][async-lift]test:fs/catalog@1.0.0#run")
+                (param i32)
+                (param i32)
+                (param i32)
+                (result i32)
+                i32.const 0
+              )
+            )
+            """.trimIndent()
+        }
+
+        /** Synchronous Preview 2 variant of [preview3SymlinkProbeCoreWat]. */
+        fun preview2SymlinkProbeCoreWat(cases: List<SymlinkProbeCase>): String {
+            val checks = symlinkProbeChecks(cases, Preview2NotPermittedErrorCode) { failure ->
+                """
+                $failure
+                return
+                """.trimIndent()
+            }
+            return """
+            (module
+              (import "wasi:filesystem/types@0.2.12" "[method]descriptor.symlink-at" (func ${'$'}symlink-at (param i32 i32 i32 i32 i32 i32)))
+              (import "wasi:filesystem/types@0.2.12" "[resource-drop]descriptor" (func ${'$'}drop-descriptor (param i32)))
+              (import "wasi:filesystem/preopens@0.2.12" "get-directories" (func ${'$'}get-directories (param i32)))
+
+              (memory (export "memory") 1)
+              (global ${'$'}heap (mut i32) (i32.const 16384))
+              ${symlinkProbeData(cases)}
+              $SymlinkProbeRealloc
+
+              (func ${'$'}symlink
+                (param ${'$'}descriptor i32)
+                (param ${'$'}target i32)
+                (param ${'$'}target-len i32)
+                (param ${'$'}link i32)
+                (param ${'$'}link-len i32)
+                (result i32)
+                local.get ${'$'}descriptor
+                local.get ${'$'}target
+                local.get ${'$'}target-len
+                local.get ${'$'}link
+                local.get ${'$'}link-len
+                i32.const 2140
+                call ${'$'}symlink-at
+                ;; result<_, error-code>: discriminant at +0, error-code enum at +1.
+                i32.const 2140
+                i32.load8_u
+                if (result i32)
+                  i32.const 2141
+                  i32.load8_u
+                  i32.const 1
+                  i32.add
+                else
+                  i32.const 0
+                end
+              )
+
+              (func (export "test:fs2/catalog@1.0.0#run") (param ${'$'}value i32) (result i32)
+                (local ${'$'}descriptor i32)
+                (local ${'$'}outcome i32)
+                i32.const 2000
+                call ${'$'}get-directories
+                i32.const 2004
+                i32.load
+                i32.const 1
+                i32.ne
+                if
+                  i32.const 710
+                  return
+                end
+                i32.const 2000
+                i32.load
+                i32.load
+                local.set ${'$'}descriptor
+                $checks
+                local.get ${'$'}descriptor
+                call ${'$'}drop-descriptor
+                local.get ${'$'}value
+                i32.const 1
+                i32.add
+              )
+            )
+            """.trimIndent()
+        }
+
+        private val SymlinkProbeRealloc = """
+            (func (export "cabi_realloc")
+              (param ${'$'}old i32)
+              (param ${'$'}old-align i32)
+              (param ${'$'}align i32)
+              (param ${'$'}size i32)
+              (result i32)
+              (local ${'$'}ptr i32)
+              global.get ${'$'}heap
+              local.set ${'$'}ptr
+              global.get ${'$'}heap
+              local.get ${'$'}size
+              i32.add
+              i32.const 7
+              i32.add
+              i32.const -8
+              i32.and
+              global.set ${'$'}heap
+              local.get ${'$'}ptr
+            )
+        """.trimIndent()
+
+        private const val SymlinkProbeDataStart = 4096
+        private const val SymlinkProbeCaseStride = 128
+        private const val SymlinkProbeLinkOffset = 64
+
+        private fun symlinkProbeData(cases: List<SymlinkProbeCase>): String {
+            require(cases.size <= (16384 - SymlinkProbeDataStart) / SymlinkProbeCaseStride)
+            return cases.withIndex().joinToString("\n") { (index, case) ->
+                val base = SymlinkProbeDataStart + index * SymlinkProbeCaseStride
+                "(data (i32.const $base) \"${case.target.watBytes()}\")\n" +
+                    "(data (i32.const ${base + SymlinkProbeLinkOffset}) \"${case.link.watBytes()}\")"
+            }
+        }
+
+        private fun symlinkProbeChecks(
+            cases: List<SymlinkProbeCase>,
+            notPermittedErrorCode: Int,
+            fail: (String) -> String,
+        ): String =
+            cases.withIndex().joinToString("\n") { (index, case) ->
+                val base = SymlinkProbeDataStart + index * SymlinkProbeCaseStride
+                val expectedOutcome = if (case.refused) 1 + notPermittedErrorCode else 0
+                """
+                local.get ${'$'}descriptor
+                i32.const $base
+                i32.const ${case.target.encodeToByteArray().size}
+                i32.const ${base + SymlinkProbeLinkOffset}
+                i32.const ${case.link.encodeToByteArray().size}
+                call ${'$'}symlink
+                local.tee ${'$'}outcome
+                i32.const $expectedOutcome
+                i32.ne
+                if
+                ${fail("local.get \$outcome\ni32.const ${1000 * (index + 1)}\ni32.add")}
+                end
+                """.trimIndent()
+            }
+
+        private fun String.watBytes(): String {
+            val bytes = encodeToByteArray()
+            require(bytes.size < SymlinkProbeLinkOffset)
+            return bytes.joinToString("") { byte -> "\\%02x".format(byte.toInt() and 0xff) }
+        }
 
         val Preview3AsyncS32ProbeWit = """
             package test:async-export;
@@ -2108,3 +2574,9 @@ class WasmtimePreview3ComponentProbeTest {
         }
     }
 }
+
+internal data class SymlinkProbeCase(
+    val target: String,
+    val link: String,
+    val refused: Boolean,
+)

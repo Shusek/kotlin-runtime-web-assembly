@@ -599,13 +599,108 @@ class WasiPreview1Test {
         assertEquals(WasiErrno.EACCES.value(), wasi.pathSymlink("../../outside", 3, "sub/leak"))
         assertEquals(WasiErrno.EACCES.value(), wasi.pathSymlink("/etc/passwd", 3, "absolute"))
         assertEquals(WasiErrno.ESUCCESS.value(), wasi.pathSymlink("inside.txt", 3, "ok"))
-        assertEquals(WasiErrno.ESUCCESS.value(), wasi.pathSymlink("../inside.txt", 3, "sub/ok"))
+        // Lands inside the preopen today, but climbs; see the rename test below.
+        assertEquals(WasiErrno.EACCES.value(), wasi.pathSymlink("../inside.txt", 3, "sub/up"))
 
         assertFalse(JFiles.exists(sandbox.resolve("leak"), LinkOption.NOFOLLOW_LINKS))
         assertFalse(JFiles.exists(sandbox.resolve("sub/leak"), LinkOption.NOFOLLOW_LINKS))
         assertFalse(JFiles.exists(sandbox.resolve("absolute"), LinkOption.NOFOLLOW_LINKS))
+        assertFalse(JFiles.exists(sandbox.resolve("sub/up"), LinkOption.NOFOLLOW_LINKS))
         assertEquals("inside", JFiles.readString(sandbox.resolve("ok"), UTF_8))
-        assertEquals("inside", JFiles.readString(sandbox.resolve("sub/ok"), UTF_8))
+    }
+
+    @Test
+    fun pathSymlinkShouldRefuseTargetsThatClimbAfterARenameOrThroughALink() {
+        val sandbox = tempDir.resolve("sandbox")
+        JFiles.createDirectories(sandbox.resolve("a/b"))
+        JFiles.createDirectories(tempDir.resolve("outside"))
+        JFiles.writeString(tempDir.resolve("outside/secret.txt"), "secret", UTF_8)
+        createSymlinkOrSkip(sandbox.resolve("probe"), Path.of("a"))
+        JFiles.delete(sandbox.resolve("probe"))
+
+        val wasiOpts = WasiOptions.builder().withDirectory("/", sandbox).build()
+        val wasi = WasiPreview1.builder().withOptions(wasiOpts).build()
+
+        // `a/b/link -> ../../x` lands in the preopen, but after renaming `a/b` to `b` the same
+        // link would point next to it.
+        assertEquals(WasiErrno.EACCES.value(), wasi.pathSymlink("../../outside/secret.txt", 3, "a/b/link"))
+        assertEquals(WasiErrno.EACCES.value(), wasi.pathSymlink("..", 3, "a/b/parent"))
+        // A link to its own directory is confined, but `self/..` climbs one level more than its
+        // lexical form suggests, so `..` is refused after a link component too.
+        assertEquals(WasiErrno.ESUCCESS.value(), wasi.pathSymlink(".", 3, "self"))
+        assertEquals(WasiErrno.EACCES.value(), wasi.pathSymlink("self/../outside/secret.txt", 3, "chain"))
+        assertEquals(WasiErrno.EACCES.value(), wasi.pathSymlink("a/../../outside", 3, "normalized"))
+        assertEquals(WasiErrno.EACCES.value(), wasi.pathSymlink("..\\outside\\secret.txt", 3, "backslash"))
+        assertEquals(WasiErrno.EACCES.value(), wasi.pathSymlink("C:\\outside", 3, "drive"))
+
+        // Downward links stay confined when the guest moves them or their directory.
+        assertEquals(WasiErrno.ESUCCESS.value(), wasi.pathSymlink("data.txt", 3, "a/b/down"))
+        assertEquals(WasiErrno.ESUCCESS.value(), wasi.pathRename(3, "a/b", 3, "b"))
+        assertEquals(WasiErrno.ESUCCESS.value(), wasi.pathRename(3, "b/down", 3, "down"))
+
+        assertFalse(JFiles.exists(sandbox.resolve("a/b/link"), LinkOption.NOFOLLOW_LINKS))
+        assertFalse(JFiles.exists(sandbox.resolve("a/b/parent"), LinkOption.NOFOLLOW_LINKS))
+        assertFalse(JFiles.exists(sandbox.resolve("chain"), LinkOption.NOFOLLOW_LINKS))
+        assertFalse(JFiles.exists(sandbox.resolve("normalized"), LinkOption.NOFOLLOW_LINKS))
+        assertFalse(JFiles.exists(sandbox.resolve("backslash"), LinkOption.NOFOLLOW_LINKS))
+        assertFalse(JFiles.exists(sandbox.resolve("drive"), LinkOption.NOFOLLOW_LINKS))
+        assertEveryLinkStaysInside(sandbox)
+        assertEquals("secret", JFiles.readString(tempDir.resolve("outside/secret.txt"), UTF_8))
+    }
+
+    @Test
+    fun guestCreatedDownwardSymlinkChainsRemainUsable() {
+        val sandbox = tempDir.resolve("sandbox")
+        JFiles.createDirectories(sandbox.resolve("sub"))
+        JFiles.writeString(sandbox.resolve("sub/data.txt"), "data", UTF_8)
+        createSymlinkOrSkip(sandbox.resolve("probe"), Path.of("sub"))
+        JFiles.delete(sandbox.resolve("probe"))
+
+        val wasiOpts = WasiOptions.builder().withDirectory("/", sandbox).build()
+        val wasi = WasiPreview1.builder().withOptions(wasiOpts).build()
+        val memory = ByteArrayMemory(MemoryLimits(1))
+
+        assertEquals(WasiErrno.ESUCCESS.value(), wasi.pathSymlink("sub", 3, "dir-link"))
+        assertEquals(WasiErrno.ESUCCESS.value(), wasi.pathSymlink("dir-link/data.txt", 3, "file-link"))
+        assertEquals(WasiErrno.ESUCCESS.value(), wasi.pathSymlink("./sub//data.txt", 3, "dotted-link"))
+
+        assertEquals(
+            WASI_ESUCCESS,
+            wasi.pathOpen(memory, 3, WASI_LOOKUPFLAGS_SYMLINK_FOLLOW, "file-link", 0, WASI_RIGHTS_FD_READ.toLong(), 0L, 0, 0),
+        )
+        assertEquals("data", JFiles.readString(sandbox.resolve("file-link"), UTF_8))
+        assertEquals("data", JFiles.readString(sandbox.resolve("dotted-link"), UTF_8))
+    }
+
+    @Test
+    fun pathOpenShouldNotCreateThroughADanglingSymlinkThatLeavesThePreopen() {
+        val sandbox = tempDir.resolve("sandbox")
+        val outside = tempDir.resolve("outside")
+        JFiles.createDirectories(sandbox)
+        JFiles.createDirectories(outside)
+        // A link the guest cannot create itself, for example one left by the host.
+        createSymlinkOrSkip(sandbox.resolve("dangling"), Path.of("..", "outside", "created.txt"))
+
+        val wasiOpts = WasiOptions.builder().withDirectory("/", sandbox).build()
+        val wasi = WasiPreview1.builder().withOptions(wasiOpts).build()
+        val memory = ByteArrayMemory(MemoryLimits(1))
+
+        for (lookupFlags in listOf(0, WASI_LOOKUPFLAGS_SYMLINK_FOLLOW)) {
+            val errno =
+                wasi.pathOpen(
+                    memory,
+                    3,
+                    lookupFlags,
+                    "dangling",
+                    WASI_OFLAGS_CREAT,
+                    WASI_RIGHTS_FD_WRITE.toLong(),
+                    WASI_RIGHTS_FD_WRITE.toLong(),
+                    0,
+                    0,
+                )
+            assertTrue(errno != WASI_ESUCCESS, "path_open(O_CREAT) through a dangling escaping link must fail")
+        }
+        assertFalse(JFiles.exists(outside.resolve("created.txt"), LinkOption.NOFOLLOW_LINKS))
     }
 
     @Test
@@ -661,6 +756,22 @@ class WasiPreview1Test {
         private const val WASI_OFLAGS_TRUNC = 1 shl 3
         private const val WASI_RIGHTS_FD_READ = 1 shl 1
         private const val WASI_RIGHTS_FD_WRITE = 1 shl 6
+
+        /** Every link below [root] must lexically resolve below [root] from its own directory. */
+        private fun assertEveryLinkStaysInside(root: Path) {
+            JFiles.walk(root).use { paths ->
+                paths
+                    .filter { path -> JFiles.isSymbolicLink(path) }
+                    .forEach { link ->
+                        val target = JFiles.readSymbolicLink(link)
+                        val resolved = link.parent.resolve(target).normalize()
+                        assertTrue(
+                            !target.isAbsolute && target.none { it.toString() == ".." } && resolved.startsWith(root),
+                            "$link -> $target leaves $root",
+                        )
+                    }
+            }
+        }
 
         private fun createSymlinkOrSkip(link: Path, target: Path) {
             try {

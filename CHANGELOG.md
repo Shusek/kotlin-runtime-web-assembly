@@ -5,6 +5,33 @@ patch and prerelease identifiers advance without changing the `0.3` major/minor 
 `1.0.0`, API changes may still be intentional; release candidates remain immutable once
 published.
 
+## 0.3.4 (2026-10-15)
+
+### Security
+
+- A guest can no longer leave a symbolic link in a writable preopen that points outside it.
+  `descriptor.symlink-at` in the WASI Preview 2 and Preview 3 hosts (and therefore Preview 1
+  guests running through the bundled adapter), `path_symlink` in the WASI Preview 1 host, and
+  the Preview 2 and Preview 3 `symlink-at` imports of the Wasmtime Preview 3 bridge now accept
+  only relative targets without a `..` component, a leading `/` or `\` or a drive prefix.
+  Other targets fail with `not-permitted` (`EACCES` in Preview 1). Previously the Preview 2 and
+  Preview 3 hosts and the bridge refused only absolute targets, so a guest could create
+  `cache/x -> ../../../../..`. Host code that later followed links in that directory, such as
+  `java.io.File.deleteRecursively` clearing a plugin cache, then deleted host files outside the
+  sandbox. The lexical check that 0.3.3 added to `path_symlink` is replaced as well: a link such
+  as `a/b/link -> ../../x` resolved inside the preopen when it was created, but pointed outside
+  it once the guest renamed `a/b` to `b`.
+
+### Changed
+
+- Guests that create links whose target contains `..`, such as `sub/link -> ../file`, now get
+  `not-permitted` (`EACCES` in Preview 1) even when the target would currently resolve inside
+  the preopen. Downward links such as `link -> sub/file` and `self -> .` keep working. Existing
+  links, including links the host created, are not changed, and guest path resolution still
+  follows them only while they resolve inside the preopen.
+- The security guide now recommends deleting guest-writable directories without following
+  links, for example with `Files.walkFileTree` instead of `java.io.File.deleteRecursively`.
+
 ## 0.3.3 (2026-10-05)
 
 ### Changed

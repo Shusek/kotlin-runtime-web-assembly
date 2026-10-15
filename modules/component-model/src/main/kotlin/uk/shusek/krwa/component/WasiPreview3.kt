@@ -2381,10 +2381,11 @@ private constructor(
     private fun filesystemSymlinkAt(args: List<Any?>): Any? {
         requireArity("descriptor.symlink-at", args, 3)
         return filesystemResult {
-            val oldPath = string(args[1]).toPath(normalize = true)
-            if (oldPath.isAbsolute) {
+            val rawTarget = string(args[1])
+            if (!isGuestSymlinkTargetConfined(rawTarget)) {
                 throw FsException("not-permitted")
             }
+            val oldPath = rawTarget.toPath(normalize = true)
             val newPath = resolvePath(mutableDirectoryDescriptor(args, 0), string(args[2]), false)
             fileSystem.createSymlink(newPath, oldPath)
             null

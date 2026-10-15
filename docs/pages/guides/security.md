@@ -70,6 +70,21 @@ deployment. Core modules fall back to compiling the `.wasm` bytes when a
 memory policy is applied or the module needs synthetic memory exports, so the
 artifact may be ignored without an error; do not rely on it for sandboxing.
 
+## Symbolic Links in Writable Preopens
+
+Every KRWA WASI host (Preview 1, Preview 2, Preview 3 and the Wasmtime Preview 3
+bridge) lets a guest create a symbolic link only when its target is relative and
+never goes up: no leading `/` or `\`, no drive prefix and no `..` component.
+Other targets fail with `not-permitted` (`EACCES` in Preview 1). Such a link
+points into the directory that holds it, so it stays inside the preopen even
+after the guest renames it or one of its parent directories.
+
+Links that already exist in a preopen, for example ones the host created, are
+not rewritten. When the host itself walks a guest-writable directory, for
+instance to clear a plugin cache, it should still not follow links. Delete with
+`Files.walkFileTree` without `FileVisitOption.FOLLOW_LINKS` instead of
+`java.io.File.deleteRecursively`, which follows links to directories.
+
 ## Untrusted Parser Input
 
 The default Wasm and WIT parsers have finite limits. For an application that

@@ -14,9 +14,18 @@ use std::sync::{Arc, Condvar, Mutex, OnceLock};
 use std::thread;
 use std::time::{Duration, Instant};
 use wasmtime::component::types::ComponentItem;
-use wasmtime::component::{Component, ComponentExportIndex, Linker, ResourceTable};
-use wasmtime::{Config, Engine, Store, StoreLimits, StoreLimitsBuilder};
+use wasmtime::component::{
+    Accessor, Component, ComponentExportIndex, Linker, LinkerInstance, Resource, ResourceTable,
+};
+use wasmtime::{Config, Engine, Store, StoreContextMut, StoreLimits, StoreLimitsBuilder};
+use wasmtime_wasi::filesystem::{Descriptor, WasiFilesystem, WasiFilesystemView};
+use wasmtime_wasi::p2::bindings::filesystem::types::{
+    ErrorCode as P2FilesystemErrorCode, HostDescriptor as P2HostDescriptor,
+};
 use wasmtime_wasi::p3::bindings::Command as P3Command;
+use wasmtime_wasi::p3::bindings::filesystem::types::{
+    ErrorCode as P3FilesystemErrorCode, HostDescriptorWithStore as P3HostDescriptorWithStore,
+};
 use wasmtime_wasi::{
     FsPerms, I32Exit, WasiCtx, WasiCtxBuilder, WasiCtxView, WasiView,
     p2::pipe::{MemoryInputPipe, MemoryOutputPipe},
@@ -1482,7 +1491,113 @@ fn add_p3_linker_imports(linker: &mut Linker<KrwaP3State>) -> Result<(), String>
         .map_err(|error| format!("failed to link Wasmtime WASI Preview3 imports: {error}"))?;
     wasmtime_wasi_http::p3::add_to_linker(linker)
         .map_err(|error| format!("failed to link Wasmtime WASI Preview3 HTTP imports: {error}"))?;
+    confine_guest_symlink_targets(linker)
+        .map_err(|error| format!("failed to confine Wasmtime WASI symlink targets: {error}"))?;
     Ok(())
+}
+
+/// `wasi:filesystem/types` as registered by `wasmtime_wasi::p2::add_to_linker_async` and
+/// `wasmtime_wasi::p3::add_to_linker` for the WIT packages of the pinned Wasmtime release.
+const P2_FILESYSTEM_TYPES_INTERFACE: &str = "wasi:filesystem/types@0.2.12";
+const P3_FILESYSTEM_TYPES_INTERFACE: &str = "wasi:filesystem/types@0.3.0";
+const SYMLINK_AT_FUNCTION: &str = "[method]descriptor.symlink-at";
+
+/// Wasmtime only refuses absolute symlink targets and relies on its own sandboxed path
+/// resolution for everything else. A guest could therefore leave `cache/x -> ../../..` in a
+/// writable preopen, and host code that follows links there, such as a recursive delete of a
+/// plugin cache, would act on host files outside the sandbox. Replace both `symlink-at`
+/// implementations with ones that first apply [is_guest_symlink_target_confined].
+fn confine_guest_symlink_targets(linker: &mut Linker<KrwaP3State>) -> wasmtime::Result<()> {
+    shadow_symlink_at(linker, P2_FILESYSTEM_TYPES_INTERFACE, define_p2_symlink_at)?;
+    shadow_symlink_at(linker, P3_FILESYSTEM_TYPES_INTERFACE, define_p3_symlink_at)
+}
+
+fn shadow_symlink_at(
+    linker: &mut Linker<KrwaP3State>,
+    interface: &str,
+    define: fn(&mut LinkerInstance<'_, KrwaP3State>) -> wasmtime::Result<()>,
+) -> wasmtime::Result<()> {
+    // Without shadowing, a second definition fails. Use that to prove that Wasmtime registered
+    // `symlink-at` under exactly this interface name before replacing it, so a Wasmtime upgrade
+    // that renames the interface fails closed instead of leaving the unchecked version linked.
+    linker.allow_shadowing(false);
+    if define(&mut linker.instance(interface)?).is_ok() {
+        wasmtime::bail!("Wasmtime did not link `{interface}#{SYMLINK_AT_FUNCTION}`");
+    }
+    linker.allow_shadowing(true);
+    let result = define(&mut linker.instance(interface)?);
+    linker.allow_shadowing(false);
+    result
+}
+
+fn define_p2_symlink_at(instance: &mut LinkerInstance<'_, KrwaP3State>) -> wasmtime::Result<()> {
+    instance.func_wrap_async(
+        SYMLINK_AT_FUNCTION,
+        |mut store: StoreContextMut<'_, KrwaP3State>,
+         (descriptor, target, link): (Resource<Descriptor>, String, String)| {
+            Box::new(async move {
+                if !is_guest_symlink_target_confined(&target) {
+                    return Ok((Err(P2FilesystemErrorCode::NotPermitted),));
+                }
+                let mut filesystem = store.data_mut().filesystem();
+                let result =
+                    P2HostDescriptor::symlink_at(&mut filesystem, descriptor, target, link).await;
+                match result {
+                    Ok(()) => Ok((Ok(()),)),
+                    Err(error) => Ok((Err(error.downcast()?),)),
+                }
+            })
+        },
+    )
+}
+
+fn define_p3_symlink_at(instance: &mut LinkerInstance<'_, KrwaP3State>) -> wasmtime::Result<()> {
+    instance.func_wrap_concurrent(
+        SYMLINK_AT_FUNCTION,
+        |accessor: &Accessor<KrwaP3State>,
+         (descriptor, target, link): (Resource<Descriptor>, String, String)| {
+            Box::pin(async move {
+                if !is_guest_symlink_target_confined(&target) {
+                    return Ok((Err(P3FilesystemErrorCode::NotPermitted),));
+                }
+                let filesystem = accessor
+                    .with_getter::<WasiFilesystem>(<KrwaP3State as WasiFilesystemView>::filesystem);
+                let result =
+                    <WasiFilesystem as P3HostDescriptorWithStore<KrwaP3State>>::symlink_at(
+                        &filesystem,
+                        descriptor,
+                        target,
+                        link,
+                    )
+                    .await;
+                match result {
+                    Ok(()) => Ok((Ok(()),)),
+                    Err(error) => Ok((Err(error.downcast()?),)),
+                }
+            })
+        },
+    )
+}
+
+/// Same rule as the Kotlin WASI hosts: a guest may only create links whose target is relative and
+/// never goes up. No leading `/` or `\`, no drive prefix such as `C:`, and no `..` component when
+/// split on `/` and `\`. Such a link resolves to its own directory or below, so it stays inside the
+/// preopen wherever the guest later moves it or one of its parent directories, and a chain of such
+/// links never climbs. A lexical check against the link's current location is not enough, because
+/// renaming `a/b` to `b` turns `a/b/link -> ../../x` into a link that leaves the preopen.
+fn is_guest_symlink_target_confined(target: &str) -> bool {
+    if target.starts_with('/') || target.starts_with('\\') {
+        return false;
+    }
+    let mut characters = target.chars();
+    if let (Some(drive), Some(':')) = (characters.next(), characters.next()) {
+        if drive.is_alphabetic() {
+            return false;
+        }
+    }
+    !target
+        .split(|character| character == '/' || character == '\\')
+        .any(|component| component == "..")
 }
 
 struct ExecutionDeadlineWatchdog {
@@ -2207,6 +2322,48 @@ mod tests {
         );
 
         fs::remove_dir_all(sandbox).unwrap();
+    }
+
+    #[test]
+    fn guest_symlink_targets_must_stay_below_the_link() {
+        for target in [
+            "data.txt",
+            "sub/data.txt",
+            "./sub//data.txt",
+            ".",
+            "self/self",
+            "a..b",
+            "..data",
+        ] {
+            assert!(is_guest_symlink_target_confined(target), "{target}");
+        }
+        for target in [
+            "..",
+            "../x",
+            "../../../../..",
+            "a/../../x",
+            "self/../x",
+            "a/..",
+            "..\\x",
+            "a\\..\\..\\x",
+            "/etc/passwd",
+            "\\x",
+            "C:\\x",
+            "c:x",
+        ] {
+            assert!(!is_guest_symlink_target_confined(target), "{target}");
+        }
+    }
+
+    #[test]
+    fn symlink_confinement_fails_closed_when_the_interface_is_not_linked() {
+        let engine = p3_engine(P3Limits::default()).unwrap();
+        let mut linker = Linker::<KrwaP3State>::new(&engine);
+        add_p3_linker_imports(&mut linker).unwrap();
+
+        let error = shadow_symlink_at(&mut linker, "krwa:unlinked/types", define_p3_symlink_at)
+            .unwrap_err();
+        assert!(error.to_string().contains("did not link"), "{error}");
     }
 
     #[test]

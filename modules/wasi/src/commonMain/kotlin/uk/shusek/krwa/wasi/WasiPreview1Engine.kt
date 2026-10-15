@@ -946,7 +946,7 @@ internal class WasiPreview1Engine(opts: WasiOptions) : WasiPreview1Host {
             } catch (_: IllegalArgumentException) {
                 return wasiResult(WasiErrno.EINVAL)
             }
-        if (target.isAbsolute) {
+        if (target.isAbsolute || !isGuestSymlinkTargetConfined(oldRawPath)) {
             return wasiResult(WasiErrno.EACCES)
         }
         if (newRawPath.endsWith("/")) {
@@ -959,9 +959,6 @@ internal class WasiPreview1Engine(opts: WasiOptions) : WasiPreview1Host {
             )
         }
         val new = resolvePath(dirFd, newRawPath) ?: return wasiResult(WasiErrno.EBADF)
-        if (!symlinkTargetInsidePreopen(new, target)) {
-            return wasiResult(WasiErrno.EACCES)
-        }
         return try {
             if (new.directory.fileSystem.exists(new.path)) {
                 return wasiResult(WasiErrno.EEXIST)
@@ -1292,20 +1289,24 @@ internal class WasiPreview1Engine(opts: WasiOptions) : WasiPreview1Host {
     }
 
     /**
-     * A relative symlink target is interpreted from the real location of the link's parent
-     * directory; creating a link whose target leaves the preopen is refused, mirroring the
-     * existing refusal of absolute targets.
+     * A guest may only create links whose target is relative and never goes up: no leading `/`
+     * or `\`, no drive prefix such as `C:`, and no `..` component when split on `/` and `\`. Such
+     * a link resolves to its own directory or below, so it stays inside the preopen wherever the
+     * guest later moves it or one of its parent directories, and chains of such links never climb.
+     *
+     * A lexical check against the link's current location is not enough: the guest can create
+     * `a/b/link -> ../../x` and then rename `a/b` to `b`, so the same link points next to the
+     * preopen. Host code that follows links, such as `java.io.File.deleteRecursively`, would then
+     * act on host files outside the sandbox.
      */
-    private fun symlinkTargetInsidePreopen(link: ResolvedPath, target: Path): Boolean {
-        val linkParent = link.path.normalized().parent ?: return false
-        return try {
-            val fileSystem = link.directory.fileSystem
-            val realRoot = fileSystem.canonicalize(link.directory.path)
-            val realParent = realPathAllowingMissingLeaf(fileSystem, linkParent)
-            isInsidePreopen(realRoot, realParent.resolve(target, normalize = true))
-        } catch (_: IOException) {
-            false
+    private fun isGuestSymlinkTargetConfined(target: String): Boolean {
+        if (target.startsWith('/') || target.startsWith('\\')) {
+            return false
         }
+        if (target.length >= 2 && target[1] == ':' && target[0].isLetter()) {
+            return false
+        }
+        return target.split('/', '\\').none { component -> component == ".." }
     }
 
     private fun metadataOrNull(descriptor: DirectoryDescriptor): FileMetadata? =

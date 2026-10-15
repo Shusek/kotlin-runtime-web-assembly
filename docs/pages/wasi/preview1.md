@@ -15,9 +15,10 @@ directories for untrusted workloads.
 Symbolic links are resolved on the host before every path operation. A link in
 any component of a guest path that leads outside the preopen root is refused
 (`EACCES`, or `EPERM` from `path_open`), `path_open` follows a final link only
-with `SYMLINK_FOLLOW`, and `path_symlink` rejects absolute targets as well as
-relative targets that would leave the preopen. Links that stay inside the
-preopen keep working.
+with `SYMLINK_FOLLOW`, and `path_symlink` accepts only relative targets without
+a `..` component (`EACCES` otherwise). A guest therefore cannot leave a link
+that points outside the preopen, not even by renaming the link or its directory
+later. Links that stay inside the preopen keep working.
 
 Configure the capabilities through `WasiOptions`:
 
