@@ -1,0 +1,125 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "url": "../../runtime/0.3.0-dev.60a66e4f9767/runtime-0.3.0-dev.60a66e4f9767.module",
+    "group": "uk.shusek.krwa",
+    "module": "runtime",
+    "version": "0.3.0-dev.60a66e4f9767",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.8.0"
+    }
+  },
+  "variants": [
+    {
+      "name": "iosSimulatorArm64ApiElements-published",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.jvm.environment": "non-jvm",
+        "org.gradle.usage": "kotlin-api",
+        "org.jetbrains.kotlin.native.target": "ios_simulator_arm64",
+        "org.jetbrains.kotlin.platform.type": "native"
+      },
+      "dependencies": [
+        {
+          "group": "uk.shusek.krwa",
+          "module": "wasm",
+          "version": {
+            "requires": "0.3.0-dev.60a66e4f9767"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.4.20"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "runtime-iosSimulatorArm64Main-0.3.0-dev.60a66e4f9767.klib",
+          "url": "runtime-iossimulatorarm64-0.3.0-dev.60a66e4f9767.klib",
+          "size": 353604,
+          "sha512": "1d33af635a2691b85ea4c49a3476c97ccdea220632d606ed668bc195331923a440a0df1c40e904e8686c00b10323a0de27f946a47e512842bb237717f19f27ea",
+          "sha256": "316d71f66b1cb2fffa2b196b9ec8c1e208920125d73b69e6f5afef92c5538243",
+          "sha1": "11c7a12fd47ae2c0569ffeb5fd0fbcdd57ea4e44",
+          "md5": "b19ae05f1060e7a708e0c02fd5f2fd01"
+        },
+        {
+          "name": "runtime-iosSimulatorArm64Cinterop-wasmtimePulleyMain-0.3.0-dev.60a66e4f9767.klib",
+          "url": "runtime-iossimulatorarm64-0.3.0-dev.60a66e4f9767-cinterop-wasmtimePulley.klib",
+          "size": 41048867,
+          "sha512": "d8e239ba300ef908df582985cdc65cfde05ba643be46d2be1f5bc813b34bb6041149a0b112cef9829ab9f5b016fe9849b7f135e0f0c64849c79615e5c22234ea",
+          "sha256": "43da426178b6aca23ee051b178b74c9b7d3997e395548d9b0e5f6f49ea714266",
+          "sha1": "092b2bbc6acb33be31af3155f1a441b8c25cbd56",
+          "md5": "2901386dc44f5ebb27420beea6cc2e79"
+        }
+      ]
+    },
+    {
+      "name": "iosSimulatorArm64SourcesElements-published",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.jvm.environment": "non-jvm",
+        "org.gradle.usage": "kotlin-runtime",
+        "org.jetbrains.kotlin.native.target": "ios_simulator_arm64",
+        "org.jetbrains.kotlin.platform.type": "native"
+      },
+      "files": [
+        {
+          "name": "runtime-iossimulatorarm64-0.3.0-dev.60a66e4f9767-sources.jar",
+          "url": "runtime-iossimulatorarm64-0.3.0-dev.60a66e4f9767-sources.jar",
+          "size": 69989,
+          "sha512": "8835a4f025ae36763acc6600acfbcea63d38cc5cb33d1214418cf1e6f70b490597ff69959edc994df2f4c0dd6761f096afbe9a35ebdf3b3cca0f67e120600cd0",
+          "sha256": "3c9a8a66379f657dc4b4e77c3a9f4d219d46a2d318eaa5b92dcd51081153d23f",
+          "sha1": "9ad6d3e7677fda3218fc6e440c230aadf063e3de",
+          "md5": "a83b6451b7251fa664edf5b7f6bf3fdf"
+        }
+      ]
+    },
+    {
+      "name": "iosSimulatorArm64MetadataElements-published",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.jvm.environment": "non-jvm",
+        "org.gradle.usage": "kotlin-metadata",
+        "org.jetbrains.kotlin.native.target": "ios_simulator_arm64",
+        "org.jetbrains.kotlin.platform.type": "native"
+      },
+      "dependencies": [
+        {
+          "group": "uk.shusek.krwa",
+          "module": "wasm",
+          "version": {
+            "requires": "0.3.0-dev.60a66e4f9767"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.4.20"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "runtime-iossimulatorarm64-0.3.0-dev.60a66e4f9767-metadata.jar",
+          "url": "runtime-iossimulatorarm64-0.3.0-dev.60a66e4f9767-metadata.jar",
+          "size": 34443,
+          "sha512": "d05d5d88dc3e22d188893bd94e85e0d0d28fb6417d635cdbdfd59f4011e9a9f890d3de12efa3ed411e3d983926524cf42f1cf741d8548b864a4a8a2c1bdafe47",
+          "sha256": "36f34eb5f5de72f358e6261982946f8783df98535637a4ed1da97b0bbbc473ae",
+          "sha1": "329592d2776f921e8877f7ec4013aa6bcb5611f3",
+          "md5": "83dda7653201846eca3acc933af7b434"
+        }
+      ]
+    }
+  ]
+}
