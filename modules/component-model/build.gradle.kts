@@ -76,9 +76,9 @@ val wasiPreview1AdapterPackage = "uk/shusek/krwa/component/wasi-preview1"
 val wasiPreview1Adapters =
     mapOf(
         "wasi_snapshot_preview1.command.wasm" to
-            "cfed888f1969c11bebf1146daeca7fbf3adcf7c011c8b41cec90b01ebf694271",
+            "557a1959455a5989a9d986102bd4929e7e5b193b98e0d1ea25e629873d0d7d75",
         "wasi_snapshot_preview1.reactor.wasm" to
-            "2d5047cca1868b1749c315dbd287e2ea90f93a597c7f28637cc60818cdf48af9",
+            "820c67eb7f1a8c2ebd4c5695b847269aef8e0fc3945c03adff69ab0c9fd45ec0",
     )
 
 val downloadWasiPreview1Adapters =

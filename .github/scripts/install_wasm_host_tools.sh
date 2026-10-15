@@ -21,29 +21,29 @@ test -n "$wasm_tools_version"
 case "$(uname -s)-$(uname -m)" in
   Darwin-arm64)
     target="aarch64-macos"
-    wasmtime_api_sha256="92e74e76ef06ae699beec893cf3268d439da4d05dbca020e8f608ca3f0c1e862"
-    wasmtime_cli_sha256="36d78cf1a5c8a5f40c0b9e933208ac3d937e868aca44b3cbbe1b48a3a530cf47"
+    wasmtime_api_sha256="34db573f929de089163fbd61fb6ffd89da74a09ba20f737d009aaa70e734f5ef"
+    wasmtime_cli_sha256="0b24079ba8c8a23df9cd9a11e40f0b5edc95398a70a7cdec9286133f18701c69"
     wasm_tools_sha256="94c4fc9baeada6e793f0d4adeca537633b5d93e9dc6bf718be2f478f4afe0296"
     library_name="libwasmtime.dylib"
     ;;
   Darwin-x86_64)
     target="x86_64-macos"
-    wasmtime_api_sha256="47789d6be9ae03d4ba0ff13821e1d069bbaa3a8926bcd4b701482c3149539556"
-    wasmtime_cli_sha256="b28b3987e6ba5a18d39dc3dc60e7c312e3fd3dcd5b2cb7a7f7fb9cfb834a6d0e"
+    wasmtime_api_sha256="0eff843c8d126b0303d76b2a949187e98d4bd45dcea51d43e53440ee227063c4"
+    wasmtime_cli_sha256="cf05506b9b118a07fc8892d2acd63d59442d9aca01ea010bb64371b3bdb91c85"
     wasm_tools_sha256="354a84ffeede30ba11f29bc72de76875a977cf43bf1c5bdc3e91e2313e8a854b"
     library_name="libwasmtime.dylib"
     ;;
   Linux-aarch64|Linux-arm64)
     target="aarch64-linux"
-    wasmtime_api_sha256="3fd35813cf4a922b968fa3dbd12a300ecea032181a895c4ffe7b1f6f2824fca6"
-    wasmtime_cli_sha256="8713dcbc6f9427eb120d7a4b514b6a58597a369e5b5d79cebeaae11fa24479f5"
+    wasmtime_api_sha256="dc5aefa8219e83a7d91a543de444e390a5daf4be45482fb2e7d3d57778072b1b"
+    wasmtime_cli_sha256="206a572cd4fab81e86bb4e808976e822603fd2aa9c67730c921710c2c6bf1c00"
     wasm_tools_sha256="6f19389a69e21c7dbd2a4e7ae72f807dc999988b48782c706c4102bad3e44487"
     library_name="libwasmtime.so"
     ;;
   Linux-x86_64)
     target="x86_64-linux"
-    wasmtime_api_sha256="81fffe5fe895c7f8f84a744f4d4d165dda28793d00ee943ee71fcfb6ab5ed923"
-    wasmtime_cli_sha256="f533a0fb3eca20aee34d69192f214839c5227a507fff2ecb3070ae1a37f0c40d"
+    wasmtime_api_sha256="8da74b225e159dcd901055bc5185248052af544d06bcdff8b3fe2d81ef4ca68f"
+    wasmtime_cli_sha256="a04bbb203271301e923ccc54ebe834145b1595af1ffb457c8e5dbf1baadd7248"
     wasm_tools_sha256="ad62b2176037e93e1348cb65d6212d128ca9f097b63d155569f25215818ff7b1"
     library_name="libwasmtime.so"
     ;;

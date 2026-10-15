@@ -21,9 +21,27 @@ published.
   sandbox. The lexical check that 0.3.3 added to `path_symlink` is replaced as well: a link such
   as `a/b/link -> ../../x` resolved inside the preopen when it was created, but pointed outside
   it once the guest renamed `a/b` to `b`.
+- Updated Wasmtime from `48.0.5` to `48.0.6` for the upstream advisories published on
+  2026-10-14: RUSTSEC-2026-0352 (`wasmtime-wasi` filesystem sandbox escape when renaming
+  symlinks with trailing slashes, reachable through the Wasmtime Preview 3 bridge preopens),
+  RUSTSEC-2026-0353 to RUSTSEC-2026-0359 and RUSTSEC-2026-0361 (host panics or stack overflow
+  reachable from guest components), RUSTSEC-2026-0362 (async-entrypoint requirement not
+  enforced), RUSTSEC-2026-0363 (component-model handle tables capped only per instance and
+  charged to no limit) and RUSTSEC-2026-0364 (exception tags can leave host data structures
+  unaligned). The same release also fixes two `wasmtime-wasi-http` advisories:
+  GHSA-5qpp-g3j2-8frx (a guest could send an absolute-form request target for another host to
+  the authority it was allowed to reach) and GHSA-w36r-2hch-9xp9 (a `?` after byte 65535 of the
+  path could panic the host).
 
 ### Changed
 
+- The Wasmtime update covers the pinned source revision, compiler cache identity, host-tool
+  checksums, Preview 1 adapters, Android and iOS native libraries, and the Preview 3 bridge.
+  Recompile precompiled modules and components; artifacts produced with `48.0.5` are not
+  portable to `48.0.6`.
+- Wasmtime `48.0.6` limits each store to 100,000 live component-model handles. A guest that
+  allocates past the limit, for example with `resource.new`, now traps; dropped handles return
+  to the budget.
 - Guests that create links whose target contains `..`, such as `sub/link -> ../file`, now get
   `not-permitted` (`EACCES` in Preview 1) even when the target would currently resolve inside
   the preopen. Downward links such as `link -> sub/file` and `self -> .` keep working. Existing

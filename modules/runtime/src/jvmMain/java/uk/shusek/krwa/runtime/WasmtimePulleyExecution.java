@@ -3086,7 +3086,7 @@ public final class WasmtimePulleyExecution implements PlatformInstanceExecution 
             }
             candidates.add(Path.of("/opt/homebrew/opt/wasmtime/lib/libwasmtime.dylib"));
             candidates.add(Path.of("/usr/local/opt/wasmtime/lib/libwasmtime.dylib"));
-            candidates.add(Path.of("/opt/homebrew/Cellar/wasmtime/48.0.5/lib/libwasmtime.dylib"));
+            candidates.add(Path.of("/opt/homebrew/Cellar/wasmtime/48.0.6/lib/libwasmtime.dylib"));
             candidates.add(Path.of("/usr/local/lib/libwasmtime.dylib"));
             candidates.add(Path.of("/usr/lib/libwasmtime.so"));
             for (Path candidate : candidates) {
