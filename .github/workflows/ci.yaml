@@ -264,8 +264,10 @@ jobs:
   ios:
     name: iOS device and simulator
     if: ${{ github.event_name != 'push' }}
-    runs-on: macos-latest
+    runs-on: macos-15
     timeout-minutes: 60
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
 
     steps:
       - name: Checkout sources
