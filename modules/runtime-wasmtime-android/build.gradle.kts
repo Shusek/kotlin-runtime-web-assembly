@@ -57,9 +57,9 @@ val wasmtimePulleyFeatures =
 val wasmtimePulleyAndroidArchiveName =
     "wasmtime-v$wasmtimePulleyVersion-aarch64-android-c-api.tar.xz"
 val wasmtimePulleyAndroidArchiveSha256 =
-    "e03fd514574a984960eda7583e53e59cc888c625eee8f0bfe25e81eb9d5498bb"
+    "ce2f295256ea465f5d868757f1a7c690371c7ccdeb9a5564947dee8098f20fe1"
 val wasmtimePulleyAndroidLibSha256 =
-    "9d795c7fb49174a3aa2ae5298893cea9846c3e6a5dae3735b5dc4e61a43d6969"
+    "71ac8855beb3ac99b87d112795c45ac4c13ccc3e31227ac977540e357becb116"
 
 fun androidJniLib(abi: AndroidAbiConfig, name: String) =
     layout.projectDirectory.file("src/androidMain/jniLibs/${abi.jniDirectory}/$name")

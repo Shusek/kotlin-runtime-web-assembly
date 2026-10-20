@@ -150,7 +150,7 @@ dependencies = [
 
 [[package]]
 name = "cranelift-bforest"
-version = "0.135.6"
+version = "0.135.7"
 dependencies = [
  "cranelift-entity",
  "wasmtime-internal-core",
@@ -158,7 +158,7 @@ dependencies = [
 
 [[package]]
 name = "cranelift-bitset"
-version = "0.135.6"
+version = "0.135.7"
 dependencies = [
  "serde",
  "serde_derive",
@@ -167,7 +167,7 @@ dependencies = [
 
 [[package]]
 name = "cranelift-entity"
-version = "0.135.6"
+version = "0.135.7"
 dependencies = [
  "cranelift-bitset",
  "serde",
@@ -792,7 +792,7 @@ dependencies = [
 
 [[package]]
 name = "pulley-interpreter"
-version = "48.0.6"
+version = "48.0.7"
 dependencies = [
  "cranelift-bitset",
  "log",
@@ -802,7 +802,7 @@ dependencies = [
 
 [[package]]
 name = "pulley-macros"
-version = "48.0.6"
+version = "48.0.7"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -886,9 +886,9 @@ dependencies = [
 
 [[package]]
 name = "rustls"
-version = "0.23.43"
+version = "0.23.46"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0283386ce02abc0151e1761d08802dfe86c173b0b494af5cbc086574e453da06"
+checksum = "48e13bd8c0e9365c43cfa5c9e8f9ad49d3c8444926c9aac819e0e4dc503c8fdf"
 dependencies = [
  "log",
  "once_cell",
@@ -1264,7 +1264,7 @@ dependencies = [
 
 [[package]]
 name = "wasmtime"
-version = "48.0.6"
+version = "48.0.7"
 dependencies = [
  "addr2line",
  "async-trait",
@@ -1303,7 +1303,7 @@ dependencies = [
 
 [[package]]
 name = "wasmtime-environ"
-version = "48.0.6"
+version = "48.0.7"
 dependencies = [
  "anyhow",
  "cpp_demangle",
@@ -1330,7 +1330,7 @@ dependencies = [
 
 [[package]]
 name = "wasmtime-internal-component-macro"
-version = "48.0.6"
+version = "48.0.7"
 dependencies = [
  "anyhow",
  "proc-macro2",
@@ -1343,11 +1343,11 @@ dependencies = [
 
 [[package]]
 name = "wasmtime-internal-component-util"
-version = "48.0.6"
+version = "48.0.7"
 
 [[package]]
 name = "wasmtime-internal-core"
-version = "48.0.6"
+version = "48.0.7"
 dependencies = [
  "hashbrown",
  "libm",
@@ -1356,7 +1356,7 @@ dependencies = [
 
 [[package]]
 name = "wasmtime-internal-fiber"
-version = "48.0.6"
+version = "48.0.7"
 dependencies = [
  "cc",
  "libc",
@@ -1368,7 +1368,7 @@ dependencies = [
 
 [[package]]
 name = "wasmtime-internal-jit-debug"
-version = "48.0.6"
+version = "48.0.7"
 dependencies = [
  "cc",
  "wasmtime-internal-versioned-export-macros",
@@ -1376,7 +1376,7 @@ dependencies = [
 
 [[package]]
 name = "wasmtime-internal-jit-icache-coherence"
-version = "48.0.6"
+version = "48.0.7"
 dependencies = [
  "libc",
  "wasmtime-internal-core",
@@ -1385,7 +1385,7 @@ dependencies = [
 
 [[package]]
 name = "wasmtime-internal-unwinder"
-version = "48.0.6"
+version = "48.0.7"
 dependencies = [
  "log",
  "object",
@@ -1394,7 +1394,7 @@ dependencies = [
 
 [[package]]
 name = "wasmtime-internal-versioned-export-macros"
-version = "48.0.6"
+version = "48.0.7"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1403,7 +1403,7 @@ dependencies = [
 
 [[package]]
 name = "wasmtime-internal-wit-bindgen"
-version = "48.0.6"
+version = "48.0.7"
 dependencies = [
  "anyhow",
  "bitflags",
@@ -1415,7 +1415,7 @@ dependencies = [
 
 [[package]]
 name = "wasmtime-wasi"
-version = "48.0.6"
+version = "48.0.7"
 dependencies = [
  "async-trait",
  "bitflags",
@@ -1437,7 +1437,7 @@ dependencies = [
 
 [[package]]
 name = "wasmtime-wasi-http"
-version = "48.0.6"
+version = "48.0.7"
 dependencies = [
  "async-trait",
  "bytes",
@@ -1460,7 +1460,7 @@ dependencies = [
 
 [[package]]
 name = "wasmtime-wasi-io"
-version = "48.0.6"
+version = "48.0.7"
 dependencies = [
  "async-trait",
  "bytes",

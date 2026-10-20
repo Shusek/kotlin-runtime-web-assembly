@@ -7,7 +7,7 @@ manifest contracts.
 
 ```kotlin
 plugins {
-    id("uk.shusek.krwa.component-model") version "0.3.4"
+    id("uk.shusek.krwa.component-model") version "0.3.5"
 }
 
 krwaComponentModel {
