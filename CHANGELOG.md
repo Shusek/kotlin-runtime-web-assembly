@@ -5,6 +5,29 @@ patch and prerelease identifiers advance without changing the `0.3` major/minor 
 `1.0.0`, API changes may still be intentional; release candidates remain immutable once
 published.
 
+## 0.3.5 (2026-10-20)
+
+### Security
+
+- Updated Wasmtime from `48.0.6` to `48.0.7`, staying on the Wasmtime 48 LTS
+  release line. This includes the upstream fixes published on 2026-10-19 for
+  conflicting HTTP content lengths (GHSA-r8xh-cgf7-392j), unchecked Preview 3
+  forwarded trailers (GHSA-jxcf-8qw5-5c33), incorrect content lengths on spliced
+  Preview 3 response bodies (GHSA-9prg-84vf-g5fc), incorrect AArch64 branch targets
+  for large `br_table` instructions (GHSA-mghf-wjfp-p5xm), and a host panic when
+  lowering a stream with an unexpected payload type (GHSA-9pvw-hwfg-92h5).
+  The upstream runtime also updates rustls to `0.23.46`.
+
+### Changed
+
+- Refreshed the pinned Wasmtime source revision, compiler cache identity,
+  host-tool checksums, Preview 1 adapters, Android and iOS native libraries, and
+  Preview 3 bridge dependencies. Recompile precompiled modules and components
+  when upgrading from `48.0.6`.
+- Updated Kotlin to `2.4.21`, Gradle to `9.8.1`, ASM to `9.11.1`, Jackson
+  Databind to `2.22.4`, and wasm-tools to `1.262.0`. Standalone samples use the
+  same Kotlin, Gradle, and KRWA release versions.
+
 ## 0.3.4 (2026-10-15)
 
 ### Security
