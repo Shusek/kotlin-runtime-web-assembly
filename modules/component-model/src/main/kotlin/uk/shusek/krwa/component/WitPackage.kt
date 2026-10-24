@@ -692,6 +692,7 @@ private constructor(private val packageName: String?, declarations: List<Declara
             expect("{")
             val members = ArrayList<InterfaceMember>()
             val scope = TypeScope(currentPackageName, name)
+            declareInterfaceTypes(scope)
             typeScopes.add(scope)
             try {
                 while (!consume("}")) {
@@ -1197,6 +1198,33 @@ private constructor(private val packageName: String?, declarations: List<Declara
         private fun activeTypeScope(): TypeScope? =
             if (typeScopes.isEmpty()) null else typeScopes[typeScopes.lastIndex]
 
+        /**
+         * Registers every type the interface body declares before its members are parsed, so a
+         * reference to a type declared further down still resolves to this interface rather than
+         * to a same-named type elsewhere in the package.
+         */
+        private fun declareInterfaceTypes(scope: TypeScope) {
+            var depth = 0
+            var index = pos
+            while (index < tokens.size) {
+                val text = tokens[index].text()
+                if (text == "{") {
+                    depth++
+                } else if (text == "}") {
+                    if (depth == 0) {
+                        return
+                    }
+                    depth--
+                } else if (depth == 0 && text in InterfaceTypeKeywords) {
+                    val typeName = tokens.getOrNull(index + 1)?.text()
+                    if (isIdentifier(typeName)) {
+                        scope.addType(checkNotNull(typeName))
+                    }
+                }
+                index++
+            }
+        }
+
         private class TypeScope(packageName: String?, interfaceName: String) {
             private val interfacePath = WitNames.qualifiedInterfaceName(packageName, interfaceName)
             private val aliases = LinkedHashMap<String, String>()
@@ -1479,6 +1507,8 @@ private constructor(private val packageName: String?, declarations: List<Declara
         private fun <K, V> immutableMap(values: Map<K, V>): Map<K, V> = values.toMap()
     }
 }
+
+private val InterfaceTypeKeywords = setOf("record", "variant", "enum", "flags", "resource", "type")
 
 private class ParseBudget(private val limits: WitParserLimits) {
     private var declarationCount = 0L
