@@ -5,6 +5,22 @@ patch and prerelease identifiers advance without changing the `0.3` major/minor 
 `1.0.0`, API changes may still be intentional; release candidates remain immutable once
 published.
 
+## 0.3.6 (2026-10-25)
+
+### Fixed
+
+- A WIT package that holds several versions of one interface now lifts and lowers each version
+  with that version's own types. `CanonicalAbi` dropped the version from qualified type names,
+  so a record such as `player-media` in `example:player/player@0.8.0` resolved to the first
+  same-named record in the package, for example the one in `@0.9.0`. Lowering then failed with
+  `missing field ...` or used the other version's layout. Versioned references now resolve
+  exactly; unversioned and simple names keep their previous fallback, so a reference to
+  `wasi:io@0.2.0` still finds a package declared as `@0.2.12`.
+- A reference to a type declared further down the same interface now resolves to that
+  interface. It used to stay unqualified and could bind to a same-named type in another
+  interface. Recursive-type errors now name the qualified types.
+- `WasmPlugin` uses the same lookup when it looks for futures and streams in async signatures.
+
 ## 0.3.5 (2026-10-20)
 
 ### Security

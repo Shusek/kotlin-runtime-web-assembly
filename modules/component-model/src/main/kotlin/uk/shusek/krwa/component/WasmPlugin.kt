@@ -1938,6 +1938,17 @@ private constructor(
 
         private fun findTypeDeclaration(name: String): WitPackage.TypeDeclaration? {
             val normalized = normalizeTypeName(name)
+            // A reference qualified by its interface keeps to that interface and its version; the
+            // simple-name match below only serves references that did not say which one they meant.
+            val exact = WitNames.stripIdentifierEscape(name)
+            findQualifiedTypeDeclaration { qualifiedName -> qualifiedName == exact }?.let {
+                return it
+            }
+            findQualifiedTypeDeclaration { qualifiedName ->
+                normalizeTypeName(qualifiedName) == normalized
+            }?.let {
+                return it
+            }
             for (declaration in witPackage.interfaces()) {
                 for (member in declaration.members()) {
                     if (
@@ -1962,6 +1973,22 @@ private constructor(
                         ) {
                             return member
                         }
+                    }
+                }
+            }
+            return null
+        }
+
+        private fun findQualifiedTypeDeclaration(
+            matches: (String) -> Boolean,
+        ): WitPackage.TypeDeclaration? {
+            for (declaration in witPackage.interfaces()) {
+                for (member in declaration.members()) {
+                    if (
+                        member is WitPackage.TypeDeclaration &&
+                            matches("${declaration.qualifiedName()}/${member.name()}")
+                    ) {
+                        return member
                     }
                 }
             }

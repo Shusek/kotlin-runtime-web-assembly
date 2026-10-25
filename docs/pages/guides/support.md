@@ -1,6 +1,6 @@
 # Support and compatibility
 
-KRWA `0.3.5` is a stable release for the platform and feature scope below. The
+KRWA `0.3.6` is a stable release for the platform and feature scope below. The
 release uses Wasmtime **48.0.7 LTS**. Compatible fixes advance the `0.3.x` patch
 version; public APIs may still evolve before `1.0.0`.
 

@@ -35,7 +35,11 @@ class CanonicalAbiTest {
 
         val message = exception.message.orEmpty()
         assertTrue(message.contains("recursive WIT type"), message)
-        assertTrue(message.contains("a -> b") || message.contains("b -> a"), message)
+        assertTrue(
+            message.contains("api/a -> example:types/api/b") ||
+                message.contains("api/b -> example:types/api/a"),
+            message,
+        )
     }
 
     @Test
@@ -275,6 +279,100 @@ class CanonicalAbiTest {
                 CanonicalAbi.CoreValType.I64,
             ),
             abi.flattenType(binaryType),
+        )
+    }
+
+    @Test
+    fun keepsEachInterfaceVersionOnItsOwnTypes() {
+        val witPackage =
+            WitPackage.parse(
+                """
+                package example:bundle@1.0.0;
+
+                package example:player@0.9.0 {
+                  interface player {
+                    record media {
+                      title: string,
+                      selections: option<string>,
+                    }
+
+                    open: func(media: media) -> u32;
+                  }
+                }
+
+                package example:player@0.8.0 {
+                  interface player {
+                    record media {
+                      title: string,
+                    }
+
+                    open: func(media: media) -> u32;
+                  }
+                }
+                """
+                    .trimIndent()
+            )
+        fun open(version: String): WitPackage.Function =
+            witPackage.interfaces()
+                .single { it.qualifiedName() == "example:player/player@$version" }
+                .functions()
+                .single()
+        val current = open("0.9.0")
+        val previous = open("0.8.0")
+        val abi = CanonicalAbi.of(witPackage)
+        val context = CanonicalAbi.Context.of(ByteArrayMemory(MemoryLimits(1)), BumpAllocator(1024)::allocate)
+
+        assertEquals(
+            List(5) { CanonicalAbi.CoreValType.I32 },
+            abi.flattenType(current.parameters().single().type()),
+        )
+        assertEquals(
+            List(2) { CanonicalAbi.CoreValType.I32 },
+            abi.flattenType(previous.parameters().single().type()),
+        )
+        val media = WitValue.record("title", "Sintel")
+        val lowered = abi.lowerFlatValues(context, previous.parameters(), listOf(media), 16)
+        @Suppress("UNCHECKED_CAST")
+        val lifted = abi.liftFlatValues(context, previous.parameters(), lowered, 16)[0] as Map<String, Any?>
+        assertEquals(mapOf("title" to "Sintel"), lifted)
+        val missing =
+            assertThrows(ComponentModelException::class.java) {
+                abi.lowerFlatValues(context, current.parameters(), listOf(media), 16)
+            }
+        assertTrue(missing.message.orEmpty().contains("missing field selections"), missing.message)
+    }
+
+    @Test
+    fun resolvesTypesDeclaredLaterInTheSameInterface() {
+        val witPackage =
+            WitPackage.parse(
+                """
+                package example:forward;
+
+                interface first {
+                  record item {
+                    value: u32,
+                  }
+                }
+
+                interface second {
+                  load: func() -> item;
+
+                  record item {
+                    value: u64,
+                    sequence: u64,
+                  }
+                }
+                """
+                    .trimIndent()
+            )
+        val load = witPackage.interfaces().single { it.name() == "second" }.functions().single()
+        val result = load.results().single().type()
+
+        assertEquals("example:forward/second/item", result.name())
+        assertEquals(
+            listOf(CanonicalAbi.CoreValType.I64, CanonicalAbi.CoreValType.I64),
+            CanonicalAbi.of(witPackage).flattenType(result),
         )
     }
 

@@ -2398,6 +2398,12 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
         declaration(name) ?: throw ComponentModelException("unknown WIT type $name")
 
     private fun declaration(name: String): WitPackage.TypeDeclaration? {
+        // A versioned reference names exactly one package version. The unversioned and simple
+        // names below only serve references that did not say which one they meant.
+        val exact = declarations[WitNames.stripIdentifierEscape(name)]
+        if (exact != null) {
+            return exact
+        }
         val normalized = normalizeTypeName(name)
         val direct = declarations[normalized]
         if (direct != null) {
@@ -2451,7 +2457,10 @@ class CanonicalAbi private constructor(private val witPackage: WitPackage) {
         ownerQualifiedName: String? = null,
     ) {
         if (ownerQualifiedName != null) {
-            putIfAbsent(result, normalizeTypeName("$ownerQualifiedName/${type.name()}"), type)
+            val qualifiedName = "$ownerQualifiedName/${WitNames.stripIdentifierEscape(type.name())}"
+            // Several versions of one interface can share a package, each with its own shape.
+            putIfAbsent(result, qualifiedName, type)
+            putIfAbsent(result, normalizeTypeName(qualifiedName), type)
         }
         putIfAbsent(result, normalizeTypeName(type.name()), type)
         putIfAbsent(result, lastSegment(normalizeTypeName(type.name())), type)
