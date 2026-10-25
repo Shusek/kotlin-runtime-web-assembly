@@ -1603,6 +1603,24 @@ internal class Validator(
                     popVal(ValType.I64)
                     pushVal(ValType.I64)
                 }
+                // Wide arithmetic: [i64 i64 i64 i64] -> [i64 i64]
+                OpCode.I64_ADD128,
+                OpCode.I64_SUB128 -> {
+                    popVal(ValType.I64)
+                    popVal(ValType.I64)
+                    popVal(ValType.I64)
+                    popVal(ValType.I64)
+                    pushVal(ValType.I64)
+                    pushVal(ValType.I64)
+                }
+                // Wide arithmetic: [i64 i64] -> [i64 i64]
+                OpCode.I64_MUL_WIDE_S,
+                OpCode.I64_MUL_WIDE_U -> {
+                    popVal(ValType.I64)
+                    popVal(ValType.I64)
+                    pushVal(ValType.I64)
+                    pushVal(ValType.I64)
+                }
                 OpCode.I64_EQ,
                 OpCode.I64_NE,
                 OpCode.I64_LT_S,

@@ -267,6 +267,36 @@ class WitPackageTest {
     }
 
     @Test
+    fun parsesNamedInterfaceImportsAndExports() {
+        val witPackage =
+            WitPackage.parse(
+                """
+                package example:named;
+                interface logging {
+                  log: func(message: string);
+                }
+                world plugin {
+                  import logger: logging;
+                  import audit: example:named/logging;
+                  export sink: logging;
+                }
+                """
+                    .trimIndent()
+            )
+
+        val world = witPackage.worlds()[0]
+
+        assertEquals(2, world.imports().size)
+        assertEquals("logger", world.imports()[0].name())
+        assertEquals("logging", world.imports()[0].type()!!.name())
+        assertEquals("audit", world.imports()[1].name())
+        assertEquals("example:named/logging", world.imports()[1].type()!!.name())
+        assertEquals(1, world.exports().size)
+        assertEquals("sink", world.exports()[0].name())
+        assertEquals("logging", world.exports()[0].type()!!.name())
+    }
+
+    @Test
     fun flattensWorldIncludes() {
         val witPackage =
             WitPackage.parse(

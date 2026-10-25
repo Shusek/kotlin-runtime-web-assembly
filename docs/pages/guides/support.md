@@ -57,7 +57,3 @@ The exact exclusions and their removal criteria are maintained in
 Android native libraries are checked for ABI and 16 KB alignment. Stable release
 acceptance also runs instrumentation tests on an ARM64 Android device or emulator;
 compiling an instrumentation APK alone does not verify native execution.
-
-On macOS, the host Preview 3 bridge build preserves symbols to avoid the Rust
-1.96 stripping issue with the macOS 27 loader. This is applied by the build and
-does not require a developer environment override.

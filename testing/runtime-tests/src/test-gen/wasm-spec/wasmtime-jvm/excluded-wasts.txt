@@ -153,4 +153,3 @@ proposals/wasm-3.0/type-rec.wast
 proposals/wasm-3.0/type-subtyping.wast
 proposals/wasm-3.0/unreached-invalid.wast
 proposals/wasm-3.0/unreached-valid.wast
-proposals/wide-arithmetic/wide-arithmetic.wast

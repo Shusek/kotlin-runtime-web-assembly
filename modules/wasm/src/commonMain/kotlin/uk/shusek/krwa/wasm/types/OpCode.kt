@@ -249,6 +249,11 @@ enum class OpCode(
     TABLE_GROW(0xFC0F, listOf(VARUINT)),
     TABLE_SIZE(0xFC10, listOf(VARUINT)),
     TABLE_FILL(0xFC11, listOf(VARUINT)),
+    // Wide arithmetic proposal: 128-bit add/sub and 64x64->128 multiply.
+    I64_ADD128(0xFC13),
+    I64_SUB128(0xFC14),
+    I64_MUL_WIDE_S(0xFC15),
+    I64_MUL_WIDE_U(0xFC16),
     V128_LOAD(0xFD00, listOf(MEMARG)),
     V128_LOAD8x8_S(0xFD01, listOf(MEMARG)),
     V128_LOAD8x8_U(0xFD02, listOf(MEMARG)),

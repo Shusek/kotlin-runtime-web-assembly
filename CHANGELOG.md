@@ -7,6 +7,19 @@ published.
 
 ## 0.3.7 (2026-10-25)
 
+### Added
+
+- The parser and validator accept the wide-arithmetic proposal (`i64.add128`,
+  `i64.sub128`, `i64.mul_wide_s`, `i64.mul_wide_u`). Wasmtime has enabled the
+  proposal by default since 49.0.0, but KRWA validates every module before the
+  engine sees it, so such modules were rejected. The upstream
+  `wide-arithmetic.wast` suite now runs in the Wasmtime/Pulley specification
+  tests (81 active WAST files, 27,491 generated tests).
+- WIT named imports and exports (`import logger: logging;`, the Component Model
+  `implements` field that `wasmtime-wasi` 50 supports) are covered by parser
+  and `WasmPlugin` linking tests: a core module import under the label resolves
+  to the named interface.
+
 ### Changed
 
 - Updated Wasmtime from `48.0.7` to `50.0.0`. KRWA now tracks the current
@@ -25,6 +38,10 @@ published.
   Preview 3 bridge dependencies. Recompile precompiled modules and components
   when upgrading from `48.0.7`; the `WasmtimeModuleCompilerBuildIdentity` cache
   key changed.
+- The host Preview 3 bridge build no longer disables symbol stripping on macOS.
+  The Rust 1.96 `__LINKEDIT` misalignment that the macOS 27 loader rejected is
+  fixed in the pinned Rust 1.99.1 toolchain, and the stripped library passes the
+  JVM bridge probe on macOS 27.
 
 ## 0.3.6 (2026-10-25)
 

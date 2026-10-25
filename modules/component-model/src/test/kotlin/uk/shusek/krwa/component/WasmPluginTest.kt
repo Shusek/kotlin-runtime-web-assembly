@@ -3516,6 +3516,74 @@ class WasmPluginTest {
     }
 
     @Test
+    fun linksNamedInterfaceImportsByLabel() {
+        val witPackage =
+            WitPackage.parse(
+                """
+                package example:named;
+                interface logging {
+                  log: func(message: string);
+                }
+                world plugin {
+                  import logger: logging;
+                  import audit: logging;
+                  export guest: interface {
+                    scan: func(document: string) -> u32;
+                  }
+                }
+                """
+                    .trimIndent()
+            )
+        val logged = AtomicReference<String>()
+        val audited = AtomicReference<String>()
+        val plugin =
+            WasmPlugin.builder(witPackage)
+                .withModule(
+                    Wat2Wasm.parse(
+                        """
+                        (module
+                          (import "logger" "log" (func ${'$'}log (param i32 i32)))
+                          (import "audit" "log" (func ${'$'}audit (param i32 i32)))
+                          (memory (export "memory") 1)
+                          (global ${'$'}heap (mut i32) (i32.const 64))
+                          (func (export "canonical_abi_realloc")
+                            (param ${'$'}old i32) (param ${'$'}old_size i32)
+                            (param ${'$'}align i32) (param ${'$'}new_size i32)
+                            (result i32)
+                            (local ${'$'}ptr i32)
+                            (local.set ${'$'}ptr (global.get ${'$'}heap))
+                            (global.set ${'$'}heap
+                              (i32.add (global.get ${'$'}heap) (local.get ${'$'}new_size)))
+                            (local.get ${'$'}ptr))
+                          (func ${'$'}scan
+                            (param ${'$'}ptr i32)
+                            (param ${'$'}len i32)
+                            (result i32)
+                            (call ${'$'}log (local.get ${'$'}ptr) (local.get ${'$'}len))
+                            (call ${'$'}audit (local.get ${'$'}ptr) (local.get ${'$'}len))
+                            (local.get ${'$'}len))
+                          (export "guest.scan" (func ${'$'}scan))
+                        )
+                        """
+                            .trimIndent()
+                    )
+                )
+                .withHostImport("logger", "log") { arguments ->
+                    logged.set(arguments[0] as String)
+                    null
+                }
+                .withHostImport("audit", "log") { arguments ->
+                    audited.set("audit:" + arguments[0])
+                    null
+                }
+                .build()
+
+        assertEquals(5L, plugin.call("guest.scan", "hello"))
+        assertEquals("hello", logged.get())
+        assertEquals("audit:hello", audited.get())
+    }
+
+    @Test
     fun bindsResourceFunctionsFromExportedInterface() {
         val witPackage =
             WitPackage.parse(

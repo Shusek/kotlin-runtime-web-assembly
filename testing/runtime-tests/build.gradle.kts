@@ -104,8 +104,8 @@ tasks.withType<Test>().configureEach {
         require(testWeights.keys == includedWasts.toSet()) {
             "Runtime specification-test weights must match included-wasts.txt exactly"
         }
-        require(testWeights.values.sum() == 27_382) {
-            "Expected runtime specification-test weights to cover 27382 tests"
+        require(testWeights.values.sum() == 27_491) {
+            "Expected runtime specification-test weights to cover 27491 tests"
         }
         require(testCosts.keys == includedTestClasses.toSet()) {
             "Runtime specification-test costs must match generated test classes exactly"
@@ -204,11 +204,11 @@ val verifyGeneratedWasmSpecInventory =
                 "Expected test-costs.txt to classify every generated test class exactly once"
             }
 
-            check(includedWasts.size == 80) {
-                "Expected 80 included Wasmtime/Pulley WAST files, got ${includedWasts.size}"
+            check(includedWasts.size == 81) {
+                "Expected 81 included Wasmtime/Pulley WAST files, got ${includedWasts.size}"
             }
-            check(parserExcludedWasts.size == 155) {
-                "Expected 155 parser/spec WAST exclusions, got ${parserExcludedWasts.size}"
+            check(parserExcludedWasts.size == 154) {
+                "Expected 154 parser/spec WAST exclusions, got ${parserExcludedWasts.size}"
             }
             check(runtimeExcludedWasts.size == 210) {
                 "Expected 210 Wasmtime/Pulley WAST exclusions, got " +
@@ -232,7 +232,7 @@ val verifyGeneratedWasmSpecInventory =
                 "Expected ${includedWasts.size} generated WebAssembly spec test sources, got " +
                     generatedSources.size
             }
-            check(testCount == 27_382) {
+            check(testCount == 27_491) {
                 "Expected the pinned Wasmtime/Pulley generated test budget, got $testCount"
             }
             check(disabledCount == parserExcludedTests.size + runtimeExcludedTests.size) {

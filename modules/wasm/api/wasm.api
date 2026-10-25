@@ -1195,6 +1195,7 @@ public final class uk/shusek/krwa/wasm/types/OpCode : java/lang/Enum {
 	public static final field I32x4_TRUNC_SAT_F64x2_S_ZERO Luk/shusek/krwa/wasm/types/OpCode;
 	public static final field I32x4_TRUNC_SAT_F64x2_U_ZERO Luk/shusek/krwa/wasm/types/OpCode;
 	public static final field I64_ADD Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_ADD128 Luk/shusek/krwa/wasm/types/OpCode;
 	public static final field I64_AND Luk/shusek/krwa/wasm/types/OpCode;
 	public static final field I64_ATOMIC_LOAD Luk/shusek/krwa/wasm/types/OpCode;
 	public static final field I64_ATOMIC_LOAD16_U Luk/shusek/krwa/wasm/types/OpCode;
@@ -1260,6 +1261,8 @@ public final class uk/shusek/krwa/wasm/types/OpCode : java/lang/Enum {
 	public static final field I64_LT_S Luk/shusek/krwa/wasm/types/OpCode;
 	public static final field I64_LT_U Luk/shusek/krwa/wasm/types/OpCode;
 	public static final field I64_MUL Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_MUL_WIDE_S Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_MUL_WIDE_U Luk/shusek/krwa/wasm/types/OpCode;
 	public static final field I64_NE Luk/shusek/krwa/wasm/types/OpCode;
 	public static final field I64_OR Luk/shusek/krwa/wasm/types/OpCode;
 	public static final field I64_POPCNT Luk/shusek/krwa/wasm/types/OpCode;
@@ -1276,6 +1279,7 @@ public final class uk/shusek/krwa/wasm/types/OpCode : java/lang/Enum {
 	public static final field I64_STORE32 Luk/shusek/krwa/wasm/types/OpCode;
 	public static final field I64_STORE8 Luk/shusek/krwa/wasm/types/OpCode;
 	public static final field I64_SUB Luk/shusek/krwa/wasm/types/OpCode;
+	public static final field I64_SUB128 Luk/shusek/krwa/wasm/types/OpCode;
 	public static final field I64_TRUNC_F32_S Luk/shusek/krwa/wasm/types/OpCode;
 	public static final field I64_TRUNC_F32_U Luk/shusek/krwa/wasm/types/OpCode;
 	public static final field I64_TRUNC_F64_S Luk/shusek/krwa/wasm/types/OpCode;

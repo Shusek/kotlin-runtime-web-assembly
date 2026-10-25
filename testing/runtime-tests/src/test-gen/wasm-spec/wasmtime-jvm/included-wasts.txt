@@ -54,6 +54,7 @@ names.wast
 nop.wast
 proposals/tail-call/return_call.wast
 proposals/tail-call/return_call_indirect.wast
+proposals/wide-arithmetic/wide-arithmetic.wast
 return.wast
 select.wast
 skip-stack-guard-page.wast

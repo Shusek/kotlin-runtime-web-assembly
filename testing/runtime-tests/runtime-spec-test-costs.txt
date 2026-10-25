@@ -78,3 +78,4 @@ uk.shusek.krwa.test.gen.SpecV1Utf8CustomSectionIdTest=81
 uk.shusek.krwa.test.gen.SpecV1Utf8ImportFieldTest=95
 uk.shusek.krwa.test.gen.SpecV1Utf8ImportModuleTest=93
 uk.shusek.krwa.test.gen.SpecV1Utf8InvalidEncodingTest=247677
+uk.shusek.krwa.test.gen.SpecV1WideArithmeticWideArithmeticTest=600

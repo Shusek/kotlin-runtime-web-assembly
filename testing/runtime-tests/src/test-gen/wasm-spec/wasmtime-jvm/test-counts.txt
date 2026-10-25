@@ -54,6 +54,7 @@ names.wast=486
 nop.wast=88
 proposals/tail-call/return_call.wast=44
 proposals/tail-call/return_call_indirect.wast=75
+proposals/wide-arithmetic/wide-arithmetic.wast=109
 return.wast=84
 select.wast=148
 skip-stack-guard-page.wast=11

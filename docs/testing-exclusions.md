@@ -21,8 +21,8 @@ tracking item below; hand-written tests must use their own issue reference and e
   less-specific table-element trap text. Scalar floating-point suites remain active.
 - Inventory: the pinned corpus must be classified exactly once as included, parser/spec excluded,
   or runtime excluded. The release inventory has separate, fixed budgets for all three WAST
-  categories and both method-exclusion categories: 445 WAST files comprise 80 active, 155
-  parser/spec excluded, and 210 runtime excluded files. The active files generate 27,382 tests,
+  categories and both method-exclusion categories: 445 WAST files comprise 81 active, 154
+  parser/spec excluded, and 210 runtime excluded files. The active files generate 27,491 tests,
   with 18 exact parser/spec and 19 exact runtime exclusions (37 generated `@Disabled` tests).
   Increasing any exclusion budget requires an explicit reviewed build-script change.
 - Exit criteria: implement the missing behavior, remove the case from the exclusion configuration,
