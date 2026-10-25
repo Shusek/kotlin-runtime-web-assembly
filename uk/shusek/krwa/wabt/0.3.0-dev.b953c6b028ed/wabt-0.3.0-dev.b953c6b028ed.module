@@ -1,0 +1,147 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "uk.shusek.krwa",
+    "module": "wabt",
+    "version": "0.3.0-dev.b953c6b028ed",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.8.1"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.jvm.version": 25,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.4.21"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "wabt-0.3.0-dev.b953c6b028ed.jar",
+          "url": "wabt-0.3.0-dev.b953c6b028ed.jar",
+          "size": 513688,
+          "sha512": "9b2a1cb14e800fbf3b07f6bfc41ec377e4e6649732ca34aee0cc40830df1fe60f533276520055c4697a38632b681fd23abec7e1f0024c72de43113cb705da5d4",
+          "sha256": "3ed50e58400e5358b714e691af40129031cd73b2868f1c6fb2630e00d9c5bed4",
+          "sha1": "e04a6c5deb574cf2665dad4f4800b11d15275244",
+          "md5": "8495448033a1a01890dfacce38edba08"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.jvm.version": 25,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "org.ow2.asm",
+          "module": "asm-bom",
+          "version": {
+            "requires": "9.11.1"
+          },
+          "attributes": {
+            "org.gradle.category": "platform"
+          }
+        },
+        {
+          "group": "io.roastedroot",
+          "module": "zerofs",
+          "version": {
+            "requires": "0.1.0"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "log",
+          "version": {
+            "requires": "0.3.0-dev.b953c6b028ed"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "runtime",
+          "version": {
+            "requires": "0.3.0-dev.b953c6b028ed"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "wasi",
+          "version": {
+            "requires": "0.3.0-dev.b953c6b028ed"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "wasm",
+          "version": {
+            "requires": "0.3.0-dev.b953c6b028ed"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.4.21"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "wabt-0.3.0-dev.b953c6b028ed.jar",
+          "url": "wabt-0.3.0-dev.b953c6b028ed.jar",
+          "size": 513688,
+          "sha512": "9b2a1cb14e800fbf3b07f6bfc41ec377e4e6649732ca34aee0cc40830df1fe60f533276520055c4697a38632b681fd23abec7e1f0024c72de43113cb705da5d4",
+          "sha256": "3ed50e58400e5358b714e691af40129031cd73b2868f1c6fb2630e00d9c5bed4",
+          "sha1": "e04a6c5deb574cf2665dad4f4800b11d15275244",
+          "md5": "8495448033a1a01890dfacce38edba08"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "wabt-0.3.0-dev.b953c6b028ed-sources.jar",
+          "url": "wabt-0.3.0-dev.b953c6b028ed-sources.jar",
+          "size": 497302,
+          "sha512": "566e476cd574bbbebf77416e3428f80c3ff1e6c713df3671864ebe3efedd879cfa4f81a6bb0ab9ab6409b643592022c0dd3412549d1887a5b67f6a0166ff8e2e",
+          "sha256": "2c58c96cc98603b1b0129b17b5c1c052895a87b67f5fc3ac04e59328a0b6e5e6",
+          "sha1": "e3085d99c0a4b2b94b00666cbcf784d480b95ea3",
+          "md5": "690f8d9eca320df2cf78ec16d2a2ab78"
+        }
+      ]
+    }
+  ]
+}

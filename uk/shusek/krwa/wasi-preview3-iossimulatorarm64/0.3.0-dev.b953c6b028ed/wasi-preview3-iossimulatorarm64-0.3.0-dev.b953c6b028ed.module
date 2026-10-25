@@ -1,0 +1,158 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "url": "../../wasi-preview3/0.3.0-dev.b953c6b028ed/wasi-preview3-0.3.0-dev.b953c6b028ed.module",
+    "group": "uk.shusek.krwa",
+    "module": "wasi-preview3",
+    "version": "0.3.0-dev.b953c6b028ed",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.8.1"
+    }
+  },
+  "variants": [
+    {
+      "name": "iosSimulatorArm64ApiElements-published",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.jvm.environment": "non-jvm",
+        "org.gradle.usage": "kotlin-api",
+        "org.jetbrains.kotlin.native.target": "ios_simulator_arm64",
+        "org.jetbrains.kotlin.platform.type": "native"
+      },
+      "dependencies": [
+        {
+          "group": "com.squareup.okio",
+          "module": "okio",
+          "version": {
+            "requires": "3.18.2"
+          }
+        },
+        {
+          "group": "org.kotlincrypto.random",
+          "module": "crypto-rand",
+          "version": {
+            "requires": "0.6.0"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlinx",
+          "module": "kotlinx-coroutines-core",
+          "version": {
+            "requires": "1.11.0"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "runtime",
+          "version": {
+            "requires": "0.3.0-dev.b953c6b028ed"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.4.21"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "wasi-preview3-iosSimulatorArm64Main-0.3.0-dev.b953c6b028ed.klib",
+          "url": "wasi-preview3-iossimulatorarm64-0.3.0-dev.b953c6b028ed.klib",
+          "size": 53433,
+          "sha512": "fb7ab4e061534613d7192c4bf5347f016ecf51be6ea77543884e2ec583cf65a7cf3ba9a9e4c74f9a73a9d42789a878c82a0401e527ceae4c5b753838078b9d21",
+          "sha256": "fe1773dce3de467cfab2328a71dc31c476f6f87e17246c1a949e9abed50dbbb7",
+          "sha1": "1ca0b60e9eb3c94387eb6d6e77c1b72864480b47",
+          "md5": "df47503733ea6da5d326c5820f83f7b0"
+        }
+      ]
+    },
+    {
+      "name": "iosSimulatorArm64SourcesElements-published",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.jvm.environment": "non-jvm",
+        "org.gradle.usage": "kotlin-runtime",
+        "org.jetbrains.kotlin.native.target": "ios_simulator_arm64",
+        "org.jetbrains.kotlin.platform.type": "native"
+      },
+      "files": [
+        {
+          "name": "wasi-preview3-iossimulatorarm64-0.3.0-dev.b953c6b028ed-sources.jar",
+          "url": "wasi-preview3-iossimulatorarm64-0.3.0-dev.b953c6b028ed-sources.jar",
+          "size": 10746,
+          "sha512": "c38b251e32dc5c07f29198ffe0ab1ca5dbeba29b30a272ae62813f24ea608175c7fc716c5a038a0dbb361b693136095b7ff6c776149800ec0a718020fbd46c5e",
+          "sha256": "bee1d80357c051ea6df38467a627ea445985249edb96d1c0af8c7ca808115171",
+          "sha1": "4deb292058bec3508cbf97c4e3b3f5b9c1441b71",
+          "md5": "1dc4aef3152ef0d06357374d370a5383"
+        }
+      ]
+    },
+    {
+      "name": "iosSimulatorArm64MetadataElements-published",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.jvm.environment": "non-jvm",
+        "org.gradle.usage": "kotlin-metadata",
+        "org.jetbrains.kotlin.native.target": "ios_simulator_arm64",
+        "org.jetbrains.kotlin.platform.type": "native"
+      },
+      "dependencies": [
+        {
+          "group": "com.squareup.okio",
+          "module": "okio",
+          "version": {
+            "requires": "3.18.2"
+          }
+        },
+        {
+          "group": "org.kotlincrypto.random",
+          "module": "crypto-rand",
+          "version": {
+            "requires": "0.6.0"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlinx",
+          "module": "kotlinx-coroutines-core",
+          "version": {
+            "requires": "1.11.0"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "runtime",
+          "version": {
+            "requires": "0.3.0-dev.b953c6b028ed"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.4.21"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "wasi-preview3-iossimulatorarm64-0.3.0-dev.b953c6b028ed-metadata.jar",
+          "url": "wasi-preview3-iossimulatorarm64-0.3.0-dev.b953c6b028ed-metadata.jar",
+          "size": 4530,
+          "sha512": "1c8f669a81cc857b4a617a81024a889863765e3f6c6a9ac1662d425de00a1bf6f604d006614adfbbf33e51515351d12ec3eac78aad23173839654f01342625f7",
+          "sha256": "3ae142bfcc2376f66e0a859bdefde5acf1bb25e635bfd3dceff7cb669ccbfb82",
+          "sha1": "f4381708028876fa56136d95dd9bbf46d61eecdf",
+          "md5": "98bd7c8c40a6add3f646403428730ee0"
+        }
+      ]
+    }
+  ]
+}
