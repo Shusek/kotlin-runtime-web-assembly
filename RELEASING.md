@@ -8,7 +8,11 @@ the local gate never publishes outside its task-owned staging directory.
 1. Set an immutable semantic version in `gradle.properties` and update `CHANGELOG.md`. KRWA
    remains on the configured `0.3.x` compatibility line: advance only the patch or prerelease
    portion, leaving the `0.3` major/minor pair unchanged. `verifyImmutablePublicationVersion`
-   enforces this before staging or publication.
+   enforces this before staging or publication. The Kotlin/Wasm npm lock file
+   `kotlin-js-store/wasm/package-lock.json` records the project version for every
+   generated package, so bump it together with `gradle.properties` (or run
+   `./gradlew kotlinWasmUpgradePackageLock` on a clean build); otherwise the
+   `ciWebPublicationGate` fails in `kotlinWasmStorePackageLock`.
    KRWA tracks the current Wasmtime major release (`50.x` today) and takes its
    patch releases. Moving to a new Wasmtime major is a deliberate update: it
    changes the pinned source revision, the compiler cache identity, the Rust
