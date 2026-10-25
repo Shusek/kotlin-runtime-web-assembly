@@ -1,0 +1,112 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "uk.shusek.krwa",
+    "module": "log",
+    "version": "0.3.0-dev.c92bbda32996",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.8.1"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.jvm.version": 25,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.4.21"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "log-0.3.0-dev.c92bbda32996.jar",
+          "url": "log-0.3.0-dev.c92bbda32996.jar",
+          "size": 12802,
+          "sha512": "104cc7bad8b613a2910218e715b5cc367c1fac553e5502957e6d9f52daa6791e4d8c6742d18ea8d85be34c604ee41dc009fc91dbd8676604b06489647842c94f",
+          "sha256": "843cb5d5f154791a0a9ecc6095c2eedccbe58287609224230e10ac76d5f62c69",
+          "sha1": "620bb57ccaa406e20246b901ab4eed2bacff55bb",
+          "md5": "4752432762ad0a2c47983ab483300108"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.jvm.version": 25,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "org.ow2.asm",
+          "module": "asm-bom",
+          "version": {
+            "requires": "9.11.1"
+          },
+          "attributes": {
+            "org.gradle.category": "platform"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.4.21"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "log-0.3.0-dev.c92bbda32996.jar",
+          "url": "log-0.3.0-dev.c92bbda32996.jar",
+          "size": 12802,
+          "sha512": "104cc7bad8b613a2910218e715b5cc367c1fac553e5502957e6d9f52daa6791e4d8c6742d18ea8d85be34c604ee41dc009fc91dbd8676604b06489647842c94f",
+          "sha256": "843cb5d5f154791a0a9ecc6095c2eedccbe58287609224230e10ac76d5f62c69",
+          "sha1": "620bb57ccaa406e20246b901ab4eed2bacff55bb",
+          "md5": "4752432762ad0a2c47983ab483300108"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "log-0.3.0-dev.c92bbda32996-sources.jar",
+          "url": "log-0.3.0-dev.c92bbda32996-sources.jar",
+          "size": 3274,
+          "sha512": "acf84b875d6f96fb5f2b3aed7090691de8dcbfb11b0663375878bc26c3617d0b0a6405587fdc43b9c4cccd978503eea7ebaf965befc66d1ad7fe2a57760fd715",
+          "sha256": "edebb705594e1f5d4a429a7fced05adfe774c6bab15b57a6d726bcc3e8fe6fda",
+          "sha1": "ed6400680c872bf08df221486c331422d2cbb7bf",
+          "md5": "a6cb065716c5aed21a6e17a92108fc73"
+        }
+      ]
+    }
+  ]
+}
