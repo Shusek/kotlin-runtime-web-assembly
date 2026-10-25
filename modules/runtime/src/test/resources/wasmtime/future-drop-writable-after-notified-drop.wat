@@ -1,4 +1,5 @@
-;; Adapted from Wasmtime v47.0.2's regression for bytecodealliance/wasmtime#13914.
+;; Adapted from Wasmtime v47.0.2's regression for bytecodealliance/wasmtime#13914, using the
+;; nested `(core ...)` canonical option references that the Wasmtime 50 text parser requires.
 (component
   (component $A
     (core module $libc (memory (export "mem") 1))
@@ -6,7 +7,7 @@
 
     (type $f (future u32))
     (core func $future.new (canon future.new $f))
-    (core func $future.write (canon future.write $f async (memory $libc "mem")))
+    (core func $future.write (canon future.write $f async (memory (core memory $libc "mem"))))
     (core func $future.drop-writable (canon future.drop-writable $f))
     (core func $task.return (canon task.return))
     (core func $waitable-set.new (canon waitable-set.new))
@@ -80,7 +81,7 @@
       (canon lift
         (core func $ci "write-and-wait")
         async
-        (callback (func $ci "write-and-wait-cb"))))
+        (callback (core func $ci "write-and-wait-cb"))))
   )
 
   (component $B
@@ -99,7 +100,7 @@
     (core func $waitable-set.new (canon waitable-set.new))
     (core func $waitable-set.drop (canon waitable-set.drop))
     (core func $waitable.join (canon waitable.join))
-    (core func $waitable-set.wait (canon waitable-set.wait (memory $libc "mem")))
+    (core func $waitable-set.wait (canon waitable-set.wait (memory (core memory $libc "mem"))))
     (core func $subtask.drop (canon subtask.drop))
 
     (core module $dm

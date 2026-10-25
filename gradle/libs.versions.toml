@@ -26,12 +26,12 @@ ksp = "2.3.12"
 ktor = "3.6.0"
 okio = "3.18.2"
 picocli = "4.7.7"
-rustRelease = "1.96.1"
-rustReleaseCommit = "31fca3adb283cc9dfd56b49cdee9a96eb9c96ffd"
+rustRelease = "1.99.1"
+rustReleaseCommit = "58cf8f9c35b355199727627d07ae34a4e2846d67"
 velocity = "1.7"
 wasmTools = "1.262.0"
-# Keep the runtime on the Wasmtime 48 LTS release line.
-wasmtime = "48.0.7"
+# Track the current Wasmtime release line; 50.0.0 requires Rust 1.97 or newer.
+wasmtime = "50.0.0"
 zerofs = "0.1.0"
 zip4j = "2.11.6"
 

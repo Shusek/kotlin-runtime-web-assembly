@@ -10,7 +10,7 @@ use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::ptr;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-use std::sync::{Arc, Condvar, Mutex, OnceLock};
+use std::sync::{Arc, Condvar, LazyLock, Mutex, OnceLock};
 use std::thread;
 use std::time::{Duration, Instant};
 use wasmtime::component::types::ComponentItem;
@@ -31,8 +31,8 @@ use wasmtime_wasi::{
     p2::pipe::{MemoryInputPipe, MemoryOutputPipe},
 };
 use wasmtime_wasi_http::{
-    DEFAULT_FORBIDDEN_HEADERS, Error as WasiHttpError, RequestOptions, WasiBody, WasiHttpCtx,
-    WasiHttpCtxView, WasiHttpHooks, WasiHttpView,
+    DEFAULT_FORBIDDEN_HEADERS, Error as WasiHttpError, ForbiddenHeaderFilter, RequestOptions,
+    WasiBody, WasiHttpCtx, WasiHttpCtxView, WasiHttpHooks, WasiHttpView,
 };
 
 const DEFAULT_MAX_MEMORY_BYTES: u64 = 256 * 1024 * 1024;
@@ -156,13 +156,21 @@ impl ExecutionControlState {
     }
 }
 
+fn is_forbidden_header(name: &HeaderName) -> bool {
+    let normalized = name.as_str().to_ascii_lowercase();
+    DEFAULT_FORBIDDEN_HEADERS.contains(name)
+        || normalized == "host"
+        || normalized == "content-length"
+        || normalized.starts_with("proxy-")
+}
+
 impl WasiHttpHooks for PolicyHttpHooks {
-    fn is_forbidden_header(&mut self, name: &HeaderName) -> bool {
-        let normalized = name.as_str().to_ascii_lowercase();
-        DEFAULT_FORBIDDEN_HEADERS.contains(name)
-            || normalized == "host"
-            || normalized == "content-length"
-            || normalized.starts_with("proxy-")
+    // Wasmtime 50 applies the filter to headers and trailers in both directions and may
+    // keep it after the store is gone, so it is handed out as a shared predicate.
+    fn forbidden_header_filter(&mut self) -> ForbiddenHeaderFilter {
+        static FILTER: LazyLock<ForbiddenHeaderFilter> =
+            LazyLock::new(|| Arc::new(is_forbidden_header));
+        FILTER.clone()
     }
 
     fn send_request(
@@ -256,7 +264,7 @@ impl WasiHttpView for KrwaP3State {
 #[unsafe(no_mangle)]
 pub extern "C" fn krwa_wasmtime_p3_execution_cancellation_create() -> u64 {
     let Some(handle) = NEXT_EXECUTION_CANCELLATION_HANDLE
-        .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |current| {
+        .try_update(Ordering::Relaxed, Ordering::Relaxed, |current| {
             current.checked_add(1)
         })
         .ok()

@@ -5,6 +5,27 @@ patch and prerelease identifiers advance without changing the `0.3` major/minor 
 `1.0.0`, API changes may still be intentional; release candidates remain immutable once
 published.
 
+## 0.3.7 (2026-10-25)
+
+### Changed
+
+- Updated Wasmtime from `48.0.7` to `50.0.0`. KRWA now tracks the current
+  Wasmtime major release instead of the 48 LTS line. The upgrade brings the
+  Wasmtime 49 and 50 changes to the runtime: wide arithmetic is enabled by
+  default, `operator_cost` fuel accounting also covers constant expressions and
+  the `start` function, component-model-async follows the latest specification
+  (use of a stream or future handle after the other end was dropped now traps),
+  Preview 3 concurrent work yields periodically, and the WASI filesystem,
+  socket, and `wasi:http` fixes shipped in both releases are included.
+- The pinned Rust toolchain moved from `1.96.1` to `1.99.1` because Wasmtime 50
+  requires Rust 1.97 or newer. `prepareReleaseDependencies` installs and verifies
+  the new compiler commit.
+- Refreshed the pinned Wasmtime source revision, compiler cache identity,
+  host-tool checksums, Preview 1 adapters, Android and iOS native libraries, and
+  Preview 3 bridge dependencies. Recompile precompiled modules and components
+  when upgrading from `48.0.7`; the `WasmtimeModuleCompilerBuildIdentity` cache
+  key changed.
+
 ## 0.3.6 (2026-10-25)
 
 ### Fixed

@@ -9,8 +9,10 @@ the local gate never publishes outside its task-owned staging directory.
    remains on the configured `0.3.x` compatibility line: advance only the patch or prerelease
    portion, leaving the `0.3` major/minor pair unchanged. `verifyImmutablePublicationVersion`
    enforces this before staging or publication.
-   Keep Wasmtime on the `48.x` LTS line and take its patch releases; a newer
-   non-LTS major release is not a dependency update candidate.
+   KRWA tracks the current Wasmtime major release (`50.x` today) and takes its
+   patch releases. Moving to a new Wasmtime major is a deliberate update: it
+   changes the pinned source revision, the compiler cache identity, the Rust
+   toolchain pin when upstream raises its minimum, and every native artifact.
 2. Provision Java 25, Node, rustup/Cargo, CMake, Xcode, and the Gradle dependency caches. The exact
    Rust release and compiler commit are the `rustRelease` and `rustReleaseCommit` entries in
    `gradle/libs.versions.toml`; do not substitute the moving `stable` alias.
