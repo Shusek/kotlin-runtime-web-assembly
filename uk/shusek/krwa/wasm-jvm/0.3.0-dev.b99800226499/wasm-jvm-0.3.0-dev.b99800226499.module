@@ -1,0 +1,123 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "url": "../../wasm/0.3.0-dev.b99800226499/wasm-0.3.0-dev.b99800226499.module",
+    "group": "uk.shusek.krwa",
+    "module": "wasm",
+    "version": "0.3.0-dev.b99800226499",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.8.1"
+    }
+  },
+  "variants": [
+    {
+      "name": "jvmApiElements-published",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "org.jetbrains.kotlinx",
+          "module": "kotlinx-io-core",
+          "version": {
+            "requires": "0.9.1"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.4.21"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "wasm-jvm-0.3.0-dev.b99800226499.jar",
+          "url": "wasm-jvm-0.3.0-dev.b99800226499.jar",
+          "size": 357746,
+          "sha512": "f091ce69590dc45886660ceb279b2d44110e5cfc5f75bdc5c9b579f4f7a9be58ad4c5d07d82e994f9264635c727b1a3b0e7f32ef86e031ac78669d655c2b13a4",
+          "sha256": "cad4ba6aec3ae6acb134875b6dbad89e751158a852238b3cef0bb4f71c69d99a",
+          "sha1": "1b751a65c16c65afd9d9fb81f8b41b06b4c8103f",
+          "md5": "1f56ac0920ec69a5a457a4f34bfbc24d"
+        }
+      ]
+    },
+    {
+      "name": "jvmRuntimeElements-published",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "org.jetbrains.kotlinx",
+          "module": "kotlinx-io-core",
+          "version": {
+            "requires": "0.9.1"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.4.21"
+          }
+        },
+        {
+          "group": "com.squareup.okio",
+          "module": "okio",
+          "version": {
+            "requires": "3.18.2"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "wasm-jvm-0.3.0-dev.b99800226499.jar",
+          "url": "wasm-jvm-0.3.0-dev.b99800226499.jar",
+          "size": 357746,
+          "sha512": "f091ce69590dc45886660ceb279b2d44110e5cfc5f75bdc5c9b579f4f7a9be58ad4c5d07d82e994f9264635c727b1a3b0e7f32ef86e031ac78669d655c2b13a4",
+          "sha256": "cad4ba6aec3ae6acb134875b6dbad89e751158a852238b3cef0bb4f71c69d99a",
+          "sha1": "1b751a65c16c65afd9d9fb81f8b41b06b4c8103f",
+          "md5": "1f56ac0920ec69a5a457a4f34bfbc24d"
+        }
+      ]
+    },
+    {
+      "name": "jvmSourcesElements-published",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "files": [
+        {
+          "name": "wasm-jvm-0.3.0-dev.b99800226499-sources.jar",
+          "url": "wasm-jvm-0.3.0-dev.b99800226499-sources.jar",
+          "size": 89120,
+          "sha512": "8804f58e7640a57772fb5f64c68ca2af9455286652b2743c80ed81956503fc66a17888b94a3aaa7509972165145869a57503a5a99201b576d19625a5167095ba",
+          "sha256": "ce3bb093d2c1377f910ca9c4c4bae23b39c581dec74cd59a2485df22e88be742",
+          "sha1": "566bb6b80e7d6af5f2ba50143d2ac459706fb458",
+          "md5": "13530d2752e0ddb34fa20d3016547fa7"
+        }
+      ]
+    }
+  ]
+}

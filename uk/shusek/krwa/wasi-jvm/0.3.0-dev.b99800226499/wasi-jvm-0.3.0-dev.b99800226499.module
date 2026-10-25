@@ -1,0 +1,179 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "url": "../../wasi/0.3.0-dev.b99800226499/wasi-0.3.0-dev.b99800226499.module",
+    "group": "uk.shusek.krwa",
+    "module": "wasi",
+    "version": "0.3.0-dev.b99800226499",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.8.1"
+    }
+  },
+  "variants": [
+    {
+      "name": "jvmApiElements-published",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "uk.shusek.krwa",
+          "module": "runtime",
+          "version": {
+            "requires": "0.3.0-dev.b99800226499"
+          }
+        },
+        {
+          "group": "com.squareup.okio",
+          "module": "okio",
+          "version": {
+            "requires": "3.18.2"
+          }
+        },
+        {
+          "group": "org.kotlincrypto.random",
+          "module": "crypto-rand",
+          "version": {
+            "requires": "0.6.0"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlinx",
+          "module": "kotlinx-io-core",
+          "version": {
+            "requires": "0.9.1"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.4.21"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "wasi-jvm-0.3.0-dev.b99800226499.jar",
+          "url": "wasi-jvm-0.3.0-dev.b99800226499.jar",
+          "size": 122100,
+          "sha512": "d794f3c1acf13ef6e3b2695361c3e287e6652a4185a2657b51b6ae70ae9061f2d5df0276d95381caab12afd856d8e19f0cf327e51868a4a0bb7b73f92e07a7ef",
+          "sha256": "065430f83655c71032e5c7bc289bfe4844f6942d501fe38bb12bb2e869b00f8e",
+          "sha1": "7c44d1c5f6b29498f97ee252b47fbe6c5fd4f2c1",
+          "md5": "dfe807a20c99f930cd38b9261417b655"
+        }
+      ]
+    },
+    {
+      "name": "jvmRuntimeElements-published",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "uk.shusek.krwa",
+          "module": "runtime",
+          "version": {
+            "requires": "0.3.0-dev.b99800226499"
+          }
+        },
+        {
+          "group": "com.squareup.okio",
+          "module": "okio",
+          "version": {
+            "requires": "3.18.2"
+          }
+        },
+        {
+          "group": "org.kotlincrypto.random",
+          "module": "crypto-rand",
+          "version": {
+            "requires": "0.6.0"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlinx",
+          "module": "kotlinx-io-core",
+          "version": {
+            "requires": "0.9.1"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.4.21"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "log",
+          "version": {
+            "requires": "0.3.0-dev.b99800226499"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "wasm",
+          "version": {
+            "requires": "0.3.0-dev.b99800226499"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "annotations",
+          "version": {
+            "requires": "0.3.0-dev.b99800226499"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "wasi-jvm-0.3.0-dev.b99800226499.jar",
+          "url": "wasi-jvm-0.3.0-dev.b99800226499.jar",
+          "size": 122100,
+          "sha512": "d794f3c1acf13ef6e3b2695361c3e287e6652a4185a2657b51b6ae70ae9061f2d5df0276d95381caab12afd856d8e19f0cf327e51868a4a0bb7b73f92e07a7ef",
+          "sha256": "065430f83655c71032e5c7bc289bfe4844f6942d501fe38bb12bb2e869b00f8e",
+          "sha1": "7c44d1c5f6b29498f97ee252b47fbe6c5fd4f2c1",
+          "md5": "dfe807a20c99f930cd38b9261417b655"
+        }
+      ]
+    },
+    {
+      "name": "jvmSourcesElements-published",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "files": [
+        {
+          "name": "wasi-jvm-0.3.0-dev.b99800226499-sources.jar",
+          "url": "wasi-jvm-0.3.0-dev.b99800226499-sources.jar",
+          "size": 32201,
+          "sha512": "dfcf022db4cdec96fba365c4cedde7e501458a52d2303885e0ba630a652e4c147175a27d8d205ba44c4850c11cdf2d05f658f062c37935e7a5e5c1c6115a2b38",
+          "sha256": "0036a2fac07d76c61d32e78d83f757ed9dbaa5b670088b4f2b4b04ee11a0f11d",
+          "sha1": "4807a504b54cfe04df7867cd803bc7bc54e0c8ef",
+          "md5": "97a55e74aaa1c6fdedfa09dbbe1f3fed"
+        }
+      ]
+    }
+  ]
+}

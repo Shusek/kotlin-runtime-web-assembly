@@ -1,0 +1,126 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "uk.shusek.krwa",
+    "module": "codegen",
+    "version": "0.3.0-dev.b99800226499",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.8.1"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.jvm.version": 25,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.4.21"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "codegen-0.3.0-dev.b99800226499.jar",
+          "url": "codegen-0.3.0-dev.b99800226499.jar",
+          "size": 21881,
+          "sha512": "babb2c89857b69d4220e8cca42aadca9bd411d74fc817d12816f6538a439a06635f302e5d6ced1f9965ac6a354ac941b0fcf5614b7035331c2a55452f3878d69",
+          "sha256": "bbdb09a83655b1c6e7d178669475f97b6dea6e3bbe6beec240cd1e5055b1a7d2",
+          "sha1": "592358c6753415b496bf4e0e38801dbe487aa579",
+          "md5": "5caa06f4345a208cb53ade5c16215061"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.jvm.version": 25,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "org.ow2.asm",
+          "module": "asm-bom",
+          "version": {
+            "requires": "9.11.1"
+          },
+          "attributes": {
+            "org.gradle.category": "platform"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "annotations",
+          "version": {
+            "requires": "0.3.0-dev.b99800226499"
+          }
+        },
+        {
+          "group": "uk.shusek.krwa",
+          "module": "wasm",
+          "version": {
+            "requires": "0.3.0-dev.b99800226499"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.4.21"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "codegen-0.3.0-dev.b99800226499.jar",
+          "url": "codegen-0.3.0-dev.b99800226499.jar",
+          "size": 21881,
+          "sha512": "babb2c89857b69d4220e8cca42aadca9bd411d74fc817d12816f6538a439a06635f302e5d6ced1f9965ac6a354ac941b0fcf5614b7035331c2a55452f3878d69",
+          "sha256": "bbdb09a83655b1c6e7d178669475f97b6dea6e3bbe6beec240cd1e5055b1a7d2",
+          "sha1": "592358c6753415b496bf4e0e38801dbe487aa579",
+          "md5": "5caa06f4345a208cb53ade5c16215061"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "codegen-0.3.0-dev.b99800226499-sources.jar",
+          "url": "codegen-0.3.0-dev.b99800226499-sources.jar",
+          "size": 5648,
+          "sha512": "714ae6631d79071c8c0638be48543f391c8a59df412f962bed53d6aed388e63a30ad32bebcf5e781fad7a8e89546c1b2e55ff00fa458b7e7969a784b1e5790c6",
+          "sha256": "0c1811dcade07f79c5fce45268293c27771871a495a25c716e93d2c604574aba",
+          "sha1": "591b32716300f6730fa28aca8ab852934c62ce64",
+          "md5": "ba6c2321fd5b060ddea58e2c9b126c86"
+        }
+      ]
+    }
+  ]
+}

@@ -3,11 +3,11 @@
   <groupId>uk.shusek.krwa</groupId>
   <artifactId>wasm-iosarm64</artifactId>
   <versioning>
-    <latest>0.3.0-dev.c92bbda32996</latest>
-    <release>0.3.0-dev.c92bbda32996</release>
+    <latest>0.3.0-dev.b99800226499</latest>
+    <release>0.3.0-dev.b99800226499</release>
     <versions>
-      <version>0.3.0-dev.c92bbda32996</version>
+      <version>0.3.0-dev.b99800226499</version>
     </versions>
-    <lastUpdated>20261025073623</lastUpdated>
+    <lastUpdated>20261025185602</lastUpdated>
   </versioning>
 </metadata>
