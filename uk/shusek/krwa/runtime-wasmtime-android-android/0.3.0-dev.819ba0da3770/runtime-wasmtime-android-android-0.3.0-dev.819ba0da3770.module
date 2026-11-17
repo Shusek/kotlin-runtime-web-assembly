@@ -1,0 +1,116 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "url": "../../runtime-wasmtime-android/0.3.0-dev.819ba0da3770/runtime-wasmtime-android-0.3.0-dev.819ba0da3770.module",
+    "group": "uk.shusek.krwa",
+    "module": "runtime-wasmtime-android",
+    "version": "0.3.0-dev.819ba0da3770",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.8.1"
+    }
+  },
+  "variants": [
+    {
+      "name": "androidApiElements-published",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.jvm.environment": "android",
+        "org.gradle.libraryelements": "aar",
+        "org.gradle.usage": "java-api",
+        "org.jetbrains.kotlin.platform.type": "androidJvm"
+      },
+      "dependencies": [
+        {
+          "group": "uk.shusek.krwa",
+          "module": "runtime",
+          "version": {
+            "requires": "0.3.0-dev.819ba0da3770"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.4.21"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "runtime-wasmtime-android.aar",
+          "url": "runtime-wasmtime-android-android-0.3.0-dev.819ba0da3770.aar",
+          "size": 25932507,
+          "sha512": "810315d368abd029b66e92699124def71fd2ef6414271f863400fa313679ed453518ec013ec2f5ccc0b001d3de52168a78477a28bac82fed6a96f3767d4e94a0",
+          "sha256": "7227bdfef224031edd31c22ef67d428566aa421d0fa8f5f632b1308aa20b799e",
+          "sha1": "adc969cd979c2ec3d9d6db1ede1449d9273fe2f1",
+          "md5": "54b7c629801a73d04556b9d9227cbe99"
+        }
+      ]
+    },
+    {
+      "name": "androidRuntimeElements-published",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.jvm.environment": "android",
+        "org.gradle.libraryelements": "aar",
+        "org.gradle.usage": "java-runtime",
+        "org.jetbrains.kotlin.platform.type": "androidJvm"
+      },
+      "dependencies": [
+        {
+          "group": "uk.shusek.krwa",
+          "module": "runtime",
+          "version": {
+            "requires": "0.3.0-dev.819ba0da3770"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.4.21"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "runtime-wasmtime-android.aar",
+          "url": "runtime-wasmtime-android-android-0.3.0-dev.819ba0da3770.aar",
+          "size": 25932507,
+          "sha512": "810315d368abd029b66e92699124def71fd2ef6414271f863400fa313679ed453518ec013ec2f5ccc0b001d3de52168a78477a28bac82fed6a96f3767d4e94a0",
+          "sha256": "7227bdfef224031edd31c22ef67d428566aa421d0fa8f5f632b1308aa20b799e",
+          "sha1": "adc969cd979c2ec3d9d6db1ede1449d9273fe2f1",
+          "md5": "54b7c629801a73d04556b9d9227cbe99"
+        }
+      ]
+    },
+    {
+      "name": "androidSourcesElements-published",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.jvm.environment": "android",
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime",
+        "org.jetbrains.kotlin.platform.type": "androidJvm"
+      },
+      "files": [
+        {
+          "name": "runtime-wasmtime-android-android-0.3.0-dev.819ba0da3770-sources.jar",
+          "url": "runtime-wasmtime-android-android-0.3.0-dev.819ba0da3770-sources.jar",
+          "size": 12356,
+          "sha512": "b3d94fe691b84c5360bcb1b85f3a5a9aa082d7b54bbc7755ce70c2d5bcd4f10fc51398ad6c7374aaaaa3f95cabfa03a14810b15ee9909de721b4b1f423849396",
+          "sha256": "f360ab6df96780d43c5a4a05130ae63baad733d0132c28c6914c4fa4c77f6d8f",
+          "sha1": "55794cce1ed7bb4fe2c560e0aa14402bcfd03a46",
+          "md5": "43ba67c48bef4bc7ba03e0bdc63b7642"
+        }
+      ]
+    }
+  ]
+}
