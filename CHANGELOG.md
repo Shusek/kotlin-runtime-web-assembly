@@ -5,6 +5,28 @@ patch and prerelease identifiers advance without changing the `0.3` major/minor 
 `1.0.0`, API changes may still be intentional; release candidates remain immutable once
 published.
 
+## 0.3.8 (2026-11-17)
+
+### Security
+
+- Updated Wasmtime from `50.0.0` to `50.0.2`, which carries the security fixes
+  of the `50.0.1` and `50.0.2` patch releases. Among them: a WASI Preview 3 UDP
+  `send` could deliver a datagram to an address allowed only for receiving
+  (RUSTSEC-2026-0420), and a stale GC heap base pointer in compiled code let a
+  guest abort the host process (GHSA-43j2-gcp4-m22g). See the Wasmtime
+  [50.0.1](https://github.com/bytecodealliance/wasmtime/releases/tag/v50.0.1)
+  and [50.0.2](https://github.com/bytecodealliance/wasmtime/releases/tag/v50.0.2)
+  release notes for the full list.
+
+### Changed
+
+- Refreshed the pinned Wasmtime source revision, compiler cache identity,
+  host-tool checksums, Preview 1 adapters, Android native libraries, and
+  Preview 3 bridge lock file for `50.0.2`. Recompile precompiled modules and
+  components when upgrading from `50.0.0`; the
+  `WasmtimeModuleCompilerBuildIdentity` cache key changed. JVM hosts need the
+  `50.0.2` Wasmtime C API library.
+
 ## 0.3.7 (2026-10-25)
 
 ### Added
