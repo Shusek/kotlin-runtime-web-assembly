@@ -677,8 +677,10 @@ class WasmtimePreview3ComponentProbeTest {
                 expectedResult = 42,
             )
 
+            // The core `run` export is lifted without `async` yet calls `task.return`. Wasmtime 50
+            // reached an internal bug check here; Wasmtime 51 traps as the Component Model requires.
             val message = assertNotNull(reason)
-            assertContains(message, "lift_result field is missing")
+            assertContains(message, "`task.return` or `task.cancel` called by a task which was not lifted with `async`")
         } finally {
             sandbox.toFile().deleteRecursively()
         }
