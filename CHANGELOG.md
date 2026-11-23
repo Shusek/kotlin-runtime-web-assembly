@@ -5,6 +5,40 @@ patch and prerelease identifiers advance without changing the `0.3` major/minor 
 `1.0.0`, API changes may still be intentional; release candidates remain immutable once
 published.
 
+## 0.3.9 (2026-11-22)
+
+### Security
+
+- Updated Wasmtime from `50.0.2` to `51.0.0`. `50.0.2` is affected by
+  GHSA-f2pq-268w-886c, a WASI filesystem sandbox escape on Windows through a
+  drive-prefixed path component. The advisory covers `wasmtime-wasi` before
+  `50.0.3` on the 50 line; `51.0.0` is outside its range.
+
+### Changed
+
+- KRWA now tracks the Wasmtime `51.x` release line. See the Wasmtime
+  [51.0.0](https://github.com/bytecodealliance/wasmtime/releases/tag/v51.0.0)
+  release notes for the full list of changes.
+- Wasmtime 51 limits the number of simultaneously live fibers in one store to
+  64 by default, and KRWA keeps that default. An async entry point that would
+  exceed it fails with an error instead of allocating another native stack.
+- Refreshed the pinned Wasmtime source revision, compiler cache identity,
+  host-tool checksums, Preview 1 adapters, Android native libraries, and
+  Preview 3 bridge lock file for `51.0.0`. Recompile precompiled modules and
+  components when upgrading from `50.0.2`; the
+  `WasmtimeModuleCompilerBuildIdentity` cache key changed. JVM hosts need the
+  `51.0.0` Wasmtime C API library.
+- The Preview 3 bridge lock file moves `rustix` from `1.1.4` to `1.1.5`.
+  Wasmtime 51 requires `libc` `0.2.190` or newer, which defines
+  `AF_SYS_CONTROL` only for macOS, and `rustix` `1.1.4` does not build for iOS
+  against it.
+- The Wasmtime C API changed in places KRWA does not call:
+  `wasmtime_memory_creator` callbacks take a `wasmtime_memory_request_t`,
+  `wasmtime_struct_type_new` returns an error with an out parameter, and
+  `WASMTIME_HEAPTYPE_KIND_CONCRETE_EXN` is gone, which renumbers
+  `WASMTIME_HEAPTYPE_KIND_NOEXN`. Hosts that call the C API directly next to
+  KRWA must follow them.
+
 ## 0.3.8 (2026-11-17)
 
 ### Security

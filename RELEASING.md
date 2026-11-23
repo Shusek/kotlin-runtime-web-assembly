@@ -13,7 +13,7 @@ the local gate never publishes outside its task-owned staging directory.
    generated package, so bump it together with `gradle.properties` (or run
    `./gradlew kotlinWasmUpgradePackageLock` on a clean build); otherwise the
    `ciWebPublicationGate` fails in `kotlinWasmStorePackageLock`.
-   KRWA tracks the current Wasmtime major release (`50.x` today) and takes its
+   KRWA tracks the current Wasmtime major release (`51.x` today) and takes its
    patch releases. Moving to a new Wasmtime major is a deliberate update: it
    changes the pinned source revision, the compiler cache identity, the Rust
    toolchain pin when upstream raises its minimum, and every native artifact.
